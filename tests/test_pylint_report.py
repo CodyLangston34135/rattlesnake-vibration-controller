@@ -7,7 +7,7 @@ parse pylint output, format issue counts, and generate an HTML report.
 Example use:
     source .venv/bin/activate
     pytest tests/test_pylint_report.py -v
-    pytest tests/test_pylint_report.py::test_score_color -v
+    pytest tests/test_pylint_report.py::test_get_score_color -v
     pytest --cov=src/rattlesnake --cov-report=xml --cov-report=html --cov-report=term-missing
 """
 
