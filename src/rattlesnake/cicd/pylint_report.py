@@ -79,17 +79,18 @@ def get_pylint_content(input_file: str) -> str:
         Content of the pylint output file
 
     Raises:
-        SystemExit: If file cannot be read
+        FileNotFoundError: If the input file is not found.
+        IOError: If there is an error reading the file.
     """
     try:
         with open(input_file, "r", encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
-        print(f'Error: Input file "{input_file}" not found.')
-        sys.exit(1)
+        # Re-raise the exception to be handled by the caller
+        raise
     except IOError as e:
-        print(f'Error reading input file "{input_file}": {e}')
-        sys.exit(1)
+        # Re-raise with a more informative message if needed, or just re-raise
+        raise IOError(f'Error reading input file "{input_file}": {e}') from e
 
 
 def get_pylint_sections(pylint_content: str) -> Tuple[List[str], List[str]]:
@@ -370,14 +371,13 @@ def write_report(html_content: str, output_file: str) -> None:
         output_file: Path for the output HTML file
 
     Raises:
-        SystemExit: If file cannot be written
+        IOError: If the file cannot be written.
     """
     try:
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(html_content)
     except IOError as e:
-        print(f'Error writing output file "{output_file}": {e}')
-        sys.exit(1)
+        raise IOError(f'Error writing output file "{output_file}": {e}') from e
 
 
 def run_pylint_report(

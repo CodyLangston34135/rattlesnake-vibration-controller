@@ -13,16 +13,38 @@ Example use:
 import re
 from pathlib import Path
 
+import pytest
 from rattlesnake.cicd.pylint_report import (
     get_issue_counts,
     get_issues_list_html,
     run_pylint_report,
+    get_pylint_content,
     get_pylint_sections,
     get_report_html,
     get_timestamp,
     get_score_color,
     get_score_from_summary,
+    write_report,
 )
+
+
+def test_get_pylint_content_file_not_found():
+    """Test that get_pylint_content raises FileNotFoundError for a missing file."""
+    with pytest.raises(FileNotFoundError):
+        get_pylint_content("non_existent_file.txt")
+
+
+def test_write_report_io_error(monkeypatch):
+    """Test that write_report raises IOError when file writing fails."""
+
+    def mock_open_raises_io_error(*args, **kwargs):
+        raise IOError("Permission denied")
+
+    monkeypatch.setattr("builtins.open", mock_open_raises_io_error)
+    with pytest.raises(IOError) as excinfo:
+        write_report("<html></html>", "protected_file.html")
+    assert 'Error writing output file "protected_file.html"' in str(excinfo.value)
+    assert "Permission denied" in str(excinfo.value)
 
 
 def test_get_score_color():
