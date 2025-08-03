@@ -4,7 +4,7 @@
 
 [![Pylint](./badges/pylint.svg)](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/)
 
-* Lint 🧹: [https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/)
+* Pylint Report 🧹: [https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/)
 
 ## Work in Progress
 
@@ -12,7 +12,7 @@
 
 [coverage report](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/)
 
-* Coverage 🛡️: [https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/)
+* Coverage Report 🛡️: [https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/)
 
 ## Overview
 

@@ -1,4 +1,12 @@
-"""This is a minimum working example of a test framework."""
+"""
+This is a minimum working example of a test framework.
+
+Example use:
+    source .venv/bin/activate
+    pytest tests/test_hello.py -v
+    pytest tests/test_hello.py::test_greet -v
+    pytest --cov=src/rattlesnake --cov-report=xml --cov-report=html --cov-report=term-missing
+"""
 
 # import pytest
 

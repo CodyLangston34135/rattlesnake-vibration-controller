@@ -6,26 +6,46 @@ parse pylint output, format issue counts, and generate an HTML report.
 
 Example use:
     source .venv/bin/activate
-    pytest test_pylint_report.py -v
-    pytest test_pylint_report.py::test_score_color
+    pytest tests/test_pylint_report.py -v
+    pytest tests/test_pylint_report.py::test_score_color -v
+    pytest --cov=src/rattlesnake --cov-report=xml --cov-report=html --cov-report=term-missing
 """
 
 import re
+import sys
+import types
 from pathlib import Path
 
 import pytest
 from rattlesnake.cicd.pylint_report import (
     get_issue_counts,
     get_issues_list_html,
-    run_pylint_report,
     get_pylint_content,
     get_pylint_sections,
     get_report_html,
-    get_timestamp,
     get_score_color,
     get_score_from_summary,
+    get_timestamp,
+    main,
+    run_pylint_report,
     write_report,
 )
+
+
+def test_get_pylint_content_success(tmp_path):
+    """Test that get_pylint_content successfully reads a file."""
+    content = "Hello, world!"
+    file_path = tmp_path / "test_file.txt"
+    file_path.write_text(content)
+    assert get_pylint_content(str(file_path)) == content
+
+
+def test_write_report_success(tmp_path):
+    """Test that write_report successfully writes to a file."""
+    content = "<html></html>"
+    file_path = tmp_path / "report.html"
+    write_report(content, str(file_path))
+    assert file_path.read_text() == content
 
 
 def test_get_pylint_content_file_not_found():
@@ -45,6 +65,87 @@ def test_write_report_io_error(monkeypatch):
         write_report("<html></html>", "protected_file.html")
     assert 'Error writing output file "protected_file.html"' in str(excinfo.value)
     assert "Permission denied" in str(excinfo.value)
+
+
+def test_main_success(monkeypatch, capsys):
+    """Test the main function for a successful run."""
+    mock_args = types.SimpleNamespace(
+        input_file="dummy_input.txt",
+        output_file="dummy_output.html",
+        run_id="123",
+        ref_name="main",
+        github_sha="abc",
+        github_repo="owner/repo",
+    )
+
+    monkeypatch.setattr("argparse.ArgumentParser.parse_args", lambda self: mock_args)
+    monkeypatch.setattr(
+        "rattlesnake.cicd.pylint_report.run_pylint_report",
+        lambda *args, **kwargs: (
+            10,
+            {"convention": 1, "warning": 2, "error": 3, "refactor": 4},
+            9.5,
+        ),
+    )
+
+    main()
+    captured = capsys.readouterr()
+    assert "✅ Pylint HTML report generated: dummy_output.html" in captured.out
+    assert "📊 Pylint score: 9.5/10" in captured.out
+    assert "- Conventions: 1" in captured.out
+    assert "- Warnings: 2" in captured.out
+    assert "- Errors: 3" in captured.out
+    assert "- Refactors: 4" in captured.out
+
+
+def test_main_file_not_found(monkeypatch, capsys):
+    """Test the main function when the input file is not found."""
+    mock_args = types.SimpleNamespace(
+        input_file="non_existent.txt",
+        output_file="dummy_output.html",
+        run_id="123",
+        ref_name="main",
+        github_sha="abc",
+        github_repo="owner/repo",
+    )
+
+    monkeypatch.setattr("argparse.ArgumentParser.parse_args", lambda self: mock_args)
+    monkeypatch.setattr(
+        "rattlesnake.cicd.pylint_report.run_pylint_report",
+        lambda *args, **kwargs: exec('raise FileNotFoundError("File not found")'),
+    )
+
+    with pytest.raises(SystemExit) as excinfo:
+        main()
+
+    assert excinfo.value.code == 1
+    captured = capsys.readouterr()
+    assert "❌ Error: The input file 'non_existent.txt' was not found." in captured.out
+
+
+def test_main_io_error(monkeypatch, capsys):
+    """Test the main function when an IOError occurs."""
+    mock_args = types.SimpleNamespace(
+        input_file="dummy_input.txt",
+        output_file="dummy_output.html",
+        run_id="123",
+        ref_name="main",
+        github_sha="abc",
+        github_repo="owner/repo",
+    )
+
+    monkeypatch.setattr("argparse.ArgumentParser.parse_args", lambda self: mock_args)
+    monkeypatch.setattr(
+        "rattlesnake.cicd.pylint_report.run_pylint_report",
+        lambda *args, **kwargs: exec('raise IOError("Permission denied")'),
+    )
+
+    with pytest.raises(SystemExit) as excinfo:
+        main()
+
+    assert excinfo.value.code == 1
+    captured = capsys.readouterr()
+    assert "❌ I/O error occurred: Permission denied" in captured.out
 
 
 def test_get_score_color():
@@ -107,7 +208,7 @@ Your code has been rated at 6.00/10 (previous run: 7.00/10, -1.00)
     assert counts["refactor"] == 1
 
 
-def test_get_score_from_summary():
+def test_get_score__from_summary():
     """Unit test for get_score_from_summary function."""
 
     # Test cases
