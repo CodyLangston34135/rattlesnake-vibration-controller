@@ -115,10 +115,10 @@ def test_main_file_not_found(monkeypatch, capsys):
         lambda *args, **kwargs: exec('raise FileNotFoundError("File not found")'),
     )
 
-    with pytest.raises(SystemExit) as excinfo:
+    with pytest.raises(FileNotFoundError) as excinfo:
         main()
 
-    assert excinfo.value.code == 1
+    assert "File not found" in str(excinfo.value)
     captured = capsys.readouterr()
     assert "❌ Error: The input file 'non_existent.txt' was not found." in captured.out
 
@@ -140,12 +140,37 @@ def test_main_io_error(monkeypatch, capsys):
         lambda *args, **kwargs: exec('raise IOError("Permission denied")'),
     )
 
-    with pytest.raises(SystemExit) as excinfo:
+    with pytest.raises(IOError) as excinfo:
         main()
 
-    assert excinfo.value.code == 1
+    assert "Permission denied" in str(excinfo.value)
     captured = capsys.readouterr()
     assert "❌ I/O error occurred: Permission denied" in captured.out
+
+
+def test_main_unexpected_error(monkeypatch, capsys):
+    """Test the main function for an unexpected error."""
+    mock_args = types.SimpleNamespace(
+        input_file="dummy_input.txt",
+        output_file="dummy_output.html",
+        run_id="123",
+        ref_name="main",
+        github_sha="abc",
+        github_repo="owner/repo",
+    )
+
+    monkeypatch.setattr("argparse.ArgumentParser.parse_args", lambda self: mock_args)
+    monkeypatch.setattr(
+        "rattlesnake.cicd.pylint_report.run_pylint_report",
+        lambda *args, **kwargs: exec('raise Exception("Something went wrong")'),
+    )
+
+    with pytest.raises(Exception) as excinfo:
+        main()
+
+    assert "Something went wrong" in str(excinfo.value)
+    captured = capsys.readouterr()
+    assert "❌ An unexpected error occurred: Something went wrong" in captured.out
 
 
 def test_get_score_color():

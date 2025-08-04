@@ -495,16 +495,19 @@ def main() -> None:
         print(f"   - Errors: {issue_counts['error']}")
         print(f"   - Refactors: {issue_counts['refactor']}")
 
-    except FileNotFoundError:
+    except FileNotFoundError as e:
         print(f"❌ Error: The input file '{args.input_file}' was not found.")
-        sys.exit(1)
+        raise e
     except IOError as e:
         print(f"❌ I/O error occurred: {e}")
-        sys.exit(1)
+        raise e
     except Exception as e:
         print(f"❌ An unexpected error occurred: {e}")
-        sys.exit(1)
+        raise e
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        sys.exit(1)
