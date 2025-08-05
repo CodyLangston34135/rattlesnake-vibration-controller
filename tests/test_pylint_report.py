@@ -12,9 +12,11 @@ Example use:
 """
 
 import re
-import sys
+
+# import sys  # unused import
 import types
 from pathlib import Path
+from typing import Final
 
 import pytest
 from rattlesnake.cicd.pylint_report import (
@@ -40,18 +42,18 @@ def test_get_pylint_content_success(tmp_path):
     assert get_pylint_content(str(file_path)) == content
 
 
+def test_get_pylint_content_file_not_found():
+    """Test that get_pylint_content raises FileNotFoundError for a missing file."""
+    with pytest.raises(FileNotFoundError):
+        get_pylint_content("non_existent_file.txt")
+
+
 def test_write_report_success(tmp_path):
     """Test that write_report successfully writes to a file."""
     content = "<html></html>"
     file_path = tmp_path / "report.html"
     write_report(content, str(file_path))
     assert file_path.read_text() == content
-
-
-def test_get_pylint_content_file_not_found():
-    """Test that get_pylint_content raises FileNotFoundError for a missing file."""
-    with pytest.raises(FileNotFoundError):
-        get_pylint_content("non_existent_file.txt")
 
 
 def test_write_report_io_error(monkeypatch):
@@ -190,7 +192,7 @@ def test_get_score_color():
     assert get_score_color("") == "gray", "Test failed for empty string"
 
 
-def test_get_formatted_timestamp():
+def test_get_timestamp():
     """Test that formatted_timestamp() returns valid datetime string.
 
     Confirms output includes expected format components like UTC, EST, MST,
@@ -205,7 +207,7 @@ def test_get_formatted_timestamp():
     assert re.search(r"\d{4}-\d{2}-\d{2}", ts)
 
 
-def test_parse_pylint_output_and_count():
+def test_get_issue_counts():
     """Test parsing of pylint output and issue counting.
 
     Verifies that issues are extracted correctly and categorized
@@ -233,7 +235,7 @@ Your code has been rated at 6.00/10 (previous run: 7.00/10, -1.00)
     assert counts["refactor"] == 1
 
 
-def test_get_score__from_summary():
+def test_get_score_from_summary():
     """Unit test for get_score_from_summary function."""
 
     # Test cases
@@ -255,8 +257,8 @@ def test_get_score__from_summary():
         assert get_score_from_summary(summary_lines) == expected_score
 
 
-def test_generate_issues_html():
-    """Test that generate_issues_html() returns valid HTML content.
+def test_get_issues_list_html():
+    """Test that get_issues_list_html returns valid HTML content.
 
     Verifies that issues are wrapped in the correct HTML structure and
     tagged with appropriate CSS classes.
@@ -278,8 +280,8 @@ def test_generate_issues_html():
     assert 'class="issue refactor"' in html_out
 
 
-def test_generate_html_report_basic():
-    """Test generate_html_report() with minimal valid inputs.
+def test_get_report_htmll():
+    """Test get_report_html with minimal valid inputs.
 
     Ensures generated HTML includes expected static and dynamic content
     like report title, issues, and summary.
@@ -306,10 +308,12 @@ def test_generate_html_report_basic():
     assert "Your code has been rated at 9.00/10" in report
 
 
-def test_create_pylint_html_report():
+def test_run_pylint_report():
     """Tests the main report creation."""
 
-    function_debug = False  # set to True to avoid deleting the temporary output file
+    function_debug: Final[bool] = (
+        True  # set to True to avoid deleting the temporary output file
+    )
 
     fin = Path(__file__).parent / "files" / "pylint_output_20250729_150018_UTC.txt"
     assert fin.is_file(), "Input file does not exist."
@@ -329,9 +333,11 @@ def test_create_pylint_html_report():
 
     # Check if the output file was created
     assert fout.is_file(), "Output HTML report was not created."
+    print(f"Created temporary file: {fout}")
 
     if not function_debug:
         # Clean up the output file after the test
         fout.unlink()
+        print(f"Deleted temporary file: {fout}")
     else:
-        print(f"Temporary output file created at: {fout}")
+        print(f"Retained output file: {fout}")

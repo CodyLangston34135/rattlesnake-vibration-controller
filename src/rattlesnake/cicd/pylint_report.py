@@ -86,6 +86,7 @@ def get_pylint_content(input_file: str) -> str:
         with open(input_file, "r", encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
+        # TODO: re-raise this similar to how IOError below is re-raised
         # Re-raise the exception to be handled by the caller
         raise
     except IOError as e:
@@ -143,7 +144,7 @@ def get_score_from_summary(summary_lines: List[str]) -> str:
 
 def get_issue_counts(issues: List[str]) -> Dict[str, int]:
     """
-    Count issues by type (error, warning, convention).
+    Count issues by type (convention, warning, error, refactor).
 
     Args:
         issues: List of pylint issue strings
@@ -180,6 +181,9 @@ def get_issues_list_html(issues: List[str]) -> str:
     issues_list: List[str] = []
 
     for issue in issues:
+        # TODO: exactly match to "refactor" via r"R\d{4}:" and add an "unknown"
+        # css_class.  Review Python version to see if we can use a match statement
+        # instead of nested if statements.
         if re.search(r"C\d{4}:", issue):
             css_class = "convention"
         elif re.search(r"W\d{4}:", issue):
@@ -193,6 +197,10 @@ def get_issues_list_html(issues: List[str]) -> str:
     return f'<div class="issues-list">{"".join(issues_list)}</div>'
 
 
+# TODO: Should this function be named "pylint_content_to_html_report" or
+# create report_html?
+# Also, can we just pass in pylint_content, and derive issues, summary_lines,
+# and pylint_score therefrom?
 def get_report_html(
     pylint_content: str,
     issues: List[str],
