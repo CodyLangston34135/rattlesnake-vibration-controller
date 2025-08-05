@@ -15,29 +15,7 @@ from typing import Dict, List, Tuple
 import pytz
 
 
-def get_score_color(pylint_score: str) -> str:
-    """
-    Determine color based on pylint score.
-
-    Args:
-        pylint_score: The pylint score as string, e.g., "8.5", "7.0", etc.
-
-    Returns:
-        Hex color code for the score, as a string.
-    """
-    # TODO: Merge this with same function in pylint_badge_color.py
-    try:
-        score_val: float = float(pylint_score)
-        if score_val >= 8.0:
-            return "brightgreen"  # #28a745
-        elif score_val >= 6.0:
-            return "yellow"  # #ffc107
-        elif score_val >= 4.0:
-            return "orange"  # #dc3545
-        else:
-            return "red"  # #dc3545
-    except ValueError:
-        return "gray"  # #6c757d for invalid scores
+from rattlesnake.cicd.utilities import get_score_color
 
 
 def get_timestamp() -> str:

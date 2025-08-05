@@ -6,17 +6,13 @@ GITHUB_ENV file so that it can be used later in the workflow.
 
 import os
 import sys
+from typing import Final
+
+from rattlesnake.cicd.utilities import get_score_color
 
 score = float(sys.argv[1]) if len(sys.argv) > 1 else 0.0
 
-if score >= 8.0:
-    COLOR = "brightgreen"
-elif score >= 6.0:
-    COLOR = "yellow"
-elif score >= 4.0:
-    COLOR = "orange"
-else:
-    COLOR = "red"
+COLOR: Final[str] = get_score_color(str(score))
 
 # Export to GitHub environment
 env_path = os.environ.get("GITHUB_ENV")
