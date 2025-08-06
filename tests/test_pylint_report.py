@@ -310,7 +310,7 @@ def test_run_pylint_report():
     """Tests the main report creation."""
 
     function_debug: Final[bool] = (
-        True  # set to True to avoid deleting the temporary output file
+        False  # set to True to avoid deleting the temporary output file
     )
 
     fin = Path(__file__).parent / "files" / "pylint_output_20250729_150018_UTC.txt"
