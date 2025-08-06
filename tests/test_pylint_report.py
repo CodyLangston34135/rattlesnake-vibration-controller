@@ -25,13 +25,13 @@ from rattlesnake.cicd.pylint_report import (
     get_pylint_content,
     get_pylint_sections,
     get_report_html,
-    get_score_color,
     get_score_from_summary,
     get_timestamp,
     main,
     run_pylint_report,
     write_report,
 )
+from rattlesnake.cicd.utilities import get_score_color
 
 
 def test_get_pylint_content_success(tmp_path):
@@ -44,8 +44,9 @@ def test_get_pylint_content_success(tmp_path):
 
 def test_get_pylint_content_file_not_found():
     """Test that get_pylint_content raises FileNotFoundError for a missing file."""
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(FileNotFoundError) as excinfo:
         get_pylint_content("non_existent_file.txt")
+    assert 'Input file not found: "non_existent_file.txt"' in str(excinfo.value)
 
 
 def test_write_report_success(tmp_path):

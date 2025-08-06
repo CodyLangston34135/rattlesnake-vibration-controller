@@ -63,10 +63,8 @@ def get_pylint_content(input_file: str) -> str:
     try:
         with open(input_file, "r", encoding="utf-8") as f:
             return f.read()
-    except FileNotFoundError:
-        # TODO: re-raise this similar to how IOError below is re-raised
-        # Re-raise the exception to be handled by the caller
-        raise
+    except FileNotFoundError as e:
+        raise FileNotFoundError(f'Input file not found: "{input_file}"') from e
     except IOError as e:
         # Re-raise with a more informative message if needed, or just re-raise
         raise IOError(f'Error reading input file "{input_file}": {e}') from e
@@ -225,29 +223,29 @@ def get_report_html(
         .container {{
             max-width: 1200px; margin: 0 auto;
         }}
-        .header {{ 
+        .header {{
             background: white; padding: 30px; border-radius: 8px; 
             box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; 
         }}
-        .score {{ 
+        .score {{
             font-size: 2.5em; font-weight: bold; color: {score_color};
         }}
-        .metadata {{ 
+        .metadata {{
             color: #6a737d; font-size: 0.9em; margin-top: 10px;
         }}
-        .nav {{ 
+        .nav {{
             background: white; padding: 20px; border-radius: 8px; 
             box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; 
         }}
-        .nav a {{ 
+        .nav a {{
             background: #0366d6; color: white; padding: 10px 20px; 
             text-decoration: none; border-radius: 6px; margin-right: 10px; 
             display: inline-block; margin-bottom: 5px;
         }}
-        .nav a:hover {{ 
-            background: #0256cc; 
+        .nav a:hover {{
+            background: #0256cc;
         }}
-        .section {{ 
+        .section {{
             background: white; padding: 25px; border-radius: 8px; 
             box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px;
         }}
@@ -430,12 +428,12 @@ def parse_arguments() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Example:
-  python pylint_report.py \\
-    --input_file pylint_output_20240101_120000_UTC.txt \\
-    --output_file pylint_report.html \\
-    --run_id 1234567890 \\
-    --ref_name main \\
-    --github_sha abc123def456 \\
+  python pylint_report.py \
+    --input_file pylint_output_20240101_120000_UTC.txt \
+    --output_file pylint_report.html \
+    --run_id 1234567890 \
+    --ref_name main \
+    --github_sha abc123def456 \
     --github_repo owner/repo-name
         """,
     )
