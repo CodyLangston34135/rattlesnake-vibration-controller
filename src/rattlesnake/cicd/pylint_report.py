@@ -457,8 +457,13 @@ Example:
     return parser.parse_args()
 
 
-def main() -> None:
-    """Main entry point for the script."""
+def main() -> int:
+    """
+    Main entry point for the script.
+
+    Returns:
+        Exit code (0 for success, 1 for failure)
+    """
     args: argparse.Namespace = parse_arguments()
 
     try:
@@ -481,17 +486,16 @@ def main() -> None:
 
     except FileNotFoundError as e:
         print(f"❌ Error: The input file '{args.input_file}' was not found.")
-        raise e
+        return 1
     except IOError as e:
         print(f"❌ I/O error occurred: {e}")
-        raise e
+        return 1
     except Exception as e:
         print(f"❌ An unexpected error occurred: {e}")
-        raise e
+        return 1
+
+    return 0  # Success exit code
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except Exception:
-        sys.exit(1)
+    sys.exit(main())
