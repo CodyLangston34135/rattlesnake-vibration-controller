@@ -118,10 +118,9 @@ def test_main_file_not_found(monkeypatch, capsys):
         lambda *args, **kwargs: exec('raise FileNotFoundError("File not found")'),
     )
 
-    with pytest.raises(FileNotFoundError) as excinfo:
-        main()
+    exit_code = main()
+    assert exit_code == 1
 
-    assert "File not found" in str(excinfo.value)
     captured = capsys.readouterr()
     assert "❌ Error: The input file 'non_existent.txt' was not found." in captured.out
 
@@ -143,10 +142,9 @@ def test_main_io_error(monkeypatch, capsys):
         lambda *args, **kwargs: exec('raise IOError("Permission denied")'),
     )
 
-    with pytest.raises(IOError) as excinfo:
-        main()
+    exit_code = main()
+    assert exit_code == 1
 
-    assert "Permission denied" in str(excinfo.value)
     captured = capsys.readouterr()
     assert "❌ I/O error occurred: Permission denied" in captured.out
 
@@ -168,10 +166,9 @@ def test_main_unexpected_error(monkeypatch, capsys):
         lambda *args, **kwargs: exec('raise Exception("Something went wrong")'),
     )
 
-    with pytest.raises(Exception) as excinfo:
-        main()
+    exit_code = main()
+    assert exit_code == 1
 
-    assert "Something went wrong" in str(excinfo.value)
     captured = capsys.readouterr()
     assert "❌ An unexpected error occurred: Something went wrong" in captured.out
 
