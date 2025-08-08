@@ -29,19 +29,21 @@ def get_timestamp() -> str:
     utc_now: datetime = datetime.now(pytz.utc)
 
     # Define the time zones
-    est: pytz.BaseTzInfo = pytz.timezone("America/New_York")
-    mst: pytz.BaseTzInfo = pytz.timezone("America/Denver")
+    timezone_est: pytz.BaseTzInfo = pytz.timezone("America/New_York")
+    timezone_mst: pytz.BaseTzInfo = pytz.timezone("America/Denver")
 
     # Convert UTC time to EST and MST
-    est_now: datetime = utc_now.astimezone(est)
-    mst_now: datetime = utc_now.astimezone(mst)
+    est_now: datetime = utc_now.astimezone(timezone_est)
+    mst_now: datetime = utc_now.astimezone(timezone_mst)
 
     # Format the output
     df: str = "%Y-%m-%d %H:%M:%S "  # Date format
-    timestamp: str = (
-        utc_now.strftime(df + "UTC")
-        + f" ({est_now.strftime(df + 'EST')} / {mst_now.strftime(df + 'MST')})"
-    )
+    utc: str = utc_now.strftime(df + "UTC")
+    est: str = est_now.strftime(df + "EST")
+    mst: str = mst_now.strftime(df + "MST")
+
+    # Combine the formatted times
+    timestamp: str = f"{utc} ({est} / {mst})"
 
     return timestamp
 
