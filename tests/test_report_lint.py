@@ -1,13 +1,13 @@
 """
-Unit tests for pylint_report.py — Pylint HTML Report Generator.
+Unit tests for report_line.py — Pylint HTML Report Generator.
 
 This test suite verifies the correctness of the utility functions used to
 parse pylint output, format issue counts, and generate an HTML report.
 
 Example use:
     source .venv/bin/activate
-    pytest tests/test_pylint_report.py -v
-    pytest tests/test_pylint_report.py::test_get_score_color -v
+    pytest tests/test_report_lint.py -v
+    pytest tests/test_report_lint.py::test_some_specific_function -v
     pytest --cov=src/rattlesnake --cov-report=xml --cov-report=html --cov-report=term-missing
 """
 
@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Final
 
 import pytest
-from rattlesnake.cicd.pylint_report import (
+from rattlesnake.cicd.report_lint import (
     get_issue_counts,
     get_issues_list_html,
     get_pylint_content,
@@ -105,7 +105,7 @@ def test_main_success(monkeypatch, capsys):
 
     monkeypatch.setattr("argparse.ArgumentParser.parse_args", lambda self: mock_args)
     monkeypatch.setattr(
-        "rattlesnake.cicd.pylint_report.run_pylint_report",
+        "rattlesnake.cicd.report_lint.run_pylint_report",
         lambda *args, **kwargs: (
             10,
             {"convention": 1, "warning": 2, "error": 3, "refactor": 4},
@@ -136,7 +136,7 @@ def test_main_file_not_found(monkeypatch, capsys):
 
     monkeypatch.setattr("argparse.ArgumentParser.parse_args", lambda self: mock_args)
     monkeypatch.setattr(
-        "rattlesnake.cicd.pylint_report.run_pylint_report",
+        "rattlesnake.cicd.report_lint.run_pylint_report",
         lambda *args, **kwargs: exec('raise FileNotFoundError("File not found")'),
     )
 
@@ -160,7 +160,7 @@ def test_main_io_error(monkeypatch, capsys):
 
     monkeypatch.setattr("argparse.ArgumentParser.parse_args", lambda self: mock_args)
     monkeypatch.setattr(
-        "rattlesnake.cicd.pylint_report.run_pylint_report",
+        "rattlesnake.cicd.report_lint.run_pylint_report",
         lambda *args, **kwargs: exec('raise IOError("Permission denied")'),
     )
 
@@ -184,7 +184,7 @@ def test_main_unexpected_error(monkeypatch, capsys):
 
     monkeypatch.setattr("argparse.ArgumentParser.parse_args", lambda self: mock_args)
     monkeypatch.setattr(
-        "rattlesnake.cicd.pylint_report.run_pylint_report",
+        "rattlesnake.cicd.report_lint.run_pylint_report",
         lambda *args, **kwargs: exec('raise Exception("Something went wrong")'),
     )
 

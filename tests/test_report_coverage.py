@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from rattlesnake.cicd.coverage_report import CoverageMetric, get_coverage_metrics
+from rattlesnake.cicd.report_coverage import CoverageMetric, get_coverage_metrics
 
 
 def test_get_coverage_metrics_simple():
