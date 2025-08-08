@@ -44,7 +44,7 @@ jobs:
         echo "PYLINT_OUTPUT_FILE=$PYLINT_OUTPUT_FILE" >> $GITHUB_ENV
         
         # Determine badge color based on score and add it as an environment variable
-        python3 pylint_badge_color.py "$SCORE"
+        python3 src/rattlesnake/cicd/pylint_badge_color.py "$SCORE"
 
     - name: Confirm new environment variables
       run: |
