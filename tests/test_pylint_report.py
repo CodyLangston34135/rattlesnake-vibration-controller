@@ -34,12 +34,14 @@ from rattlesnake.cicd.pylint_report import (
 from rattlesnake.cicd.utilities import get_score_color
 
 
-def test_get_pylint_content_success(tmp_path):
+def test_get_pylint_content_success():
     """Test that get_pylint_content successfully reads a file."""
     content = "Hello, world!"
-    file_path = tmp_path / "test_file.txt"
+    file_path = Path(__file__).parent / "test_file.txt"
     file_path.write_text(content)
+    assert file_path.is_file()
     assert get_pylint_content(str(file_path)) == content
+    file_path.unlink()  # clean up and delete the temporary file
 
 
 def test_get_pylint_content_file_not_found():
@@ -47,6 +49,26 @@ def test_get_pylint_content_file_not_found():
     with pytest.raises(FileNotFoundError) as excinfo:
         get_pylint_content("non_existent_file.txt")
     assert 'Input file not found: "non_existent_file.txt"' in str(excinfo.value)
+
+
+# def test_get_pylint_content_io_error(tmp_path):
+#     """Tests that the tested function raises an IOError for a binary file."""
+#     # fin = Path(__file__).parent / "files" / "cube.exo"
+#     # assert fin.is_file()
+#
+#     content = "Hello, world!"
+#     file_path = tmp_path / "test_file.txt"
+#     file_path.write_text(content, encoding="utf-16")
+#     breakpoint()
+#     with pytest.raises(IOError) as excinfo:
+#         # get_pylint_content(input_file=str(fin))
+#         get_pylint_content(input_file=str(file_path))
+#
+#     # with pytest.raises(IOError) as excinfo:
+#     #     get_pylint_content(input_file=str(fin))
+#
+#     breakpoint()
+#     assert 'Error reading input file "cube.exo"' in str(excinfo.value)
 
 
 def test_write_report_success(tmp_path):
@@ -278,7 +300,18 @@ def test_get_issues_list_html():
     assert 'class="issue refactor"' in html_out
 
 
-def test_get_report_htmll():
+def test_get_report_html_no_issues():
+    """Test get_report_html with no issues."""
+
+    issues_list = []  # empty list
+
+    found = get_issues_list_html(issues=issues_list)
+    known = "<p>No issues found! 🎉</p>"
+
+    assert found == known
+
+
+def test_get_report_html():
     """Test get_report_html with minimal valid inputs.
 
     Ensures generated HTML includes expected static and dynamic content

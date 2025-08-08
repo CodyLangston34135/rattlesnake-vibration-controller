@@ -14,7 +14,6 @@ from typing import Dict, List, Tuple
 
 import pytz
 
-
 from rattlesnake.cicd.utilities import get_score_color
 
 
@@ -175,10 +174,6 @@ def get_issues_list_html(issues: List[str]) -> str:
     return f'<div class="issues-list">{"".join(issues_list)}</div>'
 
 
-# TODO: Should this function be named "pylint_content_to_html_report" or
-# create report_html?
-# Also, can we just pass in pylint_content, and derive issues, summary_lines,
-# and pylint_score therefrom?
 def get_report_html(
     pylint_content: str,
     issues: List[str],
@@ -486,7 +481,7 @@ def main() -> int:
         print(f"   - Errors: {issue_counts['error']}")
         print(f"   - Refactors: {issue_counts['refactor']}")
 
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         print(f"❌ Error: The input file '{args.input_file}' was not found.")
         return 1
     except IOError as e:
