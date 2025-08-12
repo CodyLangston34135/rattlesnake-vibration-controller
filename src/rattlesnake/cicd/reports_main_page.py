@@ -3,7 +3,6 @@ Generates the main landing page for the code quality reports.
 """
 
 import argparse
-import datetime
 import sys
 from typing import Final
 
@@ -80,17 +79,6 @@ HTML_TEMPLATE: Final[str] = """
 </body>
 </html>
 """
-
-
-# def get_timestamp() -> str:
-#     """
-#     Get a formatted timestamp string.
-#
-#     Returns:
-#         Formatted timestamp string.
-#     """
-#     now: datetime.datetime = datetime.datetime.now(datetime.timezone.utc)
-#     return now.strftime("%Y-%m-%d %H:%M:%S %Z")
 
 
 def get_report_html(github_repo: str, pylint_score: str) -> str:
@@ -190,7 +178,7 @@ def main() -> int:
             pylint_score=args.pylint_score,
             output_file=args.output_file,
         )
-        print(f"✅ GitHub Pages main reports page generated: {args.output_file}")
+        print(f"✅ GitHub Pages reports main page generated: {args.output_file}")
     except IOError as e:
         print(f"❌ I/O error occurred: {e}", file=sys.stderr)
         return 1

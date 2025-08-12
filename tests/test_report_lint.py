@@ -13,7 +13,6 @@ Example use:
 
 import re
 
-# import sys  # unused import
 import types
 from pathlib import Path
 from typing import Final
