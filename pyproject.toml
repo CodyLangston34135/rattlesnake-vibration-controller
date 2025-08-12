@@ -50,6 +50,7 @@ dev = [
   'coverage-badge',
   'flake8',
   'isort',
+  'mkdocs',
   'pylint',
   'pytest',
   'pytest-cov',
