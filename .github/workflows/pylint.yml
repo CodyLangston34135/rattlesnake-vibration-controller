@@ -73,79 +73,12 @@ jobs:
         # Copy the pylint report as the main report
         cp pylint_report.html pages/reports/pylint/index.html
         
-        # Create a main index page for all reports located at
+        # Create a main index page for all reports, located at
         # https://sandialabs.github.io/rattlesnake-vibration-controller/
-        cat > pages/index.html << 'EOF'
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Rattlesnake Code Quality Reports</title>
-            <style>
-                body { 
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-                    margin: 0; padding: 20px; background: #f6f8fa; 
-                }
-                .container { 
-                    max-width: 800px; margin: 0 auto; 
-                }
-                .header { 
-                    background: white; padding: 30px; border-radius: 8px; 
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 30px; text-align: center; 
-                }
-                .report-card { 
-                    background: white; padding: 20px; border-radius: 8px; 
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; 
-                }
-                .report-card h3 { 
-                    margin-top: 0; color: #0366d6; 
-                }
-                .report-link { 
-                    background: #0366d6; color: white; padding: 10px 20px; 
-                    text-decoration: none; border-radius: 6px; display: inline-block; 
-                }
-                .report-link:hover { 
-                    background: #0256cc; 
-                }
-                .badge { 
-                    margin: 10px 5px; 
-                }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>Rattlesnake Code Quality Reports Summary</h1>
-                    <p>Automated code quality analysis for the Rattlesnake vibration controller</p>
-                    <div class="badge">
-                        <img src="https://github.com/${{ github.repository }}/raw/dev/badges/pylint.svg" alt="Pylint Score">
-                    </div>
-                    <div class="badge">
-                        <img src="https://github.com/${{ github.repository }}/raw/dev/badges/coverage.svg" alt="Coverage">
-                    </div>
-                </div>
-                
-                <div class="report-card">
-                    <h3>📊 Pylint Report</h3>
-                    <p>Static code analysis results showing code quality metrics, style compliance, and potential issues.</p>
-                    <p><strong>Latest Score:</strong> ${{ env.PYLINT_SCORE }}/10</p>
-                    <p><strong>Last Updated:</strong> $(formatted_time)</p>
-                    <a href="./reports/pylint/" class="report-link">Pylint Report</a>
-                </div>
-                
-                <div class="report-card">
-                    <h3>🔗 Quick Links</h3>
-                    <p>
-                        <a href="https://github.com/${{ github.repository }}" class="report-link">GitHub Repository</a>
-                        <a href="https://github.com/${{ github.repository }}/actions" class="report-link">GitHub Actions</a>
-                        <a href="https://github.com/${{ github.repository }}/releases" class="report-link">Releases</a>
-                    </p>
-                </div>
-            </div>
-        </body>
-        </html>
-        EOF
+        python src/rattlesnake/cicd/reports_main_page.py \
+          --github_repo ${{ github.repository }} \
+          --pylint_score ${{ env.PYLINT_SCORE }} \
+          --output_file pages/index.html
         
     - name: Create pylint badge with GitHub Pages link
       # if: github.ref == 'refs/heads/main'  # Only create badge on main branch
