@@ -30,3 +30,7 @@ dist/**
 .DS_Store
 # ignore egg files
 *.egg*
+# ignore coverage report files
+.coverage
+coverage.html
+coverage.xml
