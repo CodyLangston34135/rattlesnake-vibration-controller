@@ -64,6 +64,7 @@ jobs:
         python src/rattlesnake/cicd/report_pylint.py \
           --input_file ${{ env.PYLINT_OUTPUT_FILE }} \
           --output_file pylint_report.html \
+          --timestamp ${{ env.TIMESTAMP }} \
           --run_id ${{ github.run_id }} \
           --ref_name ${{ github.ref_name }} \
           --github_sha ${{ github.sha }} \

@@ -25,7 +25,6 @@ from rattlesnake.cicd.report_pylint import (
     get_pylint_sections,
     get_report_html,
     get_score_from_summary,
-    get_timestamp,
     main,
     run_pylint_report,
     write_report,
@@ -96,6 +95,7 @@ def test_main_success(monkeypatch, capsys):
     mock_args = types.SimpleNamespace(
         input_file="dummy_input.txt",
         output_file="dummy_output.html",
+        timestamp="20240101_120000_UTC",
         run_id="123",
         ref_name="main",
         github_sha="abc",
@@ -127,6 +127,7 @@ def test_main_file_not_found(monkeypatch, capsys):
     mock_args = types.SimpleNamespace(
         input_file="non_existent.txt",
         output_file="dummy_output.html",
+        timestamp="20240101_120000_UTC",
         run_id="123",
         ref_name="main",
         github_sha="abc",
@@ -151,6 +152,7 @@ def test_main_io_error(monkeypatch, capsys):
     mock_args = types.SimpleNamespace(
         input_file="dummy_input.txt",
         output_file="dummy_output.html",
+        timestamp="20240101_120000_UTC",
         run_id="123",
         ref_name="main",
         github_sha="abc",
@@ -175,6 +177,7 @@ def test_main_unexpected_error(monkeypatch, capsys):
     mock_args = types.SimpleNamespace(
         input_file="dummy_input.txt",
         output_file="dummy_output.html",
+        timestamp="20240101_120000_UTC",
         run_id="123",
         ref_name="main",
         github_sha="abc",
@@ -211,19 +214,19 @@ def test_get_score_color():
     assert get_score_color("") == "gray", "Test failed for empty string"
 
 
-def test_get_timestamp():
-    """Test that formatted_timestamp() returns valid datetime string.
-
-    Confirms output includes expected format components like UTC, EST, MST,
-    and a recognizable timestamp pattern.
-
-    Example get_formatted_timestamp output:
-        '2025-07-31 18:33:56 UTC (2025-07-31 14:33:56 EST / 2025-07-31 12:33:56 MST)'
-    """
-    ts = get_timestamp()
-
-    assert "UTC" in ts
-    assert re.search(r"\d{4}-\d{2}-\d{2}", ts)
+# def test_get_timestamp_ext():
+#     """Test that formatted_timestamp() returns valid datetime string.
+#
+#     Confirms output includes expected format components like UTC, EST, MST,
+#     and a recognizable timestamp pattern.
+#
+#     Example get_formatted_timestamp output:
+#         '2025-07-31 18:33:56 UTC (2025-07-31 14:33:56 EST / 2025-07-31 12:33:56 MST)'
+#     """
+#     ts = get_timestamp()
+#
+#     assert "UTC" in ts
+#     assert re.search(r"\d{4}-\d{2}-\d{2}", ts)
 
 
 def test_get_issue_counts():
@@ -326,6 +329,7 @@ def test_get_report_html():
         issues=issues,
         summary_lines=summary,
         pylint_score="9.00",
+        timestamp="20250815_211112_UTC",
         run_id="123",
         ref_name="main",
         github_sha="abc123def456",
@@ -355,6 +359,7 @@ def test_run_pylint_report():
     _total_issues, _issue_counts, _pylint_score = run_pylint_report(
         input_file=str(fin),
         output_file=str(fout),
+        timestamp="20250815_211112_UTC",
         run_id="1234567890",
         ref_name="main",
         github_sha="abc123def456",

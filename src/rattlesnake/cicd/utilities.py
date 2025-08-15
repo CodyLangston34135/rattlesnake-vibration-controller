@@ -5,6 +5,7 @@ Utilities for CICD processes.
 
 from datetime import datetime
 import pytz
+import re
 
 
 def get_score_color(pylint_score: str) -> str:
@@ -75,12 +76,28 @@ def extend_timestamp(short: str) -> str:
         Extended timestamp, for example
         2025-08-15 21:11:12 UTC (2025-08-15 17:11:12 EST / 2025-08-15 15:11:12 MST)
     """
-    # The format of the input timestamp
+    # Regex pattern to match the required format: YYYYMMDD_HHMMSS_TZ
+    # The timezone abbreviation must be 'UTC', 'GMT', or 'Z'
+    pattern: re.Pattern = re.compile(r"^(\d{8})_(\d{6})_(UTC|GMT|Z)$")
+    match = pattern.match(short)
+
+    if not match:
+        raise ValueError(
+            f"Invalid timestamp format: '{short}'. "
+            f"Expected format is YYYYMMDD_HHMMSS_TZ, where TZ is one of UTC, GMT, or Z."
+        )
+
+    # Extract the date and time parts from the regex match
+    date_part, time_part, _ = match.groups()
+
+    # Combine the parts into a format that can be parsed by datetime
+    datetime_str: str = f"{date_part}_{time_part}_UTC"
     input_format: str = "%Y%m%d_%H%M%S_%Z"
 
     # Convert the input string to a datetime object
-    utc_datetime: datetime = datetime.strptime(short, input_format)
-    # The datetime object is naive, so we make it timezone-aware
+    utc_datetime: datetime = datetime.strptime(datetime_str, input_format)
+
+    # Make the datetime object timezone-aware
     utc_now: datetime = pytz.utc.localize(utc_datetime)
 
     # Define the time zones
@@ -92,12 +109,71 @@ def extend_timestamp(short: str) -> str:
     mst_now: datetime = utc_now.astimezone(timezone_mst)
 
     # Format the output
-    df: str = "%Y-%m-%d %H:%M:%S "  # Date format
-    utc: str = utc_now.strftime(df + "UTC")
-    est: str = est_now.strftime(df + "EST")
-    mst: str = mst_now.strftime(df + "MST")
+    df: str = "%Y-%m-%d %H:%M:%S"  # Date format without trailing space
+    utc: str = utc_now.strftime(df)
+    est: str = est_now.strftime(df)
+    mst: str = mst_now.strftime(df)
+
+    # Use timezone abbreviations from the datetime objects
+    utc_tz_abbr: str = utc_now.strftime("%Z")
+    # est_tz_abbr: str = est_now.strftime("%Z")
+    est_tz_abbr: str = "EST"
+    # mst_tz_abbr: str = mst_now.strftime("%Z")
+    mst_tz_abbr: str = "MST"
 
     # Combine the formatted times
-    timestamp: str = f"{utc} ({est} / {mst})"
+    timestamp: str = f"{utc} {utc_tz_abbr} ({est} {est_tz_abbr} / {mst} {mst_tz_abbr})"
 
     return timestamp
+
+    # try:
+    #     # The format of the input timestamp
+    #     # Use a flexible format to parse a naive datetime object first
+    #     input_format_naive: str = "%Y%m%d_%H%M%S"
+
+    #     # Separate the datetime part and the timezone abbreviation
+    #     dt_part, tz_part = short.rsplit("_", 1)
+
+    #     # Handle different UTC-like timezone abbreviations
+    #     if tz_part not in ["UTC", "GMT", "Z"]:
+    #         # Raise an error if the timezone is not recognized
+    #         raise ValueError(f"Unrecognized timezone abbreviation: {tz_part}")
+
+    #     # Convert the input string to a naive datetime object
+    #     utc_datetime: datetime = datetime.strptime(dt_part, input_format_naive)
+
+    #     # Make the datetime object timezone-aware by localizing to UTC
+    #     utc_now: datetime = pytz.utc.localize(utc_datetime)
+
+    #     # Define the time zones
+    #     timezone_est: pytz.BaseTzInfo = pytz.timezone("America/New_York")
+    #     timezone_mst: pytz.BaseTzInfo = pytz.timezone("America/Denver")
+
+    #     # Convert UTC time to EST and MST
+    #     est_now: datetime = utc_now.astimezone(timezone_est)
+    #     mst_now: datetime = utc_now.astimezone(timezone_mst)
+
+    #     # Format the output
+    #     df: str = "%Y-%m-%d %H:%M:%S"  # Date format without trailing space
+    #     utc: str = utc_now.strftime(df)
+    #     est: str = est_now.strftime(df)
+    #     mst: str = mst_now.strftime(df)
+
+    #     # Use timezone abbreviations from the datetime objects
+    #     utc_tz_abbr: str = utc_now.strftime("%Z")
+    #     est_tz_abbr: str = est_now.strftime("%Z")
+    #     mst_tz_abbr: str = mst_now.strftime("%Z")
+
+    #     # Combine the formatted times
+    #     timestamp: str = (
+    #         f"{utc} {utc_tz_abbr} ({est} {est_tz_abbr} / {mst} {mst_tz_abbr})"
+    #     )
+
+    #     return timestamp
+
+    # except (ValueError, IndexError) as e:
+    #     # Catch errors from strptime or rsplit and raise a more descriptive ValueError
+    #     raise ValueError(
+    #         f"Invalid timestamp format: '{short}'. "
+    #         f"Expected format is YYYYMMDD_HHMMSS_UTC, YYYYMMDD_HHMMSS_GMT, or YYYYMMDD_HHMMSS_Z."
+    #     ) from e

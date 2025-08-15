@@ -15,7 +15,7 @@ from typing import Dict, List, Tuple
 
 # import pytz  # unused import
 
-from rattlesnake.cicd.utilities import get_score_color, get_timestamp
+from rattlesnake.cicd.utilities import get_score_color, extend_timestamp
 
 
 # def get_timestamp() -> str:
@@ -180,6 +180,7 @@ def get_report_html(
     issues: List[str],
     summary_lines: List[str],
     pylint_score: str,
+    timestamp: str,
     run_id: str,
     ref_name: str,
     github_sha: str,
@@ -201,7 +202,8 @@ def get_report_html(
     Returns:
         Complete HTML report as string
     """
-    timestamp: str = get_timestamp()
+    # timestamp: str = get_timestamp()
+    timestamp_ext: str = extend_timestamp(short=timestamp)
     score_color: str = get_score_color(pylint_score)
     issue_counts: Dict[str, int] = get_issue_counts(issues)
     issues_html: str = get_issues_list_html(issues)
@@ -286,7 +288,7 @@ def get_report_html(
             <h1>Rattlesnake Pylint Report</h1>
             <div class="score">{pylint_score}/10</div>
             <div class="metadata">
-                <div><strong>Generated:</strong> {timestamp}</div>
+                <div><strong>Generated:</strong> {timestamp_ext}</div>
                 <div><strong>Run ID:</strong> <a href="https://github.com/{github_repo}/actions/runs/{run_id}"> {run_id}</a></div>
                 <div><strong>Branch:</strong> <a href="https://github.com/{github_repo}/tree/{ref_name}"> {ref_name}</a></div>
                 <div><strong>Commit:</strong> <a href="https://github.com/{github_repo}/commit/{github_sha}"> {github_sha[:7]}</a></div>
@@ -365,6 +367,7 @@ def write_report(html_content: str, output_file: str) -> None:
 def run_pylint_report(
     input_file: str,
     output_file: str,
+    timestamp: str,
     run_id: str,
     ref_name: str,
     github_sha: str,
@@ -376,6 +379,8 @@ def run_pylint_report(
     Args:
         input_file: Path to the pylint output text file
         output_file: Path for the generated HTML report
+        timestamp: The timestampe from bash when pylint ran, in format YYYYMMDD_HHMMSS_UTC
+            e.g., 20250815_211112_UTC
         run_id: GitHub Actions run ID
         ref_name: Git reference name (branch)
         github_sha: GitHub commit SHA
@@ -399,6 +404,7 @@ def run_pylint_report(
         issues,
         summary_lines,
         pylint_score,
+        timestamp,
         run_id,
         ref_name,
         github_sha,
@@ -429,6 +435,7 @@ Example:
   python pylint_report.py \
     --input_file pylint_output_20240101_120000_UTC.txt \
     --output_file pylint_report.html \
+    --timestamp 20240101_120000_UTC \
     --run_id 1234567890 \
     --ref_name main \
     --github_sha abc123def456 \
@@ -439,6 +446,10 @@ Example:
     parser.add_argument("--input_file", required=True, help="Input pylint output file")
 
     parser.add_argument("--output_file", required=True, help="Output HTML report file")
+
+    parser.add_argument(
+        "--timestamp", required=True, help="UTC timestamp, e.g., 20240101_120000_UTC"
+    )
 
     parser.add_argument("--run_id", required=True, help="GitHub Actions run ID")
 
@@ -468,6 +479,7 @@ def main() -> int:
         total_issues, issue_counts, pylint_score = run_pylint_report(
             args.input_file,
             args.output_file,
+            args.timestamp,
             args.run_id,
             args.ref_name,
             args.github_sha,
