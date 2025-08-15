@@ -42,6 +42,7 @@ jobs:
         echo "    🏆 Pylint score: $SCORE out of 10"
         echo "PYLINT_SCORE=$SCORE" >> $GITHUB_ENV
         echo "PYLINT_OUTPUT_FILE=$PYLINT_OUTPUT_FILE" >> $GITHUB_ENV
+        echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
         
         # Determine badge color based on score and add it as an environment variable
         python3 src/rattlesnake/cicd/pylint_badge_color.py "$SCORE"
@@ -51,6 +52,7 @@ jobs:
         echo "PYLINT_OUTPUT_FILE=${{ env.PYLINT_OUTPUT_FILE }}"
         echo "PYLINT_SCORE=${{ env.PYLINT_SCORE }}"
         echo "BADGE_COLOR=${{ env.BADGE_COLOR }}"
+        echo "TIMESTAMP=${{ env.TIMESTAMP }}"
 
     - name: Create custom Pylint Report in HTML format (refined version)
       run: |
@@ -64,21 +66,25 @@ jobs:
           --github_sha ${{ github.sha }} \
           --github_repo ${{ github.repository }}
         
-    - name: Prepare GitHub Pages main landing page content
+    - name: Create GitHub Pages content
       if: github.ref == 'refs/heads/dev'  # Only deploy on dev branch
       run: |
         # Create pages directory structure
         mkdir -p pages/reports/pylint
-        
+
         # Copy the pylint report as the main report
         cp pylint_report.html pages/reports/pylint/index.html
-        
-        # Create a main index page for all reports, located at
-        # https://sandialabs.github.io/rattlesnake-vibration-controller/
-        python src/rattlesnake/cicd/reports_main_page.py \
-          --github_repo ${{ github.repository }} \
-          --pylint_score ${{ env.PYLINT_SCORE }} \
-          --output_file pages/index.html
+
+        #
+        # Update 2025-08-15: This will eventually become the main documentation
+        # landing page, and reports_main_page.py will need to be refactored:
+        #
+        # # Create a main index page for all reports, located at
+        # # https://sandialabs.github.io/rattlesnake-vibration-controller/
+        # python src/rattlesnake/cicd/reports_main_page.py \
+        #   --github_repo ${{ github.repository }} \
+        #   --pylint_score ${{ env.PYLINT_SCORE }} \
+        #   --output_file pages/index.html
         
     - name: Create pylint badge with GitHub Pages link
       # if: github.ref == 'refs/heads/main'  # Only create badge on main branch
@@ -98,7 +104,8 @@ jobs:
           "pages_url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/reports/pylint/",
           "workflow_url": "${{ github.server_url }}/${{ github.repository }}/actions/workflows/pylint.yml",
           "run_id": "${{ github.run_id }}",
-          "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          # "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+          "timestamp": "${{ env.TIMESTAMP }}"
         }
         EOF
         

@@ -49,14 +49,16 @@ HTML_TEMPLATE: Final[str] = """
 <body>
     <div class="container">
         <div class="header">
-            <h1>Rattlesnake Code Quality Reports Summary</h1>
+            <h1>Rattlesnake Code</h1>
             <p>Automated code quality analysis for the Rattlesnake vibration controller</p>
+            <!--
             <div class="badge">
                 <img src="https://github.com/{github_repo}/raw/dev/badges/pylint.svg" alt="Pylint Score">
             </div>
             <div class="badge">
                 <img src="https://github.com/{github_repo}/raw/dev/badges/coverage.svg" alt="Coverage">
             </div>
+            -->
         </div>
 
         <div class="report-card">
