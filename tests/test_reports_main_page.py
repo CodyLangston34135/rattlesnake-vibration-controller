@@ -59,7 +59,7 @@ def test_run_generate_landing_page(tmp_path):
     )
     assert output_file.is_file()
     content = output_file.read_text()
-    assert "<h1>Rattlesnake Code Quality Reports Summary</h1>" in content
+    assert "<h1>Rattlesnake Code Quality</h1>" in content
     assert "<strong>Latest Score:</strong> 8.8/10" in content
     assert 'href="https://github.com/owner/repo"' in content
 

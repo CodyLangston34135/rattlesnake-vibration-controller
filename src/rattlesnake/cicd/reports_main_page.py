@@ -49,7 +49,7 @@ HTML_TEMPLATE: Final[str] = """
 <body>
     <div class="container">
         <div class="header">
-            <h1>Rattlesnake Code</h1>
+            <h1>Rattlesnake Code Quality</h1>
             <p>Automated code quality analysis for the Rattlesnake vibration controller</p>
             <!--
             <div class="badge">

@@ -59,3 +59,45 @@ def get_timestamp() -> str:
     timestamp: str = f"{utc} ({est} / {mst})"
 
     return timestamp
+
+
+def extend_timestamp(short: str) -> str:
+    """
+    Given a timestamp string from CI/CD in the form of
+    20250815_211112_UTC, extend the timestamp to include EST and MST times
+    and return the extended string, so it look like, for example,
+    2025-08-15 21:11:12 UTC (2025-08-15 17:11:12 EST / 2025-08-15 15:11:12 MST)
+
+    Args:
+        short: the UTC bash string, for example: 20250815_211112_UTC
+
+    Returns:
+        Extended timestamp, for example
+        2025-08-15 21:11:12 UTC (2025-08-15 17:11:12 EST / 2025-08-15 15:11:12 MST)
+    """
+    # The format of the input timestamp
+    input_format: str = "%Y%m%d_%H%M%S_%Z"
+
+    # Convert the input string to a datetime object
+    utc_datetime: datetime = datetime.strptime(short, input_format)
+    # The datetime object is naive, so we make it timezone-aware
+    utc_now: datetime = pytz.utc.localize(utc_datetime)
+
+    # Define the time zones
+    timezone_est: pytz.BaseTzInfo = pytz.timezone("America/New_York")
+    timezone_mst: pytz.BaseTzInfo = pytz.timezone("America/Denver")
+
+    # Convert UTC time to EST and MST
+    est_now: datetime = utc_now.astimezone(timezone_est)
+    mst_now: datetime = utc_now.astimezone(timezone_mst)
+
+    # Format the output
+    df: str = "%Y-%m-%d %H:%M:%S "  # Date format
+    utc: str = utc_now.strftime(df + "UTC")
+    est: str = est_now.strftime(df + "EST")
+    mst: str = mst_now.strftime(df + "MST")
+
+    # Combine the formatted times
+    timestamp: str = f"{utc} ({est} / {mst})"
+
+    return timestamp
