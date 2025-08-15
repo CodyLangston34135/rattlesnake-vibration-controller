@@ -50,8 +50,8 @@ HTML_TEMPLATE: Final[str] = """
     <div class="container">
         <div class="header">
             <h1>Rattlesnake Code Quality</h1>
-            <p>Automated code quality analysis for the Rattlesnake vibration controller</p>
             <!--
+            <p>Automated code quality analysis for the Rattlesnake vibration controller</p>
             <div class="badge">
                 <img src="https://github.com/{github_repo}/raw/dev/badges/pylint.svg" alt="Pylint Score">
             </div>
