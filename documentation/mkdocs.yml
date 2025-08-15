@@ -1,0 +1,13 @@
+site_name: Rattlesnake Vibration Controller
+nav:
+  - Home: index.md
+  # - Overview: overview.md
+  # - Hardware: hardware.md
+  # - Environments: environments.md
+  - Reference: reference.md
+theme: readthedocs
+plugins:
+  - with-katex
+markdown_extensions:
+  - smart_quotes
+  - nl2br
