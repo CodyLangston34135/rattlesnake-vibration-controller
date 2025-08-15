@@ -10,42 +10,10 @@ import html
 import re
 import sys
 
-# from datetime import datetime  # unused import
 from typing import Dict, List, Tuple
 
-# import pytz  # unused import
 
 from rattlesnake.cicd.utilities import get_score_color, extend_timestamp
-
-
-# def get_timestamp() -> str:
-#     """
-#     Get formatted timestamp with UTC, EST, and MST times.
-#
-#     Returns:
-#         Formatted timestamp string
-#     """
-#     # Get the current UTC time
-#     utc_now: datetime = datetime.now(pytz.utc)
-#
-#     # Define the time zones
-#     timezone_est: pytz.BaseTzInfo = pytz.timezone("America/New_York")
-#     timezone_mst: pytz.BaseTzInfo = pytz.timezone("America/Denver")
-#
-#     # Convert UTC time to EST and MST
-#     est_now: datetime = utc_now.astimezone(timezone_est)
-#     mst_now: datetime = utc_now.astimezone(timezone_mst)
-#
-#     # Format the output
-#     df: str = "%Y-%m-%d %H:%M:%S "  # Date format
-#     utc: str = utc_now.strftime(df + "UTC")
-#     est: str = est_now.strftime(df + "EST")
-#     mst: str = mst_now.strftime(df + "MST")
-#
-#     # Combine the formatted times
-#     timestamp: str = f"{utc} ({est} / {mst})"
-#
-#     return timestamp
 
 
 def get_pylint_content(input_file: str) -> str:

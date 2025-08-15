@@ -11,8 +11,6 @@ Example use:
     pytest --cov=src/rattlesnake --cov-report=xml --cov-report=html --cov-report=term-missing
 """
 
-import re
-
 import types
 from pathlib import Path
 from typing import Final
@@ -47,26 +45,6 @@ def test_get_pylint_content_file_not_found():
     with pytest.raises(FileNotFoundError) as excinfo:
         get_pylint_content("non_existent_file.txt")
     assert 'Input file not found: "non_existent_file.txt"' in str(excinfo.value)
-
-
-# def test_get_pylint_content_io_error(tmp_path):
-#     """Tests that the tested function raises an IOError for a binary file."""
-#     # fin = Path(__file__).parent / "files" / "cube.exo"
-#     # assert fin.is_file()
-#
-#     content = "Hello, world!"
-#     file_path = tmp_path / "test_file.txt"
-#     file_path.write_text(content, encoding="utf-16")
-#     breakpoint()
-#     with pytest.raises(IOError) as excinfo:
-#         # get_pylint_content(input_file=str(fin))
-#         get_pylint_content(input_file=str(file_path))
-#
-#     # with pytest.raises(IOError) as excinfo:
-#     #     get_pylint_content(input_file=str(fin))
-#
-#     breakpoint()
-#     assert 'Error reading input file "cube.exo"' in str(excinfo.value)
 
 
 def test_write_report_success(tmp_path):
@@ -212,21 +190,6 @@ def test_get_score_color():
     assert get_score_color("invalid") == "gray", "Test failed for invalid score"
     # Test for an empty string as pylint score
     assert get_score_color("") == "gray", "Test failed for empty string"
-
-
-# def test_get_timestamp_ext():
-#     """Test that formatted_timestamp() returns valid datetime string.
-#
-#     Confirms output includes expected format components like UTC, EST, MST,
-#     and a recognizable timestamp pattern.
-#
-#     Example get_formatted_timestamp output:
-#         '2025-07-31 18:33:56 UTC (2025-07-31 14:33:56 EST / 2025-07-31 12:33:56 MST)'
-#     """
-#     ts = get_timestamp()
-#
-#     assert "UTC" in ts
-#     assert re.search(r"\d{4}-\d{2}-\d{2}", ts)
 
 
 def test_get_issue_counts():

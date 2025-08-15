@@ -163,8 +163,6 @@ def test_extend_timestamp_invalid_format():
         extend_timestamp("invalid_string")
     with pytest.raises(ValueError):
         extend_timestamp("20250815_211112")  # Missing time zone
-    # with pytest.raises(ValueError):
-    #     extend_timestamp("20250815_211112_GMT")  # Incorrect time zone abbreviation
 
 
 # endregion
