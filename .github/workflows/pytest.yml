@@ -156,10 +156,8 @@ jobs:
               color = "red"
 
           with open(os.environ["GITHUB_ENV"], "a") as f:
-              f.write(f"COVERAGE={coverage:.1f}\
-")
-              f.write(f"BADGE_COLOR={color}\
-")
+              f.write(f"COVERAGE={coverage:.1f}")
+              f.write(f"BADGE_COLOR={color}")
           '''
 
       - name: Generate coverage badge and metadata
