@@ -46,7 +46,6 @@ jobs:
         # because pytest gets its coverage data from the site-packages directory
         run: |
           TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
-          PYTEST_OUTPUT_FILE="pytest_output_${TIMESTAMP}.txt"
 
           pytest -v --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
 
@@ -68,6 +67,20 @@ jobs:
             --ref_name ${{ github.ref_name }} \
             --github_sha ${{ github.sha }} \
             --github_repo ${{ github.repository }}
+
+      - name: Prepare GitHub Pages content
+        if: github.ref == 'refs/heads/dev'  # Only deploy on dev branch
+        run: |
+          # Create pages directory structure
+          mkdir -p pages/reports/coverage
+          
+          # Copy the enhanced report as the main report
+          cp pytest_report.html pages/reports/coverage/index.html
+          
+          # Copy HTML coverage report if it exists
+          if [ -d "htmlcov" ]; then
+            cp -r htmlcov pages/reports/coverage/htmlcov
+          fi
 
       - name: Upload coverage to artifact (Ubuntu + Python 3.9 only)
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9'
@@ -545,16 +558,16 @@ jobs:
       - name: Prepare GitHub Pages content
         if: github.ref == 'refs/heads/dev'  # Only deploy on dev branch
         run: |
-          # Create pages directory structure
-          mkdir -p pages/reports/coverage
+          # # Create pages directory structure
+          # mkdir -p pages/reports/coverage
           
-          # Copy the enhanced report as the main report
-          cp pytest_report.html pages/reports/coverage/index.html
+          # # Copy the enhanced report as the main report
+          # cp pytest_report.html pages/reports/coverage/index.html
           
-          # Copy HTML coverage report if it exists
-          if [ -d "htmlcov" ]; then
-            cp -r htmlcov pages/reports/coverage/htmlcov
-          fi
+          # # Copy HTML coverage report if it exists
+          # if [ -d "htmlcov" ]; then
+          #   cp -r htmlcov pages/reports/coverage/htmlcov
+          # fi
           
           # Update main index page for all reports (or create if it doesn't exist)
           # cat > pages/index.html << 'EOF'
