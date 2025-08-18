@@ -104,7 +104,7 @@ def test_run_pytest_report():
     )
 
     # Generate HTML report
-    html_content: str = get_report_html(
+    _html_content: str = get_report_html(
         coverage_metric=cm,
         timestamp=aa,
         run_id=bb,
