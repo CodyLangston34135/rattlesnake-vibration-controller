@@ -289,7 +289,7 @@ def main() -> int:
         print(f"✅ Pytest HTML report generated: {args.output_file}")
         print(f"📊 - valid lines of code: {cm.lines_valid}")
         print(f"🔍 - lines covered: {cm.lines_covered}")
-        print(f"🎉 - coverage: {cm.coverage} of 1.00")
+        print(f"🎉 - coverage: {cm.coverage} percent")
 
     except FileNotFoundError:
         print(f"❌ Error: The input file '{args.input_file}' was not found.")

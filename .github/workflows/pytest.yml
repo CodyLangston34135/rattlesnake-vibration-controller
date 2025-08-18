@@ -41,7 +41,9 @@ jobs:
 
       - name: Run tests with coverage
         # Create a timestamp for the output file, and
-        # Add varialbes to the GitHub environment
+        # Add variables to the GitHub environment
+        # For pytest on CD/CD, us --cov=rattlesnake (instead of --cov=src/rattlesnake)
+        # because pytest gets its coverage data from the site-packages directory
         run: |
           TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
           PYTEST_OUTPUT_FILE="pytest_output_${TIMESTAMP}.txt"
@@ -547,7 +549,7 @@ jobs:
           mkdir -p pages/reports/coverage
           
           # Copy the enhanced report as the main report
-          cp coverage_enhanced_report.html pages/reports/coverage/index.html
+          cp pytest_report.html pages/reports/coverage/index.html
           
           # Copy HTML coverage report if it exists
           if [ -d "htmlcov" ]; then
