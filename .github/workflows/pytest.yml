@@ -126,12 +126,8 @@ jobs:
         with:
           name: github-pages
 
-      - name: Prepare downloaded artifact
-        run: |
-          # The artifact is downloaded into a directory named after the artifact.
-          # We move the 'pages' directory from inside it to the root.
-          mv github-pages/pages .
-          rm -rf github-pages
+      - name: List files for debugging
+        run: ls -R
 
       - name: Create root index.html for GitHub Pages
         run: |
