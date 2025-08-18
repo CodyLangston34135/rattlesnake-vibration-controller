@@ -1,17 +1,14 @@
 ![Rattlesnake Logo](/logo/Rattlesnake_Logo_Banner.png)
 
-## Quality Metrics
+## Quality & CI/CD Reports
 
 [![Pylint](./badges/pylint.svg)](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/)
+[![Coverage](./badges/coverage.svg)](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/)
 
+A summary of the latest CI/CD reports is available on our main **[GitHub Pages site](https://sandialabs.github.io/rattlesnake-vibration-controller/)**.
+
+You can also view the individual reports directly:
 * Pylint Report 🧹: [https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/)
-
-## Work in Progress
-
-![Coverage](./badges/coverage.svg)
-
-[coverage report](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/)
-
 * Coverage Report 🛡️: [https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/)
 
 * Documentation
