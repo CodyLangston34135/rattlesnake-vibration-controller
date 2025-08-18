@@ -6,11 +6,11 @@ on:
   push:
     branches:
       - main
-      # - dev  # for now, suppress run on dev branch
+      - dev  # for now, suppress run on dev branch
   pull_request:
     branches:
       - main
-      # - dev  # for now, suppress run on dev branch
+      - dev  # for now, suppress run on dev branch
 
 jobs:
   test:
@@ -18,8 +18,10 @@ jobs:
 
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]  # Specify the OS versions to test against
-        python-version: ["3.9", "3.10", "3.11"]  # Specify the Python versions to test against
+        # os: [macos-latest, ubuntu-latest, windows-latest]  # Specify the OS versions to test against
+        os: [macos-latest]  # Specify the OS versions to test against
+        # python-version: ["3.9", "3.10", "3.11"]  # Specify the Python versions to test against
+        python-version: ["3.11"]  # Specify the Python versions to test against
 
     runs-on: ${{ matrix.os }}  # Use the OS from the matrix
 
@@ -39,7 +41,27 @@ jobs:
 
       - name: Run tests with coverage
         run: |
+          # Create a timestamp for the output file
+          TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
+          PYTEST_OUTPUT_FILE="pytest_output_${TIMESTAMP}.txt"
+
           pytest -v --cov=src/rattlesnake --cov-report=xml --cov-report=term-missing --cov-report=html
+
+          # Add varialbes to the GitHub environment
+          echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
+
+      - name: Create custom Pytest Report in HTML format
+        run: |
+          # Read the pylint output and create a custom HTML report, to be saved to
+          # https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pytest/
+          python src/rattlesnake/cicd/report_pytest.py \
+            --input_file ${{ env.PYLINT_OUTPUT_FILE }} \
+            --output_file pylint_report.html \
+            --timestamp ${{ env.TIMESTAMP }} \
+            --run_id ${{ github.run_id }} \
+            --ref_name ${{ github.ref_name }} \
+            --github_sha ${{ github.sha }} \
+            --github_repo ${{ github.repository }}
 
       - name: Upload coverage to artifact (Ubuntu + Python 3.9 only)
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9'

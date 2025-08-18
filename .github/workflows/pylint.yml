@@ -79,6 +79,9 @@ jobs:
         # Copy the pylint report as the main report
         cp pylint_report.html pages/reports/pylint/index.html
 
+        # Access at
+        # https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/index.html
+
         #
         # Update 2025-08-15: This will eventually become the main documentation
         # landing page, and reports_main_page.py will need to be refactored:

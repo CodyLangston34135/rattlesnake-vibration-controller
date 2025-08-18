@@ -1,5 +1,5 @@
 """
-Unit tests for report_line.py — Pylint HTML Report Generator.
+The module tests the pylint report module.
 
 This test suite verifies the correctness of the utility functions used to
 parse pylint output, format issue counts, and generate an HTML report.
@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Final
 
 import pytest
+
 from rattlesnake.cicd.report_pylint import (
     get_issue_counts,
     get_issues_list_html,
@@ -300,7 +301,7 @@ def test_get_report_html():
     )
 
     assert "<!DOCTYPE html>" in report
-    assert "Rattlesnake Pylint Report" in report
+    assert "Pylint Report" in report
     assert "example.py" in report
     assert "Your code has been rated at 9.00/10" in report
 
@@ -335,7 +336,7 @@ def test_run_pylint_report():
 
     if not function_debug:
         # Clean up the output file after the test
-        fout.unlink()
+        fout.unlink(missing_ok=True)
         print(f"Deleted temporary file: {fout}")
     else:
         print(f"Retained output file: {fout}")

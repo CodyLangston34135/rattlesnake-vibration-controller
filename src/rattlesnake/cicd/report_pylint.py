@@ -13,7 +13,7 @@ import sys
 from typing import Dict, List, Tuple
 
 
-from rattlesnake.cicd.utilities import get_score_color, extend_timestamp
+from rattlesnake.cicd.utilities import get_score_color, extend_timestamp, write_report
 
 
 def get_pylint_content(input_file: str) -> str:
@@ -181,10 +181,10 @@ def get_report_html(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pylint Report - Rattlesnake</title>
+    <title>Pylint Report</title>
     <style>
-        body {{ 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0; padding: 20px; background: #f6f8fa; line-height: 1.6;
             background: lightgray;
         }}
@@ -192,8 +192,8 @@ def get_report_html(
             max-width: 1200px; margin: 0 auto;
         }}
         .header {{
-            background: white; padding: 30px; border-radius: 8px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; 
+            background: white; padding: 30px; border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px;
         }}
         .score {{
             font-size: 2.5em; font-weight: bold; color: {score_color};
@@ -202,23 +202,23 @@ def get_report_html(
             color: #6a737d; font-size: 0.9em; margin-top: 10px;
         }}
         .nav {{
-            background: white; padding: 20px; border-radius: 8px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; 
+            background: white; padding: 20px; border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px;
         }}
         .nav a {{
-            background: #0366d6; color: white; padding: 10px 20px; 
-            text-decoration: none; border-radius: 6px; margin-right: 10px; 
+            background: #0366d6; color: white; padding: 10px 20px;
+            text-decoration: none; border-radius: 6px; margin-right: 10px;
             display: inline-block; margin-bottom: 5px;
         }}
         .nav a:hover {{
             background: #0256cc;
         }}
         .section {{
-            background: white; padding: 25px; border-radius: 8px; 
+            background: white; padding: 25px; border-radius: 8px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px;
         }}
         .issues-list {{
-            max-height: 500px; overflow-y: auto; 
+            max-height: 500px; overflow-y: auto;
             border: 1px solid #e1e4e8; border-radius: 6px;
         }}
         .issue {{
@@ -234,7 +234,7 @@ def get_report_html(
         .issue.convention {{ background: #e8f4fd; }}
         .issue.refactor {{ background: #f0f9ff; }}
         .summary {{
-            background: #f6f8fa; padding: 20px; border-radius: 6px; 
+            background: #f6f8fa; padding: 20px; border-radius: 6px;
             border-left: 4px solid #0366d6; font-family: monospace;
             white-space: pre-wrap;
         }}
@@ -253,7 +253,7 @@ def get_report_html(
 <body>
     <div class="container">
         <div class="header">
-            <h1>Rattlesnake Pylint Report</h1>
+            <h1>Pylint Report</h1>
             <div class="score">{pylint_score}/10</div>
             <div class="metadata">
                 <div><strong>Generated:</strong> {timestamp_ext}</div>
@@ -314,22 +314,22 @@ def get_report_html(
     return html_content
 
 
-def write_report(html_content: str, output_file: str) -> None:
-    """
-    Write HTML content to file.
-
-    Args:
-        html_content: The HTML content to write
-        output_file: Path for the output HTML file
-
-    Raises:
-        IOError: If the file cannot be written.
-    """
-    try:
-        with open(output_file, "w", encoding="utf-8") as f:
-            f.write(html_content)
-    except IOError as e:
-        raise IOError(f'Error writing output file "{output_file}": {e}') from e
+# def write_report(html_content: str, output_file: str) -> None:
+#     """
+#     Write HTML content to file.
+#
+#     Args:
+#         html_content: The HTML content to write
+#         output_file: Path for the output HTML file
+#
+#     Raises:
+#         IOError: If the file cannot be written.
+#     """
+#     try:
+#         with open(output_file, "w", encoding="utf-8") as f:
+#             f.write(html_content)
+#     except IOError as e:
+#         raise IOError(f'Error writing output file "{output_file}": {e}') from e
 
 
 def run_pylint_report(

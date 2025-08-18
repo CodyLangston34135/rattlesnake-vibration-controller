@@ -126,3 +126,21 @@ def extend_timestamp(short: str) -> str:
     timestamp: str = f"{utc} {utc_tz_abbr} ({est} {est_tz_abbr} / {mst} {mst_tz_abbr})"
 
     return timestamp
+
+
+def write_report(html_content: str, output_file: str) -> None:
+    """
+    Write HTML content to file.
+
+    Args:
+        html_content: The HTML content to write
+        output_file: Path for the output HTML file
+
+    Raises:
+        IOError: If the file cannot be written.
+    """
+    try:
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write(html_content)
+    except IOError as e:
+        raise IOError(f'Error writing output file "{output_file}": {e}') from e
