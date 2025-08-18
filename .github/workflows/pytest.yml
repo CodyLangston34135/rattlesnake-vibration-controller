@@ -46,7 +46,7 @@ jobs:
           TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
           PYTEST_OUTPUT_FILE="pytest_output_${TIMESTAMP}.txt"
 
-          pytest -v --cov=src/rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
+          pytest -v --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
 
           echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
 
