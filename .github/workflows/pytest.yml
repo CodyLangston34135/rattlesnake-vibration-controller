@@ -45,14 +45,14 @@ jobs:
           TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
           PYTEST_OUTPUT_FILE="pytest_output_${TIMESTAMP}.txt"
 
-          pytest -v --cov=src/rattlesnake --cov-report=xml --cov-report=term-missing --cov-report=html
+          pytest -v --cov=src/rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
 
           # Add varialbes to the GitHub environment
           echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
 
       - name: Confirm new environment variables
         run: |
-          echo "PYTEST_OUTPUT_FILE=${{ env.PYTEST_OUTPUT_FILE }}"
+          # echo "PYTEST_OUTPUT_FILE=${{ env.PYTEST_OUTPUT_FILE }}"
           echo "TIMESTAMP=${{ env.TIMESTAMP }}"
 
       - name: Create custom Pytest Report in HTML format (refined version)
@@ -60,7 +60,8 @@ jobs:
           # Read the pylint output and create a custom HTML report, to be saved to
           # https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pytest/
           python src/rattlesnake/cicd/report_pytest.py \
-            --input_file ${{ env.PYTEST_OUTPUT_FILE }} \
+            # --input_file ${{ env.PYTEST_OUTPUT_FILE }} \
+            --input_file coverage.xml \
             --output_file pytest_report.html \
             --timestamp ${{ env.TIMESTAMP }} \
             --run_id ${{ github.run_id }} \
@@ -76,7 +77,9 @@ jobs:
           path: coverage.xml
           # retention-days: 7
 
+  # ---------------------------------------------------------------
   # Separate job for badge generation (only runs after test passes)
+  # ---------------------------------------------------------------
   coverage-badge:
     needs: test  # Only run if test passes
     runs-on: ubuntu-latest

@@ -9,7 +9,7 @@ import sys
 
 from typing import Dict, List, Tuple
 
-from rattlesnake.cicd.utilities import extend_timestamp, write_report
+from rattlesnake.cicd.utilities import get_score_color, extend_timestamp, write_report
 
 
 @dataclass(frozen=True)
@@ -104,6 +104,7 @@ def get_report_html(
         Complete HTML report as a string
     """
     timestamp_ext = extend_timestamp(timestamp)
+    score_color: str = get_score_color(f"{10 * coverage_metric.coverage:.2f}")  # scale
 
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
@@ -125,7 +126,7 @@ def get_report_html(
             box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px;
         }}
         .score {{
-            font-size: 2.5em; font-weight: bold; color: #28a745;
+            font-size: 2.5em; font-weight: bold; color: {score_color};
         }}
         .metadata {{
             color: #6a737d; font-size: 0.9em; margin-top: 10px;
@@ -154,6 +155,9 @@ def get_report_html(
             <h1>Pytest Report</h1>
             <div class="score">Coverage: {coverage_metric.coverage:.2f}%</div>
             <div class="metadata">
+                <div><strong>Lines Covered:</strong> {coverage_metric.lines_covered}</div>
+                <div><strong>Total Lines:</strong> {coverage_metric.lines_valid}</div>
+                <div>&nbsp;</div>
                 <div><strong>Generated:</strong> {timestamp_ext}</div>
                 <div><strong>Run ID:</strong> <a href="https://github.com/{github_repo}/actions/runs/{run_id}"> {run_id}</a></div>
                 <div><strong>Branch:</strong> <a href="https://github.com/{github_repo}/tree/{ref_name}"> {ref_name}</a></div>
