@@ -110,7 +110,7 @@ def get_report_html(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pytest Coverage Report</title>
+    <title>Pytest Report</title>
     <style>
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -151,6 +151,7 @@ def get_report_html(
 <body>
     <div class="container">
         <div class="header">
+            <h1>Pytest Report</h1>
             <div class="score">Coverage: {coverage_metric.coverage:.2f}%</div>
             <div class="metadata">
                 <div><strong>Generated:</strong> {timestamp_ext}</div>
