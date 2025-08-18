@@ -5,6 +5,8 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 
+import sys
+
 from typing import Dict, List, Tuple
 
 from rattlesnake.cicd.utilities import extend_timestamp, write_report
