@@ -202,17 +202,9 @@ def run_pytest_report(
     """
     # Get the coverage metric
     coverage_metric = get_coverage_metric(coverage_file=Path(input_file))
+    print(f"run_pytest_report: coverage_metric={coverage_metric}")
 
-    # # Read the pylint output
-    # pylint_content: str = get_pylint_content(input_file)
-
-    # # Parse pylint output
-    # issues, summary_lines = get_pylint_sections(pylint_content=pylint_content)
-
-    # # Extract pylint score from summary lines
-    # pylint_score: str = get_score_from_summary(summary_lines)
-
-    # # Generate HTML report
+    # Generate HTML report
     html_content: str = get_report_html(
         coverage_metric,
         timestamp,
