@@ -40,27 +40,25 @@ jobs:
           pip install .[dev]
 
       - name: Run tests with coverage
+        # Create a timestamp for the output file, and
+        # Add varialbes to the GitHub environment
         run: |
-          # Create a timestamp for the output file
           TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
           PYTEST_OUTPUT_FILE="pytest_output_${TIMESTAMP}.txt"
 
           pytest -v --cov=src/rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
 
-          # Add varialbes to the GitHub environment
           echo "TIMESTAMP=$TIMESTAMP" >> $GITHUB_ENV
 
       - name: Confirm new environment variables
         run: |
-          # echo "PYTEST_OUTPUT_FILE=${{ env.PYTEST_OUTPUT_FILE }}"
           echo "TIMESTAMP=${{ env.TIMESTAMP }}"
 
+      # Read the pylint output and create a custom HTML report, to be saved to
+      # https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pytest/
       - name: Create custom Pytest Report in HTML format (refined version)
         run: |
-          # Read the pylint output and create a custom HTML report, to be saved to
-          # https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pytest/
           python src/rattlesnake/cicd/report_pytest.py \
-            # --input_file ${{ env.PYTEST_OUTPUT_FILE }} \
             --input_file coverage.xml \
             --output_file pytest_report.html \
             --timestamp ${{ env.TIMESTAMP }} \
