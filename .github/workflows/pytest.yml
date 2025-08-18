@@ -82,6 +82,13 @@ jobs:
             cp -r htmlcov pages/reports/coverage/htmlcov
           fi
 
+      - name: Upload Pages artifact
+        if: github.ref == 'refs/heads/dev'
+        uses: actions/upload-artifact@v4
+        with:
+          name: github-pages
+          path: ./pages
+
       - name: Upload coverage to artifact (Ubuntu + Python 3.9 only)
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9'
         uses: actions/upload-artifact@v4
@@ -114,7 +121,48 @@ jobs:
           pip install .[dev]
           # pip install pytest-cov coverage-badge  # already included in dev dependencies
 
-      - name: Generate coverage badge
+      - name: Download pages artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: github-pages
+
+      - name: Generate coverage report
+        run: pytest --cov=rattlesnake --cov-report=xml
+
+      - name: Calculate coverage and color
+        run: |
+          python3 -c '''
+          import xml.etree.ElementTree as ET
+          import os
+
+          try:
+              tree = ET.parse("coverage.xml")
+              root = tree.getroot()
+              coverage = float(root.attrib["line-rate"]) * 100
+          except (FileNotFoundError, KeyError, ET.ParseError):
+              coverage = 0.0
+
+          print(f"Coverage: {coverage:.1f}%")
+
+          if coverage >= 90:
+              color = "brightgreen"
+          elif coverage >= 80:
+              color = "green"
+          elif coverage >= 70:
+              color = "yellow"
+          elif coverage >= 60:
+              color = "orange"
+          else:
+              color = "red"
+
+          with open(os.environ["GITHUB_ENV"], "a") as f:
+              f.write(f"COVERAGE={coverage:.1f}\
+")
+              f.write(f"BADGE_COLOR={color}\
+")
+          '''
+
+      - name: Generate coverage badge and metadata
         run: |
           # Create badges directory if it doesn't exist
           mkdir -p badges
