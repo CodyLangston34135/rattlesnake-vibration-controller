@@ -55,15 +55,12 @@ def get_coverage_metric(coverage_file: Path) -> CoverageMetric:
         root = tree.getroot()
         lines_valid = int(root.attrib["lines-valid"])
         lines_covered = int(root.attrib["lines-covered"])
-        _coverage = (
-            float(root.attrib["line-rate"]) * 100
-        )  # not used because we calculate it ourselves
         cm = CoverageMetric(
             lines_valid=lines_valid,
             lines_covered=lines_covered,
         )  # overwrite default
-    except:
-        print("No valid attributes found.")
+    except (FileNotFoundError, ET.ParseError, KeyError) as e:
+        print(f"Error processing coverage file: {e}")
 
     return cm
 
