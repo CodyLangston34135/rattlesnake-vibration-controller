@@ -14,6 +14,12 @@
 
 * Coverage Report 🛡️: [https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/)
 
+* Documentation
+  * Existing - see internal website
+  * New - work in progress
+    * MkDocs evaluation - not great for questions
+    * Next: [mdBook](https://rust-lang.github.io/mdBook/)
+
 ## Overview
 
 This project aims to develop a Combined Environments, Multiple-Input/Multiple-Output (MIMO) vibration
