@@ -103,6 +103,14 @@ def get_report_html(
     timestamp_ext = extend_timestamp(timestamp)
     score_color: str = get_score_color(f"{10 * coverage_metric.coverage:.2f}")  # scale
 
+    # Programmatically construct the full report URL
+    try:
+        owner, repo_name = github_repo.split('/')
+        full_report_url = f"https://{owner}.github.io/{repo_name}/reports/coverage/htmlcov/index.html"
+    except ValueError:
+        # Fallback or default URL in case the repo format is unexpected
+        full_report_url = "#"
+
     html_content = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -161,7 +169,7 @@ def get_report_html(
                 <div><strong>Commit:</strong> <a href="https://github.com/{github_repo}/commit/{github_sha}"> {github_sha[:7]}</a></div>
                 <div><strong>Repository:</strong> <a href="https://github.com/{github_repo}">{github_repo}</a></div>
                 <div>&nbsp;</div>
-                <div><strong>Full report:</strong> <a href="https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/htmlcov/index.html">HTML</a></div>
+                <div><strong>Full report:</strong> <a href="{full_report_url}">HTML</a></div>
             </div>
         </div>
     </div>
