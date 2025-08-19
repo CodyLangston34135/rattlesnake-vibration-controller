@@ -160,6 +160,8 @@ def get_report_html(
                 <div><strong>Branch:</strong> <a href="https://github.com/{github_repo}/tree/{ref_name}"> {ref_name}</a></div>
                 <div><strong>Commit:</strong> <a href="https://github.com/{github_repo}/commit/{github_sha}"> {github_sha[:7]}</a></div>
                 <div><strong>Repository:</strong> <a href="https://github.com/{github_repo}">{github_repo}</a></div>
+                <div>&nbsp;</div>
+                <div><strong>Full report:</strong> <a href="https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/htmlcov/index.html">HTML</a></div>
             </div>
         </div>
     </div>
