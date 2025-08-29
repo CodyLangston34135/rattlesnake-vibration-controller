@@ -154,6 +154,7 @@ jobs:
       # if: github.ref == 'refs/heads/main'  # Only create badge on main branch
       if: github.ref == 'refs/heads/dev'  # Only create badge on dev branch, update to main branch later
       run: |
+        git pull  # avoid race condition with pytest.yml job
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git add badges/pylint.svg badges/pylint-info.json

@@ -1,4 +1,4 @@
-# This file is a GitHub Actions workflow configuration file that runs Pytest on pushes and pull requests to the main and dev branches. It sets up a matrix of Python versions (3.8 and 3.9) to test against, checks out the code, installs dependencies, and runs the tests using Pytest.
+# This file is a GitHub Actions workflow configuration file that runs Pytest on pushes and pull requests to the main and dev branches. It sets up a matrix of Python versions to test against, checks out the code, installs dependencies, and runs the tests using Pytest.
 
 name: pytest
 
@@ -245,7 +245,7 @@ jobs:
         if: github.ref == 'refs/heads/dev'  # Only create badge on dev branch, update to main branch later
         run: |
           # git fetch
-          git pull
+          git pull  # avoid race condition with pylint.yml job
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add badges/coverage.svg badges/coverage-info.json
