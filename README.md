@@ -6,12 +6,12 @@
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-blue)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
 
-**[GitHub Pages](https://sandialabs.github.io/rattlesnake-vibration-controller/)** &nbsp; &nbsp; | &nbsp; &nbsp; [Pylint Report 🧹](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/) &nbsp; &nbsp; | &nbsp; &nbsp; [Coverage Report 🛡️](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/)
+[📝 GitHub Pages](https://sandialabs.github.io/rattlesnake-vibration-controller/) &nbsp; &nbsp; | &nbsp; &nbsp; [🧹 Pylint Report](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/) &nbsp; &nbsp; | &nbsp; &nbsp; [🛡️ Coverage Report](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/)
 
 ## To come
 
-* Pylint Report 🧹: [https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/)
-* Coverage Report 🛡️: [https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/)
+* 🧹 Pylint Report: [https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/)
+* 🛡️ Coverage Report: [https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/)
 
 * Documentation
   * Existing - see internal website
