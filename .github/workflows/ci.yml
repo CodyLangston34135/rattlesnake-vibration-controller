@@ -257,9 +257,10 @@ jobs:
           commit_message: 'Deploy reports for ${{ github.sha }}'
 
   matrix:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
         python-version: ["3.11", "3.12"]
     steps:
       - name: Checkout code
