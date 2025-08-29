@@ -37,7 +37,7 @@ jobs:
     - name: pylint analysis and custom pylint HTML report
       run: |
         # Create a timestamp for the output file
-        TIMESTAMP=$(date "%Y%m%d_%H%M%S_%Z")
+        TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
         PYLINT_OUTPUT_FILE="pylint_output_${TIMESTAMP}.txt"
         
         # Generate text report
@@ -101,7 +101,7 @@ jobs:
       - name: pytest coverage and custom coverage HTML report
         run: |
           # Create a timestamp for the output file
-          TIMESTAMP=$(date "%Y%m%d_%H%M%S_%Z")
+          TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
 
           pytest -v --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
 
@@ -172,7 +172,7 @@ jobs:
           curl -o badges/pylint.svg "https://img.shields.io/badge/pylint-${SCORE}-${{ env.BADGE_COLOR }}.svg"
           cat > badges/pylint-info.json << EOF
           {
-            "score": "$SCORE",
+            "score": "${SCORE}",
             "color": "${{ env.BADGE_COLOR }}",
             "pages_url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/reports/pylint/",
             "workflow_url": "${{ github.server_url }}/${{ github.repository }}/actions/workflows/ci.yml",
@@ -285,4 +285,4 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest
+          pytest -v
