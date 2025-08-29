@@ -37,7 +37,7 @@ jobs:
     - name: pylint analysis and custom pylint HTML report
       run: |
         # Create a timestamp for the output file
-        TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
+        TIMESTAMP=$(date "%Y%m%d_%H%M%S_%Z")
         PYLINT_OUTPUT_FILE="pylint_output_${TIMESTAMP}.txt"
         
         # Generate text report
@@ -101,7 +101,7 @@ jobs:
       - name: pytest coverage and custom coverage HTML report
         run: |
           # Create a timestamp for the output file
-          TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
+          TIMESTAMP=$(date "%Y%m%d_%H%M%S_%Z")
 
           pytest -v --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
 
@@ -172,7 +172,7 @@ jobs:
           curl -o badges/pylint.svg "https://img.shields.io/badge/pylint-${SCORE}-${{ env.BADGE_COLOR }}.svg"
           cat > badges/pylint-info.json << EOF
           {
-            "score": "${SCORE}",
+            "score": "$SCORE",
             "color": "${{ env.BADGE_COLOR }}",
             "pages_url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/reports/pylint/",
             "workflow_url": "${{ github.server_url }}/${{ github.repository }}/actions/workflows/ci.yml",
@@ -255,3 +255,34 @@ jobs:
           publish_branch: gh-pages
           keep_files: true
           commit_message: 'Deploy reports for ${{ github.sha }}'
+
+  matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[dev]
+
+      - name: Run tests
+        run: |
+          pytest
