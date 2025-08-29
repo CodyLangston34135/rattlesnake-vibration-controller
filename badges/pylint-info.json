@@ -1,8 +1,8 @@
 {
-  "score": "5.75",
-  "color": "orange",
+  "score": "5.76",
+  "color": "",
   "pages_url": "https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/",
-  "workflow_url": "https://github.com/sandialabs/rattlesnake-vibration-controller/actions/workflows/pylint.yml",
-  "run_id": "17327863006",
-  "timestamp": "20250829_152719_UTC"
+  "workflow_url": "https://github.com/sandialabs/rattlesnake-vibration-controller/actions/workflows/ci.yml",
+  "run_id": "17329230026",
+  "timestamp": "2025-08-29T16:34:34Z"
 }
