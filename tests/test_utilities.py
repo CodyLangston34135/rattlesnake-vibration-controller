@@ -25,9 +25,8 @@ from rattlesnake.cicd.utilities import get_score_color, get_timestamp, extend_ti
 
 def test_get_score_color_brightgreen():
     """Test that get_score_color returns 'brightgreen' for scores >= 8.0."""
-    assert False
-    # assert get_score_color("8.5") == "brightgreen"
-    # assert get_score_color("10") == "brightgreen"
+    assert get_score_color("8.5") == "brightgreen"
+    assert get_score_color("10") == "brightgreen"
 
 
 def test_get_score_color_yellow():
