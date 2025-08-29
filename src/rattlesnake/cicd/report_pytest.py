@@ -7,9 +7,13 @@ from pathlib import Path
 
 import sys
 
-from typing import Dict, List, Tuple
+# from typing import Dict, List, Tuple
 
-from rattlesnake.cicd.utilities import get_score_color, extend_timestamp, write_report
+from rattlesnake.cicd.utilities import (
+    get_score_color_coverage,
+    extend_timestamp,
+    write_report,
+)
 
 
 @dataclass(frozen=True)
@@ -21,6 +25,7 @@ class CoverageMetric:
         lines_covered (int): The number of lines that are covered by tests.
         coverage (float): The coverage percentage, calculated as
             (lines_covered / lines_valid) * 100. Defaults to 0.0.
+        color (str): The color code (e.g., red, green), based on the coverage.
     """
 
     lines_valid: int = 0
@@ -40,6 +45,13 @@ class CoverageMetric:
             if self.lines_valid > 0
             else 0.0
         )
+
+    @property
+    def color(self) -> str:
+        """
+        Determines the badge color based on the coverage percentage.
+        """
+        return get_score_color_coverage(str(self.coverage))
 
 
 def get_coverage_metric(coverage_file: Path) -> CoverageMetric:
@@ -63,18 +75,6 @@ def get_coverage_metric(coverage_file: Path) -> CoverageMetric:
         print(f"Error processing coverage file: {e}")
 
     return cm
-
-    # # Determine badge color based on coverage
-    # if coverage >= 90:
-    #     color = "brightgreen"
-    # elif coverage >= 80:
-    #     color = "green"
-    # elif coverage >= 70:
-    #     color = "yellow"
-    # elif coverage >= 60:
-    #     color = "orange"
-    # else:
-    #     color = "red"
 
 
 def get_report_html(
@@ -101,7 +101,7 @@ def get_report_html(
         Complete HTML report as a string
     """
     timestamp_ext = extend_timestamp(timestamp)
-    score_color: str = get_score_color(f"{10 * coverage_metric.coverage:.2f}")  # scale
+    score_color: str = coverage_metric.color
 
     # Programmatically construct the full report URL
     try:
@@ -182,9 +182,6 @@ def get_report_html(
 </html>"""
 
     return html_content
-
-
-# ==========
 
 
 def run_pytest_report(
