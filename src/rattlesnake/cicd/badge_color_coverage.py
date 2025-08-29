@@ -1,8 +1,9 @@
 """
-Calculates the coverage percentage from a coverage.xml file and determines the
+Gets the coverage percentage from a coverage.xml file and determines the
 color for a badge. It then writes the coverage and color to the GitHub
 environment file.
 """
+
 import xml.etree.ElementTree as ET
 import os
 import sys
@@ -21,8 +22,9 @@ def get_coverage_and_color(coverage_file: str):
     try:
         tree = ET.parse(coverage_file)
         root = tree.getroot()
-        coverage = float(root.attrib["line-rate"]) * 100
-    except (FileNotFoundError, KeyError, ET.ParseError, IndexError):
+        coverage = float(root.attrib["line-rate"]) * 100  # overwrite with real coverage
+    except Exception:
+        # yes all exceptions should be caught here
         coverage = 0.0
 
     print(f"Coverage: {coverage:.1f}%")

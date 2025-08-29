@@ -10,15 +10,20 @@ from typing import Final
 
 from rattlesnake.cicd.utilities import get_score_color_lint
 
-score = float(sys.argv[1]) if len(sys.argv) > 1 else 0.0
+def main():
+    score = float(sys.argv[1]) if len(sys.argv) > 1 else 0.0
 
-COLOR: Final[str] = get_score_color_lint(str(score))
+    COLOR: Final[str] = get_score_color_lint(str(score))
 
-# Export to GitHub environment
-env_path = os.environ.get("GITHUB_ENV")
-if env_path:
-    with open(env_path, "a", encoding="utf-8") as f:
-        f.write(f"BADGE_COLOR={COLOR}\n")
-    print(f"    🎨 BADGE_COLOR={COLOR}")
-else:
-    print("    ⚠️ GITHUB_ENV is not set — failed to export BADGE_COLOR")
+    # Export to GitHub environment
+    env_path = os.environ.get("GITHUB_ENV")
+    if env_path:
+        with open(env_path, "a", encoding="utf-8") as f:
+            f.write(f"BADGE_COLOR={COLOR}\n")
+        print(f"    🎨 BADGE_COLOR={COLOR}")
+    else:
+        print("    ⚠️ GITHUB_ENV is not set — failed to export BADGE_COLOR")
+
+
+if __name__ == "__main__":
+    main()

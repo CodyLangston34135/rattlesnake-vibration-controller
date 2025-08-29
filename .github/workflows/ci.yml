@@ -172,7 +172,7 @@ jobs:
           # Pylint badge
           PYLINT_OUTPUT_FILE=$(ls pylint-report/pylint_output_*.txt)
           SCORE=$(grep "Your code has been rated at" "$PYLINT_OUTPUT_FILE" | awk '{print $7}' | cut -d'/' -f1 || echo "0")
-          python3 src/rattlesnake/cicd/pylint_badge_color.py "$SCORE"
+          python3 src/rattlesnake/cicd/badge_color_pylint.py "$SCORE"
           mkdir -p badges
           curl -o badges/pylint.svg "https://img.shields.io/badge/pylint-${SCORE}-${{ env.BADGE_COLOR }}.svg"
           cat > badges/pylint-info.json << EOF
