@@ -18,13 +18,14 @@ import pytest
 
 # Assuming the utilities.py module is in a sibling directory to tests
 from rattlesnake.cicd.utilities import (
+    get_score_color_coverage,
     get_score_color_lint,
     get_timestamp,
     extend_timestamp,
 )
 
 
-# region: Test get_score_color
+# region: Test get_score_color_lint
 
 
 def test_get_score_color_brightgreen():
@@ -56,6 +57,22 @@ def test_get_score_color_invalid_input():
     assert get_score_color_lint("abc") == "gray"
     assert get_score_color_lint("") == "gray"
     assert get_score_color_lint("8.5a") == "gray"
+
+
+# endregion
+
+
+# region: Test get_score_color_coverage
+
+
+def test_get_score_color_coverage():
+    """Test all the colors for coverage."""
+    assert get_score_color_coverage("90") == "brightgreen"
+    assert get_score_color_coverage("80") == "green"
+    assert get_score_color_coverage("70") == "yellow"
+    assert get_score_color_coverage("60") == "orange"
+    assert get_score_color_coverage("50") == "red"
+    assert get_score_color_coverage("") == "gray"
 
 
 # endregion
