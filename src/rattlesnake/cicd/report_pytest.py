@@ -105,8 +105,10 @@ def get_report_html(
 
     # Programmatically construct the full report URL
     try:
-        owner, repo_name = github_repo.split('/')
-        full_report_url = f"https://{owner}.github.io/{repo_name}/reports/coverage/htmlcov/index.html"
+        owner, repo_name = github_repo.split("/")
+        full_report_url = (
+            f"https://{owner}.github.io/{repo_name}/reports/coverage/htmlcov/index.html"
+        )
     except ValueError:
         # Fallback or default URL in case the repo format is unexpected
         full_report_url = "#"
@@ -157,7 +159,7 @@ def get_report_html(
 <body>
     <div class="container">
         <div class="header">
-            <h1>Pytest Report</h1>
+            <h1>Pytest Coverage Report</h1>
             <div class="score">Coverage: {coverage_metric.coverage:.2f}%</div>
             <div class="metadata">
                 <div><strong>Lines Covered:</strong> {coverage_metric.lines_covered}</div>
