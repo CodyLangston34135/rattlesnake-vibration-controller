@@ -2,8 +2,10 @@
 
 ## Quality & CI/CD Reports
 
-[![Pylint](./badges/pylint.svg)](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/)
-[![Coverage](./badges/coverage.svg)](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/)
+Warning:  Following are `dev` branch pylint and coverage results.
+
+[![Pylint](https://raw.githubusercontent.com/sandialabs/rattlesnake-vibration-controller/dev/badges/pylint.svg)](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/)
+[![Coverage](https://raw.githubusercontent.com/sandialabs/rattlesnake-vibration-controller/dev/badges/coverage.svg)](https://sandialabs.github.io/rattlesnake-vibration-controller/reports/coverage/)
 
 A summary of the latest CI/CD reports is available on our main **[GitHub Pages site](https://sandialabs.github.io/rattlesnake-vibration-controller/)**.
 
