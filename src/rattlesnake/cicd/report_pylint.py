@@ -254,7 +254,7 @@ def get_report_html(
     <div class="container">
         <div class="header">
             <h1>Pylint Report</h1>
-            <div class="score">{pylint_score}/10</div>
+            <div class="score">Score: {pylint_score}/10</div>
             <div class="metadata">
                 <div><strong>Generated:</strong> {timestamp_ext}</div>
                 <div><strong>Run ID:</strong> <a href="https://github.com/{github_repo}/actions/runs/{run_id}"> {run_id}</a></div>

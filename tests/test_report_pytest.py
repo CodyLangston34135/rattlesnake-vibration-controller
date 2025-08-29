@@ -5,7 +5,7 @@ Example use:
     source .venv/bin/activate
     pytest tests/test_report_pytest.py -v
     pytest tests/test_report_pytest.py::test_some_specific_function -v
-    pytest --cov=src/rattlesnake --cov-report=html --cov-report=xml --cov-report=term-misssing
+    pytest --cov=src/rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
 """
 
 from pathlib import Path

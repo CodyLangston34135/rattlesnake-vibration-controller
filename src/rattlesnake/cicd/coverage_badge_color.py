@@ -3,10 +3,11 @@ Calculates the coverage percentage from a coverage.xml file and determines the
 color for a badge. It then writes the coverage and color to the GitHub
 environment file.
 """
-
 import xml.etree.ElementTree as ET
 import os
 import sys
+
+from rattlesnake.cicd.utilities import get_score_color_coverage
 
 
 def get_coverage_and_color(coverage_file: str):
@@ -26,16 +27,7 @@ def get_coverage_and_color(coverage_file: str):
 
     print(f"Coverage: {coverage:.1f}%")
 
-    if coverage >= 90:
-        color = "brightgreen"
-    elif coverage >= 80:
-        color = "green"
-    elif coverage >= 70:
-        color = "yellow"
-    elif coverage >= 60:
-        color = "orange"
-    else:
-        color = "red"
+    color = get_score_color_coverage(str(coverage))
 
     if "GITHUB_ENV" in os.environ:
         with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:

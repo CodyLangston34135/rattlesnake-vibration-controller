@@ -33,6 +33,32 @@ def get_score_color(pylint_score: str) -> str:
         return "gray"
 
 
+def get_score_color_coverage(coverage_score: str) -> str:
+    """
+    Determines the color based on a pytest coverage score.
+
+    Args:
+        coverage_score:  The coverage score as a string, e.g., "92.5"
+
+    Returns:
+        The color for the badge as a string.
+    """
+    try:
+        score_val: float = float(coverage_score)
+        if score_val >= 90:
+            return "brightgreen"
+        elif score_val >= 80:
+            return "green"
+        elif score_val >= 70:
+            return "yellow"
+        elif score_val >= 60:
+            return "orange"
+        else:
+            return "red"
+    except ValueError:
+        return "gray"
+
+
 def get_timestamp() -> str:
     """
     Get formatted timestamp with UTC, EST, and MST times.
