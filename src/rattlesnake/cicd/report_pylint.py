@@ -13,7 +13,11 @@ import sys
 from typing import Dict, List, Tuple
 
 
-from rattlesnake.cicd.utilities import get_score_color, extend_timestamp, write_report
+from rattlesnake.cicd.utilities import (
+    get_score_color_lint,
+    extend_timestamp,
+    write_report,
+)
 
 
 def get_pylint_content(input_file: str) -> str:
@@ -172,7 +176,7 @@ def get_report_html(
     """
     # timestamp: str = get_timestamp()
     timestamp_ext: str = extend_timestamp(short=timestamp)
-    score_color: str = get_score_color(pylint_score)
+    score_color: str = get_score_color_lint(pylint_score)
     issue_counts: Dict[str, int] = get_issue_counts(issues)
     issues_html: str = get_issues_list_html(issues)
 

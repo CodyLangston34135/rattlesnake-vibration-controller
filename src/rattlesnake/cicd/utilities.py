@@ -9,7 +9,7 @@ from datetime import datetime
 import pytz
 
 
-def get_score_color(pylint_score: str) -> str:
+def get_score_color_lint(pylint_score: str) -> str:
     """
     Determine color based on pylint score.
 

@@ -8,11 +8,11 @@ import os
 import sys
 from typing import Final
 
-from rattlesnake.cicd.utilities import get_score_color
+from rattlesnake.cicd.utilities import get_score_color_lint
 
 score = float(sys.argv[1]) if len(sys.argv) > 1 else 0.0
 
-COLOR: Final[str] = get_score_color(str(score))
+COLOR: Final[str] = get_score_color_lint(str(score))
 
 # Export to GitHub environment
 env_path = os.environ.get("GITHUB_ENV")

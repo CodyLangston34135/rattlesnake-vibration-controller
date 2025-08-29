@@ -17,7 +17,11 @@ import re
 import pytest
 
 # Assuming the utilities.py module is in a sibling directory to tests
-from rattlesnake.cicd.utilities import get_score_color, get_timestamp, extend_timestamp
+from rattlesnake.cicd.utilities import (
+    get_score_color_lint,
+    get_timestamp,
+    extend_timestamp,
+)
 
 
 # region: Test get_score_color
@@ -25,33 +29,33 @@ from rattlesnake.cicd.utilities import get_score_color, get_timestamp, extend_ti
 
 def test_get_score_color_brightgreen():
     """Test that get_score_color returns 'brightgreen' for scores >= 8.0."""
-    assert get_score_color("8.5") == "brightgreen"
-    assert get_score_color("10") == "brightgreen"
+    assert get_score_color_lint("8.5") == "brightgreen"
+    assert get_score_color_lint("10") == "brightgreen"
 
 
 def test_get_score_color_yellow():
     """Test that get_score_color returns 'yellow' for scores >= 6.0 and < 8.0."""
-    assert get_score_color("7.9") == "yellow"
-    assert get_score_color("6.0") == "yellow"
+    assert get_score_color_lint("7.9") == "yellow"
+    assert get_score_color_lint("6.0") == "yellow"
 
 
 def test_get_score_color_orange():
     """Test that get_score_color returns 'orange' for scores >= 4.0 and < 6.0."""
-    assert get_score_color("5.9") == "orange"
-    assert get_score_color("4.0") == "orange"
+    assert get_score_color_lint("5.9") == "orange"
+    assert get_score_color_lint("4.0") == "orange"
 
 
 def test_get_score_color_red():
     """Test that get_score_color returns 'red' for scores < 4.0."""
-    assert get_score_color("3.9") == "red"
-    assert get_score_color("0") == "red"
+    assert get_score_color_lint("3.9") == "red"
+    assert get_score_color_lint("0") == "red"
 
 
 def test_get_score_color_invalid_input():
     """Test that get_score_color returns 'gray' for non-numeric input."""
-    assert get_score_color("abc") == "gray"
-    assert get_score_color("") == "gray"
-    assert get_score_color("8.5a") == "gray"
+    assert get_score_color_lint("abc") == "gray"
+    assert get_score_color_lint("") == "gray"
+    assert get_score_color_lint("8.5a") == "gray"
 
 
 # endregion

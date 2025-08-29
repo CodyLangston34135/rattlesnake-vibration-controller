@@ -28,7 +28,7 @@ from rattlesnake.cicd.report_pylint import (
     run_pylint_report,
     write_report,
 )
-from rattlesnake.cicd.utilities import get_score_color
+from rattlesnake.cicd.utilities import get_score_color_lint
 
 
 def test_get_pylint_content_success():
@@ -180,17 +180,17 @@ def test_get_score_color():
     """Run unit tests for the score_color function."""
 
     # Test for a high pylint score (>= 8.0)
-    assert get_score_color("8.5") == "brightgreen", "Test failed for score 8.5"
+    assert get_score_color_lint("8.5") == "brightgreen", "Test failed for score 8.5"
     # Test for a medium pylint score (6.0 <= score < 8.0)
-    assert get_score_color("7.0") == "yellow", "Test failed for score 7.0"
+    assert get_score_color_lint("7.0") == "yellow", "Test failed for score 7.0"
     # Test for a low pylint score (4.0 <= score < 6.0)
-    assert get_score_color("5.0") == "orange", "Test failed for score 5.0"
+    assert get_score_color_lint("5.0") == "orange", "Test failed for score 5.0"
     # Test for a very low pylint score (< 4.0)
-    assert get_score_color("3.0") == "red", "Test failed for score 3.0"
+    assert get_score_color_lint("3.0") == "red", "Test failed for score 3.0"
     # Test for an invalid pylint score (non-numeric)
-    assert get_score_color("invalid") == "gray", "Test failed for invalid score"
+    assert get_score_color_lint("invalid") == "gray", "Test failed for invalid score"
     # Test for an empty string as pylint score
-    assert get_score_color("") == "gray", "Test failed for empty string"
+    assert get_score_color_lint("") == "gray", "Test failed for empty string"
 
 
 def test_get_issue_counts():
