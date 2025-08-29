@@ -98,6 +98,9 @@ jobs:
     runs-on: ubuntu-latest
     # if: github.ref == 'refs/heads/main'  # Only create badge on main branch
     if: github.ref == 'refs/heads/dev'  # Only create badge on dev branch, update to main branch later
+    concurrency:
+      group: gh-pages-deploy-${{ github.ref }}
+      cancel-in-progress: true
 
     steps:
       - name: Checkout code
@@ -226,7 +229,7 @@ jobs:
             "workflow_url": "${WORKFLOW_URL}",
             "run_id": "${{ github.run_id }}",
             "artifact_url": "${REPO_URL}/actions/runs/${{ github.run_id }}",
-            "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+            "timestamp": "${{ env.TIMESTAMP }}"
           }
           EOF
 
