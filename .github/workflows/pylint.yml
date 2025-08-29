@@ -59,8 +59,7 @@ jobs:
 
     - name: Create custom Pylint Report in HTML format (refined version)
       run: |
-        # Read the pylint output and create a custom HTML report, to be saved to
-        # https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/
+        # Read the pylint output and create a custom HTML report.
         python src/rattlesnake/cicd/report_pylint.py \
           --input_file ${{ env.PYLINT_OUTPUT_FILE }} \
           --output_file pylint_report.html \
@@ -70,7 +69,7 @@ jobs:
           --github_sha ${{ github.sha }} \
           --github_repo ${{ github.repository }}
         
-    - name: Create GitHub Pages content
+    - name: Create GitHub Pages Pylint content
       if: github.ref == 'refs/heads/dev'  # Only deploy on dev branch
       run: |
         # Create pages directory structure
@@ -79,9 +78,9 @@ jobs:
         # Copy the pylint report as the main report
         cp pylint_report.html pages/reports/pylint/index.html
 
-        # Access at
+        # Access the custom Pylint HTML report at
         # https://sandialabs.github.io/rattlesnake-vibration-controller/reports/pylint/index.html
-
+        #
 
     - name: Create root index.html for GitHub Pages
       if: github.ref == 'refs/heads/dev'
@@ -116,6 +115,10 @@ jobs:
         </body>
         </html>
         EOF
+
+        # Access the custom HTML report at
+        # https://sandialabs.github.io/rattlesnake-vibration-controller/
+        #
         
     - name: Create pylint badge with GitHub Pages link
       # if: github.ref == 'refs/heads/main'  # Only create badge on main branch
