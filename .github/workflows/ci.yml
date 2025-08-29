@@ -187,7 +187,7 @@ jobs:
           EOF
 
           # Pytest badge
-          python3 src/rattlesnake/cicd/coverage_badge_color.py pytest-report/coverage.xml
+          python3 src/rattlesnake/cicd/badge_color_coverage.py pytest-report/coverage.xml
           
           REPO_URL="${{ github.server_url }}/${{ github.repository }}"
           WORKFLOW_URL="${REPO_URL}/actions/workflows/ci.yml"
