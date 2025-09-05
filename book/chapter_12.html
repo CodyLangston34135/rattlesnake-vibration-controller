@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Implementing New Hardward Devices with Rattlesnake - Rattlesnake Vibration Controller</title>
+        <title>Multiple Input/Multiple Ouptut Random Vibration - Rattlesnake Vibration Controller</title>
 
 
         <!-- Custom HTML head -->
@@ -176,18 +176,22 @@
                 <div id="content" class="content">
                     <main>
                         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
-<h2 id="11-implementing-new-hardward-devices-with-rattlesnake"><a class="header" href="#11-implementing-new-hardward-devices-with-rattlesnake">11. Implementing New Hardward Devices with Rattlesnake</a></h2>
-<p><strong>WARNING:</strong> This chapter contains</p>
+<h1 id="part-iii-rattlesnake-environments"><a class="header" href="#part-iii-rattlesnake-environments">Part III. Rattlesnake Environments</a></h1>
+<p>The key to Rattlesnake's flexibility is its implementation of various environment types.  These environments can be run stand-alone or in combination with other environments.  A general environment will receive response data from the controller and then perform some analysis on that data to create the next set of output signals that will be required by the controller.  This Part will describe the existing environments in the controller and provide information required to implement additional environments.</p>
+<p>Chapter 12 describes the MIMO Random Vibration environment where users will control to vibration spectra in the form of CPSD matrices.  Chapter 13 describes the MIMO Transient Vibration environment, where users will control directly to time responses.  Chapter 14 Time History Generator environment, which allows users to specify the signal played to the excitation devices.  Chapter 15 describes the Modal environment, where users can perform dynamic characterization tests using shaker or impact hammer excitation.  Chapter 16 describes the Combined Environments functionality in Rattlesnake which allows users to run multiple environments simultaneously.</p>
+<p>Chapter 17 describes the general process to implement new environments.  Implementing new environments in Rattlesnake is a very involved process that requires a good amount of knowledge of the Rattlesnake software architecture, as well as advanced programming concepts including object-oriented programming and inheritance, multiprocessing, and \Ac{GUI} design and implementation.</p>
+<h2 id="12-multiple-inputmultiple-ouptut-random-vibration"><a class="header" href="#12-multiple-inputmultiple-ouptut-random-vibration">12. Multiple Input/Multiple Ouptut Random Vibration</a></h2>
+<p>The first environment</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="chapter_10.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="chapter_11.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="chapter_12.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="chapter_13.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -197,11 +201,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="chapter_10.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="chapter_11.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="chapter_12.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="chapter_13.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
