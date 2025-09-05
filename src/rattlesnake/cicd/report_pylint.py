@@ -269,7 +269,7 @@ def get_report_html(
         </div>
         
         <div class="section">
-            <h2 id="summary">📊 Summary</h2>
+            <h2 id="summary">Summary</h2>
             <div class="summary">{"".join(summary_lines)}</div>
             
             <div class="stats">
@@ -297,12 +297,12 @@ def get_report_html(
         </div>
         
         <!--div class="section">
-            <h2 id="issues">🔍 Issues Detail</h2>
+            <h2 id="issues">Issues Detail</h2>
             {issues_html}
         </div-->
         
         <div class="section">
-            <h2 id="statistics">📈 Full Report</h2>
+            <h2 id="statistics">Full Report</h2>
             <details>
                 <summary>Click to view complete pylint output</summary>
                 <pre style="background: #f6f8fa; padding: 20px; border-radius: 6px; overflow-x: auto;">{html.escape(pylint_content)}</pre>
