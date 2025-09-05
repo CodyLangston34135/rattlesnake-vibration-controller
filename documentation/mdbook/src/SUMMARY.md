@@ -29,6 +29,21 @@
 
 # Part III. Rattlesnake Environments
 
+- [Multiple Input/Multiple Ouptut Random Vibration](./chapter_12.md)
+- [Multiple Input/Multiple Output Transient Control](./chapter_13.md)
+- [Time History Generator](./chapter_14.md)
+- [Modal Testing](./chapter_15.md)
+- [Combined Environments](./chapter_16.md)
+- [Implementing New Environment Types](./chapter_17.md)
+
 -----------
 
-[Contributors](contributors.md)
+[Appendix A. Introduction to Example Problems](./appendix_a.md)
+[Appendix B. Example Problem using NI cDAQ Hardware and the NII DAQmx Interface](./appendix_b.md)
+[Appendix C. Synthetic Example Problem with a SDynPy System](./appendix_c.md)
+[Appendix D. Synthetic Example Problem using State Space Metrics](./appendix_d.md)
+
+-----------
+
+[Bibliography](./bibliography.md)
+[Contributors ](./contributors.md)
