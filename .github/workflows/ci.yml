@@ -246,6 +246,7 @@ jobs:
                   <ul>
                       <li><a href="reports/pylint/index.html">Pylint Report</a></li>
                       <li><a href="reports/coverage/index.html">Pytest Coverage Report</a></li>
+                      <li><a href="book/index.html">mdBook</a></li>
                   </ul>
               </div>
           </body>

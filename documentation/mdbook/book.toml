@@ -1,0 +1,8 @@
+[book]
+authors = ["Daniel P. Rohe", "Ryan Schultz", "Norman Hunter"]
+language = "en"
+src = "src"
+title = "Rattlesnake Vibration Controller"
+
+[preprocessor.katex]
+after = ["links"]

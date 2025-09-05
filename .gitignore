@@ -34,3 +34,5 @@ dist/**
 .coverage
 coverage.html
 coverage.xml
+# ignore local build target for mdbook
+documentation/mdbook/book/
