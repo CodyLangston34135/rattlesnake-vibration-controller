@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - dev
+      - "*doc"
 jobs:
   deploy-book:
     runs-on: ubuntu-latest

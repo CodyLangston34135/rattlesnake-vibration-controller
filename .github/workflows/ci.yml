@@ -5,10 +5,12 @@ on:
     branches:
       - main
       - dev
+      - "!*doc*" # Explicitly ignores branches with "doc" in the name
   pull_request:
     branches:
       - main
       - dev
+      - "!*doc*" # Explicitly ignores branches with "doc" in the name
 
 jobs:
   lint:
