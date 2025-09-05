@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Abstract - Rattlesnake Vibration Controller</title>
+        <title>NI-DAQMX Devices - Rattlesnake Vibration Controller</title>
 
 
         <!-- Custom HTML head -->
@@ -176,15 +176,23 @@
                 <div id="content" class="content">
                     <main>
                         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
-<h2 id="abstract"><a class="header" href="#abstract">Abstract</a></h2>
-<p>Rattlesnake is a combined-environments, multiple input/multiple output control system for dynamic excitation of structures under test.  It provides capabilities to control multiple responses on the part using multiple exciters using various control strategies.  Rattlesnake is written in the Python programming language to facilitate multiple input/multiple output vibration research by allowing users to prescribe custom control laws to the controller.  Rattlesnake can target multiple hardware devices, or even perform synthetic control to simulate a test virtually.  Rattlesnake has been used to execute control problems with up to 200 response channels and 24 shaker drives.  This document describes the functionality, architecture, and usage of the Rattlesnake controller to perform combined environments testing.</p>
+<h1 id="part-ii-rattlesnake-hardware-devices"><a class="header" href="#part-ii-rattlesnake-hardware-devices">Part II. Rattlesnake Hardware Devices</a></h1>
+<p>Designed for flexibility, Rattlesnake can be used with multiple hardware devices and even perform virtual control using a synthetic data acquisition system.  This Part will cover the hardware-specific implementation details that must be considered when running Rattlesnake with each hardware device.</p>
+<p>Rattlesnake is designed so there is minimal differences in software workflow when using different hardware devices.  Nonetheless, there are some slight differences in how channels and devices must be specified, and these differences are primarily found on the <code>Data Acquisition Setup</code> tab in the Rattlesnake software.</p>
+<p>The Chapters in this Part document the hardware devices that are able to be used by Rattlesnake, as well as the virtual devices that can be used to simulate control.  Chapter 4 describes the implementation and utilization of NI-DAQmx devices.  Chapter 5 describes the HBK LAN-XI hardware.  Chapters 6 and 7 describe the Data Physics Quattro and 900-series hardware devices, respectively.  Chapters 8, 9, and 10 describe virtual or synthetic hardware devices that are defined using state space matrices, eigensolution results stored in an exodus file, or a SDynPy System object, respectively.</p>
+<p>If a user is interested in implementing a new hardware device, Chapter 11 describes some of the things to be aware of.  Implementation of new hardware devices will require a good amount of knowledge of the Rattlesnake architecture.</p>
+<h2 id="chapter-4-nidaqmx-devices"><a class="header" href="#chapter-4-nidaqmx-devices">Chapter 4. NIDAQMX Devices</a></h2>
+<p>Rattlesnake is able to run National Instruments...</p>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="chapter_03.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
 
-                            <a rel="next prefetch" href="nomenclature.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="chapter_05.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -194,8 +202,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="chapter_03.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
 
-                    <a rel="next prefetch" href="nomenclature.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="chapter_05.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
