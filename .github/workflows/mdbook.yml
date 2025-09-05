@@ -12,17 +12,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install mdbook
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Install mdBook and preprocessors
         run: |
-          mkdir mdbook-bin
-          curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.52/mdbook-v0.4.52-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=mdbook-bin
-          echo `pwd`/mdbook-bin >> $GITHUB_PATH
+          cargo install mdbook mdbook-katex
 
       - name: Build mdBook
         run: mdbook build documentation/mdbook
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
+        # if: github.ref == 'refs/heads/main'  # reinstate when dev is complete
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./documentation/mdbook/book
