@@ -77,7 +77,7 @@ For single environment tests, the environment table is not visible, and the soft
 
 If importing a channel table from an Excel spreadsheet for a combined environments test, the Environment Table can be specified as the columns after the main Channel Table information (starting in Column X with one column for each environment) with the environment name specified in row 2 and an entry (e.g. an `X` or some other mark) in the row corresponding to a given channel if that channel is used for the given environment.
 
-#### Data Acquisition Paramters
+#### Data Acquisition Parameters
 
 The final portion of `Data Acquisition Setup` tab specifies data acquisition parameters.  These parameters may change depending on the hardware selected.
 
@@ -88,4 +88,115 @@ The final portion of `Data Acquisition Setup` tab specifies data acquisition par
 * **Maximum Acquisition Processes** For specific hardware devices with large channel count tests, it can be difficult to pull down large quantities of data fast enough for the controller to keep up using a single process.  This option allows the user to specify how many processes can be given to the acquisition system to be used to stream data off the hardware.  Note that too many processes will bog down the computer, and too few will result in the controller falling behind.  Generally about 20-40 channels per processor is sufficient, but this will depend on the sample rate.  For higher sample rates, more processors may be needed.
 * **Integration Oversample** For synthetic hardware devices that integrate equations of motion, an integration oversample factor can be specified.  This factor will be applied to the sample rate to determine the time step for the integration.  Generally a factor of 10 is sufficient for reasonably accurate data without significant computational expense.
 
-WIP: subsection: Initialize Data Acquisition
+#### Initialize Data Acquisition
+
+With the Data Acquisition Settings specified in the GUI, the Data Acquisition can be initialized by pressing the `Initialize Data Acquisition` button.  At this point, the controller will go through and create the programming interfaces to the hardware device, specify the sampling parameters, and create the channels on the devices.  The software will then proceed to the next tab.
+
+Figure 3-6 shows a completed `Data Acquisition Setup` tab with three response channels and one output channel for a test with two environments `A` and `B`.  The first response and output channels are used by both environments, while the second response channel is used only by environment `A` and the third response channel is used only by environment `B`.
+
+![data_acquisition_setup_tab](figures/data_acquisition_setup_tab.png)
+
+**Figure 3-6.  Example of a completed `Data Acquisition Setup` tab with three response channels and one output channel.**
+
+### Environment Definition
+
+The `Environment Definition` tab is the second tab in the Rattlesnake software.  It is in this tab that the various environments are defined.  The main tab will have one sub-tab for each environment, as shown in Figure 3-7.
+
+![environment_definition_subtabs](figures/environment_definition_subtabs.png)
+
+**Figure 3-7. Sub-tabs for environments `A` and `B` in the `Environment Definition` tab.**
+
+Different environment types will have different parameters that can be set.  See [Part III](./chapter_12.md) for a description of each environment type in Rattlesnake and the parameters that define it.
+
+When all environments are defined, the `Initialize Environments` button can be pressed to proceed to the next portion of the controller.
+
+### System Identification
+
+With the environments defined, the controller proceeds to the `System Identification` tab if required by any environment, shown in Figure 3-8.  During this phase of the controller, the controller will develop relationships between the excitation signals and the responses of the test article to those excitation signals.  It will also make a measurement of the noise floor of the test.
+
+![system_identification](figures/system_identification.png)
+
+**Figure 3-8. System identification tab showing various signals and spectral quantities that can be used to evaluate the test.**
+
+Not all environment types will require a system identification.  For environments that simply stream output data, a system identification will generally not be required.  However for any environment that aims to produce an output that creates some response on the test article, a system identification will be required to understand the relationships between the excitation signals and the response signals.
+
+There will be one sub-tab for each environment that requires a System Identification.  System identification must be run for each sub-tab before the test can be run.  When system identification is performed, the software will first perform a noise floor measurement, where all channels are recorded, but no excitation signal is provided.  After the noise floor calculation completes, the system identification will begin.
+
+The `System Identification` tab has been significantly overhauled since the previous version of controller.  The system identification now has a number of dedicated parameters on its tab that the user can select.  These are:
+
+* **Samples per Frame** The number of samples used in each measurement frame.
+* **Averaging Type** The type of averaging used to compute the spectral quantities.  Linear averaging weights each measurement frame equally.  Exponential averaging weights more recent frames more heavily.
+* **Noise Averages** The number of averages used in the noise characterization.
+* **System ID Averages** The number of averages used in the System Identification characterization.
+* **Averaging Coefficient** If Exponential Averaging is used, this is the weighting of the most recent frame compared to the weighting of the previous frames.  If the averaging coefficient is $\alpha$, then the most recent frame will be weighted $\alpha$, the frame before that will be weighted $\alpha(1-\alpha)$, the frame before that will be $\alpha(1-\alpha)^2$, etc.
+* **Estimator** The estimator used to compute transfer functions between voltage signals and responses.
+* **Level** The RMS voltage level used for the system identification
+* **Level Ramp Time** The startup and shutdown time of the system identification.
+
+The new system identification tab also gives the option to select the signal to use for system identification.
+
+* **Signal Type** The type of signal that will be used for System Identification.  This can be Random, Burst Random, Chirp, or Pseudorandom.  Random is the most flexible, but requires a Hann window which can distort data.  Burst Random does not require a window, but the response signal must decay within the measurement frame.  Chirp and Pseudorandom do not require windows, and do not need to decay, but they are only useful for environments with a single excitation device.
+* **Window** The window function used for the system identification signal
+* **Overlap** The overlap percentage between measurement frames used in System Identification
+* **On Fraction** The fraction of the frame that the Burst Random signal is active for
+* **Pretrigger** The fraction of the frame before the Burst Random signal starts
+* **Ramp Fraction** The fraction of the Burst Random On Fraction that is used to ramp up and ramp down.
+
+The system identification phase can stream time data to disk by selecting a streaming file and clicking the `Stream Time Data` checkbox.  If streaming time data, the noise measurement will be saved to the variable name `time_data` and the system identification measurement will be saved to the variable name `time_data_1` (TODO: see Section \ref{sec:using_rattlesnake_output_files} for more information on the structure of this file).  The spectral data from the system identification can be saved to disk by clicking the `Save System Identification Data` button and selecting the file.
+
+To run the system identification, there are buttons to Preview the Noise or System ID characterizations.  When ready, the `Start` button can be clicked.  It will run a Noise Characterization for the specified number of `Noise Averages`, and then subsequently run the System Identification characterization for the specified number of `System ID Averages`.  If the user wishes to run either the noise or system identification phases continuously, they can click the `Preview Noise` or `Preview System ID` buttons.
+
+Data will be plotted as the system identification proceeds.  The signals to visualize can be selected by clicking one or more of the `References` or `Responses` channels on the right side of the screen.  In the bottom right corner, there are options to show or hide various quantities of interest.  The `System Identification` tab can show the following:
+
+* **Time Data** Raw Time Data as it is streamed from the data acquisition system.  Only data used in spectral computations is shown, so the users shouldn't see any data that is ramping up or down as if the controller is starting or stopping.
+* **Transfer Function** These are the transfer functions between the References (e.g. voltage signals) and the Responses (e.g. Accelerations or Forces).  The controller will use these transfer functions to develop excitation signals that will be played to the shaker to achieve a desired response.
+* **Impulse Response**  The impulse response of the system can be visualized.  This can be helpful to debug issues with transient control.
+* **Coherence and Conditioning** Coherence will be displayed so the user can judge how satisfactory the input/output relationships that are developed are.  If coherence is poor, it could suggest that the controller won't be able to control the structure properly.  The condition number of the Transfer Function Matrix is also displayed.  This can be useful to determine what level of regularization a control law might need to implement.
+* **Levels** The autopower spectral density of each signal will be displayed both for the system identification as well as for the noise characterization.  This can help identify if the system identification is high enough out of the noise floor.
+
+### Test Predictions
+
+Once the system identification phase completes, the controller will compute a test prediction for each environment where system identification was completed.  This prediction will be based on the measured transfer functions between output signals and measured responses, as well as the environment parameters specified on the `Environment Definition` tab.  Predictions will be made both for outputs required as well as response accuracy.  These predictions will be displayed on the `Test Predictions` tab.
+
+### Test Profiles
+
+The `Test Profile` tab gives the user the ability to set up a test timeline for complex combined environments tests.  The user can add a list of events that will be executed at certain times during the test.  The tab will also display a graphical representation of the test timeline.
+
+Events can be added or removed from the test timeline by clicking the `Add Event` or `Remove Event` buttons.  Users can also load a series of events from an Excel spreadsheet.
+
+For each event, the following parameters are defined:
+
+* **Timestamp (s)** The time in seconds after the timeline has started that the event will be executed.
+* **Environment** The environment in which the event will occur.
+* **Operation** The operation that will occur to the event.  Each environment defines its own set of operations that can be executed through the test profile interface.
+* **Data** Any additional data that the operation requires.  For example, if a ``Set Test Level'' event is chosen, the Data field should specify the value that the test level is set to.
+
+Figure 3-9 shows an example of a test profile that ramps up the test level of environment `A` from -6 to 0 dB, and then subsequently starts environment `B`.
+
+![test_profile](figures/test_profile.png)
+
+**Figure 3-9. Example test profile showing a ramp up of test level for environment `A` and subsequently starting environment `B`.
+
+### Run Test
+
+The `Run Test` tab is where Rattlesnake finally runs the test.  This tab again has sub-tabs for the different environments in the test, however these sub-tabs will not be enabled until the data acquisition system is armed.
+
+Rattlesnake gives the user many options to save data to the disk through a set of Radio buttons at the top of this tab.  These options are:
+
+* **No Streaming** Do not save data to disk, just run the test.
+* **Start Streaming from Test Profile Instruction** Selecting this option allows data to be saved to disk after a "Global Start Streaming" event from the test profile is executed.  This allows the user to fine tune at which point in the test data is acquired.
+* **Start Streaming at <environment> Target Test Level** Selecting this option starts streaming data when the selected environment hits its target test level.  This can be useful if, for example in a random environment, the user wishes to start at a low level and slowly creep up to the target test level.  If all data is saved, it might require a large amount of file space, so instead only the data at the test level of interest can be saved.
+* **Start Streaming Immediately** Saves all data from the time the first environment starts until the data acquisition system is disarmed.
+* **Manually Start/Stop Streaming** Allows the user to start and stop the measurement periodically throughout the test.  A `Start Streaming` button will appear when this option is selected.  When clicked, the button will change to `Stop Streaming`.  Multiple data streams can be saved in a given test.  These will be stored to separate variables in the output NetCDF4 file (TODO: see Section \ref{sec:using_rattlesnake_output_files}).
+
+When streaming data, it is important to note that the software does not stop streaming until the data acquisition system is disarmed by pressing the `Disarm Data Acquisition` button.  This is because for a combined-environments test, the environments may have down-time between them where no environment is running, and that data should still be saved.
+
+The `Run Test` tab contains global `Arm Data Acquisition` and `Disarm Data Acquisition` buttons that start and stop the data acquisition system.  When the data acquisition system is armed, the user can no longer change streaming options, and the sub-tabs for each environment are enabled.  The user can then start or stop each environment manually using the `Start Environment` or `Stop Environment` buttons on each environment's sub-tab.  The sub-tab for each environment is described more thoroughly in [Part III](./chapter_12.md).
+
+Alternatively, the user can start or stop the test profile by clicking on the `Start Profile` or `Stop Profile` buttons respectively.  The profile capability also includes the option to switch the active environment sub-tab when an event is executed so the user can see the results.  Note that the profile options only appear when a profile has been defined on the `Test Profile` tab.
+
+Figure 3-10 shows an example `Run Test` tab with test profile events.
+
+![run_test_tab](figures/run_test_tab.png)
+
+**Figure 3-10. Run Test Tab.**
