@@ -64,7 +64,7 @@ Many users will find it more comfortable to forgo the command line and launch Ra
 
 ![figure_2-1](figures/spyder_run_configuration.png)
 
-**Figure 2-1.** Spyder run configuration showing execution in an external system terminal as well as allowing interaction with the Python console after execution.
+**Figure 2-1. Spyder run configuration showing execution in an external system terminal as well as allowing interaction with the Python console after execution.**
 
 ## Computational Requirements
 
