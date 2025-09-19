@@ -177,6 +177,7 @@
                 <div id="content" class="content">
                     <main>
                         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
+<p><img src="figures/Rattlesnake_Logo_Banner.png" alt="rattlesnake_logo" /></p>
 <h2 id="abstract"><a class="header" href="#abstract">Abstract</a></h2>
 <p>Rattlesnake is a combined-environments, multiple input/multiple output control system for dynamic excitation of structures under test.  It provides capabilities to control multiple responses on the part using multiple exciters using various control strategies.  Rattlesnake is written in the Python programming language to facilitate multiple input/multiple output vibration research by allowing users to prescribe custom control laws to the controller.  Rattlesnake can target multiple hardware devices, or even perform synthetic control to simulate a test virtually.  Rattlesnake has been used to execute control problems with up to 200 response channels and 24 shaker drives.  This document describes the functionality, architecture, and usage of the Rattlesnake controller to perform combined environments testing.</p>
 <div style="break-before: page; page-break-before: always;"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
@@ -244,23 +245,56 @@
 <h2 id="1-introduction"><a class="header" href="#1-introduction">1. Introduction</a></h2>
 <p>The field of multiple input/multiple output (MIMO) vibration testing has grown substantially in the past few years.  MIMO vibration testing provides the capability to match a field environment more accurately and at more locations on the test article than traditional single-axis vibration testing.  Unfortunately, many existing vibration control systems are proprietary, which makes it difficult to implement new MIMO techniques.</p>
 <p>Currently, MIMO vibration practitioners must either develop a control system from scratch to implement their ideas, or alternatively convince an MIMO vibration software vendor to implement their ideas into existing devices, and neither of these approaches are conducive to the rapid and iterative nature of research.</p>
-<p>The Rattlesnake framework was developed to overcome these limitations and facilitate MIMO vibration research.  Rattlesnake is a MIMO control system that provides the user the ability to overcome testing challenges by providing a flexible framework that can be extended and modified to meet testing demands.  Rattlesnake can run multiple environments simultaneously, providing a combined-environments capability that does not yet exist in commercial software packages.  It can target multiple hardware devices, or even perform control virtually using a state space model, finite element model (FEM) results, or a SDynPy System.</p>
+<p>The Rattlesnake framework was developed to overcome these limitations and facilitate MIMO vibration research.  Rattlesnake is a MIMO control system that provides the user the ability to overcome testing challenges by providing a flexible framework that can be extended and modified to meet testing demands.  Rattlesnake can run multiple environments simultaneously, providing a combined-environments capability that does not yet exist in commercial software packages.  It can target multiple hardware devices, or even perform control virtually using a state space model, finite element model (FEM) results, or a <a href="https://github.com/sandialabs/sdynpy">SDynPy</a> System.</p>
 <h3 id="11-document-overview"><a class="header" href="#11-document-overview">1.1 Document Overview</a></h3>
 <p>This document provides information about the functionality in the Rattlesnake software, as well as instructions for how to use that functionality.  The document is divided into Parts targeting different aspects of the software.</p>
 <ul>
 <li><a href="./chapter_02.html">Part I</a> provides an overview of the software as well as instructions for how to acquire and run the software.  Chapter 2 includes instructions for setting up the Python ecosystem required to run the software, if necessary.  Chapter 3 describes the Rattlesnake userinterface (UI).  Each main portion of the Rattlesnake interface is described along with the parameters that should be defined within that interface.</li>
-<li>Part II describes the hardware devices available to the Rattlesnake software, as well as the hardware-specific considerations in the controller.  Each Chapter in this Part is dedicated to a specific hardware device.  Synthetic or virtual control is also discussed in this part, as well as instructions to extend Rattlesnake to additional hardware devices.</li>
-<li>Part III describes the various control environments contained within the Rattlesnake software.  The environments defined within Rattlesnake are where the next output data that will be sent to the exciters are computed based off the previously acquired data.  Each chapter in this Part is dedicated to a environment type within Rattlesnake.  This chapter also provides instructions to combine environments as well as extend Rattlesnake to additional environments.</li>
-<li>The Appendices contain several example problems.  Users with a reasonable understanding of the Rattlesnake workflow can use these chapters as a kind of "Quick Start" guide to the software.  Appendix B demonstrates a series of tests on a simple beam using a NI cDAQ hardware device.  Appendices C and D demonstrate virtual control problems using SDynPy System and State Space models, respectively, which only require a computer to run.</li>
+<li><a href="./chapter_04.html">Part II</a> describes the hardware devices available to the Rattlesnake software, as well as the hardware-specific considerations in the controller.  Each Chapter in this Part is dedicated to a specific hardware device.  Synthetic or virtual control is also discussed in this part, as well as instructions to extend Rattlesnake to additional hardware devices.</li>
+<li><a href="./chapter_12.html">Part III</a> describes the various control environments contained within the Rattlesnake software.  The environments defined within Rattlesnake are where the next output data that will be sent to the exciters are computed based off the previously acquired data.  Each chapter in this Part is dedicated to a environment type within Rattlesnake.  This chapter also provides instructions to combine environments as well as extend Rattlesnake to additional environments.</li>
+<li>The <a href="./appendix_a.html">Appendices</a> contain several example problems.  Users with a reasonable understanding of the Rattlesnake workflow can use these chapters as a kind of "Quick Start" guide to the software.  <a href="./appendix_b.html">Appendix B</a> demonstrates a series of tests on a simple beam using a NI cDAQ hardware device.  <a href="./appendix_c.html">Appendix C</a> and <a href="./appendix_d.html">Appendix D</a> demonstrate virtual control problems using SDynPy System and State Space models, respectively, which only require a computer to run.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
 <h1 id="part-i-rattlesnake-overview"><a class="header" href="#part-i-rattlesnake-overview">Part I. Rattlesnake Overview</a></h1>
-<p>This Part provides a general overview of Rattlesnake software.  Chapter 2 provides an overview of how to acquire and run the software.  Chapter 3 describes the general software workflow.</p>
-<p>This Part with only deal with "global" Rattlesnake paramters. For hardware-specific parameters, see Part II.  For environment-specific parameters, see Part III.</p>
+<p>This Part provides a general overview of Rattlesnake software.  <a href="chapter_02.html#2-acquiring-and-running-rattlesnake">Chapter 2</a> provides an overview of how to acquire and run the software.  <a href="./chapter_03.html">Chapter 3</a> describes the general software workflow.</p>
+<p>This Part with only deal with "global" Rattlesnake paramters. For hardware-specific parameters, see <a href="./chapter_04.html">Part II</a>.  For environment-specific parameters, see <a href="./chapter_12.html">Part III</a>.</p>
 <h2 id="2-acquiring-and-running-rattlesnake"><a class="header" href="#2-acquiring-and-running-rattlesnake">2. Acquiring and Running Rattlesnake</a></h2>
 <p>Two methods are provided to acquire the Rattlesnake software.  The software can be downloaded as an executable and run directly with no other dependencies.  Alternatively, the software can be downloaded in its Python script form and run using a Python interpreter.  The former approach is simpler, but results in a larger file size and longer software loading time due to the necessity to pack the Python ecosystem into the executable for distribution and unpack it prior to execution.  The latter approach is more suited to users who wish to utilize the full functionality of the Rattlesnake framework, which would include activities such as coding up custom control laws.  In this case, it will be advantageous to have a Python ecosystem installed on the user's computer, so simply downloading the source code and executing it similarly to other Python scripts will potentially be easier than the executable approach.</p>
 <h3 id="running-from-an-executable"><a class="header" href="#running-from-an-executable">Running from an Executable</a></h3>
-<p>WIP</p>
+<p>Python code can be compiled into a single executable file, which makes it easier to distribute Python code.  The user need not have a Python distribution installed on their computer to simply run the executable, as the executable will contain the required Python interpreter and libraries compiled within it.  The executable approach has a few disadvantages.  The file size of the executable will generally be larger than the raw source code.  Additionally, the executable will generally be slower to start due to the necessary unpacking of the Python ecosystem from it.  Still, if a user is not familiar with Python, the executable will be the easiest approach to run the software.</p>
+<h4 id="downloading-the-executable"><a class="header" href="#downloading-the-executable">Downloading the Executable</a></h4>
+<p>Executables for Rattlesnake are generally stored in the <a href="https://github.com/sandialabs/rattlesnake-vibration-controller">GitHub Project</a> on the <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/releases">GitHub Releases page</a>.  A user can simply download the executable corresponding to the user's operating system and save it to their computer.  No installation is necessary to run this executable.</p>
+<h4 id="running-the-executable"><a class="header" href="#running-the-executable">Running the Executable</a></h4>
+<p>Running Rattlesnake from an executable is as simple as running any other program.  Simply double click on the executable (or otherwise execute it) and the program will run.  Note that there may be a significant delay between executing the executable and the program appearing, as the executable will unpack a Python distribution into the user's temporary space in order to run the included Python code.</p>
+<p>As with any other executable program, users may create links to the program to put on the desktop or in the start menu to make accessing the program easier.</p>
+<p>It may be beneficial to run the executable through the command terminal, as otherwise if an error occurs in the program, the program may simply disappear without the user being aware of any errors.  When running through the command terminal, the user will be able to view any error messages if the program unexpectedly exits, which will be useful in diagnosing the issue if submitted to the issue tracker in the <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/issues">GitHub Issues</a> (See <a href="chapter_02.html#obtaining-support">Obtaining Support</a> for more information).</p>
+<h2 id="running-from-the-python-script"><a class="header" href="#running-from-the-python-script">Running from the Python script</a></h2>
+<p>The alternative to running the Rattlesnake as an executable is to run it as a Python script, which users familiar with the Python programming language should be accustomed to.  This approach provides the user the ability to modify code directly without needing to recompile an executable.  Additionally, if the user plans on developing custom control laws for the Rattlesnake (see, e.g., Chapter \ref{sec:rattlesnake_environments_mimo_random} for more information), they will generally require a Python ecosystem installed on their computer, so the running of the code as a script is not a great burden.</p>
+<h3 id="setting-up-a-python-ecosystem"><a class="header" href="#setting-up-a-python-ecosystem">Setting up a Python Ecosystem</a></h3>
+<p>The first step to running Rattlesnake from its Python script is to install Python.  This can be done in multiple ways.  Python can be downloaded and installed from the <a href="https://www.python.org/">Python website</a> directly.  When installed this way, Python will not include any of the numeric or scientific libraries such as <a href="https://numpy.org">NumPy</a> or <a href="https://scipy.org">SciPy</a>.  For this reason, many users will prefer to download a scientific Python distribution which contains many numeric or scientific libraries.  <a href="https://www.anaconda.com/">Anaconda</a> or <a href="https://winpython.github.io/">WinPython</a> are popular distributions.</p>
+<p>Regardless of the distribution selected, users will need to install packages that Rattlesnake depends on.  The GitHub repository contains a <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/blob/main/requirements.txt">requirements.txt</a> file that can be used by the Python package manager <code>pip</code> to install all required dependencies:</p>
+<pre><code class="language-sh">pip install -r requirements.txt
+</code></pre>
+<p>Note that if running through a corporate or university firewall, the proxy may need to be specified in <code>pip</code>.  Additionally, on some networks the Python package repositories must be added as trusted hosts.  Such a command may look like</p>
+<pre><code class="language-sh">pip --proxy &lt;proxy_address&gt; install --trusted-host pypi.org --trusted-host files.pythonhosted.org -r requirements.txt
+</code></pre>
+<p>where <code>&lt;proxy_address&gt;</code> is the address of the proxy.</p>
+<h3 id="downloading-the-python-code"><a class="header" href="#downloading-the-python-code">Downloading the Python Code</a></h3>
+<p>With Python installed the Rattlesnake code can be downloaded from the <a href="https://github.com/sandialabs/rattlesnake-vibration-controller">GitHub project</a> repository.  For users who aim to develop the Rattlesnake software, the preferred approach to acquire the software is to use Git to clone the repository.  For users who only wish to use the software, the code can be <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/releases">downloaded</a> in a <code>zip</code> file or other archive format and extracted to the user's computer.</p>
+<h3 id="running-rattlesnake"><a class="header" href="#running-rattlesnake">Running Rattlesnake</a></h3>
+<p>If Python is on the user's path, the user can simply call</p>
+<pre><code class="language-sh">python rattlesnake.py
+</code></pre>
+<p>from a command line in the directory in which Rattlesnake was downloaded to execute the software.  If Python is not on the user's path, it will be necessary to provide the command line the full path to the Python executable.</p>
+<p>Many users will find it more comfortable to forgo the command line and launch Rattlesnake directly from their favorite integrated development environment (IDE).  Note that the Rattlesnake uses the <code>multiprocessing</code> Python package to spawn several processes, and these processes sometimes do not play nice with IDE consoles.  Therefore if running from an IDE, the IDE should be instructed to run the <code>rattlesnake.py</code> script from an external system terminal rather than a terminal inside the <code>IDE</code>.  When executing in an external terminal, it is again useful to keep the terminal active after execution in case of errors occurring.  The error message and traceback displayed in the terminal will be instrumental in debugging the source of the error.  In Spyder, this can be configured per file from the <code>Run</code> menu, so the run settings for <code>rattlesnake.py</code> should be set as shown in Figure 2-1.</p>
+<p><img src="figures/spyder_run_configuration.png" alt="figure_2-1" /></p>
+<p><strong>Figure 2-1.</strong> Spyder run configuration showing execution in an external system terminal as well as allowing interaction with the Python console after execution.</p>
+<h2 id="computational-requirements"><a class="header" href="#computational-requirements">Computational Requirements</a></h2>
+<p>Rattlesnake is a process-heavy software; it spawns processes for each environment, as well as for various portions of the controller that should operate in parallel.  In general, the core controller utilizes 2-3 full processes.  Various environments will also utilize multiple processes; for example, the MIMO Random Vibration uses 3 main processes to compute spectral quantities (FRFs, CPSDs, etc.), perform control calculations, and generate time histories simultaneously.  If running virtual control, keep in mind that acquisition processes will be more fully subscribed due to the need to integrate the equations of motion rather than just read data off the data acquisition hardware.</p>
+<p>While the exact computational requirements will depend on the channel count of the test and size of the control computations, the authors have had success using a 6-core processor with 32 GB RAM for multi-environment control approximately 20 control channels and 4 outputs.  For a 200 acquisition channel test with 50 control channels and 8 outputs, the authors needed to upgrade to a 16 core, 32 GB RAM computer.</p>
+<h2 id="obtaining-support"><a class="header" href="#obtaining-support">Obtaining Support</a></h2>
+<p>Rattlesnake was developed by a small team as a research tool, and as such will not be as polished as commercial vibration software.  Therefore, it should be expected that bugs and errors will occur from time to time.  If a bug occurs, please report it by creating a new issue in the <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/issues">GitHub issues board</a>.  This will notify the development team of the issue and they can work to solve it.  If users have a feature request, these can also be submitted to the <a href="https://github.com/sandialabs/rattlesnake-vibration-controller/issues">GitHub issues board</a>.</p>
+<p>The issue tracker provides templates for Bugs, Feature Requests, and Questions.  The more thoroughly that these can be filled out, the greater the chance that the development team can solve the issue.  For bug reports, files can also be attached to the issue, so the users can include the <code>Rattlesnake.log</code> file that is generated for each run of the Rattlesnake, as well as any screenshot of error messages that get shown in dialog boxes or the command window.  The question template can be used for basic support questions, which will be answered by the developers as their time permits.  Users should certainly consult this User's Manual and the Rattlesnake Source Code first to ensure their question is not covered by it.</p>
 <div style="break-before: page; page-break-before: always;"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
 <h2 id="3-using-rattlesnake"><a class="header" href="#3-using-rattlesnake">3. Using Rattlesnake</a></h2>
 <p>This chapter will describe how</p>
@@ -331,7 +365,40 @@
 <h2 id="bibliography"><a class="header" href="#bibliography">Bibliography</a></h2>
 <div style="break-before: page; page-break-before: always;"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
 <h2 id="contributors"><a class="header" href="#contributors">Contributors</a></h2>
-<p>Contributors include...</p>
+<ul>
+<li>Daniel P. Rohe</li>
+<li>Ryan Schultz</li>
+<li>Norman Hunter</li>
+</ul>
+<h3 id="development"><a class="header" href="#development">Development</a></h3>
+<h4 id="documentation"><a class="header" href="#documentation">Documentation</a></h4>
+<p>Update the
+<a href="https://sandialabs.github.io/rattlesnake-vibration-controller/book/">online documentation</a>
+as follows:</p>
+<pre><code class="language-sh"># change to the project directory
+cd rattlesnake/rattlesnake-vibration-controller
+
+# activate the virtual environment
+source .venv/bin/activate       # for bash shell
+source .venv/bin/activate.csh   # for c shell
+source .venv/bin/activate.fish  # for fish shell
+.\.venv\Scripts\activate        # for powershell
+
+# change to the mdbook directory
+cd rattlesnake/rattlesnake-vibration-controller/documentation/mdbook
+
+# update the source markdown (.md) files as necessary in the
+# rattlesnake/rattlesnake-vibration-controller/documentation/mdbook/src
+# folder
+
+# build the mdbook build, which build the target to the
+# rattlesnake/rattlesnake-vibration-controller/documentation/mdbook/book
+# folder
+mdbook build
+
+# visualize the mdbook in a local web browser
+mdbook serve --open
+</code></pre>
 
                     </main>
 

@@ -177,7 +177,40 @@
                     <main>
                         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
 <h2 id="contributors"><a class="header" href="#contributors">Contributors</a></h2>
-<p>Contributors include...</p>
+<ul>
+<li>Daniel P. Rohe</li>
+<li>Ryan Schultz</li>
+<li>Norman Hunter</li>
+</ul>
+<h3 id="development"><a class="header" href="#development">Development</a></h3>
+<h4 id="documentation"><a class="header" href="#documentation">Documentation</a></h4>
+<p>Update the
+<a href="https://sandialabs.github.io/rattlesnake-vibration-controller/book/">online documentation</a>
+as follows:</p>
+<pre><code class="language-sh"># change to the project directory
+cd rattlesnake/rattlesnake-vibration-controller
+
+# activate the virtual environment
+source .venv/bin/activate       # for bash shell
+source .venv/bin/activate.csh   # for c shell
+source .venv/bin/activate.fish  # for fish shell
+.\.venv\Scripts\activate        # for powershell
+
+# change to the mdbook directory
+cd rattlesnake/rattlesnake-vibration-controller/documentation/mdbook
+
+# update the source markdown (.md) files as necessary in the
+# rattlesnake/rattlesnake-vibration-controller/documentation/mdbook/src
+# folder
+
+# build the mdbook build, which build the target to the
+# rattlesnake/rattlesnake-vibration-controller/documentation/mdbook/book
+# folder
+mdbook build
+
+# visualize the mdbook in a local web browser
+mdbook serve --open
+</code></pre>
 
                     </main>
 
