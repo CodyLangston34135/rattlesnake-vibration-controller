@@ -206,3 +206,67 @@ Figure 3-10 shows an example `Run Test` tab with test profile events.
 After data is acquired, the user may wish to analyze or plot the data acquired for a given test report.  Rattlesnake stores data in a self-documenting netCDF file {{#cite unidata2019_netcdf}}, which can be read by multiple platforms.  The output file is described as self-documenting because it contains all parameters necessary to reconstruct a given test using the Rattlesnake controller.  Any parameter that is set by the user in the GUI is stored to the netCDF file.
 
 A full description of the netCDF file format is out of this document's scope, but the important points are briefly described here.  NetCDF files have a number of data structures.  Variables are multi-dimensional arrays of data.  Dimensions describe the axes of the variable arrays.  Attributes are used to store small data such as scalars or 1D arrays.  NetCDF files can be separated into different groups, and each group can have its own variables, dimensions, and attributes.
+
+The Rattlesnake output files contain the following data members:
+
+#### NetCDF Dimensions
+
+* **`response_channels`** The number of response channels in a given test
+* **`output_channels`** The number of output channels in a given test
+* **`time_samples`** The number of time samples measured in the file, this dimension can expand as more data is acquired.
+* **`time_samples_X`** If manual streaming is used and streaming is started multiple times, each subsequent stream will have the `time_samples` name with an underscore and appended number (e.g. `time_samples_1`, `time_samples_2`)
+* **`num_environments`** The total number of environments in the test
+
+#### NetCDF Attributes
+
+* **`sample_rate`** The global sample rate of the data acquisition system
+* **`time_per_write`** The amount of data put to the output hardware per write operation, in seconds
+* **`time_to_read`** The amount of data read from the acquisition hardware per read operation, in seconds
+* **`hardware`** The hardware index used for the test.
+  * 0 -- National Instruments NI-DAQmx
+  * 1 -- HBK LAN-XI Open API
+  * 2 -- Data Physics Quattro
+  * 3 -- Data Physics 900 Series
+  * 4 -- Virtual Control defined by Exodus Modal Solution
+  * 5 -- Virtual Control defined by State Space Matrices
+  * 6 -- Virtual Control defined with a SDynPy System
+* **`hardware_file`** The path to the file used to define the Virtual test article, or the path to the external code library used by the data acquisition hardware.  Otherwise, it will be `None`
+* **`maximum_acquisition_processes`** The maximum number of processes that the LAN-XI hardware can use for acquisition
+* **`output_oversample`** The oversample used either due to sample rate restrictions on the data acquisition system, or due to oversampling the integration
+
+#### NetCDF Variables
+
+* **`time_data`** The measured data from the test. Type: 64-bit float; Dimensions: `response_channels` $\times$ `time_samples`
+* **`time_data_X`** If manual streaming is used and streaming is started multiple times, each subsequent stream will have the `time_data` name with an underscore and appended number (e.g. `time_data_1`, `time_data_2`)
+* **`environment_names`** The name of each environment. Type: string; Dimensions: `num_environments`
+* **`environment_active_channels`** The channels active in each environment.  1 if active, 0 if not. Type: 8-bit int; Dimensions: `response_channels` $\times$ `num_environments`
+
+#### Channels Group
+
+The netCDF files from Rattlesnake store all channel information into a separate group called `channels`.  Inside the `channels` group, there is a variable for each column of the channel table.  See Section [Channel Table](#channel-table) for more complete descriptions of each channel variable.
+
+* **`/channels/node_number`** The node number of each channel.  Type: str; Dimensions: `response_channels`
+* **`/channels/node_direction`** The instrument direction of each channel.  Type: str; Dimensions: `response_channels`
+* **`/channels/comment`** The commend for each channel.  Type: str; Dimensions: `response_channels`
+* **`/channels/serial_number`** The serial number of the instrument for each channel.  Type: str; Dimensions: `response_channels`
+* **`/channels/triax_dof`** The sensor degree of freedom for each channel.  Type: str; Dimensions: `response_channels`
+* **`/channels/sensitivity`** The sensitivity of the instrument for each channel.  Type: str; Dimensions: `response_channels`
+* **`/channels/unit`** The engineering unit of the instrument for each channel. Type: str; Dimensions: `response_channels`
+* **`/channels/make`** The manufacturer of the instrument for each channel.  Type: str; Dimensions: `response_channels`
+* **`/channels/model`** The model number or product name of the instrument for each channel.  Type: str; Dimensions: `response_channels`
+* **`/channels/expiration`** The expiration date of the instrument's calibration for each channel.  Type: str; Dimensions: `response_channels`
+* **`/channels/physical_device`** The physical device that the instrument is connected to for each channel.  Type: str; Dimensions: `response_channels`
+* **`/channels/physical_channel`** The channel in the physical device that the instrument is attached to for each channel.  Type: str; Dimensions: `response_channels`
+* **`/channels/channel_type`** The type of quantity that is measured by the channel.  Type: str; Dimensions: `response_channels`
+* **`/channels/minimum_value`** The minimum voltage that the channel can accept.  Type: str; Dimensions: `response_channels`
+* **`/channels/maximum_value`** The maximum voltage that the channel can accept.  Type: str; Dimensions: `response_channels`
+* **`/channels/coupling`** The coupling type used by each channel (AC/DC/filter/etc.).  Type: str; Dimensions: `response_channels`
+* **`/channels/excitation_source`** The excitation source for each channel, used to specify CCLD/ICP/IEPE.  Type: str; Dimensions: `response_channels`
+* **`/channels/excitation`** The excitation current value used in the signal conditioning for each channel.  Type: str; Dimensions: `response_channels`
+* **`/channels/feedback_device`** The device that the channel's generator originates from if the channel is an output channel.  Type: str; Dimensions: `response_channels`
+* **`/channels/feedback_channel`** The channel that the channel's generator originates from if the channel is an output channel.  Type: str; Dimensions: `response_channels`
+* **`/channels/warning_level`** The warning level of each channel.  Type: str; Dimensions: `response_channels`
+* **`/channels/abort_level`** The abort level of each channel.  Type: str; Dimensions: `response_channels`
+
+<!-- Next: \subsection{Environment Groups}>
+
