@@ -272,6 +272,8 @@ The netCDF files from Rattlesnake store all channel information into a separate 
 
 Environment-specific attributes, dimensions, and variables are also stored within a group corresponding to each environment.  For example, in the case where there were two environments "A" and "B", parameters specific to environment "A" would be stored within the group "A" in the netCDF file, and similarly for "B".  See [Part III. Rattlesnake Environments](./chapter_12.md) for more information on environment-specific parameters.
 
+#### Reading Rattlesnake Output Files using Python <!-- Subsection 3.8.6-->
+
 To read data from a netCDF using Python, it is recommended to use the `netCDF4` Python package.  This library is a dependency of Rattlesnake, so if the user is not running Rattlesnake via an executable, this package should already be installed in the user's Python ecosystem.
 
 netCDF4 provides a sleek Python interface into the data of a netCDF4 file.  This section will assume the command `import netCDF4 as nc4` was used to import the package, so `nc4` is used as a shorter alias.
@@ -374,4 +376,98 @@ unlimited dimensions:
 current shape = (30,)
 ```
 
-<!-- Next: 3.8.7 Reading from MATLAB -->
+#### Reading Rattlesnake Output Files using Matlab <!-- Subsection 3.8.7-->
+
+Matlab can also be used to read netCDF files from Rattlesnake.  The Matlab `ncdisp` function can be used to quickly determine which parameters are in a file.
+
+```matlab
+>>> ncdisp('path/to/netcdf/file.nc4')
+Source:
+           path/to/netcdf/file.nc4
+Format:
+           netcdf4
+Global Attributes:
+           sample_rate       = 2048
+           samples_per_write = 512
+           samples_per_read  = 512
+           hardware          = 2
+           hardware_file     = 'path/to/hardware/file.exo'
+Dimensions:
+           response_channels = 30
+           output_channels   = 3
+           time_samples      = 31745 (UNLIMITED)
+           num_environments  = 2
+Variables:
+    time_data                  
+           Size:       31745x30
+           Dimensions: time_samples,response_channels
+           Datatype:   double
+    environment_names          
+           Size:       2x1
+           Dimensions: num_environments
+           Datatype:   UNSUPPORTED DATATYPE
+    environment_active_channels
+           Size:       2x30
+           Dimensions: num_environments,response_channels
+           Datatype:   int8
+Groups:
+    /channels/
+        Variables:
+            node_number      
+                   Size:       30x1
+                   Dimensions: /response_channels
+                   Datatype:   UNSUPPORTED DATATYPE
+       .            
+       .
+       .
+```
+
+Attributes, dimensions, and other metadata can be read into Matlab using the `ncinfo` function.  Variables information must be read using the \inlineCode{ncread} function.
+
+```matlap
+>>> finfo = ncinfo('path/to/netcdf/file.nc4')
+
+finfo = 
+
+  struct with fields:
+
+      Filename: 'C:\Users\dprohe\Documents\Local_Respositories\Combined_Environments_Controller\test_data\BARC_Exodus_Test\barc_combined.nc4'
+          Name: '/'
+    Dimensions: [1x4 struct]
+     Variables: [1x3 struct]
+    Attributes: [1x5 struct]
+        Groups: [1x3 struct]
+        Format: 'netcdf4'
+        
+>>> finfo.Dimensions(1)
+
+ans = 
+
+  struct with fields:
+
+         Name: 'response_channels'
+       Length: 30
+    Unlimited: 0
+    
+>>> time_data = ncread('path/to/netcdf/file.nc4','time_data')
+```
+
+One issue with the Matlab interface is that string variables are unsupported.  This means that the majority of the channel information cannot be read through the Matlab netCDF interface.  However, they can be read using the lower level `h5read` function.
+
+```matlab
+>>> ncread(file,'channels/node_number')
+Error using netcdf.getVar (line 137)
+12 is not a recognized netCDF datatype.
+
+Error in internal.matlab.imagesci.nc/read (line 605)
+                data = netcdf.getVar(gid, varid);
+
+Error in ncread (line 66)
+vardata = ncObj.read(varName, varargin{:});
+
+>>> h5read(file,'/channels/node_number')
+
+ans =
+
+  30x1 cell array
+```
