@@ -6,3 +6,13 @@ title = "Rattlesnake Vibration Controller"
 
 [preprocessor.katex]
 after = ["links"]
+
+[preprocessor.bib]
+# The name of your .bib file, relative to the src directory
+bibliography = "bibliography.bib"
+
+# Optional: Set the title for the automatically generated bibliography chapter
+title = "Bibliography"
+
+# Optional: Render the entire bibliography ("all") or only cited entries ("cited")
+render-bib = "cited"

@@ -45,5 +45,5 @@
 
 -----------
 
-[Bibliography](./bibliography.md)
+<!-- [Bibliography](./bibliography.md)  # deprecated, see contributors.html#bibliography -->
 [Contributors ](./contributors.md)
