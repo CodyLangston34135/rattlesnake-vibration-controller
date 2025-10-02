@@ -201,7 +201,7 @@ Figure 3-10 shows an example `Run Test` tab with test profile events.
 
 **Figure 3-10. Run Test Tab.**
 
-### Rattlesnake Output Files
+### Rattlesnake Output Files <!--Section 3.8-->
 
 After data is acquired, the user may wish to analyze or plot the data acquired for a given test report.  Rattlesnake stores data in a self-documenting netCDF file {{#cite unidata2019_netcdf}}, which can be read by multiple platforms.  The output file is described as self-documenting because it contains all parameters necessary to reconstruct a given test using the Rattlesnake controller.  Any parameter that is set by the user in the GUI is stored to the netCDF file.
 
@@ -209,7 +209,7 @@ A full description of the netCDF file format is out of this document's scope, bu
 
 The Rattlesnake output files contain the following data members:
 
-#### NetCDF Dimensions
+#### NetCDF Dimensions <!--Subsection 3.8.1-->
 
 * **`response_channels`** The number of response channels in a given test
 * **`output_channels`** The number of output channels in a given test
@@ -217,7 +217,7 @@ The Rattlesnake output files contain the following data members:
 * **`time_samples_X`** If manual streaming is used and streaming is started multiple times, each subsequent stream will have the `time_samples` name with an underscore and appended number (e.g. `time_samples_1`, `time_samples_2`)
 * **`num_environments`** The total number of environments in the test
 
-#### NetCDF Attributes
+#### NetCDF Attributes <!--Subsection 3.8.2-->
 
 * **`sample_rate`** The global sample rate of the data acquisition system
 * **`time_per_write`** The amount of data put to the output hardware per write operation, in seconds
@@ -234,14 +234,14 @@ The Rattlesnake output files contain the following data members:
 * **`maximum_acquisition_processes`** The maximum number of processes that the LAN-XI hardware can use for acquisition
 * **`output_oversample`** The oversample used either due to sample rate restrictions on the data acquisition system, or due to oversampling the integration
 
-#### NetCDF Variables
+#### NetCDF Variables <!--Subsection 3.8.3-->
 
 * **`time_data`** The measured data from the test. Type: 64-bit float; Dimensions: `response_channels` $\times$ `time_samples`
 * **`time_data_X`** If manual streaming is used and streaming is started multiple times, each subsequent stream will have the `time_data` name with an underscore and appended number (e.g. `time_data_1`, `time_data_2`)
 * **`environment_names`** The name of each environment. Type: string; Dimensions: `num_environments`
 * **`environment_active_channels`** The channels active in each environment.  1 if active, 0 if not. Type: 8-bit int; Dimensions: `response_channels` $\times$ `num_environments`
 
-#### Channels Group
+#### Channels Group <!--Subsection 3.8.4-->
 
 The netCDF files from Rattlesnake store all channel information into a separate group called `channels`.  Inside the `channels` group, there is a variable for each column of the channel table.  See Section [Channel Table](#channel-table) for more complete descriptions of each channel variable.
 
@@ -268,5 +268,110 @@ The netCDF files from Rattlesnake store all channel information into a separate 
 * **`/channels/warning_level`** The warning level of each channel.  Type: str; Dimensions: `response_channels`
 * **`/channels/abort_level`** The abort level of each channel.  Type: str; Dimensions: `response_channels`
 
-<!-- Next: \subsection{Environment Groups}>
+#### Environment Groups <!--Subsection 3.8.5-->
 
+Environment-specific attributes, dimensions, and variables are also stored within a group corresponding to each environment.  For example, in the case where there were two environments "A" and "B", parameters specific to environment "A" would be stored within the group "A" in the netCDF file, and similarly for "B".  See [Part III. Rattlesnake Environments](./chapter_12.md) for more information on environment-specific parameters.
+
+To read data from a netCDF using Python, it is recommended to use the `netCDF4` Python package.  This library is a dependency of Rattlesnake, so if the user is not running Rattlesnake via an executable, this package should already be installed in the user's Python ecosystem.
+
+netCDF4 provides a sleek Python interface into the data of a netCDF4 file.  This section will assume the command `import netCDF4 as nc4` was used to import the package, so `nc4` is used as a shorter alias.
+
+A netCDF4 dataset can be opened using the following command:
+
+```python
+dataset = nc4.Dataset('path/to/netcdf4/file.nc4')
+```
+
+after which all data can be accessed through the `dataset` object.
+    
+Attribute names can be queried using the `dataset.ncattrs()` function and the attribute values can be accessed directly from the `dataset` object using that name.
+
+```python
+>>> dataset.ncattrs()
+['sample_rate',
+'samples_per_write',
+'samples_per_read',
+'hardware',
+'hardware_file']
+
+>>> dataset.sample_rate
+2048
+```
+
+Dimensions can be accessed using the `dataset.dimensions` property, which gives a Python `dict` where the keys are the dimension names and the values are references to the dimension.  The size of the dimension can be accessed using the `size` parameter in each dimension object.
+
+```python
+>>> dataset.dimensions
+{'response_channels': <class 'netCDF4._netCDF4.Dimension'>: name = 'response_channels', size = 30,
+'output_channels': <class 'netCDF4._netCDF4.Dimension'>: name = 'output_channels', size = 3,
+'time_samples': <class 'netCDF4._netCDF4.Dimension'> (unlimited): name = 'time_samples', size = 31745,
+'num_environments': <class 'netCDF4._netCDF4.Dimension'>: name = 'num_environments', size = 2}
+
+>>> dataset.dimensions['response_channels'].size
+30
+```
+
+Variables can be accessed similarly to dimensions using the `dataset.variables` property.  Variables have many properties that may be interesting to the users, including the netCDF dimensions that were used to size the variable (accessible with the `dimensions` parameter) or the actual shape of the array (accessible with the `shape` parameter).  The data inside the dimension can be accessed by slicing or indexing the array, or simply passing it to a `numpy` array.  Note that slicing or indexing the variable returns the data in a `numpy` masked array which allows data to potentially to be missing from the array.  Rattlesnake does not use the missing data capabilities of the netCDF file, so data can safely be transformed directly to a regular `numpy` array.
+
+```python
+>>> dataset.variables
+{'time_data': <class 'netCDF4._netCDF4.Variable'>
+float64 time_data(response_channels, time_samples)
+unlimited dimensions: time_samples
+current shape = (30, 31745)
+filling on, default _FillValue of 9.969209968386869e+36 used,
+'environment_names': <class 'netCDF4._netCDF4.Variable'>
+vlen environment_names(num_environments)
+vlen data type: <class 'str'>
+unlimited dimensions: 
+current shape = (2,),
+'environment_active_channels': <class 'netCDF4._netCDF4.Variable'>
+int8 environment_active_channels(response_channels, num_environments)
+unlimited dimensions: 
+current shape = (30, 2)
+filling on, default _FillValue of -127 ignored}
+
+# Get the dimensions used by the variable
+>>> dataset.variables['time_data'].dimensions
+('response_channels', 'time_samples')
+
+# Get the shape of the variable
+>>> dataset.variables['time_data'].shape
+(30, 31745)
+
+# Access via slice returns a masked array
+>>> dataset.variables['time_data'][0,0]
+masked_array(data=-0.00312098,
+mask=False,
+fill_value=1e+20)
+
+# Can pass directly to a numpy array to get the full variable data
+>>> np.array(dataset.variables['time_data'])
+array([[-3.12098493e-03,  4.26820006e-03,  3.77395182e-03, ...,
+         2.00690958e-01,  3.38505511e-01,  0.00000000e+00],
+        [-6.10438702e-03,  1.50628999e-02, -1.50619535e-02, ...,
+         2.67639515e-01,  5.50047023e-01,  0.00000000e+00],
+        [-3.42732089e-03,  7.76593927e-03, -2.66239267e-03, ...,
+         2.05434816e-01,  3.21815820e-01,  0.00000000e+00],
+         ...,
+        [ 3.71743658e-06, -8.77497995e-08, -8.80558595e-06, ...,
+         -5.26559214e-06,  0.00000000e+00,  0.00000000e+00],
+        [-1.32020650e-05,  2.74453772e-05, -2.01551409e-05, ...,
+         -1.02501347e-05,  0.00000000e+00,  0.00000000e+00],
+        [-5.96816619e-07, -1.47868461e-05, -5.24157875e-05, ...,
+         -1.61722666e-05,  0.00000000e+00,  0.00000000e+00]])
+```
+
+Group names in the netCDF dataset can be queried using `dataset.groups`, which returns a dictionary similar to the dimensions and variables.  Groups can also be accessed by indexing the dataset directly with the group name.  A group object can be treated exactly the same as the root-level dataset, and will have its own set of attributes, dimensions, and variables.
+
+```python
+>>> dataset['channels'].variables['node_number']
+<class 'netCDF4._netCDF4.Variable'>
+vlen control(response_channels)
+vlen data type: <class 'str'>
+path = /channels
+unlimited dimensions: 
+current shape = (30,)
+```
+
+<!-- Next: 3.8.7 Reading from MATLAB -->
