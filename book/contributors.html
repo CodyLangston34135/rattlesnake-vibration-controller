@@ -211,12 +211,63 @@ mdbook build
 # visualize the mdbook in a local web browser
 mdbook serve --open
 </code></pre>
+<h5 id="bibliography"><a class="header" href="#bibliography">Bibliography</a></h5>
+<p>To create the bibliography, use <a href="https://crates.io/crates/mdbook-bib"><code>mdbook-bib</code></a>, a popular and well-documented third-party plugin.</p>
+<p><a href="https://rust-lang.org/tools/install/">Cargo</a>,
+the Rust programming language's package manager, is a prerequisite to get the plugin.</p>
+<ol>
+<li>Install the plugin via Cargo:</li>
+</ol>
+<pre><code class="language-sh">cargo install mdbook-bib
+</code></pre>
+<ol start="2">
+<li>Prepare your bibliography file:</li>
+</ol>
+<p>The <code>mdbook-bib</code> plugin uses the standard BibLaTeX (<code>.bib</code>) format for references.
+Create a <code>.bib</code> file (e.g., <code>bibliography.bib</code>) in the root of the <code>documentation/mdbook/src/</code> directory.  Populate the file with references, e.g.,</p>
+<pre><code class="language-sh">@book{knuth1986computer,
+  title={The Computer Science of TeX and Metafont: An Inaugural Lecture},
+  author={Knuth, Donald E},
+  year={1986},
+  publisher={American Mathematical Society}
+}
+</code></pre>
+<ol start="3">
+<li>Configure <code>book.toml</code></li>
+</ol>
+<p>Tell mdBook to use the <code>mdbook-bib</code> preprocessor and specify the path to the
+bibliography file in the <code>book.toml</code> configuration file.  Add the following section
+to the <code>book.toml</code>:</p>
+<pre><code class="language-sh">[preprocessor.bib]
+# The name of your .bib file, relative to the src directory
+bibliography = "bibliography.bib"
+
+# Optional: Set the title for the automatically generated bibliography chapter
+title = "Bibliography"
+
+# Optional: Render the entire bibliography ("all") or only cited entries ("cited")
+render-bib = "cited"
+</code></pre>
+<ol start="4">
+<li>Add in-text citations</li>
+</ol>
+<p>In a markdown file, use <code>{{</code> and <code>}}</code> to surround the
+citation key, <code># cite key</code>, for example:</p>
+<p><code>{{</code> <code>#cite knuth1986computer</code> <code>}}</code></p>
+<ol start="5">
+<li>Build the book</li>
+</ol>
+<p>Run the <code>mdbook build</code> command.  The preprocessor will automatically run, finding the
+citations, generating the citation numbering, and creating a new chapter containing the
+formatted bibliography based on the entries in the <code>.bib</code> file.</p>
+<pre><code class="language-sh">mdbook build
+</code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="bibliography.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="appendix_d.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
@@ -227,7 +278,7 @@ mdbook serve --open
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="bibliography.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="appendix_d.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
