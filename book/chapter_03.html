@@ -554,6 +554,10 @@ ans =
 
   30x1 cell array
 </code></pre>
+<h3 id="loading-rattlesnake-tests"><a class="header" href="#loading-rattlesnake-tests">Loading Rattlesnake Tests <!-- Section 3.9--></a></h3>
+<p>It can be tedious to set up a test from scratch each time a test is to be run, so Rattlesnake offers two ways to load test settings from files.</p>
+<p>On the <code>Data Acquisition Setup</code> page, selecting the <code>Load Test From File</code> button allows the user to load in a netCDF data file that was output from Rattlesnake.  As all the test metadata is stored to this file, Rattlesnake can read the file and set itself up accordingly to reproduce a given test.  Note that difficulties may arise using this approach if parameters specified by file paths are no longer valid.  For example, if the control law is read from a given file on one computer, but the file is in a different place on a separate computer, Rattlesnake will not be able to find the file.</p>
+<p>The second way to load in an entire test is by using the Test Profile functionality in the Combined Environments mode.  While this capability was designed to make it easier to load in complex multi-environment test setups, it can be used just as effectively for single environment tests.  See Chapter 16 <a href="./chapter_16.html">Combined Environments</a> for more information.</p>
 
                     </main>
 
