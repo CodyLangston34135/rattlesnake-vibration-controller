@@ -1,6 +1,6 @@
 ## 3. Using Rattlesnake
 
-This chapter will describe how to use Rattlesnake through its graphical user interface (GUI).  Rattlesnake is capable of running several different types of control, therefore the GUI may look different for different tests.  In general, the GUI consists of a tabbed interface across the top of the main window, and users must complete each tab before proceeding to the next.  The tabs that exist in a given test will depend on which control type is being run.  For example, in a combined environments test (TODO: see Section \ref{sec:rattlesnake_environments_combining_environments}) such as the one shown in Figure 3-1, there is a `Test Profile` tab that allows the user to define a testing timeline.  Additionally, environments such as the MIMO Random Vibration environment (TODO: see Section \ref{sec:rattlesnake_environments_mimo_random}) require a system identification phase where the controller identifies relationships between the output signals and the control degrees of freedom.  Therefore, tests using the MIMO Random Vibration environment will also have a `System Identification` and `Test Predictions` tab.  Figure 3-2, on the other hand, shows the GUI for a test that only utilizes the Time History environment (TODO: see Section \ref{sec:rattlesnake_environments_time_generator}) so these optional tabs are not displayed.
+This chapter will describe how to use Rattlesnake through its graphical user interface (GUI).  Rattlesnake is capable of running several different types of control, therefore the GUI may look different for different tests.  In general, the GUI consists of a tabbed interface across the top of the main window, and users must complete each tab before proceeding to the next.  The tabs that exist in a given test will depend on which control type is being run.  For example, in a combined environments test (see Chapter 16 [Combined Environments](./chapter_16.md)) such as the one shown in Figure 3-1, there is a `Test Profile` tab that allows the user to define a testing timeline.  Additionally, environments such as the MIMO Random Vibration environment (see Chapter 12 [Multiple Input/Multiple Ouput Random Vibration](./chapter_12.md)) require a system identification phase where the controller identifies relationships between the output signals and the control degrees of freedom.  Therefore, tests using the MIMO Random Vibration environment will also have a `System Identification` and `Test Predictions` tab.  Figure 3-2, on the other hand, shows the GUI for a test that only utilizes the Time History environment (see Chapter 14 [Time History Generatory](./chapter_14.md)) so these optional tabs are not displayed.
 
 ![Rattlesnake_Main_GUI_Combined_Environments](figures/Rattlesnake_Main_GUI_Combined_Environments.png)
 
@@ -62,12 +62,12 @@ The required data input into the channel table varies with the physical or virtu
 * **Current Excitation (A)** Used to specify the excitation current sent to the device for signal conditioning.  Depending on whether the device has a fixed or variable excitation current, this field may be left empty.  This can also be left empty if no signal conditioning is provided by the data acquisition system.  See [Part II](./chapter_04.md) for more information.
 * **Feedback Device** For output channels, this is the reference to the output or excitation device that is being fed back into the current channel's Physical device.  If the current channel is not an output channel, it should be left empty.  A populated Feedback Device column tells the controller that the given channel is an output channel.
 * **Feedback Channel** For output channels, this is the reference to the output channel on the output or excitation device that is being fed back into the current channel's Physical Device.  As an example using generic device and channel names, if `Channel 2` on `Generator 1` is teed off to `Channel 3` on `Acquisition Card 2`, the corresponding row in the channel table would have `Acquisition Card 2` specified as the Physical Device, `Channel 3` specified as the Physical Channel, `Generator 1` specified as the `Feedback Device` and `Channel 2` specified as the feedback channel.
-* **Warning Level** A warning level can be implemented for each channel.  The warning level is specified in the same units as the Engineering Unit column.  When a channel hits the warning limit, it will be flagged as Yellow in the Channel Monitor (TODO: see Section \ref{sec:channel_monitor}).  The warning level can be left blank if no warning is desired.
-* **Abort Level** An abort level can be implemented for each channel.  The abort level is specified in the same units as the Engineering Unit column.  When a channel hits the abort limit, it will be flagged as Red in the Channel Monitor (TODO: see Section \ref{sec:channel_monitor}).  The controller will also shut down if an abort level is reached.  The abort level can be left blank if no abort is desired.
+* **Warning Level** A warning level can be implemented for each channel.  The warning level is specified in the same units as the Engineering Unit column.  When a channel hits the warning limit, it will be flagged as Yellow in the Channel Monitor (see [Section 3.1](#channel-monitor)).  The warning level can be left blank if no warning is desired.
+* **Abort Level** An abort level can be implemented for each channel.  The abort level is specified in the same units as the Engineering Unit column.  When a channel hits the abort limit, it will be flagged as Red in the Channel Monitor (see [Section 3.1](#channel-monitor)).  The controller will also shut down if an abort level is reached.  The abort level can be left blank if no abort is desired.
 
 To limit the tediousness of inputting channel table information into the GUI by hand, the channel table can be loaded from an Excel spreadsheet or Comma-separated-value file.  A channel table can be loaded by clicking the `Load Channel Table` button under the channel table, which will bring up a file selection dialog, enabling the user to select a file to load.  For convenience, a template Excel spreadsheet is attached to this PDF: (TODO) \attachfile{attachments/channel_table_template.xlsx}.  A template Excel file can also be generated by creating a test in Rattlesnake and saving the empty channel table by clicking the `Save Channel Table` button under the channel table.  If a channel table is filled out in Rattlesnake's GUI, its contents will be saved to the file as well.
 
-A complete test can be loaded by clicking the `Load Test from File` button.  See Section (TODO) \ref{sec:load_rattlesnake_test} for more details.
+A complete test can be loaded by clicking the `Load Test from File` button.  See [Loading Rattlesnake Tests](#loading-rattlesnake-tests) for more details.
 
 #### Environment Table
 
@@ -175,7 +175,7 @@ Figure 3-9 shows an example of a test profile that ramps up the test level of en
 
 ![test_profile](figures/test_profile.png)
 
-**Figure 3-9. Example test profile showing a ramp up of test level for environment `A` and subsequently starting environment `B`.
+**Figure 3-9. Example test profile showing a ramp up of test level for environment `A` and subsequently starting environment `B`.**
 
 ### Run Test
 
@@ -236,7 +236,7 @@ The Rattlesnake output files contain the following data members:
 
 #### NetCDF Variables <!--Subsection 3.8.3-->
 
-* **`time_data`** The measured data from the test. Type: 64-bit float; Dimensions: `response_channels` $\times$ `time_samples`
+* **`time_data`** The measured data from the test. Type: 64-bit float; Dimensions: `response_channels` by `time_samples`
 * **`time_data_X`** If manual streaming is used and streaming is started multiple times, each subsequent stream will have the `time_data` name with an underscore and appended number (e.g. `time_data_1`, `time_data_2`)
 * **`environment_names`** The name of each environment. Type: string; Dimensions: `num_environments`
 * **`environment_active_channels`** The channels active in each environment.  1 if active, 0 if not. Type: 8-bit int; Dimensions: `response_channels` $\times$ `num_environments`
@@ -479,3 +479,13 @@ It can be tedious to set up a test from scratch each time a test is to be run, s
 On the `Data Acquisition Setup` page, selecting the `Load Test From File` button allows the user to load in a netCDF data file that was output from Rattlesnake.  As all the test metadata is stored to this file, Rattlesnake can read the file and set itself up accordingly to reproduce a given test.  Note that difficulties may arise using this approach if parameters specified by file paths are no longer valid.  For example, if the control law is read from a given file on one computer, but the file is in a different place on a separate computer, Rattlesnake will not be able to find the file.
     
 The second way to load in an entire test is by using the Test Profile functionality in the Combined Environments mode.  While this capability was designed to make it easier to load in complex multi-environment test setups, it can be used just as effectively for single environment tests.  See Chapter 16 [Combined Environments](./chapter_16.md) for more information.
+
+### Channel Monitor <!-- Section 3.10-->
+
+To aid with understanding the test levels and headroom available for the sensors in the test, a Channel Monitor is available where the levels are shown for each channel.  The channel monitor is displayed by clicking on the `Channel Monitor` button on the lower left side of the GUI.  The display shows both an instantaneous level (green) as well as a running historical maximum (blue).  If a channel reaches the Warning or Abort level, it will be flagged with a yellow or red tint, respectively.  These warnings "latch"; once the level is reached, it will stay highlighted in the channel monitor until the `Clear Alerts` button is clicked.  Figure 3.11 shows an example channel monitor.
+
+![channel_monitor](figures/channel_monitor.png)
+
+**Figure 3-11. View of the Channel Monitor dialog box showing several channels that have reached the "warning" level (highlighted yellow) and one channel that has reached the "abort" level (highlighted red).**
+
+The aspect ratio of the Channel Monitor can be customized to different sizes modifying the `Channels per Row`.
