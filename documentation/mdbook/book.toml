@@ -1,11 +1,18 @@
 [book]
 authors = ["Daniel P. Rohe", "Ryan Schultz", "Norman Hunter"]
+descrption = "Rattlesnake is a combined-environments, multiple input/multiple output control system for dynamic excitation of structures under test."
 language = "en"
+multilingual = false
 src = "src"
 title = "Rattlesnake Vibration Controller"
 
+# did work for local LaTeX, uses KaTeX, which is faster than MathJax
 [preprocessor.katex]
 after = ["links"]
+
+# reference font modifications made in the theme/custom.css file
+[output.html]
+additional-css = ["theme/custom.css"]
 
 [preprocessor.bib]
 # The name of your .bib file, relative to the src directory

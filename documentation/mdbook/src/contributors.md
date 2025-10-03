@@ -4,7 +4,6 @@
 * Ryan Schultz
 * Norman Hunter
 
-
 ### Development
 
 #### Documentation

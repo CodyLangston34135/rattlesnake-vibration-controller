@@ -1,0 +1,22 @@
+/* 2025-10-03 Chad sets custom fonts for the main body of the text because
+ * serif fonts are generally more readable for longer narratives
+ */
+
+
+
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&display=swap');
+
+body {
+    font-family: 'Crimson Pro', Georgia, serif;
+    font-size: 2em;
+    /* To make the Crimson Pro font a bit larger by default, add the font-size property
+     * to the body selector and set it to a value slightly larger than the browser's default
+     * (which is usually 16px or 1em).
+     */
+}
+
+pre, code {
+    font-family: Monaco, 'Courier New', monospace;
+    font-size: 0.9em; /* Adjust this value, e.g, 90% or 0.85 em */
+}
+
