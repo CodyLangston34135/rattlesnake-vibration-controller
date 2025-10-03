@@ -9,18 +9,21 @@ on:
 jobs:
   deploy-book:
     runs-on: ubuntu-latest
+    container:
+      image: peaceiris/mdbook:latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
+      # Avoid building the entire Rust toolchain, use peaceiris image instead.
+      # - name: Setup Rust toolchain
+      #   uses: actions-rs/toolchain@v1
+      #   with:
+      #     toolchain: stable
 
       - name: Install mdBook and preprocessors
         run: |
-          cargo install mdbook mdbook-katex
+          cargo install mdbook-katex
 
       - name: Build mdBook
         run: mdbook build documentation/mdbook
