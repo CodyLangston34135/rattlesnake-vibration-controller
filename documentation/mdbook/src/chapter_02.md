@@ -62,8 +62,6 @@ from a command line in the directory in which Rattlesnake was downloaded to exec
 
 Many users will find it more comfortable to forgo the command line and launch Rattlesnake directly from their favorite integrated development environment (IDE).  Note that the Rattlesnake uses the `multiprocessing` Python package to spawn several processes, and these processes sometimes do not play nice with IDE consoles.  Therefore if running from an IDE, the IDE should be instructed to run the `rattlesnake.py` script from an external system terminal rather than a terminal inside the `IDE`.  When executing in an external terminal, it is again useful to keep the terminal active after execution in case of errors occurring.  The error message and traceback displayed in the terminal will be instrumental in debugging the source of the error.  In Spyder, this can be configured per file from the `Run` menu, so the run settings for `rattlesnake.py` should be set as shown in Figure 2-1.
 
-![figure_2-1](figures/spyder_run_configuration.png)
-
 **Figure 2-1. Spyder run configuration showing execution in an external system terminal as well as allowing interaction with the Python console after execution.**
 
 ## Computational Requirements
