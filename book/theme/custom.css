@@ -8,7 +8,7 @@
 
 body {
     font-family: 'Crimson Pro', Georgia, serif;
-    font-size: 2em;
+    font-size: 1.3em;
     /* To make the Crimson Pro font a bit larger by default, add the font-size property
      * to the body selector and set it to a value slightly larger than the browser's default
      * (which is usually 16px or 1em).
