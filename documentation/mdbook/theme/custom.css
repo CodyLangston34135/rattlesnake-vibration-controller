@@ -7,8 +7,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&display=swap');
 
 body {
-    font-family: 'Crimson Pro', Georgia, serif;
+    /* font-family: 'Crimson Pro', Georgia, serif;
     font-size: 1.3em;
+    */
     /* To make the Crimson Pro font a bit larger by default, add the font-size property
      * to the body selector and set it to a value slightly larger than the browser's default
      * (which is usually 16px or 1em).
@@ -16,7 +17,8 @@ body {
 }
 
 pre, code {
-    font-family: Monaco, 'Courier New', monospace;
-    font-size: 0.9em; /* Adjust this value, e.g, 90% or 0.85 em */
+    /*
+    font-family: Monaco, 'Courier New', monospace; */
+    /* font-size: 0.9em; */ /* Adjust this value, e.g, 90% or 0.85 em */
 }
 
