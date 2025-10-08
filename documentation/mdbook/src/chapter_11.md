@@ -1,4 +1,4 @@
-## 11. Implementing New Hardward Devices with Rattlesnake
+## 11. Implementing New Hardware Devices with Rattlesnake
 
 **WARNING:** This chapter contains
 
