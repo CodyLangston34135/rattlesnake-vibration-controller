@@ -23,7 +23,7 @@
 - [Virtual Control using State Space Matrices](./chapter_08.md)
 - [Virtual Control using Finite Element Results in Exodus Files](./chapter_09.md)
 - [Virtual Control using SDYNPY System Objects](./chapter_10.md)
-- [Implementing New Hardward Devices with Rattlesnake](./chapter_11.md)
+- [Implementing New Hardware Devices with Rattlesnake](./chapter_11.md)
 
 -----------
 
@@ -45,5 +45,5 @@
 
 -----------
 
-[Bibliography](./bibliography.md)
+<!-- [Bibliography](./bibliography.md)  # deprecated, see contributors.html#bibliography -->
 [Contributors ](./contributors.md)

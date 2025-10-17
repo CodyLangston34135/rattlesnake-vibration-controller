@@ -9,14 +9,17 @@ on:
 jobs:
   deploy-book:
     runs-on: ubuntu-latest
+    container:
+      image: rust:latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
+      # Avoid building the entire Rust toolchain, use Rust image instead.
+      # - name: Setup Rust toolchain
+      #   uses: actions-rs/toolchain@v1
+      #   with:
+      #     toolchain: stable
 
       - name: Install mdBook and preprocessors
         run: |
