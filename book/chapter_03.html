@@ -185,15 +185,15 @@
 <p>Note that the Rattlesnake enforces an order to operations when defining a particular test by enabling and disabling tabs in the GUI.  Initially, only the first tab will be enabled.  As the users complete each tab, the next tab will become available.  In Figures 3-1 and 3-2, it can be seen that only the initial tab is enabled, and subsequent tabs are disabled.</p>
 <p><img src="figures/Rattlesnake_Main_GUI_Time_Generation.png" alt="Rattlesnake_Main_GUI_Time_Generation" /></p>
 <p><strong>Figure 3-2. Rattlesnake GUI tabs when running a single environment with no system identification phase.</strong></p>
-<h3 id="environment-selection"><a class="header" href="#environment-selection">Environment Selection</a></h3>
-<p>When Rattlesnake is opened, the first GUI window that the user will see allows the user to select the environment that they will run (Figure 3-3.).  Users can select a single environment, or alternatively select a combined environments test (TODO: see Section \ref{sec:rattlesnake_environments_combining_environments}).  The selection made in this dialog box will determine which tabs are set up in the main GUI.</p>
+<h3 id="31-environment-selection"><a class="header" href="#31-environment-selection">3.1. Environment Selection</a></h3>
+<p>When Rattlesnake is opened, the first GUI window that the user will see allows the user to select the environment that they will run (Figure 3-3.).  Users can select a single environment, or alternatively select a combined environments test (see Section 16 <!--\ref{sec:rattlesnake_environments_combining_environments}--><a href="./chapter_16.html">Combined Environments</a>).  The selection made in this dialog box will determine which tabs are set up in the main GUI.</p>
 <p><img src="figures/environment_selection.png" alt="environment_selection" /></p>
 <p><strong>Figure 3-3. Initial Rattlesnake dialog to select the type of control that will be run.</strong></p>
-<h3 id="global-data-acquisition-settings"><a class="header" href="#global-data-acquisition-settings">Global Data Acquisition Settings</a></h3>
-<p>The <code>Data Acquisition Setup</code> tab of the Rattlesnake GUI specifies the global test parameters that the controller will use.  Parameters are determined to be global when they affect all environments or the controller itself.  The three main sections of this portion of the interface are the Channel Table, Environment Table, and Global Data Acquisition Parameters.  Figure 3-4. shows this.</p>
+<h3 id="32-global-data-acquisition-settings"><a class="header" href="#32-global-data-acquisition-settings">3.2. Global Data Acquisition Settings</a></h3>
+<p>The <code>Data Acquisition Setup</code> tab of the Rattlesnake GUI specifies the global test parameters that the controller will use.  Parameters are determined to be global when they affect all environments or the controller itself.  The three main sections of this portion of the interface are the Channel Table, Environment Table, and Global Data Acquisition Parameters.  Figure 3-4 shows this.</p>
 <p><img src="figures/data_acquisition_setup.png" alt="data_acquisition_setup" /></p>
 <p><strong>Figure 3-4. Data Acqisition Setup tab in the Rattlesnake Controller where the Channel Table, Environment Table, and Data Acquisition Parameters are specified.</strong></p>
-<h4 id="channel-table"><a class="header" href="#channel-table">Channel Table</a></h4>
+<h4 id="321-channel-table"><a class="header" href="#321-channel-table">3.2.1. Channel Table</a></h4>
 <p>The channel table specifies how the instrument channels in a given test are connected to the data acquisition hardware, as well as how the data read from those channels are used by the software.</p>
 <p>In general, for a given test there will be a set of excitation devices that use the output signals from Rattlesnake as well as instrumentation to record the test article's responses to those exciters.  Rattlesnake requires each instrument (or each channel on each instrument for multi-axial instruments) as well as each excitation device to have a row in the channel table.  This is perhaps contrary to other control software where only the response channels need to be set up in the channel table.  However, to maintain the flexibility to run multiple types of hardware devices, some of which having limitations to their triggering capabilities, Rattlesnake must read in the signal from its output directly in order to be able to synchronize its outputs and the responses to those outputs.  Therefore, for all Rattlesnake test setups, the output signal should be split using a tee to the exciter and the corresponding input channel.  Because of this requirement, one should keep in mind that the number of acquisition channels required on the hardware device for a given test is actually the number of responses plus the number of outputs.  Figure 3-5 shows a schematic of a four acquisition channel, two output channel LAN-XI module set up for use with Rattlesnake.</p>
 <p><img src="figures/lanxi_source_tee_labelled.png" alt="lanxi_source_tee_labelled" /></p>
@@ -225,11 +225,11 @@
 </ul>
 <p>To limit the tediousness of inputting channel table information into the GUI by hand, the channel table can be loaded from an Excel spreadsheet or Comma-separated-value file.  A channel table can be loaded by clicking the <code>Load Channel Table</code> button under the channel table, which will bring up a file selection dialog, enabling the user to select a file to load.  For convenience, a template Excel spreadsheet is attached to this PDF: (TODO) \attachfile{attachments/channel_table_template.xlsx}.  A template Excel file can also be generated by creating a test in Rattlesnake and saving the empty channel table by clicking the <code>Save Channel Table</code> button under the channel table.  If a channel table is filled out in Rattlesnake's GUI, its contents will be saved to the file as well.</p>
 <p>A complete test can be loaded by clicking the <code>Load Test from File</code> button.  See <a href="#loading-rattlesnake-tests">Loading Rattlesnake Tests</a> for more details.</p>
-<h4 id="environment-table"><a class="header" href="#environment-table">Environment Table</a></h4>
+<h4 id="322-environment-table"><a class="header" href="#322-environment-table">3.2.2. Environment Table</a></h4>
 <p>For combined environments tests, an environment table is also provided to the right of the standard Channel Table.  This table specifies which channels are used by which environments.  A channel can be used for multiple environments, a single environment, or no environments.  Channels used by no environments will still be measured and streamed to disk, but will not be sent to any environment for use in the respective control approaches.  The environment table is also used to specify which excitation devices are used by which environment.</p>
 <p>For single environment tests, the environment table is not visible, and the software assumes that all channels in the channel table are used by the single environment.</p>
 <p>If importing a channel table from an Excel spreadsheet for a combined environments test, the Environment Table can be specified as the columns after the main Channel Table information (starting in Column X with one column for each environment) with the environment name specified in row 2 and an entry (e.g. an <code>X</code> or some other mark) in the row corresponding to a given channel if that channel is used for the given environment.</p>
-<h4 id="data-acquisition-parameters"><a class="header" href="#data-acquisition-parameters">Data Acquisition Parameters</a></h4>
+<h4 id="323-data-acquisition-parameters"><a class="header" href="#323-data-acquisition-parameters">3.2.3. Data Acquisition Parameters</a></h4>
 <p>The final portion of <code>Data Acquisition Setup</code> tab specifies data acquisition parameters.  These parameters may change depending on the hardware selected.</p>
 <ul>
 <li><strong>Hardware Selector</strong> The physical or virtual hardware used for the test.  See <a href="./chapter_04.html">Part II</a> for hardware specific details of the controller.  For some devices, a file selector window will appear will appear when the device is selected, as that device needs more information to operate.  This is primarily the case for virtual hardware where some model of the test article must be loaded.  This is also used when a specific hardware device needs to access external functionality in a library such as a <code>dll</code> file.</li>
@@ -239,18 +239,18 @@
 <li><strong>Maximum Acquisition Processes</strong> For specific hardware devices with large channel count tests, it can be difficult to pull down large quantities of data fast enough for the controller to keep up using a single process.  This option allows the user to specify how many processes can be given to the acquisition system to be used to stream data off the hardware.  Note that too many processes will bog down the computer, and too few will result in the controller falling behind.  Generally about 20-40 channels per processor is sufficient, but this will depend on the sample rate.  For higher sample rates, more processors may be needed.</li>
 <li><strong>Integration Oversample</strong> For synthetic hardware devices that integrate equations of motion, an integration oversample factor can be specified.  This factor will be applied to the sample rate to determine the time step for the integration.  Generally a factor of 10 is sufficient for reasonably accurate data without significant computational expense.</li>
 </ul>
-<h4 id="initialize-data-acquisition"><a class="header" href="#initialize-data-acquisition">Initialize Data Acquisition</a></h4>
+<h4 id="324-initialize-data-acquisition"><a class="header" href="#324-initialize-data-acquisition">3.2.4. Initialize Data Acquisition</a></h4>
 <p>With the Data Acquisition Settings specified in the GUI, the Data Acquisition can be initialized by pressing the <code>Initialize Data Acquisition</code> button.  At this point, the controller will go through and create the programming interfaces to the hardware device, specify the sampling parameters, and create the channels on the devices.  The software will then proceed to the next tab.</p>
 <p>Figure 3-6 shows a completed <code>Data Acquisition Setup</code> tab with three response channels and one output channel for a test with two environments <code>A</code> and <code>B</code>.  The first response and output channels are used by both environments, while the second response channel is used only by environment <code>A</code> and the third response channel is used only by environment <code>B</code>.</p>
 <p><img src="figures/data_acquisition_setup_tab.png" alt="data_acquisition_setup_tab" /></p>
 <p><strong>Figure 3-6.  Example of a completed <code>Data Acquisition Setup</code> tab with three response channels and one output channel.</strong></p>
-<h3 id="environment-definition"><a class="header" href="#environment-definition">Environment Definition</a></h3>
+<h3 id="33-environment-definition"><a class="header" href="#33-environment-definition">3.3. Environment Definition</a></h3>
 <p>The <code>Environment Definition</code> tab is the second tab in the Rattlesnake software.  It is in this tab that the various environments are defined.  The main tab will have one sub-tab for each environment, as shown in Figure 3-7.</p>
 <p><img src="figures/environment_definition_subtabs.png" alt="environment_definition_subtabs" /></p>
 <p><strong>Figure 3-7. Sub-tabs for environments <code>A</code> and <code>B</code> in the <code>Environment Definition</code> tab.</strong></p>
 <p>Different environment types will have different parameters that can be set.  See <a href="./chapter_12.html">Part III</a> for a description of each environment type in Rattlesnake and the parameters that define it.</p>
 <p>When all environments are defined, the <code>Initialize Environments</code> button can be pressed to proceed to the next portion of the controller.</p>
-<h3 id="system-identification"><a class="header" href="#system-identification">System Identification</a></h3>
+<h3 id="34-system-identification"><a class="header" href="#34-system-identification">3.4. System Identification</a></h3>
 <p>With the environments defined, the controller proceeds to the <code>System Identification</code> tab if required by any environment, shown in Figure 3-8.  During this phase of the controller, the controller will develop relationships between the excitation signals and the responses of the test article to those excitation signals.  It will also make a measurement of the noise floor of the test.</p>
 <p><img src="figures/system_identification.png" alt="system_identification" /></p>
 <p><strong>Figure 3-8. System identification tab showing various signals and spectral quantities that can be used to evaluate the test.</strong></p>
@@ -286,9 +286,9 @@
 <li><strong>Coherence and Conditioning</strong> Coherence will be displayed so the user can judge how satisfactory the input/output relationships that are developed are.  If coherence is poor, it could suggest that the controller won't be able to control the structure properly.  The condition number of the Transfer Function Matrix is also displayed.  This can be useful to determine what level of regularization a control law might need to implement.</li>
 <li><strong>Levels</strong> The autopower spectral density of each signal will be displayed both for the system identification as well as for the noise characterization.  This can help identify if the system identification is high enough out of the noise floor.</li>
 </ul>
-<h3 id="test-predictions"><a class="header" href="#test-predictions">Test Predictions</a></h3>
+<h3 id="35-test-predictions"><a class="header" href="#35-test-predictions">3.5. Test Predictions</a></h3>
 <p>Once the system identification phase completes, the controller will compute a test prediction for each environment where system identification was completed.  This prediction will be based on the measured transfer functions between output signals and measured responses, as well as the environment parameters specified on the <code>Environment Definition</code> tab.  Predictions will be made both for outputs required as well as response accuracy.  These predictions will be displayed on the <code>Test Predictions</code> tab.</p>
-<h3 id="test-profiles"><a class="header" href="#test-profiles">Test Profiles</a></h3>
+<h3 id="36-test-profiles"><a class="header" href="#36-test-profiles">3.6. Test Profiles</a></h3>
 <p>The <code>Test Profile</code> tab gives the user the ability to set up a test timeline for complex combined environments tests.  The user can add a list of events that will be executed at certain times during the test.  The tab will also display a graphical representation of the test timeline.</p>
 <p>Events can be added or removed from the test timeline by clicking the <code>Add Event</code> or <code>Remove Event</code> buttons.  Users can also load a series of events from an Excel spreadsheet.</p>
 <p>For each event, the following parameters are defined:</p>
@@ -301,7 +301,7 @@
 <p>Figure 3-9 shows an example of a test profile that ramps up the test level of environment <code>A</code> from -6 to 0 dB, and then subsequently starts environment <code>B</code>.</p>
 <p><img src="figures/test_profile.png" alt="test_profile" /></p>
 <p><strong>Figure 3-9. Example test profile showing a ramp up of test level for environment <code>A</code> and subsequently starting environment <code>B</code>.</strong></p>
-<h3 id="run-test"><a class="header" href="#run-test">Run Test</a></h3>
+<h3 id="37-run-test"><a class="header" href="#37-run-test">3.7. Run Test</a></h3>
 <p>The <code>Run Test</code> tab is where Rattlesnake finally runs the test.  This tab again has sub-tabs for the different environments in the test, however these sub-tabs will not be enabled until the data acquisition system is armed.</p>
 <p>Rattlesnake gives the user many options to save data to the disk through a set of Radio buttons at the top of this tab.  These options are:</p>
 <ul>
@@ -317,11 +317,11 @@
 <p>Figure 3-10 shows an example <code>Run Test</code> tab with test profile events.</p>
 <p><img src="figures/run_test_tab.png" alt="run_test_tab" /></p>
 <p><strong>Figure 3-10. Run Test Tab.</strong></p>
-<h3 id="rattlesnake-output-files"><a class="header" href="#rattlesnake-output-files">Rattlesnake Output Files <!--Section 3.8--></a></h3>
+<h3 id="38-rattlesnake-output-files"><a class="header" href="#38-rattlesnake-output-files">3.8. Rattlesnake Output Files <!--Section 3.8--></a></h3>
 <p>After data is acquired, the user may wish to analyze or plot the data acquired for a given test report.  Rattlesnake stores data in a self-documenting netCDF file {{#cite unidata2019_netcdf}}, which can be read by multiple platforms.  The output file is described as self-documenting because it contains all parameters necessary to reconstruct a given test using the Rattlesnake controller.  Any parameter that is set by the user in the GUI is stored to the netCDF file.</p>
 <p>A full description of the netCDF file format is out of this document's scope, but the important points are briefly described here.  NetCDF files have a number of data structures.  Variables are multi-dimensional arrays of data.  Dimensions describe the axes of the variable arrays.  Attributes are used to store small data such as scalars or 1D arrays.  NetCDF files can be separated into different groups, and each group can have its own variables, dimensions, and attributes.</p>
 <p>The Rattlesnake output files contain the following data members:</p>
-<h4 id="netcdf-dimensions"><a class="header" href="#netcdf-dimensions">NetCDF Dimensions <!--Subsection 3.8.1--></a></h4>
+<h4 id="381-netcdf-dimensions"><a class="header" href="#381-netcdf-dimensions">3.8.1. NetCDF Dimensions <!--Subsection 3.8.1--></a></h4>
 <ul>
 <li><strong><code>response_channels</code></strong> The number of response channels in a given test</li>
 <li><strong><code>output_channels</code></strong> The number of output channels in a given test</li>
@@ -329,7 +329,7 @@
 <li><strong><code>time_samples_X</code></strong> If manual streaming is used and streaming is started multiple times, each subsequent stream will have the <code>time_samples</code> name with an underscore and appended number (e.g. <code>time_samples_1</code>, <code>time_samples_2</code>)</li>
 <li><strong><code>num_environments</code></strong> The total number of environments in the test</li>
 </ul>
-<h4 id="netcdf-attributes"><a class="header" href="#netcdf-attributes">NetCDF Attributes <!--Subsection 3.8.2--></a></h4>
+<h4 id="382-netcdf-attributes"><a class="header" href="#382-netcdf-attributes">3.8.2. NetCDF Attributes <!--Subsection 3.8.2--></a></h4>
 <ul>
 <li><strong><code>sample_rate</code></strong> The global sample rate of the data acquisition system</li>
 <li><strong><code>time_per_write</code></strong> The amount of data put to the output hardware per write operation, in seconds</li>
@@ -349,14 +349,14 @@
 <li><strong><code>maximum_acquisition_processes</code></strong> The maximum number of processes that the LAN-XI hardware can use for acquisition</li>
 <li><strong><code>output_oversample</code></strong> The oversample used either due to sample rate restrictions on the data acquisition system, or due to oversampling the integration</li>
 </ul>
-<h4 id="netcdf-variables"><a class="header" href="#netcdf-variables">NetCDF Variables <!--Subsection 3.8.3--></a></h4>
+<h4 id="383-netcdf-variables"><a class="header" href="#383-netcdf-variables">3.8.3. NetCDF Variables <!--Subsection 3.8.3--></a></h4>
 <ul>
 <li><strong><code>time_data</code></strong> The measured data from the test. Type: 64-bit float; Dimensions: <code>response_channels</code> by <code>time_samples</code></li>
 <li><strong><code>time_data_X</code></strong> If manual streaming is used and streaming is started multiple times, each subsequent stream will have the <code>time_data</code> name with an underscore and appended number (e.g. <code>time_data_1</code>, <code>time_data_2</code>)</li>
 <li><strong><code>environment_names</code></strong> The name of each environment. Type: string; Dimensions: <code>num_environments</code></li>
 <li><strong><code>environment_active_channels</code></strong> The channels active in each environment.  1 if active, 0 if not. Type: 8-bit int; Dimensions: <code>response_channels</code> $\times$ <code>num_environments</code></li>
 </ul>
-<h4 id="channels-group"><a class="header" href="#channels-group">Channels Group <!--Subsection 3.8.4--></a></h4>
+<h4 id="384-channels-group"><a class="header" href="#384-channels-group">3.8.4. Channels Group <!--Subsection 3.8.4--></a></h4>
 <p>The netCDF files from Rattlesnake store all channel information into a separate group called <code>channels</code>.  Inside the <code>channels</code> group, there is a variable for each column of the channel table.  See Section <a href="#channel-table">Channel Table</a> for more complete descriptions of each channel variable.</p>
 <ul>
 <li><strong><code>/channels/node_number</code></strong> The node number of each channel.  Type: str; Dimensions: <code>response_channels</code></li>
@@ -382,9 +382,9 @@
 <li><strong><code>/channels/warning_level</code></strong> The warning level of each channel.  Type: str; Dimensions: <code>response_channels</code></li>
 <li><strong><code>/channels/abort_level</code></strong> The abort level of each channel.  Type: str; Dimensions: <code>response_channels</code></li>
 </ul>
-<h4 id="environment-groups"><a class="header" href="#environment-groups">Environment Groups <!--Subsection 3.8.5--></a></h4>
+<h4 id="385-environment-groups"><a class="header" href="#385-environment-groups">3.8.5. Environment Groups <!--Subsection 3.8.5--></a></h4>
 <p>Environment-specific attributes, dimensions, and variables are also stored within a group corresponding to each environment.  For example, in the case where there were two environments "A" and "B", parameters specific to environment "A" would be stored within the group "A" in the netCDF file, and similarly for "B".  See <a href="./chapter_12.html">Part III. Rattlesnake Environments</a> for more information on environment-specific parameters.</p>
-<h4 id="reading-rattlesnake-output-files-using-python"><a class="header" href="#reading-rattlesnake-output-files-using-python">Reading Rattlesnake Output Files using Python <!-- Subsection 3.8.6--></a></h4>
+<h4 id="386-reading-rattlesnake-output-files-using-python"><a class="header" href="#386-reading-rattlesnake-output-files-using-python">3.8.6. Reading Rattlesnake Output Files using Python <!-- Subsection 3.8.6--></a></h4>
 <p>To read data from a netCDF using Python, it is recommended to use the <code>netCDF4</code> Python package.  This library is a dependency of Rattlesnake, so if the user is not running Rattlesnake via an executable, this package should already be installed in the user's Python ecosystem.</p>
 <p>netCDF4 provides a sleek Python interface into the data of a netCDF4 file.  This section will assume the command <code>import netCDF4 as nc4</code> was used to import the package, so <code>nc4</code> is used as a shorter alias.</p>
 <p>A netCDF4 dataset can be opened using the following command:</p>
@@ -469,7 +469,7 @@ path = /channels
 unlimited dimensions: 
 current shape = (30,)
 </code></pre>
-<h4 id="reading-rattlesnake-output-files-using-matlab"><a class="header" href="#reading-rattlesnake-output-files-using-matlab">Reading Rattlesnake Output Files using Matlab <!-- Subsection 3.8.7--></a></h4>
+<h4 id="387-reading-rattlesnake-output-files-using-matlab"><a class="header" href="#387-reading-rattlesnake-output-files-using-matlab">3.8.7. Reading Rattlesnake Output Files using Matlab <!-- Subsection 3.8.7--></a></h4>
 <p>Matlab can also be used to read netCDF files from Rattlesnake.  The Matlab <code>ncdisp</code> function can be used to quickly determine which parameters are in a file.</p>
 <pre><code class="language-matlab">&gt;&gt;&gt; ncdisp('path/to/netcdf/file.nc4')
 Source:
@@ -555,11 +555,11 @@ ans =
 
   30x1 cell array
 </code></pre>
-<h3 id="loading-rattlesnake-tests"><a class="header" href="#loading-rattlesnake-tests">Loading Rattlesnake Tests <!-- Section 3.9--></a></h3>
+<h3 id="39-loading-rattlesnake-tests"><a class="header" href="#39-loading-rattlesnake-tests">3.9. Loading Rattlesnake Tests <!-- Section 3.9--></a></h3>
 <p>It can be tedious to set up a test from scratch each time a test is to be run, so Rattlesnake offers two ways to load test settings from files.</p>
 <p>On the <code>Data Acquisition Setup</code> page, selecting the <code>Load Test From File</code> button allows the user to load in a netCDF data file that was output from Rattlesnake.  As all the test metadata is stored to this file, Rattlesnake can read the file and set itself up accordingly to reproduce a given test.  Note that difficulties may arise using this approach if parameters specified by file paths are no longer valid.  For example, if the control law is read from a given file on one computer, but the file is in a different place on a separate computer, Rattlesnake will not be able to find the file.</p>
 <p>The second way to load in an entire test is by using the Test Profile functionality in the Combined Environments mode.  While this capability was designed to make it easier to load in complex multi-environment test setups, it can be used just as effectively for single environment tests.  See Chapter 16 <a href="./chapter_16.html">Combined Environments</a> for more information.</p>
-<h3 id="channel-monitor"><a class="header" href="#channel-monitor">Channel Monitor <!-- Section 3.10--></a></h3>
+<h3 id="310-channel-monitor"><a class="header" href="#310-channel-monitor">3.10. Channel Monitor <!-- Section 3.10--></a></h3>
 <p>To aid with understanding the test levels and headroom available for the sensors in the test, a Channel Monitor is available where the levels are shown for each channel.  The channel monitor is displayed by clicking on the <code>Channel Monitor</code> button on the lower left side of the GUI.  The display shows both an instantaneous level (green) as well as a running historical maximum (blue).  If a channel reaches the Warning or Abort level, it will be flagged with a yellow or red tint, respectively.  These warnings "latch"; once the level is reached, it will stay highlighted in the channel monitor until the <code>Clear Alerts</code> button is clicked.  Figure 3.11 shows an example channel monitor.</p>
 <p><img src="figures/channel_monitor.png" alt="channel_monitor" /></p>
 <p><strong>Figure 3-11. View of the Channel Monitor dialog box showing several channels that have reached the "warning" level (highlighted yellow) and one channel that has reached the "abort" level (highlighted red).</strong></p>
