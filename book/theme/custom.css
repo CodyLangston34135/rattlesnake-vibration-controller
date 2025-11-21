@@ -19,3 +19,43 @@ pre, code {
     font-family: Monaco, 'Courier New', monospace;
     font-size: 0.75em;
 }
+
+/* All Headers: Sans-Serif (System UI fonts) */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Lato', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+/* Specific override for Level 4 Headers */
+h4 {
+    font-weight: bold;
+    font-style: italic;
+    /* Optional: Adjust color or spacing if needed */
+    /* color: #333; */
+    /* margin-top: 1em; */
+}
+
+/* --- LIST SPACING --- */
+/* Double space between list items in the content area */
+.content ul li, 
+.content ol li {
+    margin-bottom: 1em;
+}
+
+
+/* Remove spacing from the last item to keep layout tight */
+.content ul li:last-child, 
+.content ol li:last-child {
+    margin-bottom: 0;
+}
+
+/* --- LIST HIGHLIGHTS --- */
+/* Color bold terms (and code inside bold terms) within lists */
+.content ul li strong,
+.content ol li strong,
+.content ul li strong code,
+.content ol li strong code {
+    margin-right: 0.5em;
+    color: #D32F2F; /* Deep Crimson Red */
+
+}
+
