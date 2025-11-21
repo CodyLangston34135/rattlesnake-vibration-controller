@@ -536,8 +536,95 @@ def pseudoinverse_control(
 <p><strong>Listing 12.3 A pseudoinverse control law that can be loaded into Rattlesnake</strong></p>
 <p>where the variables have been renamed from single letters (<code>G</code>, <code>H</code>) to something more meaningful (<code>specification</code>, <code>transfer_function</code>).</p>
 <p>This example shows that a control law can be implemented in only two lines of code in addition to the function boilerplate code.  Therefore even users not familiar with the Python programming language should not be intimidated by the coding required to implement custom control laws.</p>
-<h4 id="adding-optional-arguments"><a class="header" href="#adding-optional-arguments">Adding Optional Arguments <!--Section 12.7.1.2--></a></h4>
-<h4 id="trace-matching-pseudoinverse-control"><a class="header" href="#trace-matching-pseudoinverse-control">Trace-matching Pseudoinverse Control <!--Section 12.7.1.3--></a></h4>
+<h5 id="12712-adding-optional-arguments"><a class="header" href="#12712-adding-optional-arguments">12.7.1.2 Adding Optional Arguments <!--Section 12.7.1.2--></a></h5>
+<!--\subsubsection{Adding Optional Arguments}-->
+<p>When performing the pseudoinverse, users may be wary of having an ill-conditioned transfer function matrix.  This can be due to the fact that at a resonance of the structure, all responses tend to look like the mode shape at that resonance.  Therefore the condition number of the FRF matrix can be quite high.  <code>numpy</code>'s <code>pinv</code> function can accept an optional argument <code>rcond</code> which performs singular value truncation for very small singular values.  We can allow users to enter an <code>rcond</code> value through the <code>extra_parameters</code> argument.</p>
+<p>In this implementation, we try to convert the data passed as an extra parameter to a floating point number.  If we can, we use that as the <code>rcond</code> value.  If we can't we just use a default value of <code>rcond</code>.</p>
+<!--\begin{lstlisting}[language=Python,caption={A pseudoinverse control law that can be loaded into Rattlesnake that utilizes extra parameters},label=lst:pseudoinverse_control_w_rcond]-->
+<pre><code class="language-python">import numpy as np
+
+def pseudoinverse_control(
+        specification, # Specifications
+        warning_levels, # Warning levels
+        abort_levels, # Abort Levels
+        transfer_function,  # Transfer Functions
+        noise_response_cpsd,  # Noise levels and correlation 
+        noise_reference_cpsd, # from the system identification
+        sysid_response_cpsd,  # Response levels and correlation
+        sysid_reference_cpsd, # from the system identification
+        multiple_coherence, # Coherence from the system identification
+        frames, # Number of frames in the CPSD and FRF matrices
+        total_frames, # Total frames that could be in the CPSD and FRF matrices
+        extra_parameters = '', # Extra parameters for the control law
+        last_response_cpsd = None, # Last Control Response for Error Correction
+        last_output_cpsd = None, # Last Control Excitation for Drive-based control
+        ):
+    try:
+        rcond = float(extra_parameters)
+    except ValueError:
+        rcond = 1e-15
+    # Invert the transfer function using the pseudoinverse
+    tf_pinv = np.linalg.pinv(transfer_function,rcond)
+    # Return the least squares solution for the new output CPSD
+    output = tf_pinv@specification@tf_pinv.conjugate().transpose(0,2,1)
+    return output
+</code></pre>
+<p><strong>Listing 12.4 A pseudoinverse control law that can be loaded into Rattlesnake that utilizes extra parameters</strong></p>
+<h5 id="12713-trace-matching-pseudoinverse-control"><a class="header" href="#12713-trace-matching-pseudoinverse-control">12.7.1.3 Trace-matching Pseudoinverse Control <!--Section 12.7.1.3--></a></h5>
+<!--\subsubsection{Trace-matching Pseudoinverse Control}-->
+<p>While the previous example showed that a simple control law could be implemented in a few lines of code, users may argue that this simple control scheme is not representative of a control law that one might use in practice.  Therefore, the next example will illustrate the transformation of the first example into a closed-loop control law that corrects for error at each frequency line.  This is the essence of a closed-loop controller: the controller is able to respond to errors in the response and modify the output to accommodate.</p>
+<p>This control strategy is implemented by computing the trace (the sum of the diagonal of the matrix) of the specification and the trace of the last response, and then multiplying the last output CPSD by the ratio of the two at each frequency line.  The trace can be computed efficiently using the <code>numpy</code> <code>einsum</code> function.</p>
+<!--\begin{lstlisting}[language=Python,caption={A short function to compute the trace of a CPSD matrix in Python}]-->
+<pre><code class="language-python">def trace(cpsd):
+    return np.einsum('ijj-&gt;i',cpsd)
+</code></pre>
+<p><strong>Listing 12.5 A short function to compute the trace of a CPSD matrix in Python</strong></p>
+<p>The first time through the control law, when there is no previous data to use for error correction, the control strategy will perform a simple pseudoinverse control scheme.</p>
+<pre><code class="language-python">tf_pinv = np.linalg.pinv(transfer_function)
+output = tf_pinv@specification@tf_pinv.conjugate().transpose(0,2,1)
+</code></pre>
+<p>Subsequent times through the control law, the trace ratio is computed from the previous responses, and the ratio is multiplied by the previous output.  The trace ratio is also checked for <code>nan</code> quantities to ensure that there are no divide-by-zero errors.</p>
+<pre><code class="language-python">trace_ratio = trace(specification)/trace(last_response_cpsd)
+trace_ratio[np.isnan(trace_ratio)] = 0
+output = last_output_cpsd*trace_ratio[:,np.newaxis,np.newaxis]
+</code></pre>
+<p>The final code for the closed-loop control law shown in Listing 12.6<!--\ref{lst:match_trace_pseudoinverse_control}-->.  On the first run-through, the <code>last_response_cpsd</code> and <code>last_output_cpsd</code> are set to <code>None</code> which is how the function knows whether or not to compute the output using the pseudoinverse control or by updating the trace.</p>
+<!--\begin{lstlisting}[language=Python,caption={A closed-loop control law to match the trace of the CPSD matrix at each frequency line.},label=lst:match_trace_pseudoinverse_control]-->
+<pre><code class="language-python">def match_trace_pseudoinverse(
+        specification, # Specifications
+        warning_levels, # Warning levels
+        abort_levels, # Abort Levels
+        transfer_function,  # Transfer Functions
+        noise_response_cpsd,  # Noise levels and correlation 
+        noise_reference_cpsd, # from the system identification
+        sysid_response_cpsd,  # Response levels and correlation
+        sysid_reference_cpsd, # from the system identification
+        multiple_coherence, # Coherence from the system identification
+        frames, # Number of frames in the CPSD and FRF matrices
+        total_frames, # Total frames that could be in the CPSD and FRF matrices
+        extra_parameters = '', # Extra parameters for the control law
+        last_response_cpsd = None, # Last Control Response for Error Correction
+        last_output_cpsd = None, # Last Control Excitation for Drive-based control
+        ):
+    try:
+        rcond = float(extra_parameters)
+    except ValueError:
+        rcond = 1e-15
+    # If it's the first time through, do the actual control
+    if last_output_cpsd is None:
+        # Invert the transfer function using the pseudoinverse
+        tf_pinv = np.linalg.pinv(transfer_function,rcond)
+        # Return the least squares solution for the new output CPSD
+        output = tf_pinv@specification@tf_pinv.conjugate().transpose(0,2,1)
+    else:
+        # Scale the last output cpsd by the trace ratio between spec and last response
+        trace_ratio = trace(specification)/trace(last_response_cpsd)
+        trace_ratio[np.isnan(trace_ratio)] = 0
+        output =  last_output_cpsd*trace_ratio[:,np.newaxis,np.newaxis]
+    return output
+</code></pre>
+<p><strong>Listing 12.6 A closed-loop control law to match the trace of the CPSD matrix at each frequency line.</strong></p>
+<p>As can be seen in the previous Listing, the simple pseudoinverse control law can be extended to a closed-loop, error-correcting control law simply by the addition of perhaps 10 more lines of code.  This again shows that even relatively complex control strategies can be implemented easily within the Rattlesnake framework.</p>
 <h4 id="shape-constrained-control"><a class="header" href="#shape-constrained-control">Shape-Constrained Control <!--Section 12.7.1.4--></a></h4>
 <h3 id="defining-a-control-law-using-state-persistent-approaches"><a class="header" href="#defining-a-control-law-using-state-persistent-approaches">Defining a control law using state-persistent approaches <!--Section 12.7.2--></a></h3>
 <h2 id="using-transformation-matrices"><a class="header" href="#using-transformation-matrices">Using Transformation Matrices <!--Section 12.8--></a></h2>
@@ -546,102 +633,7 @@ def pseudoinverse_control(
 <h3 id="synthesizing-continuous-time-histories-using-cola"><a class="header" href="#synthesizing-continuous-time-histories-using-cola">Synthesizing Continuous Time Histories using COLA <!--Section 12.9.2--></a></h3>
 <h3 id="setting-the-test-level"><a class="header" href="#setting-the-test-level">Setting the Test Level <!--Section 12.9.3--></a></h3>
 <!-- Ends on line 2424 of Rattlesnake.tex -->
-<pre><code>\subsubsection{Adding Optional Arguments}
-
-When performing the pseudoinverse, users may be wary of having an ill-conditioned transfer function matrix.  This can be due to the fact that at a resonance of the structure, all responses tend to look like the mode shape at that resonance.  Therefore the condition number of the FRF matrix can be quite high.  `numpy`'s `pinv` function can accept an optional argument `rcond` which performs singular value truncation for very small singular values.  We can allow users to enter an `rcond` value through the `extra_parameters` argument.
-
-In this implementation, we try to convert the data passed as an extra parameter to a floating point number.  If we can, we use that as the `rcond` value.  If we can't we just use a default value of `rcond`.
-
-\begin{lstlisting}[language=Python,caption={A pseudoinverse control law that can be loaded into Rattlesnake that utilizes extra parameters},label=lst:pseudoinverse_control_w_rcond]
-</code></pre>
-<p>import numpy as np</p>
-<p>def pseudoinverse_control(
-specification, # Specifications
-warning_levels, # Warning levels
-abort_levels, # Abort Levels
-transfer_function,  # Transfer Functions
-noise_response_cpsd,  # Noise levels and correlation
-noise_reference_cpsd, # from the system identification
-sysid_response_cpsd,  # Response levels and correlation
-sysid_reference_cpsd, # from the system identification
-multiple_coherence, # Coherence from the system identification
-frames, # Number of frames in the CPSD and FRF matrices
-total_frames, # Total frames that could be in the CPSD and FRF matrices
-extra_parameters = '', # Extra parameters for the control law
-last_response_cpsd = None, # Last Control Response for Error Correction
-last_output_cpsd = None, # Last Control Excitation for Drive-based control
-):
-try:
-rcond = float(extra_parameters)
-except ValueError:
-rcond = 1e-15
-# Invert the transfer function using the pseudoinverse
-tf_pinv = np.linalg.pinv(transfer_function,rcond)
-# Return the least squares solution for the new output CPSD
-output = tf_pinv@specification@tf_pinv.conjugate().transpose(0,2,1)
-return output\end{lstlisting}</p>
-<pre><code>\subsubsection{Trace-matching Pseudoinverse Control}
-
-While the previous example showed that a simple control law could be implemented in a few lines of code, users may argue that this simple control scheme is not representative of a control law that one might use in practice.  Therefore, the next example will illustrate the transformation of the first example into a closed-loop control law that corrects for error at each frequency line.  This is the essence of a closed-loop controller: the controller is able to respond to errors in the response and modify the output to accommodate.
-
-This control strategy is implemented by computing the trace (the sum of the diagonal of the matrix) of the specification and the trace of the last response, and then multiplying the last output CPSD by the ratio of the two at each frequency line.  The trace can be computed efficiently using the `numpy` `einsum` function.
-
-\begin{lstlisting}[language=Python,caption={A short function to compute the trace of a CPSD matrix in Python}]
-</code></pre>
-<p>def trace(cpsd):
-return np.einsum('ijj-&gt;i',cpsd)\end{lstlisting}</p>
-<pre><code>The first time through the control law, when there is no previous data to use for error correction, the control strategy will perform a simple pseudoinverse control scheme.
-
-\begin{lstlisting}[language=Python]
-</code></pre>
-<p>tf_pinv = np.linalg.pinv(transfer_function)
-output = tf_pinv@specification@tf_pinv.conjugate().transpose(0,2,1)\end{lstlisting}</p>
-<pre><code>Subsequent times through the control law, the trace ratio is computed from the previous responses, and the ratio is multiplied by the previous output.  The trace ratio is also checked for `nan` quantities to ensure that there are no divide-by-zero errors.
-
-\begin{lstlisting}[language=Python]
-</code></pre>
-<p>trace_ratio = trace(specification)/trace(last_response_cpsd)
-trace_ratio[np.isnan(trace_ratio)] = 0
-output = last_output_cpsd*trace_ratio[:,np.newaxis,np.newaxis]\end{lstlisting}</p>
-<pre><code>The final code for the closed-loop control law shown in Listing \ref{lst:match_trace_pseudoinverse_control}.  On the first run-through, the `last_response_cpsd` and `last_output_cpsd` are set to `None` which is how the function knows whether or not to compute the output using the pseudoinverse control or by updating the trace.
-
-\begin{lstlisting}[language=Python,caption={A closed-loop control law to match the trace of the CPSD matrix at each frequency line.},label=lst:match_trace_pseudoinverse_control]
-</code></pre>
-<p>def match_trace_pseudoinverse(
-specification, # Specifications
-warning_levels, # Warning levels
-abort_levels, # Abort Levels
-transfer_function,  # Transfer Functions
-noise_response_cpsd,  # Noise levels and correlation
-noise_reference_cpsd, # from the system identification
-sysid_response_cpsd,  # Response levels and correlation
-sysid_reference_cpsd, # from the system identification
-multiple_coherence, # Coherence from the system identification
-frames, # Number of frames in the CPSD and FRF matrices
-total_frames, # Total frames that could be in the CPSD and FRF matrices
-extra_parameters = '', # Extra parameters for the control law
-last_response_cpsd = None, # Last Control Response for Error Correction
-last_output_cpsd = None, # Last Control Excitation for Drive-based control
-):
-try:
-rcond = float(extra_parameters)
-except ValueError:
-rcond = 1e-15
-# If it's the first time through, do the actual control
-if last_output_cpsd is None:
-# Invert the transfer function using the pseudoinverse
-tf_pinv = np.linalg.pinv(transfer_function,rcond)
-# Return the least squares solution for the new output CPSD
-output = tf_pinv@specification@tf_pinv.conjugate().transpose(0,2,1)
-else:
-# Scale the last output cpsd by the trace ratio between spec and last response
-trace_ratio = trace(specification)/trace(last_response_cpsd)
-trace_ratio[np.isnan(trace_ratio)] = 0
-output =  last_output_cpsd*trace_ratio[:,np.newaxis,np.newaxis]
-return output\end{lstlisting}</p>
-<pre><code>As can be seen in the previous Listing, the simple pseudoinverse control law can be extended to a closed-loop, error-correcting control law simply by the addition of perhaps 10 more lines of code.  This again shows that even relatively complex control strategies can be implemented easily within the Rattlesnake framework.
-
-\subsubsection{Shape-Constrained Control}
+<pre><code>\subsubsection{Shape-Constrained Control}
 
 The final example control law that will be shown in this section is a more complex control law that constrains the exciters to work together to reduce the force required in a given test \cite{schultz2020_shape_constrained_input_estimation_efficient_multishaker_vibration_testing}.  This shape-constrained approach utilizes a singular value decomposition of the transfer function matrix to determine the constraints to apply to the shakers as well as how many shapes to keep at each frequency line.
 
