@@ -54,7 +54,7 @@ h4 {
 .content ol li strong,
 .content ul li strong code,
 .content ol li strong code {
-    margin-right: 0.5em;
+    margin-right: 0.25em;
     color: #D32F2F; /* Deep Crimson Red */
 
 }
