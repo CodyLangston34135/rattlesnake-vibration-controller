@@ -282,6 +282,13 @@ on line numbering for all code blocks.</p>
 <p>Once configured, any standard Markdown code block, including one for Python,
 will automatically have line numbers when the book is built.</p>
 <p><strong>Warning:</strong> As of 2025-12-05, the <code>mdbook-numbering</code> crate did not work well with the older version (<code>0.4.52</code>) of <code>mdbook</code>, which is required since the newer version of <code>mdbook</code> (<code>0.5.0</code>) breaks <code>cmdrun</code> functionality.  For now, do not include line numbering, but leave these breadcrumbs for possible future inclusion.</p>
+<h5 id="latex-reformatting"><a class="header" href="#latex-reformatting">LaTeX Reformatting</a></h5>
+<p>In the process of translating the original SAND report from LaTeX into <code>mdbooks</code>, the following were helpful:</p>
+<pre><code class="language-sh"># Alt+Cmd+F (Replace)
+# regex ON
+\\inlineCode\{(.+1)\}
+`$1`
+</code></pre>
 
                     </main>
 
