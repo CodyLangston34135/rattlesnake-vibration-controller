@@ -263,6 +263,25 @@ citations, generating the citation numbering, and creating a new chapter contain
 formatted bibliography based on the entries in the <code>.bib</code> file.</p>
 <pre><code class="language-sh">mdbook build
 </code></pre>
+<h5 id="line-numbering"><a class="header" href="#line-numbering">Line Numbering</a></h5>
+<p>In the <code>python</code> code blocks, line number is not present by default.  To create
+line numbering, use <strong>cargo</strong> to install the <code>mdbook-numbering</code> package:</p>
+<pre><code class="language-sh">cargo install mdbook-numbering
+</code></pre>
+<p>Configure <code>book.toml</code> to include</p>
+<pre><code class="language-sh"># https://crates.io/crates/mdbook-numbering
+# requires mdbook 0.5.0 and above.
+# Add the preprocessor to the build pipeline
+[preprocessor.numbering]
+# Optional: Configuration for code block line numbering
+[preprocessor.numbering.code]
+enable = true
+</code></pre>
+<p>Setting <code>enable = true</code> under <code>[preprocessor.numbering.code]</code> specifically turns
+on line numbering for all code blocks.</p>
+<p>Once configured, any standard Markdown code block, including one for Python,
+will automatically have line numbers when the book is built.</p>
+<p><strong>Warning:</strong> As of 2025-12-05, the <code>mdbook-numbering</code> crate did not work well with the older version (<code>0.4.52</code>) of <code>mdbook</code>, which is required since the newer version of <code>mdbook</code> (<code>0.5.0</code>) breaks <code>cmdrun</code> functionality.  For now, do not include line numbering, but leave these breadcrumbs for possible future inclusion.</p>
 
                     </main>
 

@@ -259,7 +259,7 @@
 <strong>Figure 13-5. Visualizing individual channels' time response.</strong></p>
 <p>Further convenience operations are available in the <code>Window Operations:</code> section. Pressing <code>Tile All Windows</code> will rearrange all channel windows neatly across the screen. Pressing <code>Close All Windows</code> will close all open channel windows.</p>
 <h3 id="136-output-netcdf-file-structure"><a class="header" href="#136-output-netcdf-file-structure">13.6. Output NetCDF File Structure <!--Section 13.6--></a></h3>
-<p>When Rattlesnake saves data to a netCDF file, environment-specific parameters are stored in a netCDF group with the same name as the environment name. Similar to the root netCDF structure described in Section 3.8, this group will have its own attributes, dimensions, and variables, which are described here.</p>
+<p>When Rattlesnake saves data to a netCDF file, environment-specific parameters are stored in a netCDF group with the same name as the environment name. Similar to the root netCDF structure described in <a href="chapter_03.html#38-rattlesnake-output-files">Section 3.8</a>, this group will have its own attributes, dimensions, and variables, which are described here.</p>
 <h4 id="1361-netcdf-dimensions"><a class="header" href="#1361-netcdf-dimensions">13.6.1. NetCDF Dimensions <!--Section 13.6.1--></a></h4>
 <ul>
 <li><strong>signal_samples</strong>: The number of time samples in the specification signal provided to the MIMO Transient environment.</li>
@@ -447,9 +447,9 @@ drive_signals_oversampled = np.fft.irfft(
 return drive_signals_oversampled
 </code></pre>
 <p><strong>Listing 13.2 Computing the pseudoinverse calculation to solve for a least-squares output spectrum</strong></p>
-<p>For users not familiar with Python and its numeric library \inlineCode{numpy}, the following points are clarified</p>
+<p>For users not familiar with Python and its numeric library <code>numpy</code>, the following points are clarified</p>
 <ul>
-<li><strong>numpy</strong> is imported and assigned to the alias \inlineCode{np}, which lets us just type in <code>np</code> rather than the longer name <code>numpy</code> when we want to access <code>numpy</code> functions.</li>
+<li><strong>numpy</strong> is imported and assigned to the alias <code>np</code>, which lets us just type in <code>np</code> rather than the longer name <code>numpy</code> when we want to access <code>numpy</code> functions.</li>
 <li>To interpolate a function in the frequency domain, we can zero-pad its time response, and to interpolate a function in the time domain, we can zero-pad its frequency response.</li>
 <li>The <strong>numpy</strong> module has a function <code>zeros</code> to create an array of zeros and a function <code>concatenate</code> to combine two arrays together.  These two functions allow us to zero-pad an array.</li>
 <li><strong>FFT</strong> calculations can be performed using the Fourier Transform package <code>fft</code> within <code>numpy</code>. We will be using real signals, so we use <code>rfft</code> and <code>irfft</code> to do these transforms.</li>
@@ -548,95 +548,245 @@ def pseudoinverse_control(
 <p><strong>Listing 13.3 A pseudoinverse transient control law that can be loaded into Rattlesnake</strong></p>
 <p>The requirement that transient control laws are required to be able to oversample their output and may require switching between frequency and time domains mean that the Transient control laws will generally be more complex than the Random Vibration control laws.  Note that these computations to oversample the output are still performed by the controller for the Random Vibration environment described in <a href="./chapter_12.html#12-multiple-inputmultiple-ouptut-random-vibration">Chapter 12</a><!--\ref{sec:rattlesnake_environments_mimo_random}-->; however, the user does not need to handle them explicitly.  In the Transient environment, the user-defined control laws are actually creating the time signals that will be sent to the exciters, so user-defined control laws must handle these computations.</p>
 <h4 id="1372-defining-a-control-law-using-state-persistent-approaches"><a class="header" href="#1372-defining-a-control-law-using-state-persistent-approaches">13.7.2. Defining a control law using state-persistent approaches <!--Section 13.7.2--></a></h4>
-<p>While the function approach is useful in its simplicity there are certain applications where it is not sufficient. These primarily revolve around cases where there is a significant amount of setup computations or response history that must be tracked. To demonstrate, the Buzz Test approach by Daborn is used for illustration [daborn2014_smarter_dynamic_testing_critical_structures].</p>
-<p>The Buzz Test control strategy uses a flat random "buzz" test of the part to determine preferred phasing and coherence between the control degrees of freedom. This "buzz" comes from the system identification phase of the controller, which is one of the inputs to the control law. The specification is then modified so the coherence and phase of the buzz test are matched by the specification. The same pseudoinverse control is then performed as described above, except now with the modified specification.</p>
-<p>For this case, it is helpful to define several smaller functions. The first function will compute the coherence of each entry in a <code>CPSD</code> matrix.</p>
-<p>A second function is defined that computes the phase of each entry in a <code>CPSD</code> matrix.</p>
-<p>We also need a function that can get the <code>APSD</code> functions (diagonal terms) from a <code>CPSD</code> matrix. This can be done very efficiently with the <code>numpy</code> Einstein Summation function <code>einsum</code>.</p>
-<p>Now that functions are defined to extract the various parts of a <code>CPSD</code> matrix, a function is defined that assembles a <code>CPSD</code> matrix from those parts.</p>
-<p>Then finally, a function is defined that will extract the autospectra from one <code>CPSD</code> matrix and assemble a new <code>CPSD</code> matrix using the coherence and phase from a second <code>CPSD</code> matrix.</p>
-<p>In a Buzz Test control law defined using a Python function, the specification is updated using the phase and coherence of the <code>CPSD</code> from the system identification phase, and control is performed using pseudoinverse control to the updated specification.</p>
-<p>The issue with this approach is that the helper functions are re-defined each time the control law is called, and the coherence and phase of the system identification <code>CPSD</code> matrix are re-computed each time. It would be much more efficient to define the helper functions once and compute the coherence and phase of the <code>buzz</code> <code>CPSD</code> matrix once. Python generator functions and classes are two ways that this can be achieved.</p>
-<h5 id="13721-defining-control-laws-with-generator-functions"><a class="header" href="#13721-defining-control-laws-with-generator-functions">13.7.2.1. Defining Control Laws with Generator Functions <!--Section 13.7.2.1--></a></h5>
-<p>Generator functions are functions that can be paused and resumed. They are created in Python using the <code>yield</code> keyword. When a generator function is called, it returns a generator object. When the <code>next</code> function is called on the generator object, the generator will execute until it encounters a <code>yield</code> statement. The value <code>yield</code>ed is returned, and then the function is paused until the next time <code>next</code> is called on the generator object. State is maintained between calls to <code>next</code>, which makes it a good option for a state-persistent control law.</p>
-<p>To implement a control law in Rattlesnake using a generator function, a user would define their generator function to do any pre-computation and then enter an infinite <code>while</code> loop where it would <code>yield</code> a value. Rattlesnake will automatically call <code>next</code> on the generator object and pass the return from the generator to the controller as the updated control value.</p>
-<p>A generator function to implement the Buzz Test control strategy would look like the following:</p>
-<pre><code class="language-python">def buzz_test(
-    specification, # Specifications
-    warning_levels, # Warning levels
-    abort_levels, # Abort Levels
-    transfer_function, # Transfer Functions
-    noise_response_cpsd, # Noise levels and correlation
-    noise_reference_cpsd, # from the system identification
-    sysid_response_cpsd, # Response levels and correlation
-    sysid_reference_cpsd, # from the system identification
-    multiple_coherence, # Coherence from the system identification
-    frames, # Number of frames in the CPSD and FRF matrices
-    total_frames, # Total frames that could be in the CPSD and FRF matrices
-    extra_parameters = '', # Extra parameters for the control law
-    last_response_cpsd = None, # Last Control Response for Error Correction
-    last_output_cpsd = None, # Last Control Excitation for Drive-based control
-    ):
+<!--2025-12-05-start-->
+<p>Similarly to the \Ac{MIMO} Random Vibration environment, the Transient environment may also use state-persistent approaches such as generator functions or classes.  This can be handy, for example, to compute the \ac{FFT} of the desired response signals one time, as opposed to computing them every single control iteration, because the desired response signals generally do not change throughout a test.</p>
+<h5 id="13721-defining-control-laws-with-generator-functions"><a class="header" href="#13721-defining-control-laws-with-generator-functions">13.7.2.1. Defining Control Laws with Generator Functions</a></h5>
+<!--\subsubsection{Defining Control Laws with Generator Functions}-->
+<p>The second strategy to define a control law in Rattlesnake is to use a Generator Function.  A generator function is simply a function that maintains its internal state between function calls.  Listing <!--\ref{lst:pseudoinverse_transient_generator}-->13.4 shows the Pseudoinverse Transient control law implemented as a generator function.</p>
+<!--\begin{lstlisting}[language=Python, caption = {A Pseudoinverse Transient control law defined using a Python generator function to allow for state persistence},label=lst:pseudoinverse_transient_generator]-->
+<pre><code class="language-python">import numpy as np
 
-    # Perform setup calculations (e.g. compute coherence and phase of buzz)
-    buzz_coherence = ...
-    buzz_phase = ...
-
+def pseudoinverse_control_generator():
+    signal_fft = None
+    inverted_frf = None
+    drive_signals_oversampled = None
     while True:
-        # Re-assemble the specification with the buzz test coherence and phase
-        modified_spec = ...
-        
-        # Perform the control
-        output_cpsd = ...
+        (sample_rate,
+         specification_signals, # Signal to try to reproduce
+         frequency_spacing,
+         transfer_function, # Transfer Functions
+         noise_response_cpsd,  # Noise levels and correlation 
+         noise_reference_cpsd, # from the system identification
+         sysid_response_cpsd,  # Response levels and correlation
+         sysid_reference_cpsd, # from the system identification
+         multiple_coherence, # Coherence from the system identification
+         frames, # Number of frames in the CPSD and FRF matrices
+         total_frames, # Total frames that could be in the CPSD and FRF matrices
+         output_oversample_factor, # Oversample factor to output
+         extra_parameters, # Extra parameters for the control law
+         last_excitation_signals, # Last excitation signal for drive-based control
+         last_response_signals, # Last response signal for error correction
+         ) = yield drive_signals_oversampled
+        if signal_fft is None:
+            # Compute the FFT of the spec if it hasn't been done yet
+            signal_fft = np.fft.rfft(specification_signals).T
+        # Get a tolerance if specified
+        rcond = 1e-15
+        zero_impulse_after = None
+        for entry in extra_parameters.split('\n'):
+            field,value = entry.split(':')
+            field = field.strip()
+            if field == 'rcond':
+                rcond = float(value)
+            elif field == 'zero_impulse_after':
+                zero_impulse_after = float(value)
+            else:
+                print('Unrecognized Parameter: {:}'.format(field))
+        if inverted_frf is None:
+            # Compute impulse responses
+            impulse_response = np.fft.irfft(transfer_function,axis=0)
 
-        # update values from the controller by yielding and receiving
-        (last_response_cpsd,last_output_cpsd) = yield output_cpsd
+            if zero_impulse_after is not None:
+                # Remove noncausal portion
+                impulse_response_abscissa = np.arange(impulse_response.shape[0])/sample_rate
+                zero_indices = impulse_response_abscissa &gt; zero_impulse_after
+                impulse_response[zero_indices] = 0
+                
+            # Zero pad the impulse response to create a signal that is long enough
+            added_zeros = np.zeros((specification_signals.shape[-1]-impulse_response.shape[0],) + impulse_response.shape[1:])
+            full_impulse_response = np.concatenate((impulse_response,added_zeros),axis=0)
+
+            # Compute FRFs
+            interpolated_transfer_function = np.fft.rfft(full_impulse_response,axis=0)
+
+            # Perform convolution in frequency domain
+            inverted_frf = np.linalg.pinv(interpolated_transfer_function,rcond=rcond)
+            
+        drive_signals_fft = np.einsum('ijk,ki-&gt;ij',inverted_frf,signal_fft)
+
+        # Zero pad the FFT to oversample
+        drive_signals_fft_zero_padded = np.concatenate((drive_signals_fft[:-1],
+            np.zeros((drive_signals_fft[:-1].shape[0]*(output_oversample_factor-1)+1,)+drive_signals_fft.shape[1:])),axis=0)
+
+        drive_signals_oversampled = np.fft.irfft(drive_signals_fft_zero_padded.T,axis=-1)*output_oversample_factor
 </code></pre>
-<h5 id="13722-defining-control-laws-using-classes"><a class="header" href="#13722-defining-control-laws-using-classes">13.7.2.2. Defining Control Laws using Classes <!--Section 13.7.2.2--></a></h5>
-<p>An alternative, and perhaps more intuitive approach to defining state-persistent control laws is to use a Python class. A class can be thought of as a blueprint for an object. A class will have a constructor (<code>__init__</code>) where any setup operations can be performed, and the state of the object can be stored in the object's properties (e.g. <code>self.buzz_coherence</code>). A class can also have methods, which are functions that can be called that can access the object's properties.</p>
-<p>For a Rattlesnake control law defined using a class, the controller will instantiate the class by calling its <code>__init__</code> method, passing in the arguments that do not change from iteration to iteration. Then, for each iteration of the control loop, the controller will call a method on the class called <code>update</code>, and pass in the arguments that do change from iteration to iteration.</p>
-<p>A class to implement the Buzz Test control strategy would look like the following:</p>
-<pre><code class="language-python">class BuzzTest:
+<p><strong>Listing 13.4 A Pseudoinverse Transient control law defined using a Python generator function to allow for state persistence</strong></p>
+<p>Note that the generator function itself is not called with any arguments, as the initial function call simply starts up the generator.  Also note that there is no \inlineCode{return} statement in a generator function, only a \inlineCode{yield} statement.   When a program requests the next value from a generator, the generator code proceeds until it hits a \inlineCode{yield} statement, at which time it pauses and waits for the next value to be requested.  During this pause, all internal data is maintained inside the generator function.  The \inlineCode{yield} statement also accepts new data into the generator function, so this is where the same arguments used to define a control law using a Python function are passed in to the generator control law.  Therefore, by creating a while loop inside a generator function, the generator can be called infinitely many times to deliver data to the controller.</p>
+<p>To implement the Pseudoinverse control as shown in Listing 13.4<!--\ref{lst:pseudoinverse_transient_generator}--> several parameters are initialized as \inlineCode{None}, which enables the generator to check whether or not they have been computed yet.  If they have, then there is no need to compute them again.</p>
+<h5 id="13722-defining-control-laws-using-classes"><a class="header" href="#13722-defining-control-laws-using-classes">13.7.2.2. Defining Control Laws using Classes</a></h5>
+<!--\subsubsection{Defining Control Laws using Classes}-->
+<p>A final way to implement more complex control laws is using a Python class.  This approach allows for the near infinite flexibility of Python's object-oriented programming at the expense of more complex syntax.  Users not familiar with Python's object-oriented programming paradigms are encouraged to <a href="https://docs.python.org/3/tutorial/classes.html">learn more</a> about the topic prior to reading this section.</p>
+<p>A class in Python is effectively a container that can have functions and properties stored inside of it, so it provides a good way to encapsulate all the parameters and helper functions associated with a given control law into one place.  A class allows for arbitrary properties to be stored within it, so arbitrary data can be made persistent between function calls.</p>
+<p>For the Rattlesnake implementation of a control law, the class must have at a minimum three functions defined.  These are the class constructor \inlineCode{<strong>init</strong>} that is called when the class is instantiated, a \inlineCode{system_id_update} function that is called upon completion of the System Identification portion of the controller, and a \inlineCode{control} function that actually computes the output \ac{CPSD} matrix.  A general class structure is shown below</p>
+<!--\begin{lstlisting}[language=Python,caption={Structure for a class defining a transient control law in Rattlesnake}]-->
+<pre><code class="language-python"># Any module imports or constants would go here    
+
+class ControlLawClass:
     def __init__(self,
-        specification, # Specifications
-        warning_levels, # Warning levels
-        abort_levels, # Abort Levels
-        transfer_function, # Transfer Functions
-        noise_response_cpsd, # Noise levels and correlation
-        noise_reference_cpsd, # from the system identification
-        sysid_response_cpsd, # Response levels and correlation
-        sysid_reference_cpsd, # from the system identification
-        multiple_coherence, # Coherence from the system identification
-        frames, # Number of frames in the CPSD and FRF matrices
-        total_frames, # Total frames that could be in the CPSD and FRF matrices
-        extra_parameters = '', # Extra parameters for the control law
-        ):
-
-        # Perform setup calculations and store to self
-        self.buzz_coherence = ...
-        self.buzz_phase = ...
-
-    def update(self,
-        last_response_cpsd = None, # Last Control Response for Error Correction
-        last_output_cpsd = None, # Last Control Excitation for Drive-based control
-        ):
-        # Re-assemble the specification with the buzz test coherence and phase
-        modified_spec = ...
+                 sample_rate,
+                 specification_signals, # Signal to try to reproduce
+                 output_oversample_factor, # Oversample factor to output
+                 extra_parameters, # Extra parameters for the control law
+                 frequency_spacing,
+                 transfer_function, # Transfer Functions
+                 noise_response_cpsd,  # Noise levels and correlation 
+                 noise_reference_cpsd, # from the system identification
+                 sysid_response_cpsd,  # Response levels and correlation
+                 sysid_reference_cpsd, # from the system identification
+                 multiple_coherence, # Coherence from the system identification
+                 frames, # Number of frames in the CPSD and FRF matrices
+                 total_frames, # Total frames that could be in the CPSD and FRF matrices
+                 last_excitation_signals = None, # Last excitation signal for drive-based control
+                 last_response_signals = None, # Last response signal for error correction
+                 ):
+        # Code to initialize the control law would go here
+    
+    def system_id_update(self,
+                         frequency_spacing,
+                         transfer_function, # Transfer Functions
+                         noise_response_cpsd,  # Noise levels and correlation 
+                         noise_reference_cpsd, # from the system identification
+                         sysid_response_cpsd,  # Response levels and correlation
+                         sysid_reference_cpsd, # from the system identification
+                         multiple_coherence, # Coherence from the system identification
+                         frames, # Number of frames in the CPSD and FRF matrices
+                         total_frames, # Total frames that could be in the CPSD and FRF matrices
+                         ):
+        # Code to update the control law with system identification information would go here
+    
+    def control(self,
+                last_excitation_signals = None, # Last excitation signal for drive-based control
+                last_response_signals = None, # Last response signal for error correction
+                ) -&gt; np.ndarray:
+        # Code to perform the actual control operations would go here
         
-        # Perform the control
-        output_cpsd = ...
-
-        # Return the new output
-        return output_cpsd
+    # Any helper functions or properties that belong with the class would go here
 </code></pre>
-<h3 id="138-using-transformation-matrices"><a class="header" href="#138-using-transformation-matrices">13.8. Using Transformation Matrices <!--Section 13.8--></a></h3>
-<p>Transformation matrices in the Transient environment behave identically to the the Random Vibration environment. See <a href="./chapter_12.html#128-using-transformation-matrices">Section 12.8. Using Transformation Matrices</a>for more information.</p>
-<h3 id="139-identifying-the-signal-in-the-acquired-data"><a class="header" href="#139-identifying-the-signal-in-the-acquired-data">13.9. Identifying the Signal in the Acquired Data <!--Section 13.9--></a></h3>
+<p><strong>Listing 13.5 Structure for a class defining a transient control law in Rattlesnake</strong></p>
+<p>The class's \inlineCode{<strong>init</strong>} constructor function is called whenever a class is instantiated (e.g. \inlineCode{control_law_object = ControlLawClass(sample_rate,specification_signals,output_oversample_factor,...)}). Note that the the constructor function accepts as arguments not only the data available at the time (e.g. the specification and any extra control parameters) but also any parameters that will eventually exist.  This is because it needs to be able to seamlessly transition in case the control law is changed during control when there is already a transfer function, last signal, etc.</p>
+<p>The \inlineCode{system_id_function} is called after the system identification is complete, so inside this function is where all setup calculations that require a transfer function would go.  In the case of a typical pseudoinverse control law, the system identification will not change as the test proceeds, so the inversion can take place in this function.</p>
+<p>The \inlineCode{control} function is then the function that actually performs the control operations to compute the output time history using the last response or output time histories in addition to any data that had been stored inside the class.</p>
+<p>The class implementation of the pseudoinverse control is shown in Listing 13.6<!--\ref{lst:transient_pseudoinverse_class}-->.</p>
+<!--\begin{lstlisting}[language=Python,caption = {Class implementation of the buzz test approach},label=lst:transient_pseudoinverse_class]-->
+<pre><code class="language-python">import numpy as np
+
+class pseudoinverse_control_class:
+    def __init__(self,
+                 sample_rate,
+                 specification_signals, # Signal to try to reproduce
+                 output_oversample_factor, # Oversample factor to output
+                 extra_parameters, # Extra parameters for the control law
+                 frequency_spacing,
+                 transfer_function, # Transfer Functions
+                 noise_response_cpsd,  # Noise levels and correlation 
+                 noise_reference_cpsd, # from the system identification
+                 sysid_response_cpsd,  # Response levels and correlation
+                 sysid_reference_cpsd, # from the system identification
+                 multiple_coherence, # Coherence from the system identification
+                 frames, # Number of frames in the CPSD and FRF matrices
+                 total_frames, # Total frames that could be in the CPSD and FRF matrices
+                 last_excitation_signals = None, # Last excitation signal for drive-based control
+                 last_response_signals = None, # Last response signal for error correction
+                 ):
+        self.rcond = 1e-15
+        self.zero_impulse_after = None
+        for entry in extra_parameters.split('\n'):
+            field,value = entry.split(':')
+            field = field.strip()
+            if field == 'rcond':
+                self.rcond = float(value)
+            elif field == 'zero_impulse_after':
+                self.zero_impulse_after = float(value)
+            else:
+                print('Unrecognized Parameter: {:}'.format(field))
+        self.sample_rate = sample_rate
+        self.specification_signals = specification_signals
+        self.signal_fft = np.fft.rfft(specification_signals).T
+        if self.transfer_function is not None:
+            self.system_id_update(
+                frequency_spacing,
+                transfer_function, # Transfer Functions
+                noise_response_cpsd,  # Noise levels and correlation 
+                noise_reference_cpsd, # from the system identification
+                sysid_response_cpsd,  # Response levels and correlation
+                sysid_reference_cpsd, # from the system identification
+                multiple_coherence, # Coherence from the system identification
+                frames, # Number of frames in the CPSD and FRF matrices
+                total_frames, # Total frames that could be in the CPSD and FRF matrices
+                )
+        
+    def system_id_update(self,
+                         frequency_spacing,
+                         transfer_function, # Transfer Functions
+                         noise_response_cpsd,  # Noise levels and correlation 
+                         noise_reference_cpsd, # from the system identification
+                         sysid_response_cpsd,  # Response levels and correlation
+                         sysid_reference_cpsd, # from the system identification
+                         multiple_coherence, # Coherence from the system identification
+                         frames, # Number of frames in the CPSD and FRF matrices
+                         total_frames, # Total frames that could be in the CPSD and FRF matrices
+                         ):
+        # Compute impulse responses
+        impulse_response = np.fft.irfft(transfer_function,axis=0)
+
+        if self.zero_impulse_after is not None:
+            # Remove noncausal portion
+            impulse_response_abscissa = np.arange(impulse_response.shape[0])/self.sample_rate
+            zero_indices = impulse_response_abscissa &gt; self.zero_impulse_after
+            impulse_response[zero_indices] = 0
+            
+        # Zero pad the impulse response to create a signal that is long enough
+        added_zeros = np.zeros((self.specification_signals.shape[-1]-impulse_response.shape[0],) 
+                               + impulse_response.shape[1:])
+        full_impulse_response = np.concatenate((impulse_response,added_zeros),axis=0)
+
+        # Compute FRFs
+        interpolated_transfer_function = np.fft.rfft(full_impulse_response,axis=0)
+
+        # Perform convolution in frequency domain
+        self.inverted_frf = np.linalg.pinv(interpolated_transfer_function,rcond=self.rcond)
+        
+        drive_signals_fft = np.einsum('ijk,ki-&gt;ij',self.inverted_frf,self.signal_fft)
+
+        # Zero pad the FFT to oversample
+        drive_signals_fft_zero_padded = np.concatenate((drive_signals_fft[:-1],
+            np.zeros((drive_signals_fft[:-1].shape[0]*(self.output_oversample_factor-1)+1,)
+                     +drive_signals_fft.shape[1:])),axis=0)
+
+        self.drive_signals_oversampled = np.fft.irfft(
+            drive_signals_fft_zero_padded.T,axis=-1)*self.output_oversample_factor
+
+    def control(self,
+                last_excitation_signals = None, # Last excitation signal for drive-based control
+                last_response_signals = None, # Last response signal for error correction
+                ) -&gt; np.ndarray:       
+        # We could modify the output signal based on new data that we obtained
+        # Otherwise just output the same
+        
+        return self.drive_signals_oversampled
+</code></pre>
+<p><strong>Listing 13.6 Class implementation of the buzz test approach</strong></p>
+<p>Note that the number of lines of code for a class implementation of the pseudoinverse control approach is not significantly more than the simpler function implementation, therefore users should not immediately discard the class-based approach as too difficult to implement in favor of the simpler function implementation.  Each approach has its merits and limitations, so it is up to the user to decide the best approach for their control law.</p>
+<h3 id="138-using-transformation-matrices"><a class="header" href="#138-using-transformation-matrices">13.8. Using Transformation Matrices</a></h3>
+<!--\section{Using Transformation Matrices}-->
+<p>Transformation matrices in the Transient environment behave identically to the the Random Vibration environment.  See <a href="./chapter_12.html#128-using-transformation-matrices">Section 12.8</a><!--\ref{sec:rattlesnake_environments_transformation_matrices}--> for more information.</p>
+<h3 id="139-identifying-the-signal-in-the-acquired-data"><a class="header" href="#139-identifying-the-signal-in-the-acquired-data">13.9. Identifying the Signal in the Acquired Data</a></h3>
+<!--\section{Identifying the Signal in the Acquired Data}-->
 <p>As the environment may be started or stopped arbitrarily during a given test, the Transient environment will need to identify where the signal that was desired actually occurs in the acquired signals.</p>
 <p>The Transient environment keeps a buffer twice the length of the desired control signal, so at some point during the acquisition, the entire signal should be within the buffer.</p>
-<p>To identify the position of the signal in the buffer, a correlation is performed between the signal that was output to the exciters and the acquired output data. Correlation is performed on the output signal as it is generally read directly back into the controller and does not depend on an accurate prediction of the part's response. The index of the maximum value of the correlation determines the sample closest to the starting point of the signal.</p>
-<p>A second, sub-sample alignment is then performed using phases from the FFT of the signal truncated to the starting point and signal length compared to the phases of the specified output. The slope of the phase change vs frequency line is proportional to the sub-sample signal shift.</p>
-<p>With the sample and subsample shift of the signal computed for the output signal, the same sample and subsample shift can be can be applied to the signal from the control gauges. This portion of the control channel signals can then be compared directly to the desired signal to judge how well the environment is controlling.</p>
+<p>To identify the position of the signal in the buffer, a correlation is performed between the signal that was output to the exciters and the acquired output data.  Correlation is performed on the output signal as it is generally read directly back into the controller and does not depend on an accurate prediction of the part's response.  The index of the maximum value of the correlation determines the sample closest to the starting point of the signal.</p>
+<p>A second, sub-sample alignment is then performed using phases from the \ac{FFT} of the signal truncated to the starting point and signal length compared to the phases of the specified output.  The slope of the phase change vs frequency line is proportional to the sub-sample signal shift.</p>
+<p>With the sample and subsample shift of the signal computed for the output signal, the same sample and subsample shift can be can be applied to the signal from the control gauges.  This portion of the control channel signals can then be compared directly to the desired signal to judge how well the environment is controlling.</p>
 
                     </main>
 
