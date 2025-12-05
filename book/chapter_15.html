@@ -367,8 +367,21 @@ The tabs at the top of the \inlineCode{Signal Generator} section determine the t
 <p>Windows created in the \inlineCode{Run Test} tab of a Modal Testing environment are flexible in that they can show multiple different types of data in various formats for any channel in the test.  All windows have a \inlineCode{Lock} checkbox that when checked does not allow the channel to change via the \inlineCode{Increment Channels} arrow buttons.  A locked channel can still be changed manually, however.</p>
 <p>This section will walk through the various window types in a modal test.</p>
 <h5 id="15232-time-window"><a class="header" href="#15232-time-window">15.2.3.2. Time Window <!--Section 15.2.3.2--></a></h5>
+<!--\subsubsection{Time Window}-->
+<p>The \inlineCode{Time} window displays the time trace for a single measurement frame for the selected channel.  Figure 15.4<!--\ref{fig:modaltimewindow}--> shows an example of this window.  The channel to visualize can be chosen from the drop-down menu.  The \inlineCode{Lock} checkbox can be checked to ensure the channel does not change when the \inlineCode{Increment Channels} functionality is utilized.</p>
+<!--
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.7\linewidth]{figures/modal_time_window}
+        \caption{Modal Testing data window showing a channel's time signal.}
+        \label{fig:modaltimewindow}
+    \end{figure}
+-->
+<p><img src="figures/modal_time_window.png" alt="modal_time_window" /></p>
+<p><strong>Figure 15-4. Modal Testing data window showing a channel's time signal.</strong></p>
+<h5 id="15233-windowed-time-window"><a class="header" href="#15233-windowed-time-window">15.2.3.3. Windowed Time Window <!--Section 15.2.3.3--></a></h5>
 <!--\subsubsection{Windowed Time Window}-->
-<p>The \inlineCode{Windowed Time} window displays the time trace for a single measurement with the window function applied.  This allows users to visualize the affect that the window has on the data.  Figure \ref{fig:modalwindowedtimewindow} shows an example of this window.  The channel to visualize can be chosen from the drop-down menu.  The \inlineCode{Lock} checkbox can be checked to ensure the channel does not change when the \inlineCode{Increment Channels} functionality is utilized.</p>
+<p>The \inlineCode{Windowed Time} window displays the time trace for a single measurement with the window function applied.  This allows users to visualize the affect that the window has on the data.  Figure 15-4<!--\ref{fig:modalwindowedtimewindow}--> shows an example of this window.  The channel to visualize can be chosen from the drop-down menu.  The \inlineCode{Lock} checkbox can be checked to ensure the channel does not change when the \inlineCode{Increment Channels} functionality is utilized.</p>
 <!--
     \begin{figure}
         \centering
@@ -378,175 +391,154 @@ The tabs at the top of the \inlineCode{Signal Generator} section determine the t
     \end{figure}
 -->
 <p><img src="figures/modal_windowed_time_window.png" alt="modal_windowed_time_window" /></p>
-<p><strong>Figure 15-4. Modal Testing data window showing a channel's windowed time signal.</strong></p>
-<h5 id="15233-windowed-time-window"><a class="header" href="#15233-windowed-time-window">15.2.3.3. Windowed Time Window <!--Section 15.2.3.3--></a></h5>
+<p><strong>Figure 15-5. Modal Testing data window showing a channel's windowed time signal.</strong></p>
 <h5 id="15234-spectrum-window"><a class="header" href="#15234-spectrum-window">15.2.3.4. Spectrum Window <!--Section 15.2.3.4--></a></h5>
+<!--\subsubsection{Spectrum Window}-->
+<p>The \inlineCode{Spectrum} window displays the magnitude of the FFT of the (windowed) time trace for a single measurement.  Figure 15-6<!--\ref{fig:modalspectrumwindow}--> shows an example of this window.  The channel to visualize can be chosen from the drop-down menu.  The \inlineCode{Lock} checkbox can be checked to ensure the channel does not change when the \inlineCode{Increment Channels} functionality is utilized.</p>
+<!--
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.7\linewidth]{figures/modal_spectrum_window}
+        \caption{Modal Testing data window showing a channel's spectrum.}
+        \label{fig:modalspectrumwindow}
+    \end{figure}
+-->
+<p><img src="figures/modal_spectrum_window.png" alt="modal_spectrum_window" /></p>
+<p><strong>Figure 15-6. Modal Testing data window showing a channel's spectrum.</strong></p>
 <h5 id="15235-autospectrum-window"><a class="header" href="#15235-autospectrum-window">15.2.3.5. Autospectrum Window <!--Section 15.2.3.5--></a></h5>
+<!--\subsubsection{Autospectrum Window}-->
+<p>The \inlineCode{Autospectrum} window displays the magnitude of the autospectrum for a single measurement.  This is an averaged quantity, so it will generally improve as more averages are acquired.  Figure (TODO: Ask DAN if this should be 15-7 instead of 15.6)\ref{fig:modalspectrumwindow} shows an example of this window.  The channel to visualize can be chosen from the drop-down menu.  The \inlineCode{Lock} checkbox can be checked to ensure the channel does not change when the \inlineCode{Increment Channels} functionality is utilized.</p>
+<!--
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.7\linewidth]{figures/modal_autospectrum_window}
+        \caption{Modal Testing data window showing a channel's autospectrum.}
+        \label{fig:modalautospectrumwindow}
+    \end{figure}
+-->
+<p><img src="figures/modal_autospectrum_window.png" alt="modal_autospectrum_window" /></p>
+<p><strong>Figure 15-7. Modal Testing data window showing a channel's autospectrum.</strong></p>
 <h5 id="15236-frf-window"><a class="header" href="#15236-frf-window">15.2.3.6. FRF Window <!--Section 15.2.3.6--></a></h5>
+<!--\subsubsection{FRF Window}-->
+<p>The \inlineCode{FRF} window displays a \Ac{FRF} for a reference/response channel combination.  This is an averaged quantity, so it will generally improve as more averages are acquired.  Figure \ref{fig:modalfrfwindow} shows an example of this window.  Two channel selection menus exist to select which \ac{FRF} to visualize.  The first corresponds to the \inlineCode{Response} channel, and the second corresponds to the \inlineCode{Reference} channel.  Channels selected as a Reference on the \inlineCode{Environment Definition} tab will show up in the reference channel selection menu, and channels that were not selected will show up in the response channel selection menu.  The \ac{FRF} can be visualized by looking at Real, Imaginary, Magnitude, or Phase parts, or it can be split into two plots to visualize Magnitude and Phase or Real and Imaginary parts simultaneously.  The \inlineCode{Lock} checkbox can be checked to ensure the response channel does not change when the \inlineCode{Increment Channels} functionality is utilized.</p>
+<!--
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.7\linewidth]{figures/modal_frf_window}
+        \caption{Modal Testing data window showing the FRF between a reference and response channel.}
+        \label{fig:modalfrfwindow}
+    \end{figure}
+-->
+<p><img src="figures/modal_frf_window.png" alt="modal_frf_window" /></p>
+<p><strong>Figure 15-8. Modal Testing data window showing the FRF between a reference and response channel.</strong></p>
 <h5 id="15237-coherence-window"><a class="header" href="#15237-coherence-window">15.2.3.7. Coherence Window <!--Section 15.2.3.7--></a></h5>
+<!--\subsubsection{Coherence Window}-->
+<p>The \inlineCode{Coherence} window displays the coherence for a given channel.  Figure 15-9<!--\ref{fig:modalcoherencewindow}--> shows an example of this window.  If only a single reference is used, this will be the regular coherence.  If multiple references are used, this will then be the Multiple Coherence function.  The channel to visualize can be chosen from the drop-down menu.  The \inlineCode{Lock} checkbox can be checked to ensure the channel does not change when the \inlineCode{Increment Channels} functionality is utilized.</p>
+<!--
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.7\linewidth]{figures/modal_coherence_window}
+        \caption{Modal Testing data window showing a channel's coherence.}
+        \label{fig:modalcoherencewindow}
+    \end{figure}
+-->
+<p><img src="figures/modal_coherence_window.png" alt="modal_coherence_window" /></p>
+<p><strong>Figure 15-9. Modal Testing data window showing a channel's coherence.</strong></p>
 <h5 id="15238-frf-coherence-window"><a class="header" href="#15238-frf-coherence-window">15.2.3.8. FRF Coherence Window <!--Section 15.2.3.8--></a></h5>
+<!--\subsubsection{FRF Coherence Window}-->
+<p>The \inlineCode{FRF Coherence} window displays a \ac{FRF} overlaid with the Coherence plot.  This allows users to align drops in coherence with features of the \inlineCode{FRF} to determine if they occur at modes of the structure, which could suggest an issue with the data.  Figure 15-10<!--\ref{fig:modalfrfcoherencewindow}--> shows an example of this window.  Two channel selection menus exist to select which \ac{FRF} to visualize.  The first corresponds to the \inlineCode{Response} channel, and the second corresponds to the \inlineCode{Reference} channel.  The coherence will generally correspond to the Response channel: if multiple references exist, then the multiple coherence that is plotted will be a function of the response degree of freedom; if only a single reference exists, then the regular coherence will be with respect to the only reference in the test, and will also then only change when the response is updated.  The \ac{FRF} can be visualized by looking at Real, Imaginary, Magnitude, or Phase parts, or it can be split into two plots to visualize Magnitude and Phase or Real and Imaginary parts simultaneously.  If these latter options are selected, the coherence will be overlaid on the second plot, which will be the Magnitude or Imaginary part.  The \inlineCode{Lock} checkbox can be checked to ensure the response channel does not change when the \inlineCode{Increment Channels} functionality is utilized.</p>
+<!--
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.7\linewidth]{figures/modal_frfcoherence_window}
+        \caption{Modal Testing data window showing a channel's FRF overlaid with the coherence.}
+        \label{fig:modalfrfcoherencewindow}
+    \end{figure}
+-->
+<p><img src="figures/modal_frfcoherence_window.png" alt="modal_frfcoherence_window" /></p>
+<p><strong>Figure 15-10. Modal Testing data window showing a channel's FRF overlaid with the coherence.</strong></p>
 <h5 id="15239-reciprocity-window"><a class="header" href="#15239-reciprocity-window">15.2.3.9. Reciprocity Window <!--Section 15.2.3.9--></a></h5>
+<!--\subsubsection{Reciprocity Window}-->
+<p>The \inlineCode{Reciprocity} window displays two reciprocal \ac{FRF}s overlaid.  For a linear system, these \ac{FRF}s should be identical to one another.  Figure 15-11<!--\ref{fig:modalreciprocitywindow}--> shows an example of this window.  Two channel selection menus exist to select which \ac{FRF} to visualize.  The first corresponds to the \inlineCode{Response} channel, and the second corresponds to the \inlineCode{Reference} channel.  Rattlesnake will automatically go through and find the reciprocal \ac{FRF} for that measurement and overlay it.  The \ac{FRF} can be visualized by looking at Real, Imaginary, Magnitude, or Phase parts, or it can be split into two plots to visualize Magnitude and Phase or Real and Imaginary parts simultaneously.  The \inlineCode{Lock} checkbox can be checked to ensure the response channel does not change when the \inlineCode{Increment Channels} functionality is utilized.</p>
+<!--
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.7\linewidth]{figures/modal_reciprocity_window}
+        \caption{Modal Testing window showing two reciprocal FRFs.}
+        \label{fig:modalreciprocitywindow}
+    \end{figure}
+-->
+<p><img src="figures/modal_reciprocity_window.png" alt="modal_reciprocity_window" /></p>
+<p>** 15-11. Modal Testing window showing two reciprocal FRFs.**</p>
 <h4 id="1524-degree-of-freedom-override"><a class="header" href="#1524-degree-of-freedom-override">15.2.4. Degree of Freedom Override <!--Section 15.2.4--></a></h4>
+<!--\subsection{Degree of Freedom Override}-->
+<p>This section of the Modal Testing \inlineCode{Run Test} tab allows users to override the channel metadata for a given measurement.  This is particularly useful for roving hammer or roving accelerometer testing strategies.  The node identification number and direction are defined on the channel table on the first tab of the software, and it would be very tedious to need to move back to the first tab to redefine the node number, reinitialize the data acquisition, redefine the environment definition, and finally, rearm the test to take data.  Instead, the user can override the degree of freedom information without leaving the \inlineCode{Run Test} tab.</p>
+<p>To add an override channel, users can press the \inlineCode{Add Override} button.  This will create a new row in the override table.  These can be removed by clicking the \inlineCode{Remove Override} button with the particular row in the table selected.  Figure 15-12<!--\ref{fig:modaldofoverride}--> shows an example of this functionality where the node information on the force channel has been updated.  Note that the windows will also be updated to display this new degree of freedom information.</p>
+<!--
+    \begin{figure}
+        \centering
+        \includegraphics[width=\linewidth]{figures/modal_dof_override}
+        \caption{Overriding the 16934 X+ degree of freedom information with 16950 X+ degree of freedom information.}
+        \label{fig:modaldofoverride}
+    \end{figure}
+-->
+<p><img src="figures/modal_dof_override.png" alt="modal_dof_override" /></p>
+<p><strong>Figure 15-12. Overriding the 16934 X+ degree of freedom information with 16950 X+ degree of freedom information.</strong></p>
 <h3 id="153-output-netcdf-file-structure"><a class="header" href="#153-output-netcdf-file-structure">15.3. Output NetCDF File Structure <!--Section 15.3--></a></h3>
+<!--\section{Output NetCDF File Structure}\label{sec:rattlesnake_environments_modal_output_files}-->
+<p>When Rattlesnake saves data to a netCDF file, environment-specific parameters are stored in a netCDF group with the same name as the environment name.  Similar to the root netCDF structure described in <a href="./chapter_03.html#38-rattlesnake-output-files">Section 3.8 Rattlesnake Output Files</a><!--\ref{sec:using_rattlesnake_output_files}-->, this group will have its own attributes, dimensions, and variables, which are described here.</p>
 <h4 id="1531-netcdf-dimensions"><a class="header" href="#1531-netcdf-dimensions">15.3.1. NetCDF Dimensions <!--Section 15.3.1--></a></h4>
+<!--\subsection{NetCDF Dimensions}-->
+<ul>
+<li><strong>reference_channels</strong>: The number of reference channels in the measurement</li>
+<li><strong>response_channels</strong>: The number of response channels in the measurement</li>
+</ul>
 <h4 id="1532-netcdf-attributes"><a class="header" href="#1532-netcdf-attributes">15.3.2. NetCDF Attributes <!--Section 15.3.2--></a></h4>
+<!--\subsection{NetCDF Attributes}-->
+<ul>
+<li><strong>samples_per_frame</strong>: The number of samples per measurement frame.</li>
+<li><strong>averaging_type</strong>: A string specifying if linear or exponential averaging was performed in the measurement.</li>
+<li><strong>num_averages</strong>: The number of averages used to compute spectral quantities like \ac{FRF}s and autospectra.</li>
+<li><strong>averaging_coefficient</strong>: If Exponential Averaging is used, this is the weighting of the most recent frame compared to the weighting of the previous frames.  If the averaging coefficient is <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal" style="margin-right:0.0037em;">α</span></span></span></span>, then the most recent frame will be weighted <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.4306em;"></span><span class="mord mathnormal" style="margin-right:0.0037em;">α</span></span></span></span>, the frame before that will be weighted <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.0037em;">α</span><span class="mopen">(</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.0037em;">α</span><span class="mclose">)</span></span></span></span>, the frame before that will be <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.0037em;">α</span><span class="mopen">(</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:1.0641em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.0037em;">α</span><span class="mclose"><span class="mclose">)</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span></span>, etc.</li>
+<li><strong>frf_technique</strong>: A string representing the estimator used to compute \ac{FRF}s, e.g. H1, H2, Hv.</li>
+<li><strong>frf_window</strong>: A string representing the window function used when computing \ac{FRF}s.</li>
+<li><strong>overlap</strong>: The overlap fraction between measurement frames.</li>
+<li><strong>trigger_type</strong>: A string representing the type of triggering used in the modal test (e.g. Free Run, First Frame, Every Frame).</li>
+<li><strong>accept_type</strong>: A string representing the acceptance type used in the modal test (e.g. Accept All, Manual).</li>
+<li><strong>wait_for_steady_state</strong>: The amount of time the measurement needed to wait for steady state to occur before acquiring data.</li>
+<li><strong>trigger_channel</strong>: An integer representing the channel used to trigger the measurement.</li>
+<li><strong>pretrigger</strong>: The amount of the measurement frame that occurs prior to the trigger.</li>
+<li><strong>trigger_slope_positive</strong>: An integer equal to 1 if the slope was positive and 0 if the slope was negative.</li>
+<li><strong>trigger_level</strong>: The level that was used to trigger the system as a fraction of the total range of the channel.</li>
+<li><strong>hysteresis_level</strong>: The level that the data must return back to prior to being able to accept another trigger as a fraction of the total range of the channel.</li>
+<li><strong>hysteresis_length</strong>: The length of time that a channel must return to the hysteresis level prior to being able to accept another trigger as a fraction of the measurement frame length.</li>
+<li><strong>signal_generator_type</strong>: The type of signal being generated by the modal test</li>
+<li><strong>signal_generator_level</strong>: The signal level, which could be a peak value for signals such as a sine wave, or an \ac{RMS} value for random signals</li>
+<li><strong>signal_generator_min_frequency</strong>: The minimum frequency of the excitation signal</li>
+<li><strong>signal_generator_max_frequency</strong>: The maximum frequency of the excitation signal</li>
+<li><strong>signal_generator_on_fraction</strong>: The percent of time that a square wave is <code>up'' or a burst random is </code>active''.</li>
+<li><strong>exponential_window_value_at_frame_end</strong>: The value of the exponential window function at the end of the measurement frame, used to set the strength of the exponential window.</li>
+<li><strong>acceptance_function</strong>: If the system is set to automatically reject a measurement, this is the script and function name used to evaluate that signal.</li>
+</ul>
 <h4 id="1533-netcdf-variables"><a class="header" href="#1533-netcdf-variables">15.3.3. NetCDF Variables <!--Section 15.3.3--></a></h4>
+<!--\subsection{NetCDF Variables}-->
+<ul>
+<li><strong>reference_channel_indices</strong>: The indices into the channel table that correspond to the reference channels.  Type: 32-bit int; Dimensions: \inlineCode{reference_channels}</li>
+<li><strong>response_channel_indices</strong>: The indices into the channel table that correspond to the response channels.  Type: 32-bit int; Dimensions: \inlineCode{response_channels}</li>
+</ul>
 <h4 id="1534-saving-modal-data"><a class="header" href="#1534-saving-modal-data">15.3.4. Saving Modal Data <!--Section 15.3.4--></a></h4>
-<pre><code>\subsubsection{Time Window}
-The \inlineCode{Time} window displays the time trace for a single measurement frame for the selected channel.  Figure \ref{fig:modaltimewindow} shows an example of this window.  The channel to visualize can be chosen from the drop-down menu.  The \inlineCode{Lock} checkbox can be checked to ensure the channel does not change when the \inlineCode{Increment Channels} functionality is utilized.
-
-
-\begin{figure}
-    \centering
-    \includegraphics[width=0.7\linewidth]{figures/modal_time_window}
-    \caption{Modal Testing data window showing a channel's time signal.}
-    \label{fig:modaltimewindow}
-\end{figure}
-
-\subsubsection{Spectrum Window}
-The \inlineCode{Spectrum} window displays the magnitude of the FFT of the (windowed) time trace for a single measurement.  Figure \ref{fig:modalspectrumwindow} shows an example of this window.  The channel to visualize can be chosen from the drop-down menu.  The \inlineCode{Lock} checkbox can be checked to ensure the channel does not change when the \inlineCode{Increment Channels} functionality is utilized.
-
-
-\begin{figure}
-    \centering
-    \includegraphics[width=0.7\linewidth]{figures/modal_spectrum_window}
-    \caption{Modal Testing data window showing a channel's spectrum.}
-    \label{fig:modalspectrumwindow}
-\end{figure}
-
-\subsubsection{Autospectrum Window}
-The \inlineCode{Autospectrum} window displays the magnitude of the autospectrum for a single measurement.  This is an averaged quantity, so it will generally improve as more averages are acquired.  Figure \ref{fig:modalspectrumwindow} shows an example of this window.  The channel to visualize can be chosen from the drop-down menu.  The \inlineCode{Lock} checkbox can be checked to ensure the channel does not change when the \inlineCode{Increment Channels} functionality is utilized.
-
-
-\begin{figure}
-    \centering
-    \includegraphics[width=0.7\linewidth]{figures/modal_autospectrum_window}
-    \caption{Modal Testing data window showing a channel's autospectrum.}
-    \label{fig:modalautospectrumwindow}
-\end{figure}
-
-\subsubsection{FRF Window}
-The \inlineCode{FRF} window displays a \Ac{FRF} for a reference/response channel combination.  This is an averaged quantity, so it will generally improve as more averages are acquired.  Figure \ref{fig:modalfrfwindow} shows an example of this window.  Two channel selection menus exist to select which \ac{FRF} to visualize.  The first corresponds to the \inlineCode{Response} channel, and the second corresponds to the \inlineCode{Reference} channel.  Channels selected as a Reference on the \inlineCode{Environment Definition} tab will show up in the reference channel selection menu, and channels that were not selected will show up in the response channel selection menu.  The \ac{FRF} can be visualized by looking at Real, Imaginary, Magnitude, or Phase parts, or it can be split into two plots to visualize Magnitude and Phase or Real and Imaginary parts simultaneously.  The \inlineCode{Lock} checkbox can be checked to ensure the response channel does not change when the \inlineCode{Increment Channels} functionality is utilized.
-
-
-\begin{figure}
-    \centering
-    \includegraphics[width=0.7\linewidth]{figures/modal_frf_window}
-    \caption{Modal Testing data window showing the FRF between a reference and response channel.}
-    \label{fig:modalfrfwindow}
-\end{figure}
-
-\subsubsection{Coherence Window}
-The \inlineCode{Coherence} window displays the coherence for a given channel.  Figure \ref{fig:modalcoherencewindow} shows an example of this window.  If only a single reference is used, this will be the regular coherence.  If multiple references are used, this will then be the Multiple Coherence function.  The channel to visualize can be chosen from the drop-down menu.  The \inlineCode{Lock} checkbox can be checked to ensure the channel does not change when the \inlineCode{Increment Channels} functionality is utilized.
-
-
-\begin{figure}
-    \centering
-    \includegraphics[width=0.7\linewidth]{figures/modal_coherence_window}
-    \caption{Modal Testing data window showing a channel's coherence.}
-    \label{fig:modalcoherencewindow}
-\end{figure}
-
-\subsubsection{FRF Coherence Window}
-The \inlineCode{FRF Coherence} window displays a \ac{FRF} overlaid with the Coherence plot.  This allows users to align drops in coherence with features of the \inlineCode{FRF} to determine if they occur at modes of the structure, which could suggest an issue with the data.  Figure \ref{fig:modalfrfcoherencewindow} shows an example of this window.  Two channel selection menus exist to select which \ac{FRF} to visualize.  The first corresponds to the \inlineCode{Response} channel, and the second corresponds to the \inlineCode{Reference} channel.  The coherence will generally correspond to the Response channel: if multiple references exist, then the multiple coherence that is plotted will be a function of the response degree of freedom; if only a single reference exists, then the regular coherence will be with respect to the only reference in the test, and will also then only change when the response is updated.  The \ac{FRF} can be visualized by looking at Real, Imaginary, Magnitude, or Phase parts, or it can be split into two plots to visualize Magnitude and Phase or Real and Imaginary parts simultaneously.  If these latter options are selected, the coherence will be overlaid on the second plot, which will be the Magnitude or Imaginary part.  The \inlineCode{Lock} checkbox can be checked to ensure the response channel does not change when the \inlineCode{Increment Channels} functionality is utilized.
-
-
-\begin{figure}
-    \centering
-    \includegraphics[width=0.7\linewidth]{figures/modal_frfcoherence_window}
-    \caption{Modal Testing data window showing a channel's FRF overlaid with the coherence.}
-    \label{fig:modalfrfcoherencewindow}
-\end{figure}
-
-\subsubsection{Reciprocity Window}
-The \inlineCode{Reciprocity} window displays two reciprocal \ac{FRF}s overlaid.  For a linear system, these \ac{FRF}s should be identical to one another.  Figure \ref{fig:modalreciprocitywindow} shows an example of this window.  Two channel selection menus exist to select which \ac{FRF} to visualize.  The first corresponds to the \inlineCode{Response} channel, and the second corresponds to the \inlineCode{Reference} channel.  Rattlesnake will automatically go through and find the reciprocal \ac{FRF} for that measurement and overlay it.  The \ac{FRF} can be visualized by looking at Real, Imaginary, Magnitude, or Phase parts, or it can be split into two plots to visualize Magnitude and Phase or Real and Imaginary parts simultaneously.  The \inlineCode{Lock} checkbox can be checked to ensure the response channel does not change when the \inlineCode{Increment Channels} functionality is utilized.
-
-
-\begin{figure}
-    \centering
-    \includegraphics[width=0.7\linewidth]{figures/modal_reciprocity_window}
-    \caption{Modal Testing window showing two reciprocal FRFs.}
-    \label{fig:modalreciprocitywindow}
-\end{figure}
-
-\FloatBarrier
-
-\subsection{Degree of Freedom Override}
-This section of the Modal Testing \inlineCode{Run Test} tab allows users to override the channel metadata for a given measurement.  This is particularly useful for roving hammer or roving accelerometer testing strategies.  The node identification number and direction are defined on the channel table on the first tab of the software, and it would be very tedious to need to move back to the first tab to redefine the node number, reinitialize the data acquisition, redefine the environment definition, and finally, rearm the test to take data.  Instead, the user can override the degree of freedom information without leaving the \inlineCode{Run Test} tab.
-
-To add an override channel, users can press the \inlineCode{Add Override} button.  This will create a new row in the override table.  These can be removed by clicking the \inlineCode{Remove Override} button with the particular row in the table selected.  Figure \ref{fig:modaldofoverride} shows an example of this functionality where the node information on the force channel has been updated.  Note that the windows will also be updated to display this new degree of freedom information.
-
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{figures/modal_dof_override}
-    \caption{Overriding the 16934 X+ degree of freedom information with 16950 X+ degree of freedom information.}
-    \label{fig:modaldofoverride}
-\end{figure}
-
-
-\FloatBarrier
-
-\section{Output NetCDF File Structure}\label{sec:rattlesnake_environments_modal_output_files}
-When Rattlesnake saves data to a netCDF file, environment-specific parameters are stored in a netCDF group with the same name as the environment name.  Similar to the root netCDF structure described in Section \ref{sec:using_rattlesnake_output_files}, this group will have its own attributes, dimensions, and variables, which are described here.
-
-\subsection{NetCDF Dimensions}
-\begin{description}
-    \item[reference\_channels] The number of reference channels in the measurement
-    \item[response\_channels] The number of response channels in the measurement
-\end{description}
-
-\subsection{NetCDF Attributes}
-\begin{description}
-    \item[samples\_per\_frame] The number of samples per measurement frame.
-    \item[averaging\_type] A string specifying if linear or exponential averaging was performed in the measurement.
-    \item[num\_averages] The number of averages used to compute spectral quantities like \ac{FRF}s and autospectra.
-    \item[averaging\_coefficient] If Exponential Averaging is used, this is the weighting of the most recent frame compared to the weighting of the previous frames.  If the averaging coefficient is &lt;span class="katex"&gt;&lt;span class="katex-html" aria-hidden="true"&gt;&lt;span class="base"&gt;&lt;span class="strut" style="height:0.4306em;"&gt;&lt;/span&gt;&lt;span class="mord mathnormal" style="margin-right:0.0037em;"&gt;α&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;, then the most recent frame will be weighted &lt;span class="katex"&gt;&lt;span class="katex-html" aria-hidden="true"&gt;&lt;span class="base"&gt;&lt;span class="strut" style="height:0.4306em;"&gt;&lt;/span&gt;&lt;span class="mord mathnormal" style="margin-right:0.0037em;"&gt;α&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;, the frame before that will be weighted &lt;span class="katex"&gt;&lt;span class="katex-html" aria-hidden="true"&gt;&lt;span class="base"&gt;&lt;span class="strut" style="height:1em;vertical-align:-0.25em;"&gt;&lt;/span&gt;&lt;span class="mord mathnormal" style="margin-right:0.0037em;"&gt;α&lt;/span&gt;&lt;span class="mopen"&gt;(&lt;/span&gt;&lt;span class="mord"&gt;1&lt;/span&gt;&lt;span class="mspace" style="margin-right:0.2222em;"&gt;&lt;/span&gt;&lt;span class="mbin"&gt;−&lt;/span&gt;&lt;span class="mspace" style="margin-right:0.2222em;"&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="base"&gt;&lt;span class="strut" style="height:1em;vertical-align:-0.25em;"&gt;&lt;/span&gt;&lt;span class="mord mathnormal" style="margin-right:0.0037em;"&gt;α&lt;/span&gt;&lt;span class="mclose"&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;, the frame before that will be &lt;span class="katex"&gt;&lt;span class="katex-html" aria-hidden="true"&gt;&lt;span class="base"&gt;&lt;span class="strut" style="height:1em;vertical-align:-0.25em;"&gt;&lt;/span&gt;&lt;span class="mord mathnormal" style="margin-right:0.0037em;"&gt;α&lt;/span&gt;&lt;span class="mopen"&gt;(&lt;/span&gt;&lt;span class="mord"&gt;1&lt;/span&gt;&lt;span class="mspace" style="margin-right:0.2222em;"&gt;&lt;/span&gt;&lt;span class="mbin"&gt;−&lt;/span&gt;&lt;span class="mspace" style="margin-right:0.2222em;"&gt;&lt;/span&gt;&lt;/span&gt;&lt;span class="base"&gt;&lt;span class="strut" style="height:1.0641em;vertical-align:-0.25em;"&gt;&lt;/span&gt;&lt;span class="mord mathnormal" style="margin-right:0.0037em;"&gt;α&lt;/span&gt;&lt;span class="mclose"&gt;&lt;span class="mclose"&gt;)&lt;/span&gt;&lt;span class="msupsub"&gt;&lt;span class="vlist-t"&gt;&lt;span class="vlist-r"&gt;&lt;span class="vlist" style="height:0.8141em;"&gt;&lt;span style="top:-3.063em;margin-right:0.05em;"&gt;&lt;span class="pstrut" style="height:2.7em;"&gt;&lt;/span&gt;&lt;span class="sizing reset-size6 size3 mtight"&gt;&lt;span class="mord mtight"&gt;2&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;, etc.
-    \item[frf\_technique] A string representing the estimator used to compute \ac{FRF}s, e.g. H1, H2, Hv.
-    \item[frf\_window] A string representing the window function used when computing \ac{FRF}s.
-    \item[overlap] The overlap fraction between measurement frames.
-    \item[trigger\_type] A string representing the type of triggering used in the modal test (e.g. Free Run, First Frame, Every Frame).
-    \item[accept\_type] A string representing the acceptance type used in the modal test (e.g. Accept All, Manual).
-    \item[wait\_for\_steady\_state] The amount of time the measurement needed to wait for steady state to occur before acquiring data.
-    \item[trigger\_channel] An integer representing the channel used to trigger the measurement.
-    \item[pretrigger] The amount of the measurement frame that occurs prior to the trigger.
-    \item[trigger\_slope\_positive] An integer equal to 1 if the slope was positive and 0 if the slope was negative.
-    \item[trigger\_level] The level that was used to trigger the system as a fraction of the total range of the channel.
-    \item[hysteresis\_level] The level that the data must return back to prior to being able to accept another trigger as a fraction of the total range of the channel.
-    \item[hysteresis\_length] The length of time that a channel must return to the hysteresis level prior to being able to accept another trigger as a fraction of the measurement frame length.
-    \item[signal\_generator\_type] The type of signal being generated by the modal test
-    \item[signal\_generator\_level] The signal level, which could be a peak value for signals such as a sine wave, or an \ac{RMS} value for random signals
-    \item[signal\_generator\_min\_frequency] The minimum frequency of the excitation signal
-    \item[signal\_generator\_max\_frequency] The maximum frequency of the excitation signal
-    \item[signal\_generator\_on\_fraction] The percent of time that a square wave is ``up'' or a burst random is ``active''.
-    \item[exponential\_window\_value\_at\_frame\_end] The value of the exponential window function at the end of the measurement frame, used to set the strength of the exponential window.
-    \item[acceptance\_function] If the system is set to automatically reject a measurement, this is the script and function name used to evaluate that signal.
-\end{description}
-
-\subsection{NetCDF Variables}
-\begin{description}
-    \item[reference\_channel\_indices] The indices into the channel table that correspond to the reference channels.  Type: 32-bit int; Dimensions: \inlineCode{reference_channels}
-    \item[response\_channel\_indices] The indices into the channel table that correspond to the response channels.  Type: 32-bit int; Dimensions: \inlineCode{response_channels}       
-\end{description}
-
-\subsection{Saving Modal Data}
-In addition to time streaming, Rattlesnake's Modal Testing environment will also save bespoke modal data files directly to the disk when a test is started with the \inlineCode{Start Acquisition} button.  The computed spectral quantities such as \ac{FRF} and coherence data are in a NetCDF file, and are updated at each average.  Time data is also stored to this file, but only the time data that is used for spectral computations.  For example, if a hammer test is being performed and the user takes a minute to evaluate the data before accepting or rejecting the measurement frame, that time data measured during that pause will not be stored to the modal data file; however, it would be stored to the streaming data file described in Section \ref{sec:using_rattlesnake_output_files}, which is essentially an open-tape measurement.
-
-The additional dimension is:
-
-\begin{description}
-    \item[fft\_lines] The number of frequency lines in the spectral quantities.
-\end{description}
-
-There are also several additional variables to store the spectral data:
-
-\begin{description}
-    \item[frf\_data\_real] The real part of the most recently computed value for the transfer functions between the reference signals and the response signals.  NetCDF files cannot handle complex data types so real and imaginary parts are split into two variables.  Type: 64-bit float; Dimensions: \inlineCode{fft_lines} &lt;span class="katex"&gt;&lt;span class="katex-html" aria-hidden="true"&gt;&lt;span class="base"&gt;&lt;span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"&gt;&lt;/span&gt;&lt;span class="mord"&gt;×&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt; \inlineCode{response_channels} &lt;span class="katex"&gt;&lt;span class="katex-html" aria-hidden="true"&gt;&lt;span class="base"&gt;&lt;span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"&gt;&lt;/span&gt;&lt;span class="mord"&gt;×&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt; \inlineCode{reference_channels}
-    
-    \item[frf\_data\_imag] The imaginary part of the most recently computed value for the transfer functions between the excitation signals and the control response signals.  NetCDF files cannot handle complex data types so real and imaginary parts are split into two variables.  Type: 64-bit float; Dimensions: \inlineCode{fft_lines} &lt;span class="katex"&gt;&lt;span class="katex-html" aria-hidden="true"&gt;&lt;span class="base"&gt;&lt;span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"&gt;&lt;/span&gt;&lt;span class="mord"&gt;×&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt; \inlineCode{response_channels} &lt;span class="katex"&gt;&lt;span class="katex-html" aria-hidden="true"&gt;&lt;span class="base"&gt;&lt;span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"&gt;&lt;/span&gt;&lt;span class="mord"&gt;×&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt; \inlineCode{reference_channels}
-    
-    \item[coherence] The multiple or regular coherence of the channels computed during the test, depending on if there are multiple references or a single reference, respectively.  Type: 64-bit float; Dimensions: \inlineCode{fft_lines} &lt;span class="katex"&gt;&lt;span class="katex-html" aria-hidden="true"&gt;&lt;span class="base"&gt;&lt;span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"&gt;&lt;/span&gt;&lt;span class="mord"&gt;×&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt; \inlineCode{response_channels}
-    
-\end{description}</code></pre>
+<!--\subsection{Saving Modal Data}-->
+<p>In addition to time streaming, Rattlesnake's Modal Testing environment will also save bespoke modal data files directly to the disk when a test is started with the \inlineCode{Start Acquisition} button.  The computed spectral quantities such as \ac{FRF} and coherence data are in a NetCDF file, and are updated at each average.  Time data is also stored to this file, but only the time data that is used for spectral computations.  For example, if a hammer test is being performed and the user takes a minute to evaluate the data before accepting or rejecting the measurement frame, that time data measured during that pause will not be stored to the modal data file; however, it would be stored to the streaming data file described in Section \ref{sec:using_rattlesnake_output_files}, which is essentially an open-tape measurement.</p>
+<p>The additional dimension is:</p>
+<ul>
+<li><strong>fft_lines</strong>: The number of frequency lines in the spectral quantities.</li>
+</ul>
+<p>There are also several additional variables to store the spectral data:</p>
+<ul>
+<li><strong>frf_data_real</strong>: The real part of the most recently computed value for the transfer functions between the reference signals and the response signals.  NetCDF files cannot handle complex data types so real and imaginary parts are split into two variables.  Type: 64-bit float; Dimensions: \inlineCode{fft_lines} <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="mord">×</span></span></span></span> \inlineCode{response_channels} <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="mord">×</span></span></span></span> \inlineCode{reference_channels}</li>
+<li><strong>frf_data_imag</strong>: The imaginary part of the most recently computed value for the transfer functions between the excitation signals and the control response signals.  NetCDF files cannot handle complex data types so real and imaginary parts are split into two variables.  Type: 64-bit float; Dimensions: \inlineCode{fft_lines} <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="mord">×</span></span></span></span> \inlineCode{response_channels} <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="mord">×</span></span></span></span> \inlineCode{reference_channels}</li>
+<li><strong>coherence</strong>: The multiple or regular coherence of the channels computed during the test, depending on if there are multiple references or a single reference, respectively.  Type: 64-bit float; Dimensions: \inlineCode{fft_lines} <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="mord">×</span></span></span></span> \inlineCode{response_channels}</li>
+</ul>
 
                     </main>
 
