@@ -182,17 +182,17 @@
 <p>Rattlesnake's Time History Generator environment provides the ability to simply stream a user-created signal to an output device.  While this is a relatively simple environment, it can be used to create simple shocks or run open-loop excitation devices such as a centrifuge with voltage input being proportional to speed.  There is no system identification, and therefore no test predictions that are made for this environment.</p>
 <h3 id="141-signal-definition"><a class="header" href="#141-signal-definition">14.1. Signal Definition <!--Section 14.1--></a></h3>
 <!--\section{Signal Definition}-->
-<p>The first step to defining a Time History Generator environment is to create the signal that will be output.  Rattlesnake accepts the signal in the form of a 2D array consisting of an output sample for each excitation signal for each time step.  Signals can be loaded from Numpy \inlineCode{<em>.npy} or \inlineCode{</em>.npz} files or Matlab \inlineCode{<em>.mat} files.  For \inlineCode{</em>.npy} files, the stored array defines the signal directly, and it is assumed that the signal uses the sample rate specified in Rattlesnake.  Note that if a hardware device over-samples the output (e.g. LAN-XI, see Section \ref{sec:rattlesnake_hardware_lanxi}), it is the over-sampled output sample rate that is used rather than the acquisition sample rate.  Matlab \inlineCode{<em>.mat} and Numpy \inlineCode{</em>.npz} files allow the users to specify a time vector as well as a signal, and should contain the following data members:</p>
+<p>The first step to defining a Time History Generator environment is to create the signal that will be output.  Rattlesnake accepts the signal in the form of a 2D array consisting of an output sample for each excitation signal for each time step.  Signals can be loaded from Numpy <code>*.npy</code> or <code>*.npz</code> files or Matlab <code>*.mat</code> files.  For <code>*.npy</code> files, the stored array defines the signal directly, and it is assumed that the signal uses the sample rate specified in Rattlesnake.  Note that if a hardware device over-samples the output (e.g. LAN-XI, see Section \ref{sec:rattlesnake_hardware_lanxi}), it is the over-sampled output sample rate that is used rather than the acquisition sample rate.  Matlab <code>*.mat</code> and Numpy <code>*.npz</code> files allow the users to specify a time vector as well as a signal, and should contain the following data members:</p>
 <ul>
-<li><strong>signal</strong>: A <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">o</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">s</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> array containing the signal for each exciter for each time step in \inlineCode{t}.</li>
-<li><strong>t</strong>: A <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">s</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> array of times corresponding to the samples in the \inlineCode{signal} matrix.</li>
+<li><strong>signal</strong>: A <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">o</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">s</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> array containing the signal for each exciter for each time step in <code>t</code>.</li>
+<li><strong>t</strong>: A <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">s</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> array of times corresponding to the samples in the <code>signal</code> matrix.</li>
 </ul>
-<p>where <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">o</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> is the number of exciters and <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">s</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> is the number of samples in the signal.  If the time vector specified by \inlineCode{t} does not match the sample rate specified in Rattlesnake, the \inlineCode{signal} data will be linearly interpolated to provide the correct sample rate.  If \inlineCode{t} is not provided in the \inlineCode{<em>.mat} or \inlineCode{</em>.npz} file, Rattlesnake will treat \inlineCode{signal} as if it were defined at the output sample rate of the controller.</p>
+<p>where <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">o</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> is the number of exciters and <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.5806em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em;"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">s</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span> is the number of samples in the signal.  If the time vector specified by <code>t</code> does not match the sample rate specified in Rattlesnake, the <code>signal</code> data will be linearly interpolated to provide the correct sample rate.  If <code>t</code> is not provided in the <code>*.mat</code> or <code>*.npz</code> file, Rattlesnake will treat <code>signal</code> as if it were defined at the output sample rate of the controller.</p>
 <p>The ordering of the signals in the signal file is the same as the ordering of the excitation devices in the channel table that are active in the current environment.  The first signal will be played to the first excitation device, and so on.</p>
 <p>Note that the environment will play the signal as-is, so it is up to the user to implement graceful startup and shutdown at the start and end of the signal if the test configuration requires it.</p>
 <h3 id="142-defining-the-time-history-generator-environment-in-rattlesnake"><a class="header" href="#142-defining-the-time-history-generator-environment-in-rattlesnake">14.2. Defining the Time History Generator Environment in Rattlesnake <!--Section 14.2--></a></h3>
 <!--\section{Defining the Time History Generator Environment in Rattlesnake}-->
-<p>In addition to the signal that will be played to the excitation devices, there is only one parameter that needs to be defined in the Time History Generator.  Figure 14.1<!--\ref{fig:timehistorygeneratorenvironmentdefinition}--> shows a Time History Generator sub-tab in the \inlineCode{Environment Definition} tab of Rattlesnake.</p>
+<p>In addition to the signal that will be played to the excitation devices, there is only one parameter that needs to be defined in the Time History Generator.  Figure 14.1<!--\ref{fig:timehistorygeneratorenvironmentdefinition}--> shows a Time History Generator sub-tab in the <code>Environment Definition</code> tab of Rattlesnake.</p>
 <!--
     \begin{figure}
         \centering
@@ -202,12 +202,12 @@
     \end{figure}
 -->
 <p><img src="figures/time_history_generator_environment_definition.png" alt="time_history_generator_environment_definition" /></p>
-<p><strong>Figure 14-2. GUI defining the Time History Generation environment</strong></p>
-<p>Pressing the \inlineCode{Load Signal} button brings up a file dialog from which the signal file can be loaded.  Once the file is loaded, it is displayed in the main plot window.  Signal statistics are also displayed in the adjacent table.  The checkbox in the \inlineCode{Show?} column of the table can be used to show or hide individual signals.  The signal name in the \inlineCode{Signal} column is constructed from the node number and direction in the channel table.  The \inlineCode{Max} and \inlineCode{RMS} value of the signal is also displayed.</p>
+<p><strong>Figure 14-1. GUI defining the Time History Generation environment</strong></p>
+<p>Pressing the <code>Load Signal</code> button brings up a file dialog from which the signal file can be loaded.  Once the file is loaded, it is displayed in the main plot window.  Signal statistics are also displayed in the adjacent table.  The checkbox in the <code>Show?</code> column of the table can be used to show or hide individual signals.  The signal name in the <code>Signal</code> column is constructed from the node number and direction in the channel table.  The <code>Max</code> and <code>RMS</code> value of the signal is also displayed.</p>
 <p>At the bottom of the window, there are various computed parameters, and one user defined parameter.</p>
 <ul>
-<li><strong>Sample Rate</strong>:  The global sample rate of the data acquisition system.  This is set on the \inlineCode{Data Acquisition Setup} tab, and displayed here for convenience as a read-only value.</li>
-<li><strong>Output Sample Rate</strong>:  This is the output sample rate, which might be different than \inlineCode{Sample Rate} if the hardware over-samples the output device.  This is set on the \inlineCode{Data Acquisition Setup} tab, and displayed here for convenience as a read-only value.</li>
+<li><strong>Sample Rate</strong>:  The global sample rate of the data acquisition system.  This is set on the <code>Data Acquisition Setup</code> tab, and displayed here for convenience as a read-only value.</li>
+<li><strong>Output Sample Rate</strong>:  This is the output sample rate, which might be different than <code>Sample Rate</code> if the hardware over-samples the output device.  This is set on the <code>Data Acquisition Setup</code> tab, and displayed here for convenience as a read-only value.</li>
 <li><strong>Output Channels</strong>:  The number of excitation signals being used by this environment.  This is a computed quantity presented for convenience, so the user cannot modify it directly.</li>
 <li><strong>Signal Samples</strong>: The number of samples in the loaded signal.  This is a computed quantity presented for convenience, so the use cannot modify it directly.</li>
 <li><strong>Signal Time</strong>: The amount of time it will take to play the signal.  This is a computed quantity presented for convenience, so the user cannot modify it directly.</li>
@@ -216,7 +216,7 @@
 <h3 id="143-running-the-time-history-generator-environment"><a class="header" href="#143-running-the-time-history-generator-environment">14.3. Running the Time History Generator Environment</a></h3>
 <!--Section 14.3-->
 <!--\section{Running the Time History Generator Environment}-->
-<p>The Time History Generator environment is then run on the \inlineCode{Run Test} tab of the controller.  With the data acquisition system armed, the \ac{GUI} looks like Figure \ref{fig:timehistorygeneratorruntest}.</p>
+<p>The Time History Generator environment is then run on the <code>Run Test</code> tab of the controller.  With the data acquisition system armed, the \ac{GUI} looks like Figure \ref{fig:timehistorygeneratorruntest}.</p>
 <!--
     \begin{figure}
         \centering
@@ -225,43 +225,33 @@
         \label{fig:timehistorygeneratorruntest}
     \end{figure}
 -->
-<pre><code>\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{figures/time_history_generator_run_test}
-    \caption{\Ac{GUI} for running the Time History Generator Environment}
-    \label{fig:timehistorygeneratorruntest}
-\end{figure}
-
-Two parameters can be defined prior to starting the environment.
-\begin{description}
-    \item[Signal Level] Allows the user to scale the signal prior to output by a number of dB.
-    \item[Repeat Signal] Checking this checkbox makes the signal repeat once started until the environment is stopped manually.  Alternatively, the environment will stop automatically once the signal has been played.
-\end{description}
-
-Similar to other environments, there are \inlineCode{Start Environment} and \inlineCode{Stop Environment} buttons to control when the environment occurs.  If the \inlineCode{Stop Environment} button is clicked, the signal will continue to play for the specified \inlineCode{Cancel Rampdown Time} while the environment ramps the signal level to zero.
-</code></pre>
-<h3 id="output-netcdf-file-structure"><a class="header" href="#output-netcdf-file-structure">Output NetCDF File Structure <!--Section 14.4--></a></h3>
-<h4 id="netcdf-dimensions"><a class="header" href="#netcdf-dimensions">NetCDF Dimensions <!--Section 14.4.1--></a></h4>
-<h4 id="netcdf-attributes"><a class="header" href="#netcdf-attributes">NetCDF Attributes <!--Section 14.4.2--></a></h4>
-<h4 id="netcdf-variables"><a class="header" href="#netcdf-variables">NetCDF Variables <!--Section 14.4.3--></a></h4>
-<pre><code>\section{Output NetCDF File Structure}
-When Rattlesnake saves data to a netCDF file, environment-specific parameters are stored in a netCDF group with the same name as the environment name.  Similar to the root netCDF structure described in Section \ref{sec:using_rattlesnake_output_files}, this group will have its own attributes, dimensions, and variables, which are described here.
-
-\subsection{NetCDF Dimensions}
-\begin{description}
-    \item[output\_channels] The number of output signals used by the environment
-    \item[signal\_samples] The number of samples in the output signals
-\end{description}
-
-\subsection{NetCDF Attributes}
-\begin{description}
-    \item[cancel\_rampdown\_time] The time to ramp to zero if the environment is stopped.
-\end{description}
-
-\subsection{NetCDF Variables}
-\begin{description}
-    \item[output\_signal] The signals that are played to the excitation devices  Type: 64-bit float; Dimensions: \inlineCode{output_channels} &lt;span class="katex"&gt;&lt;span class="katex-html" aria-hidden="true"&gt;&lt;span class="base"&gt;&lt;span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"&gt;&lt;/span&gt;&lt;span class="mord"&gt;×&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt; \inlineCode{signal_samples}
-\end{description}</code></pre>
+<p><img src="figures/time_history_generator_run_test.png" alt="time_history_generator_run_test" /></p>
+<p><strong>Figure 14-2. GUI for running the Time History Generator Environment</strong></p>
+<p>Two parameters can be defined prior to starting the environment.</p>
+<ul>
+<li><strong>Signal Level</strong>: Allows the user to scale the signal prior to output by a number of dB.</li>
+<li><strong>Repeat Signal</strong>: Checking this checkbox makes the signal repeat once started until the environment is stopped manually.  Alternatively, the environment will stop automatically once the signal has been played.</li>
+</ul>
+<p>Similar to other environments, there are <code>Start Environment</code> and <code>Stop Environment</code> buttons to control when the environment occurs.  If the <code>Stop Environment</code> button is clicked, the signal will continue to play for the specified <code>Cancel Rampdown Time</code> while the environment ramps the signal level to zero.</p>
+<h3 id="144-output-netcdf-file-structure"><a class="header" href="#144-output-netcdf-file-structure">14.4. Output NetCDF File Structure <!--Section 14.4--></a></h3>
+<!--\section{Output NetCDF File Structure}-->
+<p>When Rattlesnake saves data to a netCDF file, environment-specific parameters are stored in a netCDF group with the same name as the environment name.  Similar to the root netCDF structure described in Section \ref{sec:using_rattlesnake_output_files}, this group will have its own attributes, dimensions, and variables, which are described here.</p>
+<h4 id="1442-netcdf-dimensions"><a class="header" href="#1442-netcdf-dimensions">14.4.2. NetCDF Dimensions <!--Section 14.4.1--></a></h4>
+<!--\subsection{NetCDF Dimensions}-->
+<ul>
+<li><strong>output_channels</strong>: The number of output signals used by the environment</li>
+<li><strong>signal_samples</strong>: The number of samples in the output signals</li>
+</ul>
+<h4 id="1442-netcdf-attributes"><a class="header" href="#1442-netcdf-attributes">14.4.2. NetCDF Attributes <!--Section 14.4.2--></a></h4>
+<!--\subsection{NetCDF Attributes}-->
+<ul>
+<li><strong>cancel_rampdown_time</strong>:  The time to ramp to zero if the environment is stopped.</li>
+</ul>
+<h4 id="1443-netcdf-variables"><a class="header" href="#1443-netcdf-variables">14.4.3. NetCDF Variables <!--Section 14.4.3--></a></h4>
+<!--\subsection{NetCDF Variables}-->
+<ul>
+<li><strong>output_signal</strong>:  The signals that are played to the excitation devices  Type: 64-bit float; Dimensions: <code>output_channels</code> <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="mord">×</span></span></span></span> <code>signal_samples</code></li>
+</ul>
 
                     </main>
 
