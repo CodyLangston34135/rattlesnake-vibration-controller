@@ -37,6 +37,8 @@ class SysIDDataAnalysisCommands(Enum):
     STOP_SYSTEM_ID = 5
     SHUTDOWN_ACHIEVED = 6
     SYSTEM_ID_COMPLETE = 7
+    LOAD_TRANSFER_FUNCTION = 8
+    LOAD_NOISE = 9
     
 from .abstract_sysid_environment import AbstractSysIdMetadata
     
@@ -56,6 +58,8 @@ class AbstractSysIDAnalysisProcess(AbstractMessageProcess):
         self.map_command(SysIDDataAnalysisCommands.RUN_NOISE,self.run_sysid_noise)
         self.map_command(SysIDDataAnalysisCommands.RUN_TRANSFER_FUNCTION,self.run_sysid_transfer_function)
         self.map_command(SysIDDataAnalysisCommands.STOP_SYSTEM_ID,self.stop_sysid)
+        self.map_command(SysIDDataAnalysisCommands.LOAD_NOISE,self.load_sysid_noise)
+        self.map_command(SysIDDataAnalysisCommands.LOAD_TRANSFER_FUNCTION,self.load_sysid_transfer_function)
         self.environment_name = environment_name
         self.environment_command_queue = environment_command_queue
         self.data_in_queue = data_in_queue
@@ -74,6 +78,39 @@ class AbstractSysIDAnalysisProcess(AbstractMessageProcess):
         
     def initialize_sysid_parameters(self,data : AbstractSysIdMetadata):
         self.parameters = data
+
+    def load_sysid_noise(self, spectral_data):
+        self.log('Obtained Spectral Data')
+        (self.frames,
+        self.frequencies,
+        frf,coherence,
+        self.sysid_response_noise,
+        self.sysid_reference_noise,
+        condition) = spectral_data
+
+    def load_sysid_transfer_function(self, spectral_data, skip_sysid=True):
+        self.log('Obtained Spectral Data')
+        (self.frames,
+        self.frequencies,
+        self.sysid_frf,
+        self.coherence,
+        self.sysid_response_cpsd,
+        self.sysid_reference_cpsd,
+        self.sysid_condition) = spectral_data
+        if skip_sysid:
+            self.environment_command_queue.put(
+                self.process_name,
+                (SysIDDataAnalysisCommands.SYSTEM_ID_COMPLETE,
+                    (self.frames,
+                    0,
+                    self.frequencies,
+                    self.sysid_frf,
+                    self.coherence,
+                    self.sysid_response_cpsd,
+                    self.sysid_reference_cpsd,
+                    self.sysid_condition,
+                    self.sysid_response_noise,
+                    self.sysid_reference_noise)))
     
     def run_sysid_noise(self,auto_shutdown):
         if self.startup:
@@ -81,13 +118,7 @@ class AbstractSysIDAnalysisProcess(AbstractMessageProcess):
             self.frames = 0
         spectral_data = flush_queue(self.data_in_queue)
         if len(spectral_data) > 0:
-            self.log('Obtained Spectral Data')
-            (self.frames,
-             self.frequencies,
-             frf,coherence,
-             self.sysid_response_noise,
-             self.sysid_reference_noise,
-             condition) = spectral_data[-1]
+            self.load_sysid_noise(spectral_data[-1])
             self.gui_update_queue.put((self.environment_name,
                                        ('noise_update',
                                         (self.frames,
@@ -110,14 +141,7 @@ class AbstractSysIDAnalysisProcess(AbstractMessageProcess):
             self.frames = 0
         spectral_data = flush_queue(self.data_in_queue)
         if len(spectral_data) > 0:
-            self.log('Obtained Spectral Data')
-            (self.frames,
-             self.frequencies,
-             self.sysid_frf,
-             self.coherence,
-             self.sysid_response_cpsd,
-             self.sysid_reference_cpsd,
-             self.sysid_condition) = spectral_data[-1]
+            self.load_sysid_transfer_function(spectral_data[-1], skip_sysid=False)
             self.gui_update_queue.put((self.environment_name,
                                        ('sysid_update',
                                         (self.frames,
@@ -131,7 +155,7 @@ class AbstractSysIDAnalysisProcess(AbstractMessageProcess):
         if auto_shutdown and self.parameters.sysid_averages == self.frames:
             self.environment_command_queue.put(
                 self.process_name,
-                (SysIDDataAnalysisCommands.START_SHUTDOWN,False))
+                (SysIDDataAnalysisCommands.START_SHUTDOWN,(False,True)))
             self.stop_sysid(None)
             self.environment_command_queue.put(
                 self.process_name,

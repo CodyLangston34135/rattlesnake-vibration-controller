@@ -133,7 +133,9 @@ class StateSpaceAcquisition(HardwareAcquisition):
 
         """
         self.integration_oversample = test_data.output_oversample
-        self.times = np.arange(test_data.samples_per_read*self.integration_oversample)/(test_data.sample_rate*self.integration_oversample)
+        # Need to get one more sample than you would think because lsim doesn't bridge the gap
+        # between integrations
+        self.times = np.arange(test_data.samples_per_read*self.integration_oversample+1)/(test_data.sample_rate*self.integration_oversample)
         self.frame_time = test_data.samples_per_read/test_data.sample_rate
         self.acquisition_delay = test_data.samples_per_write/test_data.output_oversample
         
@@ -186,7 +188,9 @@ class StateSpaceAcquisition(HardwareAcquisition):
         # Now extract a force that is the correct size
         this_force = self.force_buffer[:self.times.size]
         # And leave the rest for next time
-        self.force_buffer = self.force_buffer[self.times.size:]
+        # Note we have to keep the last force sample still on the
+        # buffer because it will be the next force sample we use
+        self.force_buffer = self.force_buffer[self.times.size-1:]
             
         times_out,sys_out,x_out = signal.lsim(self.system,this_force,self.times,self.state)
         
@@ -197,7 +201,9 @@ class StateSpaceAcquisition(HardwareAcquisition):
         if remaining_time > 0.0:
             time.sleep(remaining_time)
 
-        return sys_out.T[...,::self.integration_oversample]
+        # We don't want to return the last sample because it
+        # will be the initial state for the next sample
+        return sys_out.T[...,:-1:self.integration_oversample]
     
     def read_remaining(self):
         """Method to read the rest of the data on the acquisition

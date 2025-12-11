@@ -22,7 +22,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import multiprocessing as mp
-from .utilities import QueueContainer,GlobalCommands,flush_queue,align_signals
+from .utilities import (QueueContainer,GlobalCommands,flush_queue,align_signals,
+                        correlation_norm_signal_spec_ratio,
+                        correlation_norm_spec_ratio)
 from .abstract_message_process import AbstractMessageProcess
 from time import time,sleep
 
@@ -41,7 +43,7 @@ class AcquisitionProcess(AbstractMessageProcess):
     
     See AbstractMesssageProcess for inherited class members.
     """
-    def __init__(self,process_name : str, queue_container : QueueContainer,environments : list, acquisition_active : mp.Value):
+    def __init__(self,process_name : str, queue_container : QueueContainer, environments : list, acquisition_active : mp.Value):
         """
         Constructor for the AcquisitionProcess class
         
@@ -132,13 +134,19 @@ class AcquisitionProcess(AbstractMessageProcess):
             self.hardware.close()
         if data_acquisition_parameters.hardware == 0:
             from .nidaqmx_hardware_multitask import NIDAQmxAcquisition
-            self.hardware = NIDAQmxAcquisition()
+            self.hardware = NIDAQmxAcquisition(
+                data_acquisition_parameters.extra_parameters['task_trigger'],
+                data_acquisition_parameters.extra_parameters['task_trigger_output_channel'])
         elif data_acquisition_parameters.hardware == 1:
             from .lanxi_hardware_multiprocessing import LanXIAcquisition
-            self.hardware = LanXIAcquisition(data_acquisition_parameters.maximum_acquisition_processes)
+            self.hardware = LanXIAcquisition(
+                data_acquisition_parameters.extra_parameters['maximum_acquisition_processes'])
         elif data_acquisition_parameters.hardware == 2:
             from .data_physics_hardware import DataPhysicsAcquisition
             self.hardware = DataPhysicsAcquisition(data_acquisition_parameters.hardware_file,self.queue_container.single_process_hardware_queue)
+        elif data_acquisition_parameters.hardware == 3:
+            from .data_physics_dp900_hardware import DataPhysicsDP900Acquisition
+            self.hardware = DataPhysicsDP900Acquisition(data_acquisition_parameters.hardware_file, self.queue_container.single_process_hardware_queue)
         elif data_acquisition_parameters.hardware == 4:
             from .exodus_modal_solution_hardware import ExodusAcquisition
             self.hardware = ExodusAcquisition(data_acquisition_parameters.hardware_file,self.queue_container.single_process_hardware_queue)
@@ -148,6 +156,9 @@ class AcquisitionProcess(AbstractMessageProcess):
         elif data_acquisition_parameters.hardware == 6:
             from .sdynpy_system_virtual_hardware import SDynPySystemAcquisition
             self.hardware = SDynPySystemAcquisition(data_acquisition_parameters.hardware_file,self.queue_container.single_process_hardware_queue)
+        elif data_acquisition_parameters.hardware == 7:
+            from .sdynpy_frf_virtual_hardware import SDynPyFRFAcquisition
+            self.hardware = SDynPyFRFAcquisition(data_acquisition_parameters.hardware_file,self.queue_container.single_process_hardware_queue)
         else:
             raise ValueError('Invalid Hardware or Hardware Not Implemented!')
         # Initialize hardware and create channels
@@ -288,8 +299,6 @@ class AcquisitionProcess(AbstractMessageProcess):
             self.hardware.stop()
             self.shutdown_flag = False
             self.startup = True
-            self.acquisition_active = False
-            self.log('Acquisition Shut Down')
             # print('{:} {:}'.format(self.streaming,self.any_environments_started))
             if self.streaming and self.any_environments_started:
                 self.queue_container.streaming_command_queue.put(self.process_name,(GlobalCommands.STREAMING_DATA,read_data.copy()))
@@ -297,6 +306,8 @@ class AcquisitionProcess(AbstractMessageProcess):
             if self.has_streamed and self.any_environments_started:
                 self.queue_container.streaming_command_queue.put(self.process_name,(GlobalCommands.FINALIZE_STREAMING,None))
                 self.has_streamed = False
+            self.acquisition_active = False
+            self.log('Acquisition Shut Down')
         else:
             self.log('Acquiring Data for {:} environments'.format([name for name,flag in self.environment_active_flags.items() if flag]))
             read_data = self.hardware.read()
@@ -329,16 +340,25 @@ class AcquisitionProcess(AbstractMessageProcess):
                                      read_data = read_data,
                                      output_indices = self.output_indices,
                                      first_data = self.environment_first_data[environment])
-                        _, delay, _ = align_signals(self.read_data[self.output_indices],
-                                                    self.environment_first_data[environment],
-                                                    perform_subsample=False, 
-                                                    correlation_threshold = 0.5)
+                        _, delay, _, alignment_correlation = align_signals(
+                            self.read_data[self.output_indices],
+                            self.environment_first_data[environment],
+                            perform_subsample=False, 
+                            correlation_threshold = 0.5,
+                            correlation_metric = correlation_norm_signal_spec_ratio)
                         correlation_end_time = time()
                         self.log('Correlation check for environment {:} took {:0.2f} seconds'.format(environment,correlation_end_time-correlation_start_time))
-                        if delay is None:
+                        # Adding a criteria that the delay must be in the first half
+                        # of the buffer, otherwise we could still be increasing
+                        # in correlation as more data is acquired.  If it's in
+                        # the first half, it means that we have acquired more
+                        # data and the best match did not improve
+                        if delay is None or delay > self.read_data.shape[-1]//2:
                             continue
                     self.log('Found First Data for Environment {:}'.format(environment))
                     environment_data = self.read_data[self.environment_acquisition_channels[environment],delay:]
+                    if DEBUG:
+                        np.savez('debug_data/environment_first_data_{:}.npz'.format(environment),found_data = environment_data, expected_data = self.environment_first_data[environment])
                     self.environment_first_data[environment] = None
                     if not self.environment_last_data[environment]:
                         self.environment_active_flags[environment] = True

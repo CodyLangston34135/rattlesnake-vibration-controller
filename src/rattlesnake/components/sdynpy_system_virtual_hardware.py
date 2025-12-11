@@ -1,6 +1,6 @@
 """
 Synthetic "hardware" that allows the responses to be simulated by integrating
-linear equations of motion defined by a SDynPy System Object
+linear equations of motion.
 
 Rattlesnake Vibration Control Software
 Copyright (C) 2021  National Technology & Engineering Solutions of Sandia, LLC
@@ -44,6 +44,12 @@ _direction_map = {'X+': 1, 'X': 1, '+X': 1,
                   'RZ-': -6, '-RZ': -6,
                   '': 0, None:0}
 
+DEBUG = False
+
+if DEBUG:
+    from glob import glob
+    FILE_OUTPUT = 'debug_data/sdynpy_hardware_{:}.npz'
+
 class SDynPySystemAcquisition(HardwareAcquisition):
     """Class defining the interface between the controller and synthetic acquisition
     
@@ -54,7 +60,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
     the test hardware into the controller.
     """
     
-    def __init__(self,system_file : str, queue : mp.queues.Queue):
+    def __init__(self,system_file : str, queue : mp.queues.Queue, sleep : bool = True):
         """
         Loads in the SDynPy system file and sets initial parameters to null
         values.
@@ -70,6 +76,11 @@ class SDynPySystemAcquisition(HardwareAcquisition):
             with the specified excitation and the Acquisition would record the
             responses to that excitation.  In the synthetic case, we need to
             pass the output data to the acquisition which does the integration.
+        sleep : bool
+            If True, the integrator will wait the amount of time the calculation
+            would have took if it were real life, which adds a realistic delay
+            to simulate an actual measurement.  If False, the integration will
+            proceed as fast as possible.
 
         Returns
         -------
@@ -86,6 +97,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         self.integration_oversample = None
         self.response_channels = None
         self.output_channels = None
+        self.sleep = sleep
         # Create a dictionary of channels for faster lookup
         self.channel_indices = {tuple([abs(v) for v in val]):index for index,val in enumerate(self.sdynpy_system_data['coordinate'])}
         
@@ -231,7 +243,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
                 C_response.append(C_accel[response_index])
                 D_response.append(D_accel[response_index])
             else:
-                print("Unknown Channel Type for Channel {:}: {:}".format(i+1,channel.channel_type()))
+                print("Unknown Channel Type for Channel {:}: {:}".format(i+1,channel.channel_type))
                 C_response.append(C_disp[response_index])
                 D_response.append(D_disp[response_index])
             response_index += 1
@@ -263,7 +275,9 @@ class SDynPySystemAcquisition(HardwareAcquisition):
 
         """
         self.integration_oversample = test_data.output_oversample
-        self.times = np.arange(test_data.samples_per_read*self.integration_oversample)/(test_data.sample_rate*self.integration_oversample)
+        # Need to get one more sample than you would think because lsim doesn't bridge the gap
+        # between integrations
+        self.times = np.arange(test_data.samples_per_read*self.integration_oversample+1)/(test_data.sample_rate*self.integration_oversample)
         self.frame_time = test_data.samples_per_read/test_data.sample_rate
         self.acquisition_delay = test_data.samples_per_write/test_data.output_oversample
         
@@ -309,24 +323,36 @@ class SDynPySystemAcquisition(HardwareAcquisition):
             try:
                 forces = self.queue.get(timeout=self.frame_time)
             except mp.queues.Empty: # If we don't get an output in time, this likely means output has stopped so just put zeros.
+                print('Warning! SDynPy integrator ran out of samples!')
                 forces = np.zeros((self.force_buffer.shape[-1],self.times.size))
             self.force_buffer = np.concatenate((self.force_buffer,forces.T),axis=0)
             
         # Now extract a force that is the correct size
         this_force = self.force_buffer[:self.times.size]
         # And leave the rest for next time
-        self.force_buffer = self.force_buffer[self.times.size:]
-            
+        # Note we have to keep the last force sample still on the
+        # buffer because it will be the next force sample we use
+        self.force_buffer = self.force_buffer[self.times.size-1:]
+        
         times_out,sys_out,x_out = signal.lsim(self.system,this_force,self.times,self.state)
         
         self.state[:] = x_out[-1]
         
+        if DEBUG:
+            num_files = len(glob(FILE_OUTPUT.format('*')))
+            np.savez(FILE_OUTPUT.format(num_files),
+                     force_in = this_force.T,
+                     response_out_full_resolution = sys_out.T[...,:-1:self.integration_oversample],
+                     response_out_downsampled = sys_out.T[...,:-1])
+        
         integration_time = time.time() - start_time
         remaining_time = self.frame_time - integration_time
-        if remaining_time > 0.0:
+        if remaining_time > 0.0 and self.sleep:
             time.sleep(remaining_time)
 
-        return sys_out.T[...,::self.integration_oversample]
+        # We don't want to return the last sample because it
+        # will be the initial state for the next sample
+        return sys_out.T[...,:-1:self.integration_oversample]
     
     def read_remaining(self):
         """Method to read the rest of the data on the acquisition

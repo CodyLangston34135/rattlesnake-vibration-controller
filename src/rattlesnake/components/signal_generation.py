@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-General functionality for generating various signal types used in Rattlesnake
-
 Rattlesnake Vibration Control Software
 Copyright (C) 2021  National Technology & Engineering Solutions of Sandia, LLC
 (NTESS). Under the terms of Contract DE-NA0003525 with NTESS, the U.S.
@@ -22,9 +20,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import numpy as np
-from abc import ABC,abstractmethod,abstractproperty
+from abc import abstractmethod
 from enum import Enum
 import scipy.signal as sig
+from scipy.stats import norm
 from time import time
 from .utilities import rms_csd
 
@@ -38,6 +37,12 @@ class SignalTypes(Enum):
     CPSD = 6
     TRANSIENT = 7
     CONTINUOUSTRANSIENT = 8
+
+DEBUG = False
+
+if DEBUG:
+    from glob import glob
+    FILE_OUTPUT = 'debug_data/signal_generator_{:}.npz'
 
 def cola(signal_samples : int,end_samples : int,
          signals : np.ndarray,window_name : str,window_exponent : float = 0.5):
@@ -139,13 +144,14 @@ def cpsd_to_time_history(cpsd_matrix,sample_rate,df,output_oversample = 1):
 
 class SignalGenerator:
     @abstractmethod
-    def generate_frame():
+    def generate_frame(self):
         pass
     
     def update_parameters(self,*args,**kwargs):
         pass
     
-    @abstractproperty
+    @property
+    @abstractmethod
     def ready_for_next_output(self):
         pass
 
@@ -405,21 +411,22 @@ class CPSDSignalGenerator(SignalGenerator):
                  cola_overlap,
                  cola_window,
                  cola_exponent,
+                 sigma_clip,
                  output_oversample):
         self.sample_rate = sample_rate
         self.num_samples = num_samples_per_frame
         self.num_signals = num_signals
-        self.cpsd_matrix = cpsd_matrix
-        if self.cpsd_matrix is None:
-            self.Lsvd = None
-        else:
-            svd_start = time()
-            # Compute SVD broadcasting over all frequency lines
-            [U,S,Vh] = np.linalg.svd(cpsd_matrix,full_matrices=False)
-            svd_end = time()
-            # print('SVD Time: {:0.4f}'.format(svd_end-svd_start))
-            # Reform using the sqrt of the S matrix
-            self.Lsvd = U*np.sqrt(S[:,np.newaxis,:])@Vh
+        if sigma_clip is None:
+            self.sigma_clip = None
+        elif isinstance(sigma_clip, np.ndarray):
+            self.sigma_clip = sigma_clip.squeeze()[:, np.newaxis] # force to n x 1 array
+            if np.all(self.sigma_clip >= 5.0):
+                self.sigma_clip = None
+        elif isinstance(sigma_clip, (int, float)):
+            self.sigma_clip = sigma_clip
+            if self.sigma_clip >= 5.0:
+                self.sigma_clip = None
+        self.update_parameters(cpsd_matrix)
         self.cola_overlap = cola_overlap
         self.cola_window = cola_window.lower()
         self.cola_exponent = cola_exponent
@@ -448,22 +455,53 @@ class CPSDSignalGenerator(SignalGenerator):
     
     def update_parameters(self,cpsd_matrix):
         self.cpsd_matrix = cpsd_matrix
-        # print('CPSD Signal Generator received new data with RMS\n  {:}'.format(rms_csd(cpsd_matrix,self.frequency_spacing)))
-        svd_start = time()
+        if self.cpsd_matrix is None:
+            self.Lsvd = None
+            return
+        # Determine rms and rescaling factors for sigma clipping (rescale factors used to maintain rms levels when using low clipping thresholds)
+        self._rms = ( np.trapz(self.cpsd_matrix.diagonal(axis1=1, axis2=2), np.arange(self.cpsd_matrix.shape[0])*self.frequency_spacing, axis=0)**0.5 )[:, np.newaxis]
+        if self.sigma_clip is None:
+            self._scale_factor = None
+        else:
+            self._scale_factor = -1 / (self.sigma_clip + 0.5)**3 + 1 # this is based on a curve fit between clipping threshold and rms error: [-1/(x + 0.5)^3 + 1] (less effective at lower clipping threshold)
+        self._size = (*self.cpsd_matrix.shape[:-1], 1)
+        # svd_start = time()
         # Compute SVD broadcasting over all frequency lines
         [U,S,Vh] = np.linalg.svd(cpsd_matrix,full_matrices=False)
-        svd_end = time()
+        # svd_end = time()
         # print('SVD Time: {:0.4f}'.format(svd_end-svd_start))
         # Reform using the sqrt of the S matrix
         self.Lsvd = U*np.sqrt(S[:,np.newaxis,:])@Vh
+
+    def rejection_sample(self, size, threshold=None) -> np.ndarray:
+        # `size` should be (n_samples x n_channels x 1) (this is the size needed to add to the cola queue)
+        if threshold is None:
+            return
+        oversample = np.max(size[0] + np.ceil((1 - norm.cdf(threshold))*100*size[0])).astype(int)
+        arr = np.random.randn(size[1], oversample) # arr needs to be (n_channels x n_samples) (so that when we mask it, it gets flattened in the right order)
+        mask = np.abs(arr) <= threshold
+        num_rejected = np.cumsum(np.sum(~mask, axis=1)) # total number of samples rejected for each channel
+        num_rejected = np.roll(num_rejected, 1, axis=0) # roll forward by 1 and set first value to zero
+        num_rejected[0] = 0
+        shifted_indices = np.array([oversample*j for j in range(size[1])], dtype=int) - num_rejected # starting indices from original arr after masked values are removed
+        indices = np.concatenate([np.arange(ind, ind + size[0]) for ind in shifted_indices])
+        return arr[mask][indices].reshape((size[1], size[0], size[2])).swapaxes(0, 1) # pull out masked values, reshape in correct order, and swapaxes to match dims of `size`
     
     def generate_frame(self):
         if not self.cola_initialized:
             self.cola_initialized = True
             self.generate_frame()
         # Create a signal
+        if self.sigma_clip is None:
+            real = np.random.randn(*self._size)
+            imag = np.random.randn(*self._size)
+        else:
+            # Apply sigma clipping via rejection sampling (apply correction factor to attempt to preserve rms levels)
+            real = self.rejection_sample(self._size, self.sigma_clip)/self._scale_factor
+            imag = self.rejection_sample(self._size, self.sigma_clip)/self._scale_factor
+        # print('after ', len(real), len(imag))
         # Compute Random Process
-        W = np.sqrt(0.5)*(np.random.randn(*self.cpsd_matrix.shape[:-1],1)+1j*np.random.randn(*self.cpsd_matrix.shape[:-1],1))
+        W = np.sqrt(0.5)*(real+1j*imag)
         Xv = 1/np.sqrt(self.frequency_spacing) * self.Lsvd@W
         # Ensure that the signal is real by setting the nyquist and DC component to 0
         Xv[[0,-1],:,:] = 0
@@ -477,11 +515,20 @@ class CPSDSignalGenerator(SignalGenerator):
         # Band limit it
         # Roll the queue
         self.cola_queue = np.roll(self.cola_queue,-1,axis=0)
+        # self.cola_queue[-1,...] = signal[np.abs(signal) <= (self._rms * self.sigma_clip)][..., :self.num_samples]
         self.cola_queue[-1,...] = signal
         output_signal = cola(self.samples_per_output*self.output_oversample,
                              self.overlapped_output_samples*self.output_oversample,
                              self.cola_queue,self.cola_window,self.cola_exponent)
-        return output_signal,False
+        
+        # mirror tail ends of the distribution about the sigma clipping threshold
+        if self.sigma_clip is not None:
+            mask = np.abs(output_signal) >= (self._rms * self.sigma_clip)
+            if len(mask) > 0:
+                twosigma = np.sign(output_signal).real * self._rms.real * self.sigma_clip * 2
+                output_signal[mask] *= -1
+                output_signal[mask] += twosigma[mask]
+        return output_signal, False
     
 class ContinuousTransientSignalGenerator(SignalGenerator):
     def __init__(self,
@@ -505,6 +552,11 @@ class ContinuousTransientSignalGenerator(SignalGenerator):
     def generate_frame(self):
         output_signal = self.signal[...,:self.num_samples]
         self.signal = self.signal[...,self.num_samples:]
+        if DEBUG:
+            num_files = len(glob(FILE_OUTPUT.format('*')))
+            np.savez(FILE_OUTPUT.format(num_files),
+                     output_signal = output_signal,
+                     last_signal = (self.no_more_signal_incoming and self.signal.shape[-1]==0))
         return output_signal,(self.no_more_signal_incoming and self.signal.shape[-1]==0)
     
 class TransientSignalGenerator(SignalGenerator):
@@ -524,3 +576,4 @@ class TransientSignalGenerator(SignalGenerator):
         
     def generate_frame(self):
         return self.signal,not self.repeat
+    

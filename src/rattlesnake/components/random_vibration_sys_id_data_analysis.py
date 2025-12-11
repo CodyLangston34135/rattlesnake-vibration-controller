@@ -21,8 +21,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-
-
 from .abstract_sysid_data_analysis import (AbstractSysIDAnalysisProcess,
                                            SysIDDataAnalysisCommands)
 from .random_vibration_sys_id_environment import (RandomVibrationMetadata,
@@ -34,6 +32,8 @@ import numpy as np
 from enum import Enum
 import os
 import importlib
+import time
+import sys
 
 class RandomVibrationDataAnalysisCommands(Enum):
     INITIALIZE_PARAMETERS = 0
@@ -41,6 +41,7 @@ class RandomVibrationDataAnalysisCommands(Enum):
     RUN_CONTROL = 2
     STOP_CONTROL = 3
     # SHUTDOWN_ACHIEVED = 4
+    # UPDATE_INTERACTIVE_CONTROL_PARAMETERS = 5
 
 class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
     
@@ -61,6 +62,8 @@ class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
                          self.perform_control_prediction)
         self.map_command(RandomVibrationDataAnalysisCommands.RUN_CONTROL,self.run_control)
         self.map_command(RandomVibrationDataAnalysisCommands.STOP_CONTROL,self.stop_control)
+        self.map_command(GlobalCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS, self.update_interactive_control_parameters)
+        self.map_command(GlobalCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command)
         self.error_indices = None
         self.control_function = None
         self.response_cpsd_prediction = None
@@ -71,6 +74,8 @@ class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
         self.last_response_cpsd = None
         self.last_drive_cpsd = None
         self.startup = True
+        self.has_sent_interactive_control_transfer_function_results = False
+        self.last_interactive_parameters = None
     
     def initialize_sysid_parameters(self,data : RandomVibrationMetadata):
         self.parameters : RandomVibrationMetadata
@@ -115,6 +120,30 @@ class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
                 self.last_response_cpsd, # Last Control Response for Error Correction
                 self.last_drive_cpsd, # Last Control Excitation for Drive-based control
                 )
+        elif  self.parameters.control_python_function_type == 3: # Interactive
+            control_frf = self.control_frf if self.parameters.update_tf_during_control else self.sysid_frf
+            control_coherence = self.control_coherence if self.parameters.update_tf_during_control else self.sysid_coherence
+            control_class = getattr(module,data.control_python_function)
+            self.control_function = control_class(
+                self.environment_name, 
+                self.gui_update_queue, 
+                data.specification_cpsd_matrix, # Specifications
+                data.specification_warning_matrix, # Warning levels
+                data.specification_abort_matrix, # Abort Levels
+                data.control_python_function_parameters, # Extra parameters for the control law
+                control_frf,  # Transfer Functions
+                self.sysid_response_noise,  # Noise levels and correlation 
+                self.sysid_reference_noise, # from the system identification
+                self.sysid_response_cpsd,  # Response levels and correlation
+                self.sysid_reference_cpsd, # from the system identification
+                control_coherence, # Coherence from the system identification
+                self.frames, # Number of frames in the CPSD
+                self.parameters.frames_in_cpsd, # Total number of frames
+                self.last_response_cpsd, # Last Control Response for Error Correction
+                self.last_drive_cpsd, # Last Control Excitation for Drive-based control
+                )
+            self.last_interactive_parameters = None
+            self.has_sent_interactive_control_transfer_function_results = False
         else: # Function
             self.control_function = getattr(module,data.control_python_function)
         
@@ -138,25 +167,45 @@ class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
                 None, # Last Control Response for Error Correction
                 None, # Last Control Excitation for Drive-based control
                 ))
-        elif self.parameters.control_python_function_type == 2: # Class
-            self.control_function.system_id_update(
-                self.sysid_frf,  # Transfer Functions
-                self.sysid_response_noise,  # Noise levels and correlation 
-                self.sysid_reference_noise, # from the system identification
-                self.sysid_response_cpsd,  # Response levels and correlation
-                self.sysid_reference_cpsd, # from the system identification
-                self.sysid_coherence, # Coherence from the system identification
-                self.parameters.sysid_averages, # Number of frames in the CPSD
-                self.parameters.sysid_averages, # Total number of frames
-                )
-            output_cpsd = self.control_function.control(
-                self.sysid_frf,  # Transfer Functions
-                self.sysid_coherence, # Coherence from the system identification
-                self.parameters.sysid_averages, # Number of frames in the CPSD
-                self.parameters.sysid_averages, # Total number of frames
-                None,
-                None
-                )
+        elif self.parameters.control_python_function_type in [2,3]: # Class or Interactive
+            if self.parameters.control_python_function == 2 or not self.has_sent_interactive_control_transfer_function_results:
+                self.control_function.system_id_update(
+                    self.sysid_frf,  # Transfer Functions
+                    self.sysid_response_noise,  # Noise levels and correlation 
+                    self.sysid_reference_noise, # from the system identification
+                    self.sysid_response_cpsd,  # Response levels and correlation
+                    self.sysid_reference_cpsd, # from the system identification
+                    self.sysid_coherence, # Coherence from the system identification
+                    self.parameters.sysid_averages, # Number of frames in the CPSD
+                    self.parameters.sysid_averages, # Total number of frames
+                    )
+                if self.parameters.control_python_function_type == 3:
+                    self.gui_update_queue.put((self.environment_name,('interactive_control_sysid_update',
+                                                                      (self.sysid_frf,  # Transfer Functions
+                                                                      self.sysid_response_noise,  # Noise levels and correlation 
+                                                                      self.sysid_reference_noise, # from the system identification
+                                                                      self.sysid_response_cpsd,  # Response levels and correlation
+                                                                      self.sysid_reference_cpsd, # from the system identification
+                                                                      self.sysid_coherence, # Coherence from the system identification
+                                                                      ))))
+                    self.has_sent_interactive_control_transfer_function_results = True
+            if self.parameters.control_python_function_type == 2 or self.last_interactive_parameters is not None:
+                output_cpsd = self.control_function.control(
+                    self.sysid_frf,  # Transfer Functions
+                    self.sysid_coherence, # Coherence from the system identification
+                    self.parameters.sysid_averages, # Number of frames in the CPSD
+                    self.parameters.sysid_averages, # Total number of frames
+                    None,
+                    None
+                    )
+            else:
+                self.log('Have not yet received control parameters from interactive control law!')
+                self.command_queue.put(
+                    self.process_name,
+                    (RandomVibrationDataAnalysisCommands.PERFORM_CONTROL_PREDICTION,
+                     None))
+                time.sleep(0.25)
+                return
         else: # Function
             output_cpsd = self.control_function(
                 self.parameters.specification_cpsd_matrix, # Specifications
@@ -189,7 +238,9 @@ class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
                                                            self.parameters.specification_cpsd_matrix,
                                                            rms_drives,
                                                            rms_db_error))))
-        
+        if self.parameters.control_python_function_type == 3:
+            self.has_sent_interactive_control_transfer_function_results = False
+            
     def run_control(self,data):
         if self.startup:
             self.log('Starting Control')
@@ -220,14 +271,15 @@ class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
             warning_channels = []
             abort_channels = []
             with np.errstate(invalid='ignore'):
+                lines_out = (self.parameters.percent_lines_out/100)*self.parameters.fft_lines
                 for i in range(self.last_response_cpsd.shape[-1]):
-                    if np.any(self.last_response_cpsd[:,i,i] > self.parameters.specification_abort_matrix[1,:,i]):
+                    if sum(self.last_response_cpsd[:,i,i] > self.parameters.specification_abort_matrix[1,:,i]) > lines_out:
                         abort_channels.append(i)
-                    elif np.any(self.last_response_cpsd[:,i,i] < self.parameters.specification_abort_matrix[0,:,i]):
+                    elif sum(self.last_response_cpsd[:,i,i] < self.parameters.specification_abort_matrix[0,:,i]) > lines_out:
                         abort_channels.append(i)
-                    elif np.any(self.last_response_cpsd[:,i,i] > self.parameters.specification_warning_matrix[1,:,i]):
+                    elif sum(self.last_response_cpsd[:,i,i] > self.parameters.specification_warning_matrix[1,:,i]) > lines_out:
                         warning_channels.append(i)
-                    elif np.any(self.last_response_cpsd[:,i,i] < self.parameters.specification_warning_matrix[0,:,i]):
+                    elif sum(self.last_response_cpsd[:,i,i] < self.parameters.specification_warning_matrix[0,:,i]) > lines_out:
                         warning_channels.append(i)
             if (len(abort_channels) > 0
                 and self.frames == self.parameters.frames_in_cpsd
@@ -261,7 +313,7 @@ class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
                     self.last_response_cpsd, # Last Control Response for Error Correction
                     self.last_drive_cpsd, # Last Control Excitation for Drive-based control
                     ))
-            elif self.parameters.control_python_function_type == 2: # Class
+            elif self.parameters.control_python_function_type in [2,3]: # Class or interactive class
                 output_cpsd = self.control_function.control(
                     control_frf,  # Transfer Functions
                     control_coherence, # Coherence
@@ -296,6 +348,19 @@ class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
             self.process_name,
             (RandomVibrationDataAnalysisCommands.RUN_CONTROL,None))
             
+    def update_interactive_control_parameters(self,interactive_control_parameters):
+        if self.parameters.control_python_function_type == 3: # Interactive
+            self.control_function.update_parameters(interactive_control_parameters)
+            self.last_interactive_parameters = interactive_control_parameters
+        else:
+            raise ValueError('Received an UPDATE_INTERACTIVE_CONTROL_PARAMETERS signal without an interactive control law.  How did this happen?')
+        
+    def send_interactive_command(self,command):
+        if self.parameters.control_python_function_type == 3: # Interactive
+            self.control_function.send_command(command)
+        else:
+            raise ValueError('Received an UPDATE_INTERACTIVE_CONTROL_PARAMETERS signal without an interactive control law.  How did this happen?')
+        
     def stop_control(self,data):
         # Remove any run_transfer_function or run_control from the queue
         instructions = self.command_queue.flush(self.process_name)

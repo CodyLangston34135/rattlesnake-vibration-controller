@@ -46,7 +46,8 @@ import netCDF4 as nc4
 import openpyxl
 from enum import Enum
 from copy import deepcopy
-from scipy.io import savemat
+from scipy.io import savemat, loadmat
+import pyqtgraph as pg
 
 class SystemIdCommands(Enum):
     PREVIEW_NOISE = 0
@@ -84,6 +85,8 @@ class AbstractSysIdMetadata(AbstractMetadata):
         self.sysid_burst_on = None
         self.sysid_pretrigger = None
         self.sysid_burst_ramp_fraction = None
+        self.sysid_low_frequency_cutoff = None
+        self.sysid_high_frequency_cutoff = None
         
     @property
     @abstractmethod
@@ -186,12 +189,64 @@ class AbstractSysIdMetadata(AbstractMetadata):
         netcdf_group_handle.sysid_burst_on = self.sysid_burst_on
         netcdf_group_handle.sysid_pretrigger = self.sysid_pretrigger
         netcdf_group_handle.sysid_burst_ramp_fraction = self.sysid_burst_ramp_fraction
+        netcdf_group_handle.sysid_low_frequency_cutoff = self.sysid_low_frequency_cutoff
+        netcdf_group_handle.sysid_high_frequency_cutoff = self.sysid_high_frequency_cutoff
 
     def __eq__(self,other):
         try:
             return np.all([np.all(self.__dict__[field] == other.__dict__[field]) for field in self.__dict__])
         except (AttributeError,KeyError):
             return False
+
+class RotatedAxisItem(pg.AxisItem):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._original_height = self.height()
+
+    def setAngle(self, angle):
+        self._angle = angle
+        self._angle = (self._angle + 180) % 360 - 180
+
+    def drawPicture(self, p, axisSpec, tickSpecs, textSpecs):
+        profiler = pg.debug.Profiler()
+        max_width = 0
+
+        ## draw long line along axis
+        pen, p1, p2 = axisSpec
+        p.setPen(pen)
+        p.drawLine(p1, p2)
+        ## draw ticks
+        for pen, p1, p2 in tickSpecs:
+            p.setPen(pen)
+            p.drawLine(p1, p2)
+        profiler('draw ticks')
+
+        for rect, flags, text in textSpecs:
+            p.save()  # save the painter state
+
+            p.translate(rect.center())   # move coordinate system to center of text rect
+            p.rotate(self._angle)  # rotate text
+            p.translate(-rect.center())  # revert coordinate system
+
+            x_offset = np.ceil(np.fabs(np.sin(np.radians(self._angle)) * rect.width()))
+            if self._angle < 0:
+                x_offset = -x_offset
+            p.translate(x_offset/2, 0)  # Move the coordinate system (relatively) downwards
+
+            p.drawText(rect, flags, text)
+            p.restore()  # restore the painter state
+            offset = np.fabs(x_offset)
+            max_width = offset if max_width < offset else max_width
+
+        profiler('draw text')
+        #  Adjust the height
+        self.setHeight(self._original_height + max_width)
+
+    def boundingRect(self):
+        rect = super().boundingRect()
+        rect.adjust(0, 0, 0, 20)  # Add 20 pixels to bottom
+        return rect
+
 
 from .abstract_sysid_data_analysis import SysIDDataAnalysisCommands
 
@@ -251,6 +306,7 @@ class AbstractSysIdUI(AbstractUI):
         self.last_reference_cpsd = None
         self.last_coherence = None
         self.last_condition = None
+        self.last_kurtosis = None
         
         self.time_response_plot = self.system_id_widget.time_data_graphicslayout.addPlot(row=0,column=0)
         self.time_response_plot.setLabel('left','Response')
@@ -281,6 +337,21 @@ class AbstractSysIdUI(AbstractUI):
         self.condition_plot.setLabel('bottom','Frequency (Hz)')
         self.coherence_plot.vb.setLimits(yMin=0,yMax=1)
         self.coherence_plot.vb.disableAutoRange(axis='y')
+        # Set up kurtosis plots
+        self.response_nodes = []
+        self.reference_nodes = []
+        self.all_response_indices = []
+        self.all_reference_indices = []
+        self.kurtosis_response_plot = self.system_id_widget.kurtosis_graphicslayout.addPlot(row=0,column=0)
+        self.kurtosis_reference_plot = self.system_id_widget.kurtosis_graphicslayout.addPlot(row=0,column=1)
+        self.kurtosis_response_plot.setLabel('left','Response')
+        self.kurtosis_reference_plot.setLabel('left','Reference')
+        response_axis = RotatedAxisItem('bottom')
+        reference_axis = RotatedAxisItem('bottom')
+        response_axis.setAngle(-60)
+        reference_axis.setAngle(-60)
+        self.kurtosis_response_plot.setAxisItems({'bottom': response_axis})
+        self.kurtosis_reference_plot.setAxisItems({'bottom': reference_axis})
         for plot in [self.level_response_plot,
                      self.level_reference_plot,
                      self.transfer_function_magnitude_plot,
@@ -291,6 +362,7 @@ class AbstractSysIdUI(AbstractUI):
         self.show_hide_levels()
         self.show_hide_time_data()
         self.show_hide_transfer_function()
+        self.show_hide_kurtosis()
     
     def connect_sysid_callbacks(self):
         self.system_id_widget.preview_noise_button.clicked.connect(self.preview_noise)
@@ -305,8 +377,10 @@ class AbstractSysIdUI(AbstractUI):
         self.system_id_widget.time_data_checkbox.stateChanged.connect(self.show_hide_time_data)
         self.system_id_widget.impulse_checkbox.stateChanged.connect(self.show_hide_impulse)
         self.system_id_widget.transfer_function_checkbox.stateChanged.connect(self.show_hide_transfer_function)
+        self.system_id_widget.kurtosis_checkbox.stateChanged.connect(self.show_hide_kurtosis)
         self.system_id_widget.signalTypeComboBox.currentIndexChanged.connect(self.update_signal_type)
         self.system_id_widget.save_system_id_matrices_button.clicked.connect(self.save_sysid_matrix_file)
+        self.system_id_widget.load_system_id_matrices_button.clicked.connect(self.load_sysid_matrix_file)
         
     @abstractmethod
     def initialize_data_acquisition(self,data_acquisition_parameters : DataAcquisitionParameters):
@@ -326,6 +400,22 @@ class AbstractSysIdUI(AbstractUI):
         self.log('Initializing Data Acquisition')
         # Store for later
         self.data_acquisition_parameters = data_acquisition_parameters
+        self.system_id_widget.highFreqCutoffSpinBox.setMaximum(data_acquisition_parameters.sample_rate//2)
+        # finish setting up kurtosis plots using node number + direction
+        for i, channel in enumerate(self.data_acquisition_parameters.channel_list):
+            node = channel.node_number + ('' if channel.node_direction is None else channel.node_direction)
+            if channel.feedback_device is None:
+                self.response_nodes.append(node)
+                self.all_response_indices.append(i)
+            else:
+                self.reference_nodes.append(node)
+                self.all_reference_indices.append(i)
+        response_ax = self.kurtosis_response_plot.getAxis('bottom')
+        reference_ax = self.kurtosis_reference_plot.getAxis('bottom')
+        response_ax.setTicks([list(enumerate(self.response_nodes))])
+        reference_ax.setTicks([list(enumerate(self.reference_nodes))])
+        self.system_id_widget.kurtosis_graphicslayout.ci.layout.setColumnStretchFactor(0, len(self.all_response_indices)*2 + len(self.all_reference_indices))
+        self.system_id_widget.kurtosis_graphicslayout.ci.layout.setColumnStretchFactor(1, len(self.all_reference_indices)*2 + len(self.all_response_indices))
     
     @abstractmethod
     def collect_environment_definition_parameters(self) -> AbstractSysIdMetadata:
@@ -356,6 +446,8 @@ class AbstractSysIdUI(AbstractUI):
         metadata.sysid_burst_on = self.system_id_widget.onFractionDoubleSpinBox.value()/100
         metadata.sysid_pretrigger = self.system_id_widget.pretriggerDoubleSpinBox.value()/100
         metadata.sysid_burst_ramp_fraction = self.system_id_widget.rampFractionDoubleSpinBox.value()/100
+        metadata.sysid_low_frequency_cutoff = self.system_id_widget.lowFreqCutoffSpinBox.value()
+        metadata.sysid_high_frequency_cutoff = self.system_id_widget.highFreqCutoffSpinBox.value()
         # for key in dir(metadata):
         #     if '__' == key[:2]:
         #         continue
@@ -429,7 +521,10 @@ class AbstractSysIdUI(AbstractUI):
                        self.system_id_widget.select_transfer_function_stream_file_button,
                        self.system_id_widget.transfer_function_stream_file_display,
                        self.system_id_widget.levelRampTimeDoubleSpinBox,
-                       self.system_id_widget.save_system_id_matrices_button]:
+                       self.system_id_widget.save_system_id_matrices_button,
+                       self.system_id_widget.load_system_id_matrices_button,
+                       self.system_id_widget.lowFreqCutoffSpinBox,
+                       self.system_id_widget.highFreqCutoffSpinBox]:
             widget.setEnabled(False)
         for widget in [self.system_id_widget.stop_button]:
             widget.setEnabled(True)
@@ -458,7 +553,10 @@ class AbstractSysIdUI(AbstractUI):
                        self.system_id_widget.select_transfer_function_stream_file_button,
                        self.system_id_widget.transfer_function_stream_file_display,
                        self.system_id_widget.levelRampTimeDoubleSpinBox,
-                       self.system_id_widget.save_system_id_matrices_button]:
+                       self.system_id_widget.save_system_id_matrices_button,
+                       self.system_id_widget.load_system_id_matrices_button,
+                       self.system_id_widget.lowFreqCutoffSpinBox,
+                       self.system_id_widget.highFreqCutoffSpinBox]:
             widget.setEnabled(False)
         for widget in [self.system_id_widget.stop_button]:
             widget.setEnabled(True)
@@ -487,7 +585,10 @@ class AbstractSysIdUI(AbstractUI):
                        self.system_id_widget.select_transfer_function_stream_file_button,
                        self.system_id_widget.transfer_function_stream_file_display,
                        self.system_id_widget.levelRampTimeDoubleSpinBox,
-                       self.system_id_widget.save_system_id_matrices_button]:
+                       self.system_id_widget.save_system_id_matrices_button,
+                       self.system_id_widget.load_system_id_matrices_button,
+                       self.system_id_widget.lowFreqCutoffSpinBox,
+                       self.system_id_widget.highFreqCutoffSpinBox]:
             widget.setEnabled(False)
         for widget in [self.system_id_widget.stop_button]:
             widget.setEnabled(True)
@@ -500,7 +601,7 @@ class AbstractSysIdUI(AbstractUI):
     def stop_system_id(self):
         self.log('Stopping System ID')
         self.system_id_widget.stop_button.setEnabled(False)
-        self.environment_command_queue.put(self.log_name,(SystemIdCommands.STOP_SYSTEM_ID,True))
+        self.environment_command_queue.put(self.log_name,(SystemIdCommands.STOP_SYSTEM_ID,(True,True)))
     
     def select_transfer_function_stream_file(self):
         """Select a file to save transfer function data to"""
@@ -512,7 +613,8 @@ class AbstractSysIdUI(AbstractUI):
     
     def update_sysid_plots(self,update_time = True,
                            update_transfer_function = True,
-                           update_noise = True):
+                           update_noise = True,
+                           update_kurtosis = True):
         # Figure out the selected entries
         response_indices = [i for i in range(
             self.system_id_widget.response_selector.count()) if 
@@ -586,6 +688,17 @@ class AbstractSysIdUI(AbstractUI):
                         self.level_response_plot.plot(self.frequencies,response_level[:,i],pen=i)
                     except Exception:
                         pass
+
+        if update_kurtosis:
+            self.kurtosis_response_plot.clear()
+            self.kurtosis_reference_plot.clear()
+            if self.last_kurtosis is not None:
+                response_kurtosis = self.last_kurtosis[self.all_response_indices]
+                reference_kurtosis = self.last_kurtosis[self.all_reference_indices]
+                response_bar = pg.BarGraphItem(x = range(len(self.response_nodes)), height = response_kurtosis, width=0.5, pen='r', brush='r')
+                reference_bar = pg.BarGraphItem(x = range(len(self.reference_nodes)), height = reference_kurtosis, width=0.5, pen='r', brush='r')
+                self.kurtosis_response_plot.addItem(response_bar)
+                self.kurtosis_reference_plot.addItem(reference_bar)
     
     def show_hide_coherence(self):
         if self.system_id_widget.coherence_checkbox.isChecked():
@@ -616,6 +729,12 @@ class AbstractSysIdUI(AbstractUI):
             self.system_id_widget.impulse_groupbox.show()
         else:
             self.system_id_widget.impulse_groupbox.hide()
+
+    def show_hide_kurtosis(self):
+        if self.system_id_widget.kurtosis_checkbox.isChecked():
+            self.system_id_widget.kurtosis_groupbox.show()
+        else:
+            self.system_id_widget.kurtosis_groupbox.hide()
     
     def update_signal_type(self):
         if self.system_id_widget.signalTypeComboBox.currentIndex() == 0: # Random
@@ -628,6 +747,9 @@ class AbstractSysIdUI(AbstractUI):
             self.system_id_widget.pretriggerDoubleSpinBox.hide()
             self.system_id_widget.rampFractionLabel.hide()
             self.system_id_widget.rampFractionDoubleSpinBox.hide()
+            self.system_id_widget.bandwidthLabel.show()
+            self.system_id_widget.lowFreqCutoffSpinBox.show()
+            self.system_id_widget.highFreqCutoffSpinBox.show()
         elif self.system_id_widget.signalTypeComboBox.currentIndex() == 1: # Pseudorandom
             self.system_id_widget.windowComboBox.setCurrentIndex(1)
             self.system_id_widget.overlapDoubleSpinBox.hide()
@@ -638,6 +760,9 @@ class AbstractSysIdUI(AbstractUI):
             self.system_id_widget.pretriggerDoubleSpinBox.hide()
             self.system_id_widget.rampFractionLabel.hide()
             self.system_id_widget.rampFractionDoubleSpinBox.hide()
+            self.system_id_widget.bandwidthLabel.show()
+            self.system_id_widget.lowFreqCutoffSpinBox.show()
+            self.system_id_widget.highFreqCutoffSpinBox.show()
         elif self.system_id_widget.signalTypeComboBox.currentIndex() == 2: # Burst
             self.system_id_widget.windowComboBox.setCurrentIndex(1)
             self.system_id_widget.overlapDoubleSpinBox.hide()
@@ -648,6 +773,9 @@ class AbstractSysIdUI(AbstractUI):
             self.system_id_widget.pretriggerDoubleSpinBox.show()
             self.system_id_widget.rampFractionLabel.show()
             self.system_id_widget.rampFractionDoubleSpinBox.show()
+            self.system_id_widget.bandwidthLabel.show()
+            self.system_id_widget.lowFreqCutoffSpinBox.show()
+            self.system_id_widget.highFreqCutoffSpinBox.show()
         elif self.system_id_widget.signalTypeComboBox.currentIndex() == 3: # Chirp
             self.system_id_widget.windowComboBox.setCurrentIndex(1)
             self.system_id_widget.overlapDoubleSpinBox.hide()
@@ -658,10 +786,13 @@ class AbstractSysIdUI(AbstractUI):
             self.system_id_widget.pretriggerDoubleSpinBox.hide()
             self.system_id_widget.rampFractionLabel.hide()
             self.system_id_widget.rampFractionDoubleSpinBox.hide()
+            self.system_id_widget.bandwidthLabel.hide()
+            self.system_id_widget.lowFreqCutoffSpinBox.hide()
+            self.system_id_widget.highFreqCutoffSpinBox.hide()
             
     
     @abstractmethod
-    def retrieve_metadata(self, netcdf_handle : nc4._netCDF4.Dataset):
+    def retrieve_metadata(self, netcdf_handle : nc4._netCDF4.Dataset, environment_name: str = None) -> nc4._netCDF4.Group:
         """Collects environment parameters from a netCDF dataset.
 
         This function retrieves parameters from a netCDF dataset that was written
@@ -676,18 +807,23 @@ class AbstractSysIdUI(AbstractUI):
         should collect parameters pertaining to the environment from a Group
         in the dataset sharing the environment's name, e.g.
         
-        ``group = netcdf_handle.groups[self.environment_name]``
-        ``self.definition_widget.parameter_selector.setValue(group.parameter)``
-        
         Parameters
         ----------
         netcdf_handle : nc4._netCDF4.Dataset :
             The netCDF dataset from which the data will be read.  It should have
             a group name with the enviroment's name.
 
+        environment_name : str : (optional)
+            The netCDF group name from which the data will be read. This will override
+            the current environment's name if given.
+
+        Returns
+        -------
+        group : nc4._netCDF4.Group
+            The netCDF group that was used to set the system ID parameters
         """
         # Get the group
-        group = netcdf_handle.groups[self.environment_name]
+        group = netcdf_handle.groups[self.environment_name if environment_name is None else environment_name]
         self.system_id_widget.samplesPerFrameSpinBox.setValue(group.sysid_frame_size)
         self.system_id_widget.averagingTypeComboBox.setCurrentIndex(self.system_id_widget.averagingTypeComboBox.findText(group.sysid_averaging_type))
         self.system_id_widget.noiseAveragesSpinBox.setValue(group.sysid_noise_averages)
@@ -702,6 +838,11 @@ class AbstractSysIdUI(AbstractUI):
         self.system_id_widget.onFractionDoubleSpinBox.setValue(group.sysid_burst_on*100)
         self.system_id_widget.pretriggerDoubleSpinBox.setValue(group.sysid_pretrigger*100)
         self.system_id_widget.rampFractionDoubleSpinBox.setValue(group.sysid_burst_ramp_fraction*100)
+        if hasattr(group, 'sysid_low_frequency_cutoff'):
+            self.system_id_widget.lowFreqCutoffSpinBox.setValue(group.sysid_low_frequency_cutoff)
+        if hasattr(group, 'sysid_high_frequency_cutoff'):
+            self.system_id_widget.highFreqCutoffSpinBox.setValue(group.sysid_high_frequency_cutoff)
+        return group
     
     @abstractmethod
     def update_gui(self,queue_data : tuple):
@@ -727,13 +868,21 @@ class AbstractSysIdUI(AbstractUI):
             self.last_time_response,accept = data
             self.update_sysid_plots(update_time = True,
                                     update_transfer_function = False,
-                                    update_noise = False)
+                                    update_noise = False,
+                                    update_kurtosis=False)
+        elif message == 'kurtosis':
+            self.last_kurtosis = data
+            self.update_sysid_plots(update_time = False,
+                                    update_transfer_function = False,
+                                    update_noise = False,
+                                    update_kurtosis=True)
         elif message == 'noise_update':
             (frames,total_frames,self.frequencies,
              self.last_response_noise,self.last_reference_noise) = data
             self.update_sysid_plots(update_time = False,
                                     update_transfer_function = False,
-                                    update_noise = True)
+                                    update_noise = True,
+                                    update_kurtosis=False)
             self.system_id_widget.current_frames_spinbox.setValue(frames)
             self.system_id_widget.total_frames_spinbox.setValue(total_frames)
             self.system_id_widget.progressBar.setValue(int(frames/total_frames*100))
@@ -748,7 +897,8 @@ class AbstractSysIdUI(AbstractUI):
             # print(self.last_reference_cpsd.shape)
             self.update_sysid_plots(update_time = False,
                                     update_transfer_function = True,
-                                    update_noise = True)
+                                    update_noise = True,
+                                    update_kurtosis=False)
             self.system_id_widget.current_frames_spinbox.setValue(frames)
             self.system_id_widget.total_frames_spinbox.setValue(total_frames)
             self.system_id_widget.progressBar.setValue(int(frames/total_frames*100))
@@ -773,7 +923,10 @@ class AbstractSysIdUI(AbstractUI):
                            self.system_id_widget.select_transfer_function_stream_file_button,
                            self.system_id_widget.transfer_function_stream_file_display,
                            self.system_id_widget.levelRampTimeDoubleSpinBox,
-                           self.system_id_widget.save_system_id_matrices_button]:
+                           self.system_id_widget.save_system_id_matrices_button,
+                           self.system_id_widget.load_system_id_matrices_button,
+                           self.system_id_widget.lowFreqCutoffSpinBox,
+                           self.system_id_widget.highFreqCutoffSpinBox]:
                 widget.setEnabled(True)
             for widget in [self.system_id_widget.stop_button]:
                 widget.setEnabled(False)
@@ -798,7 +951,10 @@ class AbstractSysIdUI(AbstractUI):
                            self.system_id_widget.select_transfer_function_stream_file_button,
                            self.system_id_widget.transfer_function_stream_file_display,
                            self.system_id_widget.levelRampTimeDoubleSpinBox,
-                           self.system_id_widget.save_system_id_matrices_button]:
+                           self.system_id_widget.save_system_id_matrices_button,
+                           self.system_id_widget.load_system_id_matrices_button,
+                           self.system_id_widget.lowFreqCutoffSpinBox,
+                           self.system_id_widget.highFreqCutoffSpinBox]:
                 widget.setEnabled(False)
             for widget in [self.system_id_widget.stop_button]:
                 widget.setEnabled(True)
@@ -901,8 +1057,9 @@ class AbstractSysIdUI(AbstractUI):
             netcdf_handle.time_per_read = self.data_acquisition_parameters.samples_per_read/self.data_acquisition_parameters.sample_rate
             netcdf_handle.hardware = self.data_acquisition_parameters.hardware
             netcdf_handle.hardware_file = 'None' if self.data_acquisition_parameters.hardware_file is None else self.data_acquisition_parameters.hardware_file
-            netcdf_handle.maximum_acquisition_processes = self.data_acquisition_parameters.maximum_acquisition_processes
             netcdf_handle.output_oversample = self.data_acquisition_parameters.output_oversample
+            for name, value in self.data_acquisition_parameters.extra_parameters.items():
+                setattr(self.netcdf_handle,name,value)
             # Create Variables
             var = netcdf_handle.createVariable('environment_names',str,('num_environments',))
             this_environment_index = None
@@ -926,38 +1083,38 @@ class AbstractSysIdUI(AbstractUI):
             group_handle = netcdf_handle.createGroup(self.environment_name)
             self.environment_parameters.store_to_netcdf(group_handle)
             try:
-                group_handle.createDimension('control_channels',self.last_transfer_function.shape[1])
+                group_handle.createDimension('sysid_control_channels',self.last_transfer_function.shape[1])
             except RuntimeError:
                 pass
             try:
-                group_handle.createDimension('output_channels',self.last_transfer_function.shape[2])
+                group_handle.createDimension('sysid_output_channels',self.last_transfer_function.shape[2])
             except RuntimeError:
                 pass
             try:
-                group_handle.createDimension('fft_lines',self.last_transfer_function.shape[0])
+                group_handle.createDimension('sysid_fft_lines',self.last_transfer_function.shape[0])
             except RuntimeError:
                 pass
-            var = group_handle.createVariable('frf_data_real','f8',('fft_lines','control_channels','output_channels'))
+            var = group_handle.createVariable('frf_data_real','f8',('sysid_fft_lines','sysid_control_channels','sysid_output_channels'))
             var[...] = self.last_transfer_function.real
-            var = group_handle.createVariable('frf_data_imag','f8',('fft_lines','control_channels','output_channels'))
+            var = group_handle.createVariable('frf_data_imag','f8',('sysid_fft_lines','sysid_control_channels','sysid_output_channels'))
             var[...] = self.last_transfer_function.imag
-            var = group_handle.createVariable('frf_coherence','f8',('fft_lines','control_channels'))
+            var = group_handle.createVariable('frf_coherence','f8',('sysid_fft_lines','sysid_control_channels'))
             var[...] = self.last_coherence.real
-            var = group_handle.createVariable('response_cpsd_real','f8',('fft_lines','control_channels','control_channels'))
+            var = group_handle.createVariable('response_cpsd_real','f8',('sysid_fft_lines','sysid_control_channels','sysid_control_channels'))
             var[...] = self.last_response_cpsd.real
-            var = group_handle.createVariable('response_cpsd_imag','f8',('fft_lines','control_channels','control_channels'))
+            var = group_handle.createVariable('response_cpsd_imag','f8',('sysid_fft_lines','sysid_control_channels','sysid_control_channels'))
             var[...] = self.last_response_cpsd.imag
-            var = group_handle.createVariable('reference_cpsd_real','f8',('fft_lines','output_channels','output_channels'))
+            var = group_handle.createVariable('reference_cpsd_real','f8',('sysid_fft_lines','sysid_output_channels','sysid_output_channels'))
             var[...] = self.last_reference_cpsd.real
-            var = group_handle.createVariable('reference_cpsd_imag','f8',('fft_lines','output_channels','output_channels'))
+            var = group_handle.createVariable('reference_cpsd_imag','f8',('sysid_fft_lines','sysid_output_channels','sysid_output_channels'))
             var[...] = self.last_reference_cpsd.imag
-            var = group_handle.createVariable('response_noise_cpsd_real','f8',('fft_lines','control_channels','control_channels'))
+            var = group_handle.createVariable('response_noise_cpsd_real','f8',('sysid_fft_lines','sysid_control_channels','sysid_control_channels'))
             var[...] = self.last_response_noise.real
-            var = group_handle.createVariable('response_noise_cpsd_imag','f8',('fft_lines','control_channels','control_channels'))
+            var = group_handle.createVariable('response_noise_cpsd_imag','f8',('sysid_fft_lines','sysid_control_channels','sysid_control_channels'))
             var[...] = self.last_response_noise.imag
-            var = group_handle.createVariable('reference_noise_cpsd_real','f8',('fft_lines','output_channels','output_channels'))
+            var = group_handle.createVariable('reference_noise_cpsd_real','f8',('sysid_fft_lines','sysid_output_channels','sysid_output_channels'))
             var[...] = self.last_reference_noise.real
-            var = group_handle.createVariable('reference_noise_cpsd_imag','f8',('fft_lines','output_channels','output_channels'))
+            var = group_handle.createVariable('reference_noise_cpsd_imag','f8',('sysid_fft_lines','sysid_output_channels','sysid_output_channels'))
             var[...] = self.last_reference_noise.imag
         else:
             field_dict = {}
@@ -967,7 +1124,6 @@ class AbstractSysIdUI(AbstractUI):
             field_dict['time_per_read'] = self.data_acquisition_parameters.samples_per_read/self.data_acquisition_parameters.sample_rate
             field_dict['hardware'] = self.data_acquisition_parameters.hardware
             field_dict['hardware_file'] = 'None' if self.data_acquisition_parameters.hardware_file is None else self.data_acquisition_parameters.hardware_file
-            field_dict['maximum_acquisition_processes'] = self.data_acquisition_parameters.maximum_acquisition_processes
             field_dict['output_oversample'] = self.data_acquisition_parameters.output_oversample
             field_dict['frf_data'] = self.last_transfer_function
             field_dict['response_cpsd'] = self.last_response_cpsd
@@ -980,6 +1136,7 @@ class AbstractSysIdUI(AbstractUI):
             field_dict['response_transformation_matrix'] = np.nan if self.environment_parameters.response_transformation_matrix is None else self.environment_parameters.response_transformation_matrix
             field_dict['reference_transformation_matrix'] = np.nan if self.environment_parameters.reference_transformation_matrix is None else self.environment_parameters.reference_transformation_matrix
             field_dict['sysid_frequency_spacing'] = self.environment_parameters.sysid_frequency_spacing
+            field_dict.update(self.data_acquisition_parameters.extra_parameters)
             for key,value in self.environment_parameters.__dict__.items():
                 try:
                     if 'sysid_' in key:
@@ -1002,6 +1159,102 @@ class AbstractSysIdUI(AbstractUI):
                 savemat(filename,field_dict)
             elif file_filter == 'Numpy File (*.npz)':
                 np.savez(filename,**field_dict)
+
+    def load_sysid_matrix_file(self, filename, popup=True):
+        if popup:
+            filename,file_filter = QtWidgets.QFileDialog.getOpenFileName(
+                self.system_id_widget,'Select File to Load Transfer Function Matrices',
+                filter='NetCDF File (*.nc4);;MatLab File (*.mat);;Numpy File (*.npz);;SDynPy FRF (*.npz);;Forcefinder SPR (*.npz)')
+        else:
+            file_filter = None
+        if filename is None or filename == '':
+            return
+        elif file_filter == 'NetCDF File (*.nc4)' or (file_filter is None and filename.endswith('.nc4')):
+            netcdf_handle = nc4.Dataset(filename,'r',format='NETCDF4')
+            # TODO: error checking to make sure relevant info matches current controller state
+            group_handle = netcdf_handle[self.environment_name]
+            sample_rate = netcdf_handle.sample_rate
+            frame_size = group_handle.sysid_frame_size
+            fft_lines = group_handle.dimensions['fft_lines'].size
+            variables = group_handle.variables
+            combine = np.vectorize(complex)
+            try:
+                self.last_transfer_function = np.array(combine(variables['frf_data_real'][:], variables['frf_data_imag'][:]))
+                self.last_coherence         = np.array(variables['frf_coherence'][:])
+                self.last_response_cpsd     = np.array(combine(variables['response_cpsd_real'][:], variables['response_cpsd_imag'][:]))
+                self.last_reference_cpsd    = np.array(combine(variables['reference_cpsd_real'][:], variables['reference_cpsd_imag'][:]))
+                self.last_response_noise    = np.array(combine(variables['response_noise_cpsd_real'][:], variables['response_noise_cpsd_imag'][:]))
+                self.last_reference_noise   = np.array(combine(variables['reference_noise_cpsd_real'][:], variables['reference_noise_cpsd_imag'][:]))
+                self.last_condition         = np.linalg.cond(self.last_transfer_function)
+                self.frequencies            = np.arange(fft_lines) * sample_rate/frame_size
+            except KeyError:
+                # TODO: in the case that a time history file was chosen, should FRF be auto-computed? could work on environment run or sysid (environment run just may have poor FRF)
+                # could we use the data analysis process to do the computation? so we don't lock up the UI
+                # could we also pass the FRF to any virtual hardware?
+                return
+        elif file_filter == 'SDynPy FRF (*.npz)':
+            sdynpy_dict = np.load(filename)
+            if sdynpy_dict['function_type'].item() != 4:
+                raise ValueError('File must contain a Sdynpy FrequencyResponseFunctionArray')
+            self.last_transfer_function = np.moveaxis(np.array(sdynpy_dict['data']['ordinate']), -1, 0)
+            self.last_condition         = np.linalg.cond(self.last_transfer_function)
+            self.frequencies            = np.array(sdynpy_dict['data']['abscissa'][0][0])
+            self.last_coherence         = np.zeros((0, self.last_transfer_function.shape[1]))
+            # TODO: pull coordinate out to verify matching info
+        elif file_filter == 'Forcefinder SPR (*.npz)':
+            forcefinder_dict = np.load(filename)
+            self.last_transfer_function = np.array(forcefinder_dict['training_frf']) # training frf will generally be the one used for testing
+            self.last_condition         = np.linalg.cond(self.last_transfer_function)
+            self.frequencies            = np.array(forcefinder_dict['abscissa'])
+            self.last_coherence         = np.zeros((0, self.last_transfer_function.shape[1]))
+            if 'buzz_cpsd' in forcefinder_dict:
+                self.last_response_cpsd = np.array(forcefinder_dict['buzz_cpsd'])
+        else:
+            if file_filter == 'MatLab File (*.mat)':
+                field_dict = loadmat(filename)
+                for field in ['frf_data',
+                              'response_cpsd',
+                              'reference_cpsd',
+                              'coherence',
+                              'response_noise_cpsd',
+                              'reference_noise_cpsd']:
+                    field_dict[field] = np.moveaxis(field_dict[field],-1,0)
+            elif file_filter == 'Numpy File (*.npz)':
+                field_dict = np.load(filename)
+            self.last_transfer_function = np.array(field_dict['frf_data'])
+            self.last_response_cpsd     = np.array(field_dict['response_cpsd'])
+            self.last_reference_cpsd    = np.array(field_dict['reference_cpsd'])
+            self.last_coherence         = np.array(field_dict['coherence'])
+            self.last_response_noise    = np.array(field_dict['response_noise_cpsd'])
+            self.last_reference_noise   = np.array(field_dict['reference_noise_cpsd'])
+            self.last_condition         = np.linalg.cond(self.last_transfer_function)
+            self.frequencies            = np.arange(self.last_transfer_function.shape[0]) * field_dict['sysid_frequency_spacing'].squeeze()
+        # Send values to data analysis process (through the environment queue, environment then passes to data analysis)
+        self.environment_command_queue.put(self.log_name, (SysIDDataAnalysisCommands.LOAD_NOISE, (
+            0,
+            self.frequencies,
+            None,
+            None,
+            self.last_response_noise,
+            self.last_reference_noise,
+            None
+        )))
+        self.environment_command_queue.put(self.log_name, (SysIDDataAnalysisCommands.LOAD_TRANSFER_FUNCTION, (
+            0,
+            self.frequencies,
+            self.last_transfer_function,
+            self.last_coherence,
+            self.last_response_cpsd,
+            self.last_reference_cpsd,
+            self.last_condition
+        )))
+        self.update_sysid_plots(update_time = False,
+                                update_transfer_function = True,
+                                update_noise = True,
+                                update_kurtosis=False)
+        self.system_id_widget.current_frames_spinbox.setValue(0)
+        self.system_id_widget.total_frames_spinbox.setValue(0)
+        self.system_id_widget.progressBar.setValue(100)
                 
     def disable_system_id_daq_armed(self):
         for widget in [self.system_id_widget.preview_noise_button,
@@ -1024,7 +1277,10 @@ class AbstractSysIdUI(AbstractUI):
                        self.system_id_widget.select_transfer_function_stream_file_button,
                        self.system_id_widget.transfer_function_stream_file_display,
                        self.system_id_widget.levelRampTimeDoubleSpinBox,
-                       self.system_id_widget.save_system_id_matrices_button]:
+                       self.system_id_widget.save_system_id_matrices_button,
+                       self.system_id_widget.load_system_id_matrices_button,
+                       self.system_id_widget.lowFreqCutoffSpinBox,
+                       self.system_id_widget.highFreqCutoffSpinBox]:
             widget.setEnabled(False)
         for widget in [self.system_id_widget.stop_button]:
             widget.setEnabled(False)
@@ -1050,7 +1306,10 @@ class AbstractSysIdUI(AbstractUI):
                        self.system_id_widget.select_transfer_function_stream_file_button,
                        self.system_id_widget.transfer_function_stream_file_display,
                        self.system_id_widget.levelRampTimeDoubleSpinBox,
-                       self.system_id_widget.save_system_id_matrices_button]:
+                       self.system_id_widget.save_system_id_matrices_button,
+                       self.system_id_widget.load_system_id_matrices_button,
+                       self.system_id_widget.lowFreqCutoffSpinBox,
+                       self.system_id_widget.highFreqCutoffSpinBox]:
             widget.setEnabled(True)
         for widget in [self.system_id_widget.stop_button]:
             widget.setEnabled(False)
@@ -1118,6 +1377,8 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
         self.map_command(SysIDDataAnalysisCommands.START_SHUTDOWN,self.stop_system_id)
         self.map_command(SysIDDataAnalysisCommands.START_SHUTDOWN_AND_RUN_SYSID,self.start_shutdown_and_run_sysid)
         self.map_command(SysIDDataAnalysisCommands.SYSTEM_ID_COMPLETE,self.system_id_complete)
+        self.map_command(SysIDDataAnalysisCommands.LOAD_NOISE, self.load_noise)
+        self.map_command(SysIDDataAnalysisCommands.LOAD_TRANSFER_FUNCTION, self.load_transfer_function)
         self.map_command(SystemIdCommands.CHECK_FOR_COMPLETE_SHUTDOWN,self.check_for_sysid_shutdown)
         self._waiting_to_start_transfer_function = False
         self.collector_command_queue = collector_command_queue
@@ -1187,6 +1448,7 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
         pretrigger_fraction = self.environment_parameters.sysid_pretrigger
         frame_size = self.environment_parameters.sysid_frame_size
         window = Window.HANN if self.environment_parameters.sysid_window == 'Hann' else Window.RECTANGLE
+        kurtosis_buffer_length = self.environment_parameters.sysid_averages
         
         return CollectorMetadata(
             num_channels,
@@ -1204,6 +1466,7 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
             pretrigger_fraction,
             frame_size,
             window,
+            kurtosis_buffer_length = kurtosis_buffer_length,
             response_transformation_matrix = self.environment_parameters.response_transformation_matrix,
             reference_transformation_matrix = self.environment_parameters.reference_transformation_matrix)
     
@@ -1238,7 +1501,7 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
     def get_sysid_signal_generation_metadata(self) -> SignalGenerationMetadata:
         return SignalGenerationMetadata(
             samples_per_write = self.data_acquisition_parameters.samples_per_write,
-            level_ramp_samples = self.environment_parameters.sysid_level_ramp_time * self.environment_parameters.sample_rate,
+            level_ramp_samples = self.environment_parameters.sysid_level_ramp_time * self.environment_parameters.sample_rate * self.data_acquisition_parameters.output_oversample,
             output_transformation_matrix = self.environment_parameters.reference_transformation_matrix,
             )
     
@@ -1249,8 +1512,8 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
                 sample_rate = self.environment_parameters.sample_rate,
                 num_samples_per_frame = self.environment_parameters.sysid_frame_size,
                 num_signals = self.environment_parameters.num_reference_channels,
-                low_frequency_cutoff = None,
-                high_frequency_cutoff = None,
+                low_frequency_cutoff = self.environment_parameters.sysid_low_frequency_cutoff,
+                high_frequency_cutoff = self.environment_parameters.sysid_high_frequency_cutoff,
                 cola_overlap = 0.5,
                 cola_window = 'hann',
                 cola_exponent = 0.5,
@@ -1261,8 +1524,8 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
                 sample_rate = self.environment_parameters.sample_rate,
                 num_samples_per_frame = self.environment_parameters.sysid_frame_size,
                 num_signals = self.environment_parameters.num_reference_channels,
-                low_frequency_cutoff = None,
-                high_frequency_cutoff = None,
+                low_frequency_cutoff = self.environment_parameters.sysid_low_frequency_cutoff,
+                high_frequency_cutoff = self.environment_parameters.sysid_high_frequency_cutoff,
                 output_oversample = self.data_acquisition_parameters.output_oversample)
         elif self.environment_parameters.sysid_signal_type == 'Burst Random':
             return BurstRandomSignalGenerator(
@@ -1270,8 +1533,8 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
                 sample_rate = self.environment_parameters.sample_rate,
                 num_samples_per_frame = self.environment_parameters.sysid_frame_size,
                 num_signals = self.environment_parameters.num_reference_channels,
-                low_frequency_cutoff = None,
-                high_frequency_cutoff = None,
+                low_frequency_cutoff = self.environment_parameters.sysid_low_frequency_cutoff,
+                high_frequency_cutoff = self.environment_parameters.sysid_high_frequency_cutoff,
                 on_fraction = self.environment_parameters.sysid_burst_on, 
                 ramp_fraction = self.environment_parameters.sysid_burst_ramp_fraction, 
                 output_oversample = self.data_acquisition_parameters.output_oversample)
@@ -1281,9 +1544,17 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
                 sample_rate = self.environment_parameters.sample_rate,
                 num_samples_per_frame = self.environment_parameters.sysid_frame_size,
                 num_signals = self.environment_parameters.num_reference_channels,
-                low_frequency_cutoff = self.environment_parameters.sysid_frequency_spacing,
-                high_frequency_cutoff = self.environment_parameters.sample_rate/2,
+                low_frequency_cutoff = np.max([self.environment_parameters.sysid_frequency_spacing,
+                                               self.environment_parameters.sysid_low_frequency_cutoff]),
+                high_frequency_cutoff = np.min([self.environment_parameters.sample_rate/2,
+                                                self.environment_parameters.sysid_high_frequency_cutoff]),
                 output_oversample = self.data_acquisition_parameters.output_oversample)
+        
+    def load_noise(self,data):
+        self.data_analysis_command_queue.put(self.environment_name, (SysIDDataAnalysisCommands.LOAD_NOISE, data))
+
+    def load_transfer_function(self,data):
+        self.data_analysis_command_queue.put(self.environment_name, (SysIDDataAnalysisCommands.LOAD_TRANSFER_FUNCTION, data))
     
     def preview_noise(self,data):
         self.log('Starting Noise Preview')
@@ -1359,6 +1630,11 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
         self.spectral_processing_command_queue.put(
             self.environment_name,
             (SpectralProcessingCommands.RUN_SPECTRAL_PROCESSING,None))
+
+        # Tell data collector to clear the kurtosis buffer
+        self.collector_command_queue.put(
+            self.environment_name,
+            (DataCollectorCommands.CLEAR_KURTOSIS_BUFFER, None))
     
     def preview_transfer_function(self,data):
         self.log('Starting System ID Preview')
@@ -1440,6 +1716,11 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
         self.spectral_processing_command_queue.put(
             self.environment_name,
             (SpectralProcessingCommands.RUN_SPECTRAL_PROCESSING,None))
+
+        # Tell data collector to clear the kurtosis buffer
+        self.collector_command_queue.put(
+            self.environment_name,
+            (DataCollectorCommands.CLEAR_KURTOSIS_BUFFER, None))
     
     def start_noise(self,data):
         self.log('Starting Noise Measurement for System ID')
@@ -1451,8 +1732,7 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
         self.controller_communication_queue.put(self.environment_name,(GlobalCommands.UPDATE_METADATA,(self.environment_name,self.environment_parameters)))
         # Start up controller
         if self._sysid_stream_name is not None:
-            name,ext = os.path.splitext(self._sysid_stream_name)
-            self.controller_communication_queue.put(self.environment_name,(GlobalCommands.INITIALIZE_STREAMING,name+'_noise'+ext))
+            self.controller_communication_queue.put(self.environment_name,(GlobalCommands.INITIALIZE_STREAMING,self._sysid_stream_name))
             self.controller_communication_queue.put(self.environment_name,(GlobalCommands.START_STREAMING,None))
         self.controller_communication_queue.put(self.environment_name,(GlobalCommands.RUN_HARDWARE,None))
         self.controller_communication_queue.put(self.environment_name,(GlobalCommands.START_ENVIRONMENT,self.environment_name))
@@ -1520,6 +1800,11 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
         self.spectral_processing_command_queue.put(
             self.environment_name,
             (SpectralProcessingCommands.RUN_SPECTRAL_PROCESSING,None))
+
+        # Tell data collector to clear the kurtosis buffer
+        self.collector_command_queue.put(
+            self.environment_name,
+            (DataCollectorCommands.CLEAR_KURTOSIS_BUFFER, None))
     
     def start_transfer_function(self,data):
         self.log('Starting Transfer Function for System ID')
@@ -1530,14 +1815,8 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
         self.environment_parameters = data
         # Start up controller
         if self._sysid_stream_name is not None:
-            name,ext = os.path.splitext(self._sysid_stream_name)
-            self.controller_communication_queue.put(self.environment_name,(GlobalCommands.INITIALIZE_STREAMING,name+'_tf'+ext))
             self.controller_communication_queue.put(self.environment_name,(GlobalCommands.START_STREAMING,None))
-        self.controller_communication_queue.put(self.environment_name,(GlobalCommands.RUN_HARDWARE,None))
-        # Wait for the environment to start up
-        while not (self.acquisition_active and self.output_active):
-            # print('Waiting for Acquisition and Output to Start up') 
-            time.sleep(0.1)
+
         self.controller_communication_queue.put(self.environment_name,(GlobalCommands.START_ENVIRONMENT,self.environment_name))
         
         # Set up the collector
@@ -1606,9 +1885,18 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
             self.environment_name,
             (SpectralProcessingCommands.RUN_SPECTRAL_PROCESSING,None))
         
-    def stop_system_id(self,stop_data_analysis):
+        # Tell data collector to clear the kurtosis buffer
+        self.collector_command_queue.put(
+            self.environment_name,
+            (DataCollectorCommands.CLEAR_KURTOSIS_BUFFER, None))
+
+    def stop_system_id(self,stop_tasks):
+        stop_data_analysis,stop_hardware = stop_tasks
         self.log('Stop Transfer Function')
-        self.controller_communication_queue.put(self.environment_name,(GlobalCommands.STOP_HARDWARE,None))
+        if stop_hardware:
+            self.controller_communication_queue.put(self.environment_name,(GlobalCommands.STOP_HARDWARE,None))
+        elif self._sysid_stream_name is not None:
+            self.controller_communication_queue.put(self.environment_name,(GlobalCommands.STOP_STREAMING,None))
         self.collector_command_queue.put(
             self.environment_name,
             (DataCollectorCommands.SET_TEST_LEVEL,
@@ -1642,8 +1930,9 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
     def check_for_sysid_shutdown(self,data):
         if (self.siggen_shutdown_achieved and self.collector_shutdown_achieved
             and self.spectral_shutdown_achieved and
-            self.analysis_shutdown_achieved and not self.acquisition_active
-            and not self.output_active):
+            self.analysis_shutdown_achieved
+            and ((not self.acquisition_active) or self._waiting_to_start_transfer_function)
+            and ((not self.output_active) or self._waiting_to_start_transfer_function)):
             self.log('Shutdown Achieved')
             if self._waiting_to_start_transfer_function:
                 self.start_transfer_function(self.environment_parameters)
@@ -1663,9 +1952,9 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
                 waiting_for.append('Spectral Processing')
             if not self.analysis_shutdown_achieved:
                 waiting_for.append('Data Analysis')
-            if self.output_active:
+            if self.output_active and (not self._waiting_to_start_transfer_function):
                 waiting_for.append('Output Shutdown')
-            if self.acquisition_active:
+            if self.acquisition_active and (not self._waiting_to_start_transfer_function):
                 waiting_for.append('Acquisition Shutdown')
             self.log('Waiting for {:}'.format(' and '.join(waiting_for)))
             self.environment_command_queue.put(
@@ -1675,13 +1964,13 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
     def start_shutdown_and_run_sysid(self,data):
         self.log('Shutting down and then Running System ID Afterwards')
         self._waiting_to_start_transfer_function = True
-        self.stop_system_id(False)
+        self.stop_system_id((False,False))
     
     def system_id_complete(self,data):
         self.log('Finished System Identification')
         self.controller_communication_queue.put(
             self.environment_name,
-            (GlobalCommands.COMPLETED_SYSTEM_ID,self.environment_name))
+            (GlobalCommands.COMPLETED_SYSTEM_ID,(self.environment_name,data)))
     
     @abstractmethod
     def stop_environment(self,data):

@@ -169,7 +169,9 @@ class ExodusAcquisition(HardwareAcquisition):
         C = np.diag((2*2*np.pi*frequencies*self.damping))
         A,B,C,D = MCK_to_StateSpace(M,C,K)
         self.system = signal.StateSpace(A,B,C,D)
-        self.times = np.arange(test_data.samples_per_read*self.integration_oversample)/(test_data.sample_rate*self.integration_oversample)
+        # Need to get one more sample than you would think because lsim doesn't bridge the gap
+        # between integrations
+        self.times = np.arange(test_data.samples_per_read*self.integration_oversample+1)/(test_data.sample_rate*self.integration_oversample)
         self.frame_time = test_data.samples_per_read/test_data.sample_rate
         self.state = np.zeros(nmodes*2)
         self.acquisition_delay = test_data.samples_per_write/test_data.output_oversample
@@ -224,7 +226,9 @@ class ExodusAcquisition(HardwareAcquisition):
         # Now extract a force that is the correct size
         this_force = self.force_buffer[:self.times.size]
         # And leave the rest for next time
-        self.force_buffer = self.force_buffer[self.times.size:]
+        # Note we have to keep the last force sample still on the
+        # buffer because it will be the next force sample we use
+        self.force_buffer = self.force_buffer[self.times.size-1:]
         
         # print('Got Force')
         # print('this_force shape: {:}'.format(this_force.shape))
@@ -267,7 +271,9 @@ class ExodusAcquisition(HardwareAcquisition):
                      modal_forces = modal_forces,forces = this_force,
                      integration_output = sys_out,times=times_out,state = self.state,
                      response_channels = self.response_channels)
-        return output[...,::self.integration_oversample] + NOISE_LEVEL*np.random.randn(*output[...,::self.integration_oversample].shape)
+        # We don't want to return the last sample because it
+        # will be the initial state for the next sample
+        return output[...,:-1:self.integration_oversample] + NOISE_LEVEL*np.random.randn(*output[...,:-1:self.integration_oversample].shape)
     
     def read_remaining(self):
         """Method to read the rest of the data on the acquisition

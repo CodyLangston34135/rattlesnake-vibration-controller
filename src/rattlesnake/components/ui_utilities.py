@@ -22,7 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import os
-from qtpy import QtWidgets, uic, QtGui
+from qtpy import QtWidgets, uic, QtGui, QtCore
 from qtpy.QtCore import Qt,QTimer
 import numpy as np
 import pyqtgraph
@@ -30,6 +30,8 @@ from scipy.io import loadmat
 from scipy.interpolate import interp1d
 import openpyxl
 from typing import List
+import requests
+import socket
 
 from .utilities import (coherence,error_message_qt,save_csv_matrix,
                         load_csv_matrix,trac,Channel,DataAcquisitionParameters)
@@ -173,7 +175,7 @@ def load_time_history(signal_path,sample_rate):
     return signal
 
 colororder = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
-def multiline_plotter(x,y,widget = None,curve_list = None,names=None,other_pen_options = {'width':1},legend=False):
+def multiline_plotter(x,y,widget = None,curve_list = None,names=None,other_pen_options = {'width':1},legend=False,downsample={'ds': 1, 'auto': False, 'mode': 'peak'},clip_to_view=False):
     """Helper function for PyQtGraph to deal with plots with multiple curves
 
     Parameters
@@ -202,6 +204,8 @@ def multiline_plotter(x,y,widget = None,curve_list = None,names=None,other_pen_o
     """
     if not widget is None:
         plot_item = widget.getPlotItem()
+        plot_item.setDownsampling(**downsample)
+        plot_item.setClipToView(clip_to_view)
         if legend:
             plot_item.addLegend(colCount = len(y)//10)
         handles = []
@@ -213,6 +217,21 @@ def multiline_plotter(x,y,widget = None,curve_list = None,names=None,other_pen_o
     elif not curve_list is None:
         for this_y,curve in zip(y,curve_list):
             curve.setData(x,y)
+        return curve_list
+    else:
+        raise ValueError('Either Widget or list of curves must be specified')
+
+def blended_scatter_plot(xy,widget=None, curve_list = None, names = None, symbol='o'):
+    if not widget is None:
+        plot_item = widget.getPlotItem()
+        handles = []
+        for index,(x,y) in enumerate(xy):
+            c = (1-(index+1)/len(xy))*255
+            handles.append(plot_item.plot([x],[y],symbolBrush=(c,c,c),name=None if names is None else names[index],symbol=symbol))
+        return handles
+    elif not curve_list is None:
+        for (x,y),curve in zip(xy,curve_list):
+            curve.setData([x],[y])
         return curve_list
     else:
         raise ValueError('Either Widget or list of curves must be specified')
@@ -270,10 +289,19 @@ def save_combined_environments_profile_template(filename,environment_data):
     hardware_worksheet.cell(4,2,'# Number of seconds per Read from the Data Acquisition System')
     hardware_worksheet.cell(5,1,'Time Per Write')
     hardware_worksheet.cell(5,2,'# Number of seconds per Write to the Data Acquisition System')
-    hardware_worksheet.cell(6,1,'Acquisition Processes')
+    hardware_worksheet.cell(6,1,'Maximum Acquisition Processes')
     hardware_worksheet.cell(6,2,'# Maximum Number of Acquisition Processes to start to pull data from hardware')
+    hardware_worksheet.cell(6,3, 'Only Used by LAN-XI Hardware.  This row can be deleted if LAN-XI is not used')
     hardware_worksheet.cell(7,1,'Integration Oversampling')
-    hardware_worksheet.cell(7,2,'# For virual control, an integration oversampling can be specified')
+    hardware_worksheet.cell(7,2,'# For virtual control, an integration oversampling can be specified')
+    hardware_worksheet.cell(7,3,'Only used for virtual control (Exodus, State Space, or SDynPy).  This row can be deleted if these are not used.')
+    hardware_worksheet.cell(8,1,'Task Trigger')
+    hardware_worksheet.cell(8,2,'# Start trigger type')
+    hardware_worksheet.cell(8,3,'Task Triggers: 0 - Internal, 1 - PFI0 with external trigger, 2 - PFI0 with Analog Output trigger.  Only used for NI hardware.  This row can be deleted if NI is not used.')
+    hardware_worksheet.cell(9,1,'Task Trigger Output Channel')
+    hardware_worksheet.cell(9,2,'# Physical device and channel that generates a trigger signal')
+    hardware_worksheet.cell(9,3,'Only used if Task Triggers is 2.  Only used for NI hardware.  This row can be deleted if it is not used.')
+    
     # Now do the environment
     worksheet.cell(row=1,column=24,value='Environments')
     for row,(value,name) in enumerate(environment_data):
@@ -455,6 +483,13 @@ class ControlSelect(QtWidgets.QDialog):
 
 class PlotWindow(QtWidgets.QDialog):
     """Class defining a subwindow that displays specific channel information"""
+    WARNING_COLOR = (225, 190, 0)
+    WARNING_LINEWIDTH = 0.3
+    WARNING_LINESTYLE = Qt.SolidLine
+    ABORT_COLOR = (200, 0, 0)
+    ABORT_LINEWIDTH = 0.3
+    ABORT_LINESTYLE = Qt.SolidLine
+
     def __init__(self,parent,row,column,datatype,specification,row_name,column_name,datatype_name,
                  warning_matrix = None, abort_matrix = None):
         """
@@ -503,11 +538,11 @@ class PlotWindow(QtWidgets.QDialog):
             plot_item.setLogMode(False,True)
         plot_item.plot(self.frequencies,self.spec_data,pen = {'color': "b", 'width': 1})
         if not warning_matrix is None:
-            plot_item.plot(self.frequencies,warning_matrix[0,:,row],pen = {'color': (255, 204, 0), 'width': 1, 'style':Qt.DashLine})
-            plot_item.plot(self.frequencies,warning_matrix[1,:,row],pen = {'color': (255, 204, 0), 'width': 1, 'style':Qt.DashLine})
+            plot_item.plot(self.frequencies,warning_matrix[0,:,row],pen = {'color': PlotWindow.WARNING_COLOR, 'width': PlotWindow.WARNING_LINEWIDTH, 'style': PlotWindow.WARNING_LINESTYLE})
+            plot_item.plot(self.frequencies,warning_matrix[1,:,row],pen = {'color': PlotWindow.WARNING_COLOR, 'width': PlotWindow.WARNING_LINEWIDTH, 'style': PlotWindow.WARNING_LINESTYLE})
         if not abort_matrix is None:
-            plot_item.plot(self.frequencies,abort_matrix[0,:,row],pen = {'color': (153, 0, 0), 'width': 1, 'style':Qt.DashLine})
-            plot_item.plot(self.frequencies,abort_matrix[1,:,row],pen = {'color': (153, 0, 0), 'width': 1, 'style':Qt.DashLine})
+            plot_item.plot(self.frequencies,abort_matrix[0,:,row],pen = {'color': PlotWindow.ABORT_COLOR, 'width': PlotWindow.ABORT_LINEWIDTH, 'style': PlotWindow.ABORT_LINESTYLE})
+            plot_item.plot(self.frequencies,abort_matrix[1,:,row],pen = {'color': PlotWindow.ABORT_COLOR, 'width': PlotWindow.ABORT_LINEWIDTH, 'style': PlotWindow.ABORT_LINESTYLE})
         self.curve = plot_item.plot(self.frequencies,self.data,pen = {'color': "r", 'width': 1})
         self.setWindowTitle('{:} {:} / {:}'.format(datatype_name,row_name,column_name))
         self.show()
@@ -647,6 +682,7 @@ class TransformationMatrixWindow(QtWidgets.QDialog):
         """
         super().__init__(parent)
         uic.loadUi(transformation_matrices_ui_path, self)
+        self.setWindowTitle('Transformation Matrix Definition')
         
         self.response_transformation_matrix.setColumnCount(num_responses)
         self.output_transformation_matrix.setColumnCount(num_outputs)
@@ -1303,7 +1339,7 @@ class ChannelMonitor(QtWidgets.QDialog):
     def update_channel_list(self,daq_settings):
         self.channels = daq_settings.channel_list
         self.history_hold_frames = int(np.ceil(10*daq_settings.sample_rate/daq_settings.samples_per_read))
-        self.build_plots()
+        self.build_plot()
     
     def clear_alerts(self):
         self.aborted_channels = [False for val in self.aborted_channels]
@@ -1422,3 +1458,349 @@ class ChannelMonitor(QtWidgets.QDialog):
                 current_bar.setOpts(brushes=[self.limit_brush])
                 background_bar.setOpts(brushes=[self.limit_background_brush])
                 history_bar.setOpts(brushes=[self.limit_history_brush])
+
+class VaryingNumberOfLinePlot():
+    def __init__(self, plot_item, initial_abscissa = None, initial_ordinate = None):
+        self.plot_item = plot_item
+        self.lines = []
+        if initial_abscissa is not None and initial_ordinate is not None:
+            self.set_data(initial_abscissa,initial_ordinate)
+    
+    def set_data(self, abscissa, ordinate):
+        for i,(this_ordinate, this_abscissa) in enumerate(zip(ordinate,abscissa)):
+            try:
+                self.lines[i].setData(this_abscissa,this_ordinate)
+            except IndexError:
+                pen = {'color':colororder[i%len(colororder)]}
+                self.lines.append(self.plot_item.plot(this_abscissa,this_ordinate,pen=pen))
+        
+        # Remove extra lines
+        extra_lines = len(self.lines) - len(ordinate)
+        for i in range(extra_lines):
+            line = self.lines.pop()
+            self.plot_item.removeItem(line)
+
+    def clear(self):
+        self.lines = []
+        self.plot_item.clear()
+class IPAddress():
+    """ Container for information about IPAddress, mainly used to make 
+    sure each address has a values for relevant information"""
+    def __init__(self, host_name = None, ipv4_address = None, ipv6_address = None, valid_ip = False):
+        self.host_name = host_name
+        self.ipv4_address = ipv4_address
+        self.ipv6_address = ipv6_address
+        self.valid_ip = valid_ip
+
+this_path = os.path.split(__file__)[0]
+ip_manager_ui_path = os.path.join(this_path, 'ip_manager.ui')
+
+class IPAddressManager(QtWidgets.QDialog):
+    def __init__(self, ip_addresses: list[IPAddress] = [], parent = None):
+        super().__init__(parent)
+        uic.loadUi(ip_manager_ui_path, self)
+
+        self.ip_address_table.setColumnWidth(0, 200)
+        self.ip_address_table.setColumnWidth(1, 200)
+        self.ip_address_table.setColumnWidth(2, 250)
+
+        self.ip_addresses = []
+        self.unique_indices = []
+        for ind, address in enumerate(ip_addresses):
+            self.add_ip_address()
+            self.ip_addresses[ind] = address
+
+        self.validation_timeout = 0.5
+        self.selected_index = -1
+
+        self.refresh_ip_table()
+        self.loading_bar.hide()
+
+        self.connect_callbacks()
+
+        self.setWindowIcon(QtGui.QIcon('logo/Rattlesnake_Icon.png'))
+
+    def connect_callbacks(self):
+        self.add_ip_address_button.clicked.connect(self.add_ip_address)
+        self.remove_ip_address_button.clicked.connect(self.remove_ip_address)
+        self.validate_ip_address_button.clicked.connect(self.validate_button_pressed)
+
+        self.button_box.accepted.disconnect()
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+
+    def set_row_count(self, row_count):
+        while self.ip_address_table.rowCount() < row_count:
+            clicked = False
+            self.add_ip_address(clicked)
+
+    def add_ip_address(self, clicked=None, append_list=True):
+        if append_list:
+            new_ip = IPAddress()
+            self.ip_addresses.append(new_ip)
+
+            unique_index = 0
+            while unique_index in self.unique_indices:
+                unique_index += 1
+            self.unique_indices.append(unique_index)
+
+        # Add new row to list
+        current_row = self.ip_address_table.rowCount()
+        self.ip_address_table.setRowCount(len(self.unique_indices))
+
+        # Add a host name line edit with move up and move down buttons
+        host_name_widget = QtWidgets.QWidget()
+        host_name_layout = QtWidgets.QHBoxLayout(host_name_widget)
+        host_name_layout.setContentsMargins(0, 0, 0, 0)
+        host_name_layout.setSpacing(0)
+
+        move_button_layout = QtWidgets.QVBoxLayout()
+        move_button_layout.setContentsMargins(0, 0, 0, 0)
+        move_button_layout.setSpacing(0)
+
+        up_button = QtWidgets.QToolButton()
+        up_button.setArrowType(QtCore.Qt.UpArrow)
+        up_button.setFixedSize(30, 15)
+        up_button.clicked.connect(lambda: self.move_address_up(unique_index))
+
+        down_button = QtWidgets.QToolButton()
+        down_button.setArrowType(QtCore.Qt.DownArrow)
+        down_button.setFixedSize(30, 15)
+        down_button.clicked.connect(lambda: self.move_address_down(unique_index))
+
+        move_button_layout.addWidget(up_button)
+        move_button_layout.addWidget(down_button)
+
+        host_name_input = QtWidgets.QLineEdit()
+        host_name_input.setFixedHeight(45)
+        host_name_input.setPlaceholderText("BK<Type>-<Serial>")
+        host_name_input.textChanged.connect(lambda text: self.host_name_changed(text, unique_index))
+        host_name_input.focusInEvent = lambda event: self.ip_input_focused(event, unique_index)
+
+        host_name_layout.addLayout(move_button_layout)
+        host_name_layout.addWidget(host_name_input)
+
+        self.ip_address_table.setCellWidget(current_row, 0, host_name_widget)
+
+        ipv4_input = QtWidgets.QLineEdit()
+        ipv4_input.setFixedHeight(45)
+        ipv4_input.setPlaceholderText("169.254.001.001")
+        ipv4_input.textChanged.connect(lambda text: self.ipv4_address_changed(text, unique_index))
+        ipv4_input.focusInEvent = lambda event: self.ip_input_focused(event, unique_index)
+
+        self.ip_address_table.setCellWidget(current_row, 1, ipv4_input)
+
+        ipv6_input = QtWidgets.QLineEdit()
+        ipv6_input.setFixedHeight(45)
+        ipv6_input.setPlaceholderText("[<Unicast>%<Network>]")
+        ipv6_input.textChanged.connect(lambda text: self.ipv6_address_changed(text, unique_index))
+        ipv6_input.focusInEvent = lambda event: self.ip_input_focused(event, unique_index)
+
+        self.ip_address_table.setCellWidget(current_row, 2, ipv6_input)
+
+    def host_name_changed(self, text: str, unique_index: int):
+        try:
+            current_row = self.unique_indices.index(unique_index)
+        except ValueError:
+            return
+        self.ip_addresses[current_row].host_name = text
+        self.ip_addresses[current_row].valid_ip = False
+
+    def ipv4_address_changed(self, text: str, unique_index: int):
+        try:
+            current_row = self.unique_indices.index(unique_index)
+        except ValueError:
+            return
+        self.ip_addresses[current_row].ipv4_address = text
+        self.ip_addresses[current_row].valid_ip = False
+
+    def ipv6_address_changed(self, text: str, unique_index: int):
+        try:
+            current_row = self.unique_indices.index(unique_index)
+        except ValueError:
+            return
+        self.ip_addresses[current_row].ipv6_address = text
+        self.ip_addresses[current_row].valid_ip = False
+
+    def ip_input_focused(self, event, unique_index: int):
+        self.selected_index = unique_index
+
+    def remove_ip_address(self):
+        try:
+            current_row = self.unique_indices.index(self.selected_index)
+        except ValueError:
+            return
+        if 0 <= current_row < len(self.unique_indices):
+            self.ip_address_table.removeRow(current_row,)
+            self.ip_addresses.pop(current_row)
+            self.unique_indices.pop(current_row)
+            self.selected_index = -1
+    
+    def move_address_up(self, ip_index):
+        # Just shifts text values up one LineEdit, unique_indices correspond
+        # to LineEdit objects which dont shift therefore the unique_indices dont change
+        try:
+            current_row = self.unique_indices.index(ip_index)
+        except ValueError:
+            return
+        if current_row > 0:
+            move_ip = self.ip_addresses.pop(current_row)
+            self.ip_addresses.insert(current_row - 1, move_ip)
+            self.refresh_ip_table([current_row - 1, current_row])
+
+    def move_address_down(self, ip_index):
+        # Just shifts text values down one LineEdit, unique_indices correspond
+        # to LineEdit objects which dont shift therefore the unique_indices dont change
+        try:
+            current_row = self.unique_indices.index(ip_index)
+        except ValueError:
+            return
+        if current_row < len(self.unique_indices) - 1:
+            move_ip = self.ip_addresses.pop(current_row)
+            self.ip_addresses.insert(current_row + 1, move_ip)
+            self.refresh_ip_table([current_row, current_row + 1])
+
+    def refresh_ip_table(self, rows: list[int] = None):
+        if rows is None:
+            rows = range(len(self.unique_indices))
+
+        # This is slower than just deleting widgets and refreshing them but I do
+        # this to keep a consistent unique indice corresponding to rows
+        for row_idx in rows:
+            if row_idx >= self.ip_address_table.rowCount():
+                return
+            
+            host_name = str(self.ip_addresses[row_idx].host_name) if self.ip_addresses[row_idx].host_name is not None else ''
+            host_name_widget = self.ip_address_table.cellWidget(row_idx, 0)
+            host_name_input = host_name_widget.findChild(QtWidgets.QLineEdit)
+            host_name_input.blockSignals(True)
+            host_name_input.setText(host_name)
+            host_name_input.blockSignals(False)
+
+            ipv4_address = str(self.ip_addresses[row_idx].ipv4_address) if self.ip_addresses[row_idx].ipv4_address is not None else ''
+            ipv4_input = self.ip_address_table.cellWidget(row_idx, 1)
+            ipv4_input.blockSignals(True)
+            ipv4_input.setText(ipv4_address)
+            ipv4_input.blockSignals(False)
+
+            ipv6_address = str(self.ip_addresses[row_idx].ipv6_address) if self.ip_addresses[row_idx].ipv6_address is not None else ''
+            ipv6_input = self.ip_address_table.cellWidget(row_idx, 2)
+            ipv6_input.blockSignals(True)
+            ipv6_input.setText(ipv6_address)
+            ipv6_input.blockSignals(False)
+
+    def get_ip_addresses(self, host_name: str = None):
+        valid_host_name = False
+        ipv4_address = None
+        ipv6_address = None
+        try:
+            # Get the address info for the hostname
+            ipv4_info = socket.getaddrinfo(host_name, None, socket.AF_INET)
+            ipv6_info = socket.getaddrinfo(host_name, None, socket.AF_INET6)
+            ipv4 = ipv4_info[0]
+            ipv4_address = ipv4[4][0]
+            ipv6 = ipv6_info[0]
+            ipv6_address = f'[{ipv6[4][0]}%{ipv6[4][3]}]'
+
+            valid_host_name = self.validate_ip_address(ipv6_address)
+        except (socket.gaierror, IndexError):
+            # print(f'Error retrieving info')
+            pass
+
+        return (valid_host_name, ipv4_address, ipv6_address)
+    
+    def get_host_name(self, ip_address: str = None):
+        host_name = None
+        host = "http://" + ip_address
+        valid_ip = self.validate_ip_address(ip_address)
+        if valid_ip:
+            try:
+                response = requests.get(host + "/rest/rec/module/info", timeout=1)
+                info = response.json()
+                host_name = f"BK{info['module']['type']['number']}-{info['module']['serial']}"
+            except:
+                valid_ip = False
+                host_name = None
+
+        return (valid_ip, host_name)
+    
+    def validate_ip_address(self, ip_address: str = None):
+        valid_ip = False
+        host = "http://" + ip_address
+        try:
+            response = requests.put(host + "/rest/rec/open", timeout=self.validation_timeout)
+            if response.status_code == 200:
+                valid_ip = True
+        except requests.exceptions.Timeout:
+            pass
+        except requests.exceptions.ConnectionError:
+            pass
+        except requests.exceptions.RequestException as e:
+            pass
+
+        return valid_ip
+        
+    def auotfill_ip_addresses(self):
+        """This function validates the ip address and autofills the other values.
+        If multiple inputs are valid but correspond to different devices, the
+        priority is host_name > ipv4 > ipv6
+        Note: Having 2 of the same host names may not validate correctly due to weird socket waiting requirements
+        """
+        self.loading_bar.setValue(0)
+        self.loading_bar.show()
+        num_rows = len(self.unique_indices)
+        for row_idx in range(num_rows):
+            valid_row = self.ip_addresses[row_idx].valid_ip
+            percent_complete = round((row_idx + 1)/num_rows*100)
+            self.loading_bar.setValue(percent_complete)
+
+            # Check if you can pull information from hostname
+            host_name = str(self.ip_addresses[row_idx].host_name) if self.ip_addresses[row_idx].host_name is not None else ''
+            if not valid_row and host_name != '':
+                valid_row, ipv4_address, ipv6_address = self.get_ip_addresses(host_name)
+                
+                if valid_row:
+                    self.ip_addresses[row_idx].ipv4_address = ipv4_address
+                    self.ip_addresses[row_idx].ipv6_address = ipv6_address
+                    self.ip_addresses[row_idx].valid_ip = valid_row
+                    continue
+
+            ipv4_address = str(self.ip_addresses[row_idx].ipv4_address) if self.ip_addresses[row_idx].ipv4_address is not None else ''
+            if not valid_row and ipv4_address != None:
+                valid_row, host_name = self.get_host_name(ipv4_address)
+
+                if valid_row:
+                    self.ip_addresses[row_idx].host_name = host_name
+                    (valid_row, _, ipv6_address) = self.get_ip_addresses(host_name)
+                    self.ip_addresses[row_idx].ipv6_address = ipv6_address
+                    self.ip_addresses[row_idx].valid_ip = valid_row
+                    continue
+                
+            ipv6_address = str(self.ip_addresses[row_idx].ipv6_address) if self.ip_addresses[row_idx].ipv6_address is not None else ''
+            if not valid_row and ipv6_address != None:
+                valid_row, host_name = self.get_host_name(ipv6_address)
+
+                if valid_row:
+                    self.ip_addresses[row_idx].host_name = host_name
+                    (valid_row, ipv4_address, _) = self.get_ip_addresses(host_name)
+                    self.ip_addresses[row_idx].ipv4_address = ipv4_address
+                    self.ip_addresses[row_idx].valid_ip = valid_row
+                    continue
+        
+        self.loading_bar.hide()
+    
+    def validate_button_pressed(self):
+        self.auotfill_ip_addresses()
+        self.refresh_ip_table()
+
+        valid_ip_list = [ip.valid_ip for ip in self.ip_addresses]
+        if not all(valid_ip_list):
+            invalid_ip_rows = [row for row, valid_bool in enumerate(valid_ip_list) if not valid_bool]
+            message = f"Invalid IP address at rows: {invalid_ip_rows}.\n\n If IPv4 connection is unstable, try inputting host name."
+            reply = QtWidgets.QMessageBox.question(self, "Invalid IP Addresses",
+                                        message,
+                                        QtWidgets.QMessageBox.Ok,
+                                        QtWidgets.QMessageBox.Ok)
+            
+    def closeEvent(self, a0):
+        return self.ip_addresses

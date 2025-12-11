@@ -995,20 +995,33 @@ class ModalUI(AbstractUI):
     def get_reciprocal_measurements(self):
         node_numbers = np.array([channel.node_number if not i in self.override_table else self.override_table[i][0] 
                                  for i,channel in enumerate(self.data_acquisition_parameters.channel_list)])
-        node_directions = np.array([''.join([char for char in (
+        node_directions = np.array([('' if channel.node_direction is None else ''.join([char for char in (
             channel.node_direction if not i in self.override_table else self.override_table[i][1])
-            if not char in '+-']) for i,channel in enumerate(self.data_acquisition_parameters.channel_list)])
+            if not char in '+-'])) for i,channel in enumerate(self.data_acquisition_parameters.channel_list)])
         reference_node_numbers = node_numbers[self.environment_parameters.reference_channel_indices]
         reference_node_directions = node_directions[self.environment_parameters.reference_channel_indices]
         response_node_numbers = node_numbers[self.environment_parameters.response_channel_indices]
         response_node_directions = node_directions[self.environment_parameters.response_channel_indices]
         corresponding_drive_responses = []
         for node,direction in zip(reference_node_numbers,reference_node_directions):
+            # print('Node: {:} Direction: {:}'.format(node,direction))
+            # print('Response Node Numbers:')
+            # print(response_node_numbers)
+            # print('Response Node Directions:')
+            # print(response_node_directions)
+            # print('Node Match:')
+            # print(response_node_numbers == node)
+            # print('Direction Match:')
+            # print(response_node_directions == direction)
             index = np.where((response_node_numbers == node) & (response_node_directions == direction))[0]
+            # print('Index:')
+            # print(index)
             if len(index) == 0:
                 corresponding_drive_responses.append(None)
+                print('Warning: No Drive Point Found for Reference {:}{:}'.format(node,direction))
             elif len(index) > 1:
                 corresponding_drive_responses.append(None)
+                print('Warning: Multiple Drive Points Found for Reference {:}{:}'.format(node,direction))
             else:
                 corresponding_drive_responses.append(index[0])
         # print(corresponding_drive_responses)
@@ -1027,8 +1040,9 @@ class ModalUI(AbstractUI):
         self.netcdf_handle.time_per_read = self.data_acquisition_parameters.samples_per_read/self.data_acquisition_parameters.sample_rate
         self.netcdf_handle.hardware = self.data_acquisition_parameters.hardware
         self.netcdf_handle.hardware_file = 'None' if self.data_acquisition_parameters.hardware_file is None else self.data_acquisition_parameters.hardware_file
-        self.netcdf_handle.maximum_acquisition_processes = self.data_acquisition_parameters.maximum_acquisition_processes
         self.netcdf_handle.output_oversample = self.data_acquisition_parameters.output_oversample
+        for name, value in self.data_acquisition_parameters.extra_parameters.items():
+            setattr(self.netcdf_handle,name,value)
         # Create Variables
         self.netcdf_handle.createVariable('time_data','f8',('response_channels','time_samples'))
         var = self.netcdf_handle.createVariable('environment_names',str,('num_environments',))

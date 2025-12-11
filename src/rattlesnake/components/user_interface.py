@@ -23,7 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 from qtpy import QtWidgets, uic, QtGui
-from qtpy.QtCore import QThreadPool,QRunnable,QObject,Signal,Slot,QTimer
+from qtpy.QtCore import QThreadPool,QRunnable,QObject,Signal,Slot,QTimer,QEvent,QDir
 import time
 import datetime
 import netCDF4
@@ -37,6 +37,7 @@ import numpy as np
 import multiprocessing as mp
 import copy
 import traceback
+import re
 
 from .utilities import (Channel,error_message_qt,QueueContainer,
                         VerboseMessageQueue,
@@ -44,7 +45,10 @@ from .utilities import (Channel,error_message_qt,QueueContainer,
 
 from .environments import environment_UIs as all_environment_UIs,ui_path
 
-from .ui_utilities import get_table_bools,ProfileTimer,ChannelMonitor
+from .ui_utilities import get_table_bools,ProfileTimer,ChannelMonitor,IPAddressManager,IPAddress
+
+directory = os.path.split(__file__)[0]
+QDir.addSearchPath('images',os.path.join(directory,'themes','images'))
 
 task_name = 'UI'
 
@@ -116,6 +120,7 @@ class Ui(QtWidgets.QMainWindow):
         """
         try:
             # Store input data
+            self._updated_size = False
             self.queue_container = queue_container
             self.environment_types = {name:control_type for control_type,name in environments}
             self.environments = [name for control_type,name in environments]
@@ -124,6 +129,7 @@ class Ui(QtWidgets.QMainWindow):
             self.profile_timers = None
             self.profile_list_update_timer = None
             self.channel_monitor_window = None
+            self.lanxi_ip_addresses = []
             
             # Create the user interface
             super(Ui, self).__init__()
@@ -199,6 +205,9 @@ class Ui(QtWidgets.QMainWindow):
             self.setWindowTitle('Rattlesnake Vibration Controller')
             self.show()
         
+            # Hide the task trigger fields if necessary
+            self.task_trigger_update()
+            
             # If there is a loaded profile file, we need to handle it
             # print('Loading Profile')
             if not profile_file is None:
@@ -206,30 +215,56 @@ class Ui(QtWidgets.QMainWindow):
                 # print('Loading Channel Table')
                 self.load_channel_table(None,profile_file)
                 # print('Loading Workbook')
-                workbook = openpyxl.load_workbook(profile_file)
+                workbook = openpyxl.load_workbook(profile_file, data_only=True)
                 # Hardware
                 # print('Setting Hardware')
                 hardware_sheet = workbook['Hardware']
-                hardware_index = int(hardware_sheet.cell(1,2).value)
-                self.hardware_selector.blockSignals(True)
-                self.hardware_selector.setCurrentIndex(hardware_index)
-                self.hardware_selector.blockSignals(False)
-                self.hardware_update(select_file = False)
-                self.hardware_file = hardware_sheet.cell(2,2).value
-                if hardware_index == 1:
-                    self.lanxi_sample_rate_selector.setCurrentIndex(round(np.log2(int(hardware_sheet.cell(3,2).value)/4096)))
-                else:
-                    self.sample_rate_selector.setValue(int(hardware_sheet.cell(3,2).value))
-                self.time_per_read_selector.setValue(hardware_sheet.cell(4,2).value)
-                self.time_per_write_selector.setValue(hardware_sheet.cell(5,2).value)
-                self.lanxi_maximum_acquisition_processes_selector.setValue(hardware_sheet.cell(6,2).value)
-                self.integration_oversample_selector.setValue(hardware_sheet.cell(7,2).value)
+                for i,row in enumerate(hardware_sheet.rows):
+                    if i == 0:
+                        hardware_index = int(row[1].value)
+                        self.hardware_selector.blockSignals(True)
+                        self.hardware_selector.setCurrentIndex(hardware_index)
+                        self.hardware_selector.blockSignals(False)
+                        self.hardware_update(select_file = False)
+                    elif i == 1:
+                        self.hardware_file = row[1].value
+                    elif i == 2:
+                        sample_rate = int(row[1].value)
+                        self.lanxi_sample_rate_selector.setCurrentIndex(round(np.log2(sample_rate/4096)))
+                        self.sample_rate_selector.setValue(sample_rate)
+                    elif i == 3:
+                        self.time_per_read_selector.setValue(row[1].value)
+                    elif i == 4:
+                        self.time_per_write_selector.setValue(row[1].value)
+                    # The rest of these are named variables
+                    else:
+                        name = str(row[0].value).lower().strip().replace(' ','_')
+                        if name == '':
+                            continue
+                        value = row[1].value
+                        if name == 'integration_oversampling':
+                            self.integration_oversample_selector.setValue(int(value))
+                        elif name == 'task_trigger':
+                            self.task_trigger_selector.setCurrentIndex(int(value))
+                        elif name == 'task_trigger_output_channel':
+                            self.task_trigger_output_selector.setText(str(value))
+                        elif name == 'maximum_acquisition_processes':
+                            self.lanxi_maximum_acquisition_processes_selector.setValue(int(value))
+                        else:
+                            print('Hardware sheet entry {:} not recognized'.format(row[0].value))
                 # print('Initializing Data Acquisition')
                 self.initialize_data_acquisition()
                 # Now go through and do the environments
                 for environment_name,environment_ui in self.environment_UIs.items():
                     # print('Setting Environment {:}'.format(environment_name))
                     environment_ui.set_parameters_from_template(workbook[environment_name])
+                    # TODO: maybe uncomment this later (auto-load FRF matrix to system id tab if using frf virtual hardware) 
+                    # NOTE: would need to fix an order of operations bug in the transient module
+                    # if hardware_index == 7 and isinstance(environment_ui, AbstractSysIdUI):
+                    #     try:
+                    #         environment_ui.load_sysid_matrix_file(self.hardware_file, popup=False)
+                    #     except KeyError:
+                    #         pass
                 # print('Initializing Environments')
                 self.initialize_environment_parameters()
                 # Now the profile
@@ -308,6 +343,15 @@ class Ui(QtWidgets.QMainWindow):
         except Exception:
             print(traceback.format_exc())
             
+    def event(self, event):
+        was_processed = super().event(event)
+        if event.type() == QEvent.LayoutRequest:
+            if not self._updated_size:
+                print('Updating Size of Window')
+                self.resize(1500, 667)
+                self._updated_size = True
+        return was_processed
+            
     def log(self,string):
         """Pass a message to the log_file_queue along with date/time and task name
 
@@ -321,11 +365,14 @@ class Ui(QtWidgets.QMainWindow):
         
     def complete_ui(self):
         """Helper function to complete setting up of the User Interface"""
+        self.ip_lookup_button.hide()
         self.lanxi_sample_rate_selector.hide()
         self.lanxi_maximum_acquisition_processes_label.hide()
         self.lanxi_maximum_acquisition_processes_selector.hide()
         self.integration_oversample_selector.hide()
         self.integration_oversample_label.hide()
+
+        self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         # Fill in the channel table with empty strings
         for row_idx in range(self.channel_table.rowCount()):
             for col_idx in range(self.channel_table.columnCount()):
@@ -365,17 +412,35 @@ class Ui(QtWidgets.QMainWindow):
         self.stop_program_button.clicked.connect(self.stop_program)
         # Channel Monitor
         self.channel_monitor_button.clicked.connect(self.show_channel_monitor)
+        self.color_theme_combobox.currentTextChanged.connect(self.change_color_theme)
         # Channel Table Tab
+        self.ip_lookup_button.clicked.connect(self.ip_lookup)
         self.load_channel_table_button.clicked.connect(self.load_channel_table)
         self.save_channel_table_button.clicked.connect(self.save_channel_table)
         self.initialize_data_acquisition_button.clicked.connect(self.initialize_data_acquisition)
         self.load_test_file_button.clicked.connect(self.load_test_file)
         self.hardware_selector.currentIndexChanged.connect(self.hardware_update)
+        self.task_trigger_selector.currentIndexChanged.connect(self.task_trigger_update)
         self.sample_rate_selector.valueChanged.connect(self.sample_rate_update)
         channel_table_scroll = self.channel_table.verticalScrollBar()
         channel_table_scroll.valueChanged.connect(self.sync_environment_table)
         environment_table_scroll = self.environment_channels_table.verticalScrollBar()
         environment_table_scroll.valueChanged.connect(self.sync_channel_table)
+        # Copy
+        self.channel_table_action_copy = QtWidgets.QAction("Copy", self.channel_table)
+        self.channel_table_action_copy.setShortcut("Ctrl+C")
+        self.channel_table_action_copy.triggered.connect(self.channel_table_copy)
+        self.channel_table.addAction(self.channel_table_action_copy)
+        # Paste
+        self.channel_table_action_paste = QtWidgets.QAction("Paste", self.channel_table)
+        self.channel_table_action_paste.setShortcut("Ctrl+V")
+        self.channel_table_action_paste.triggered.connect(self.channel_table_paste)
+        self.channel_table.addAction(self.channel_table_action_paste)
+        # Delete
+        self.channel_table_action_delete = QtWidgets.QAction("Delete", self.channel_table)
+        self.channel_table_action_delete.setShortcut("Del")
+        self.channel_table_action_delete.triggered.connect(self.channel_table_delete)
+        self.channel_table.addAction(self.channel_table_action_delete)
         
         # Control Definition Tab
         self.initialize_environments_button.clicked.connect(self.initialize_environment_parameters)
@@ -425,6 +490,7 @@ class Ui(QtWidgets.QMainWindow):
             loading from a file (Default value = None).
 
         """
+        self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
         num_environments = len(self.environments)
         if filename is None:
             filename,file_filter = QtWidgets.QFileDialog.getOpenFileName(self,'Load Channel Table',filter='Spreadsheets (*.xlsx *.csv *.txt)')
@@ -433,7 +499,7 @@ class Ui(QtWidgets.QMainWindow):
         self.log('Loading Channel Table {:}'.format(filename))
         file_base,file_type = os.path.splitext(filename)
         if file_type == '.xlsx':
-            workbook = openpyxl.load_workbook(filename,read_only=True)
+            workbook = openpyxl.load_workbook(filename,read_only=True, data_only=True)
             sheets = workbook.sheetnames
             if len(sheets) > 1:
                 sheets = [sheet for sheet in sheets if 'channel' in sheet.lower()]
@@ -484,6 +550,8 @@ class Ui(QtWidgets.QMainWindow):
                     except IndexError:
                         value = False
                     self.environment_channels_table.cellWidget(row_index,environment_table_column).setChecked(value)
+
+        self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
 
     def save_channel_table(self):
         """Save the channel table to a file"""
@@ -553,12 +621,13 @@ class Ui(QtWidgets.QMainWindow):
         elif file_type == '.csv' or file_type == '.txt':
             error_message_qt('Not Implemented!','Output to CSV Not Implemented Yet!')
             
-    def load_test_file(self):
+    def load_test_file(self, filename, hardware=True):
         """Loads a test file using a file dialog
         """
-        filename,file_filter = QtWidgets.QFileDialog.getOpenFileName(self,'Load Test NetCDF File',filter='NetCDF File (*.nc4);;All Files (*.*)')
-        if filename == '':
-            return
+        if not filename:
+            filename,file_filter = QtWidgets.QFileDialog.getOpenFileName(self,'Load Test NetCDF File',filter='NetCDF File (*.nc4);;All Files (*.*)')
+            if filename == '':
+                return
         dataset = netCDF4.Dataset(filename)
         # Channel Table
         channel_table = dataset['channels']
@@ -652,22 +721,29 @@ class Ui(QtWidgets.QMainWindow):
             self.channel_table.item(row_idx,21).setText(value)
         # Environment Table
         for saved_environment_index,saved_environment_name in enumerate(dataset.variables['environment_names'][...]):
-            environment_index = self.environments.index(saved_environment_name)
+            try:
+                environment_index = self.environments.index(saved_environment_name)
+            except ValueError:
+                if len(dataset.variables['environment_names'][...]) == 1:
+                    environment_index = 0
+                    print(f'Warning: saved environment ({saved_environment_name}) is different from '
+                          f'current environment ({self.environments[environment_index]})')
             for channel_index,bool_row in enumerate(dataset.variables['environment_active_channels'][:,saved_environment_index]):
                 boolean = bool(bool_row)
                 widget = self.environment_channels_table.cellWidget(channel_index,environment_index)
                 widget.setChecked(boolean)
-        # Hardware
-        self.hardware_selector.blockSignals(True)
-        try:
-            self.hardware_selector.setCurrentIndex(dataset.hardware)
-            self.hardware_file = None if dataset.hardware_file == 'None' else dataset.hardware_file
-        except AttributeError:
-            self.hardware_selector.setCurrentIndex(0)
-            self.hardware_file = None
-        self.hardware_selector.blockSignals(False)
-        # Show the right widgets
-        self.hardware_update(select_file = False)
+        if hardware:
+            # Hardware
+            self.hardware_selector.blockSignals(True)
+            try:
+                self.hardware_selector.setCurrentIndex(dataset.hardware)
+                self.hardware_file = None if dataset.hardware_file == 'None' else dataset.hardware_file
+            except AttributeError:
+                self.hardware_selector.setCurrentIndex(0)
+                self.hardware_file = None
+            self.hardware_selector.blockSignals(False)
+            # Show the right widgets
+            self.hardware_update(select_file = False)
         if self.hardware_selector.currentIndex() == 1:
             self.lanxi_sample_rate_selector.setCurrentIndex(np.log2(dataset.sample_rate//4096))
             self.lanxi_maximum_acquisition_processes_selector.setValue(dataset.maximum_acquisition_processes)
@@ -682,25 +758,92 @@ class Ui(QtWidgets.QMainWindow):
         for environment in self.environments:
             self.environment_UIs[environment].retrieve_metadata(dataset)
         self.initialize_environment_parameters()
+
+    def channel_table_paste(self):
+        """Function to paste clipboard starting from top left cell"""
+        selection_range  = self.channel_table.selectedRanges()
+        self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
+        if selection_range:
+            # Get top left cell
+            top_left_row = selection_range[0].topRow()
+            top_left_column = selection_range[0].leftColumn()
+            # Get clipboard text
+            clipboard = QtWidgets.QApplication.clipboard()
+            if clipboard.mimeData().hasText():
+                clipboard_text = clipboard.text()
+                # Split clipboard text with newlines between rows
+                rows = clipboard_text.splitlines()
+                # Split clipboard text with tabs between columns
+                array_text = [row.split('\t') for row in rows]
+                # Paste the text into the table
+                for i, row in enumerate(array_text):
+                    for j, cell_text in enumerate(row):
+                        cell_text = cell_text if cell_text is not None else ''
+                        item = QtWidgets.QTableWidgetItem(cell_text)
+                        self.channel_table.setItem(top_left_row + i, top_left_column + j, item)
+        self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+
+    def channel_table_copy(self):
+        """Function to copy text from channel table in a format that Excel recognizes"""
+        clipboard = QtWidgets.QApplication.clipboard()
+        selected_ranges = self.channel_table.selectedRanges()
+        if selected_ranges:
+            # Get selected range
+            selected_range  = selected_ranges[0]
+            copied_text = ''
+            rows = range(selected_range.topRow(), selected_range.bottomRow() + 1)
+            columns = range(selected_range.leftColumn(), selected_range.rightColumn() + 1)
+            # Put tabs inbetween columns, newlines inbetween rows
+            copied_text = []
+            for row in rows:
+                row_data = []
+                for column in columns:
+                    item = self.channel_table.item(row, column)
+                    row_data.append(item.text() if item else "") # Empty cells should be "" not None
+                copied_text.append("\t".join(row_data)) # Tab betewen columns
+            copied_text = "\n".join(copied_text) # Newline between rows
+            clipboard.setText(copied_text) 
+
+    def channel_table_delete(self):
+        """Function to delete text from a channel table when delete is pressed"""
+        selection_range = self.channel_table.selectedRanges()
+        self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
+        if selection_range:
+            # Get the selected range
+            selected_range = selection_range[0]
+            rows = range(selected_range.topRow(), selected_range.bottomRow() + 1)
+            columns = range(selected_range.leftColumn(), selected_range.rightColumn() + 1)
+            # Clear the selected cells
+            for row in rows:
+                for column in columns:
+                    clear_item = QtWidgets.QTableWidgetItem('')
+                    self.channel_table.setItem(row, column, clear_item)
+        self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
     
     def hardware_update(self, current_index = None, select_file = True):
         """Callback to provide options when hardware is selected"""
         current_index = self.hardware_selector.currentIndex()
         if current_index == 0: # NIDAQmx
             self.sample_rate_selector.show()
+            self.ip_lookup_button.hide()
             self.lanxi_sample_rate_selector.hide()
             self.lanxi_maximum_acquisition_processes_label.hide()
             self.lanxi_maximum_acquisition_processes_selector.hide()
             self.integration_oversample_selector.hide()
             self.integration_oversample_label.hide()
+            self.task_trigger_label.show()
+            self.task_trigger_selector.show()
             self.hardware_file = None
         elif current_index == 1: # LAN-XI
             self.sample_rate_selector.hide()
+            self.ip_lookup_button.show()
             self.lanxi_sample_rate_selector.show()
             self.lanxi_maximum_acquisition_processes_label.show()
             self.lanxi_maximum_acquisition_processes_selector.show()
             self.integration_oversample_selector.hide()
             self.integration_oversample_label.hide()
+            self.task_trigger_label.hide()
+            self.task_trigger_selector.hide()
             self.hardware_file = None
         elif current_index == 2: # DP Quattro
             # Load in the library file
@@ -712,15 +855,33 @@ class Ui(QtWidgets.QMainWindow):
                 else:
                     self.hardware_file = filename
             self.sample_rate_selector.show()
+            self.ip_lookup_button.hide()
             self.lanxi_sample_rate_selector.hide()
             self.lanxi_maximum_acquisition_processes_label.hide()
             self.lanxi_maximum_acquisition_processes_selector.hide()
             self.integration_oversample_selector.hide()
             self.integration_oversample_label.hide()
+            self.task_trigger_label.hide()
+            self.task_trigger_selector.hide()
             self.sample_rate_update()
         elif current_index == 3: # DP 900
-            error_message_qt('Data Physics 900 Series','Data Physics 900 Series is not yet available.  Expected Quarter 1 of 2024.')
-            self.hardware_selector.setCurrentIndex(0)
+            # Load in the library file
+            if select_file:
+                filename,file_filter = QtWidgets.QFileDialog.getOpenFileName(self,'Data Physics API',filter='DP900 API (Dp900Matlab.dll)')
+                if filename == '':
+                    self.hardware_selector.setCurrentIndex(0)
+                    return
+                else:
+                    self.hardware_file = filename
+            self.sample_rate_selector.show()
+            self.ip_lookup_button.hide()
+            self.lanxi_sample_rate_selector.hide()
+            self.lanxi_maximum_acquisition_processes_label.hide()
+            self.lanxi_maximum_acquisition_processes_selector.hide()
+            self.integration_oversample_selector.hide()
+            self.integration_oversample_label.hide()
+            self.task_trigger_label.hide()
+            self.task_trigger_selector.hide()
         elif current_index == 4: # Exodus
             # Load in an exodus file
             if select_file:
@@ -731,11 +892,14 @@ class Ui(QtWidgets.QMainWindow):
                 else:
                     self.hardware_file = filename
             self.sample_rate_selector.show()
+            self.ip_lookup_button.hide()
             self.lanxi_sample_rate_selector.hide()
             self.lanxi_maximum_acquisition_processes_label.hide()
             self.lanxi_maximum_acquisition_processes_selector.hide()
             self.integration_oversample_selector.show()
             self.integration_oversample_label.show()
+            self.task_trigger_label.hide()
+            self.task_trigger_selector.hide()
         elif current_index == 5: # State Space File
             # Load in a state space file
             if select_file:
@@ -746,29 +910,85 @@ class Ui(QtWidgets.QMainWindow):
                 else:
                     self.hardware_file = filename
             self.sample_rate_selector.show()
+            self.ip_lookup_button.hide()
             self.lanxi_sample_rate_selector.hide()
             self.lanxi_maximum_acquisition_processes_label.hide()
             self.lanxi_maximum_acquisition_processes_selector.hide()
             self.integration_oversample_selector.show()
             self.integration_oversample_label.show()
+            self.task_trigger_label.hide()
+            self.task_trigger_selector.hide()
         elif current_index == 6:
             # Load in an sdynpy system
             if select_file:
                 filename,file_filter = QtWidgets.QFileDialog.getOpenFileName(self,'Load a SDynPy System',filter='Numpy File (*.npz)')
                 if filename == '':
                     self.hardware_selector.setCurrentIndex(0)
-                    self.hardware_file = None
+                    return
                 else:
                     self.hardware_file = filename
             self.sample_rate_selector.show()
+            self.ip_lookup_button.hide()
             self.lanxi_sample_rate_selector.hide()
             self.lanxi_maximum_acquisition_processes_label.hide()
             self.lanxi_maximum_acquisition_processes_selector.hide()
             self.integration_oversample_selector.show()
             self.integration_oversample_label.show()
+            self.task_trigger_label.hide()
+            self.task_trigger_selector.hide()
+        elif current_index == 7:
+            if select_file:
+                filename,file_filter = QtWidgets.QFileDialog.getOpenFileName(self,'Load a SDynPy TransferFunctionArray',filter='Numpy File (*.npz)')
+                if filename == '':
+                    self.hardware_selector.setCurrentIndex(0)
+                    return
+                else:
+                    self.hardware_file = filename
+            self.sample_rate_selector.show()
+            self.ip_lookup_button.hide()
+            self.lanxi_sample_rate_selector.hide()
+            self.lanxi_maximum_acquisition_processes_label.hide()
+            self.lanxi_maximum_acquisition_processes_selector.hide()
+            self.integration_oversample_selector.show()
+            self.integration_oversample_label.show()
+            self.task_trigger_label.hide()
+            self.task_trigger_selector.hide()
         else:
             error_message_qt('Invalid Hardware Type!','You have selected an invalid hardware type.  How did you do this?!')
+        self.task_trigger_update()
     
+    def ip_lookup(self):
+        ipv4_pattern = r'^((25[0-5]|(2[0-4]|1[0-9]|[1-9]|)[0-9])(\.(?!$)|$)){4}$'
+        ipv6_pattern = r'\[\s*([0-9a-fA-F]{1,4}:){0,7}(:[0-9a-fA-F]{1,4})*%?\d*\s*\]'
+        stored_addresses = self.lanxi_ip_addresses
+
+        bknum = []
+        ipv4 = []
+        ipv6 = []
+        for ip_address in stored_addresses:
+            bknum.append(ip_address.host_name)
+            ipv4.append(ip_address.ipv4_address)
+            ipv6.append(ip_address.ipv6_address)
+
+        # Loop through table devices and append unique IP addresses
+        for row in range(self.channel_table.rowCount()):
+            table_text = self.channel_table.item(row, 10).text()
+            if re.search(ipv4_pattern, table_text) is not None:
+                if table_text not in ipv4:
+                    stored_addresses.append(IPAddress(None, table_text, None))
+                    ipv4.append(table_text)
+            elif re.search(ipv6_pattern, table_text) is not None:
+                if table_text not in ipv6:
+                    stored_addresses.append(IPAddress(None, None, table_text))
+                    ipv6.append(table_text)
+            elif table_text != '':
+                if table_text not in bknum:
+                    stored_addresses.append(IPAddress(table_text, None, None))
+                    bknum.append(table_text)
+
+        ip_manager = IPAddressManager(stored_addresses)
+        ok_clicked = ip_manager.show() == QtWidgets.QDialog.Accepted
+
     def sample_rate_update(self):
         if self.hardware_selector.currentIndex() == 2:
             current_value = self.sample_rate_selector.value()
@@ -789,6 +1009,14 @@ class Ui(QtWidgets.QMainWindow):
             self.sample_rate_selector.blockSignals(True)
             self.sample_rate_selector.setValue(closest_rate)
             self.sample_rate_selector.blockSignals(False)
+    
+    def task_trigger_update(self):
+        if self.hardware_selector.currentIndex() == 0 and self.task_trigger_selector.currentIndex() == 2:
+            self.task_trigger_output_selector.show()
+            self.task_trigger_output_label.show()
+        else:
+            self.task_trigger_output_selector.hide()
+            self.task_trigger_output_label.hide()
     
     def initialize_data_acquisition(self):
         """Initializes the data acquisition hardware
@@ -819,20 +1047,24 @@ class Ui(QtWidgets.QMainWindow):
         # Go through and initialize the channel information for each environment
         environment_booleans = np.array(environment_booleans)
         environment_channel_indices = {}
-        if self.hardware_selector.currentIndex() == 1:
+        extra_parameters = {}
+        if self.hardware_selector.currentIndex() == 0:
+            sample_rate = self.sample_rate_selector.value()
+            extra_parameters['task_trigger'] = self.task_trigger_selector.currentIndex()
+            extra_parameters['task_trigger_output_channel'] = self.task_trigger_output_selector.text()
+            output_oversample = 1
+        elif self.hardware_selector.currentIndex() == 1:
             sample_rate = 2**self.lanxi_sample_rate_selector.currentIndex()*4096
             output_oversample = 16384//sample_rate
             if output_oversample == 0:
                 output_oversample = 1
-            acquisition_processes = self.lanxi_maximum_acquisition_processes_selector.value()
-        elif self.hardware_selector.currentIndex() in [4,5,6]:
+            extra_parameters['maximum_acquisition_processes'] = self.lanxi_maximum_acquisition_processes_selector.value()
+        elif self.hardware_selector.currentIndex() in [4,5,6,7]:
             sample_rate = self.sample_rate_selector.value()
             output_oversample = self.integration_oversample_selector.value()
-            acquisition_processes = 1
         else:
             sample_rate = self.sample_rate_selector.value()
             output_oversample = 1
-            acquisition_processes = 1
         for environment_index,environment in enumerate(self.environments):
             environment_channel_list = copy.deepcopy([channel for channel,environment_bool in zip(channels,environment_booleans) if environment_bool[environment_index]])
             environment_channel_indices[environment] = [index for index,environment_bool in enumerate(environment_booleans) if environment_bool[environment_index]]
@@ -845,7 +1077,7 @@ class Ui(QtWidgets.QMainWindow):
                                                                    self.environments,
                                                                    environment_booleans,
                                                                    output_oversample,
-                                                                   acquisition_processes)
+                                                                   **extra_parameters)
             self.queue_container.environment_command_queues[environment].put(task_name,(GlobalCommands.INITIALIZE_DATA_ACQUISITION,environment_daq_parameters))
             self.environment_UIs[environment].initialize_data_acquisition(environment_daq_parameters)
         self.global_daq_parameters = DataAcquisitionParameters(channels,
@@ -857,7 +1089,7 @@ class Ui(QtWidgets.QMainWindow):
                                                           self.environments,
                                                           environment_booleans,
                                                           output_oversample,
-                                                          acquisition_processes)
+                                                          **extra_parameters)
         self.queue_container.acquisition_command_queue.put(task_name,(GlobalCommands.INITIALIZE_DATA_ACQUISITION,
                               (self.global_daq_parameters,
                                environment_channel_indices)))
@@ -1331,7 +1563,8 @@ class Ui(QtWidgets.QMainWindow):
         elif message == GlobalCommands.STOP_STREAMING:
             self.queue_container.acquisition_command_queue.put(task_name,(GlobalCommands.STOP_STREAMING,data))
         elif message == GlobalCommands.COMPLETED_SYSTEM_ID:
-            self.complete_system_ids[data] = True
+            environment, spectral_data = data
+            self.complete_system_ids[environment] = True
             if all([flag for environment,flag in self.complete_system_ids.items()]):
                 if self.has_test_predictions:
                     self.rattlesnake_tabs.setTabEnabled(4,True)
@@ -1363,7 +1596,20 @@ class Ui(QtWidgets.QMainWindow):
             command_queue.put(task_name,(GlobalCommands.QUIT,None))
         
         event.accept()
-        
+    
+    def change_color_theme(self, text: str):
+        if text == 'Light':
+            self.setStyleSheet("")
+        elif text == 'Dark':
+            dark_theme_path = os.path.join(directory,'themes','dark_theme.txt')
+            with open(dark_theme_path) as file:
+                stylesheet = file.read()
+            images_path = os.path.join(
+                directory,'themes','images').replace('\\','/')
+            print(f'Images Path: {images_path}')
+            stylesheet.replace(r'%%IMAGES_PATH%%',images_path)
+            self.setStyleSheet(stylesheet)
+
     def show_channel_monitor(self):
         """
         Shows the channel monitor window

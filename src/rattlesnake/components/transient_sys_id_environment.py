@@ -32,6 +32,7 @@ from .utilities import (VerboseMessageQueue, DataAcquisitionParameters,
 from .ui_utilities import (load_time_history,PlotTimeWindow,
                            TransformationMatrixWindow,multiline_plotter,
                            colororder)
+from abc import abstractmethod
 from enum import Enum
 import multiprocessing as mp
 import inspect
@@ -55,6 +56,7 @@ class TransientCommands(Enum):
     START_CONTROL = 0
     STOP_CONTROL = 1
     PERFORM_CONTROL_PREDICTION = 3
+    # UPDATE_INTERACTIVE_CONTROL_PARAMETERS = 4
 
 #%% Queues
 
@@ -69,7 +71,7 @@ class TransientQueues:
                  data_out_queue : Queue,
                  log_file_queue : VerboseMessageQueue
                  ):
-        """A container class for the queues that random vibration will manage.
+        """A container class for the queues that transient will manage.
         
         The environment uses many queues to pass data between the various pieces.
         This class organizes those queues into one common namespace.
@@ -199,7 +201,7 @@ class TransientMetadata(AbstractSysIdMetadata):
         netcdf_group_handle.control_python_function_parameters = self.control_python_function_parameters
         # Save the output signal
         netcdf_group_handle.createDimension('control_channels',len(self.control_channel_indices))
-        netcdf_group_handle.createDimension('specification_channels',len(self.control_channel_indices))
+        netcdf_group_handle.createDimension('specification_channels',self.control_signal.shape[0])
         netcdf_group_handle.createDimension('signal_samples',self.signal_samples)
         var = netcdf_group_handle.createVariable('control_signal','f8',('specification_channels','signal_samples'))
         var[...] = self.control_signal
@@ -230,6 +232,7 @@ from .signal_generation_process import (signal_generation_process,
 from .signal_generation import TransientSignalGenerator
 from .data_collector import FrameBuffer,data_collector_process
 from .abstract_sysid_data_analysis import sysid_data_analysis_process
+from .abstract_interactive_control_law import AbstractControlLawComputation
 
 class TransientUI(AbstractSysIdUI):
     def __init__(self,
@@ -270,6 +273,8 @@ class TransientUI(AbstractSysIdUI):
         self.response_prediction = None
         self.last_control_data = None
         self.last_output_data = None
+        self.interactive_control_law_widget = None
+        self.interactive_control_law_window = None
         
         self.control_selector_widgets = [
                 self.prediction_widget.response_selector,
@@ -326,6 +331,7 @@ class TransientUI(AbstractSysIdUI):
         self.run_widget.close_windows_button.clicked.connect(self.close_windows)
         self.run_widget.control_response_error_list.itemDoubleClicked.connect(self.show_window)
         self.run_widget.save_current_control_data_button.clicked.connect(self.save_control_data)
+        self.run_widget.display_duration_spinbox.valueChanged.connect(self.set_display_duration)
     
     # %% Data Acquisition
     
@@ -574,7 +580,7 @@ class TransientUI(AbstractSysIdUI):
             loading from a file (Default value = None).
 
         """
-        if filename is None:
+        if filename is None or not os.path.isfile(filename):
             filename,file_filter = QtWidgets.QFileDialog.getOpenFileName(self.definition_widget,'Select Python Module',filter='Python Modules (*.py)')
             if filename == '':
                 return
@@ -582,7 +588,10 @@ class TransientUI(AbstractSysIdUI):
         functions = [function for function in inspect.getmembers(self.python_control_module)
                      if (inspect.isfunction(function[1]) and len(inspect.signature(function[1]).parameters)>=6)
                      or inspect.isgeneratorfunction(function[1])
-                     or (inspect.isclass(function[1]) and all([method in function[1].__dict__ for method in ['system_id_update','control']]))]
+                     or (inspect.isclass(function[1]) and all([(method in function[1].__dict__ 
+                                                                and not (hasattr(function[1].__dict__ [method], '__isabstractmethod__') 
+                                                                         and function[1].__dict__ [method].__isabstractmethod__)) 
+                                                                for method in ['system_id_update','control']]))]
         self.log('Loaded module {:} with functions {:}'.format(self.python_control_module.__name__,[function[0] for function in functions]))
         self.definition_widget.control_function_input.clear()
         self.definition_widget.control_script_file_path_input.setText(filename)
@@ -593,9 +602,14 @@ class TransientUI(AbstractSysIdUI):
         """Updates the function/generator selector based on the function selected"""
         if self.python_control_module is None:
             return
-        function = getattr(self.python_control_module,self.definition_widget.control_function_input.itemText(self.definition_widget.control_function_input.currentIndex()))
+        try:
+            function = getattr(self.python_control_module,self.definition_widget.control_function_input.itemText(self.definition_widget.control_function_input.currentIndex()))
+        except AttributeError:
+            return
         if inspect.isgeneratorfunction(function):
             self.definition_widget.control_function_generator_selector.setCurrentIndex(1)
+        elif inspect.isclass(function) and issubclass(function,AbstractControlLawComputation):
+            self.definition_widget.control_function_generator_selector.setCurrentIndex(3)
         elif inspect.isclass(function):
             self.definition_widget.control_function_generator_selector.setCurrentIndex(2)
         else:
@@ -630,15 +644,17 @@ class TransientUI(AbstractSysIdUI):
                 np.zeros((2,self.environment_parameters.control_signal.shape[-1])),
                 widget = self.prediction_widget.response_display_plot,
                 other_pen_options={'width':1},
-                names = ['Prediction','Spec']
-                )
+                names = ['Prediction','Spec'],
+                downsample={'auto': True},
+                clip_to_view=True)
         self.plot_data_items['excitation_prediction'] = multiline_plotter(
                 np.arange(self.environment_parameters.control_signal.shape[-1])/self.environment_parameters.sample_rate,
                 np.zeros((1,self.environment_parameters.control_signal.shape[-1])),
                 widget = self.prediction_widget.excitation_display_plot,
                 other_pen_options={'width':1},
-                names = ['Prediction']
-                )
+                names = ['Prediction'],
+                downsample={'auto': True},
+                clip_to_view=True)
         # Set up the run plots
         self.run_widget.output_signal_plot.getPlotItem().clear()
         self.run_widget.response_signal_plot.getPlotItem().clear()
@@ -646,20 +662,43 @@ class TransientUI(AbstractSysIdUI):
             self.data_acquisition_parameters.samples_per_read*buffer_size_samples_per_read_multiplier/
             self.environment_parameters.control_signal.shape[-1])
         buffer_size = int(np.ceil(self.environment_parameters.control_signal.shape[-1]*buffer_multiplier))
+        self.max_plot_samples = self.data_acquisition_parameters.sample_rate * self.run_widget.display_duration_spinbox.value()
         self.plot_data_items['output_signal_measurement'] = multiline_plotter(
-                np.arange(buffer_size)/self.data_acquisition_parameters.sample_rate,
-                np.zeros((len(self.initialized_control_names),buffer_size)),
+                (np.array([])),
+                np.zeros((len(self.initialized_control_names),0)),
                 widget=self.run_widget.output_signal_plot,
                 other_pen_options={'width':1},
-                names = self.initialized_control_names)
+                names = self.initialized_control_names,
+                downsample={'auto': True},
+                clip_to_view=True)
         self.plot_data_items['signal_range'] = self.run_widget.response_signal_plot.getPlotItem().plot(np.zeros(5),np.zeros(5),pen = {'color': "k", 'width': 1},name='Signal Lower Bound')
         self.plot_data_items['control_signal_measurement'] = multiline_plotter(
-                np.arange(buffer_size)/self.data_acquisition_parameters.sample_rate,
-                np.zeros((len(self.initialized_output_names),buffer_size)),
+                (np.array([])),
+                np.zeros((len(self.initialized_output_names),0)),
                 widget=self.run_widget.response_signal_plot,
                 other_pen_options={'width':1},
-                names = self.initialized_output_names)
-        
+                names = self.initialized_output_names,
+                downsample={'auto': True},
+                clip_to_view=True)
+        if self.definition_widget.control_function_generator_selector.currentIndex() == 3:
+            control_class = getattr(self.python_control_module,self.definition_widget.control_function_input.itemText(self.definition_widget.control_function_input.currentIndex()))
+            self.log('Building Interactive UI for class {:}'.format(control_class.__name__))
+            ui_class = control_class.get_UI_class()
+            if ui_class == self.interactive_control_law_widget.__class__:
+                print('initializing data acquisition and environment parameters')
+                self.interactive_control_law_widget.initialize_parameters(self.data_acquisition_parameters,
+                                                                          self.environment_parameters)
+            else:
+                if self.interactive_control_law_widget is not None:
+                    self.interactive_control_law_widget.close()
+                self.interactive_control_law_window = QtWidgets.QDialog(self.definition_widget)
+                self.interactive_control_law_widget = ui_class(self.log_name,
+                                                                self.environment_command_queue,
+                                                                self.interactive_control_law_window,
+                                                                self,
+                                                                self.data_acquisition_parameters,
+                                                                self.environment_parameters)
+            self.interactive_control_law_window.show()
         return self.environment_parameters
     
     def check_selected_control_channels(self):
@@ -733,6 +772,10 @@ class TransientUI(AbstractSysIdUI):
               self.run_widget.repeat_signal_checkbox.isChecked())))
         if self.run_widget.test_level_selector.value() >= 0:
             self.controller_communication_queue.put(self.log_name,(GlobalCommands.AT_TARGET_LEVEL,self.environment_name))
+        for item in self.plot_data_items['control_signal_measurement']:
+            item.clear()
+        for item in self.plot_data_items['output_signal_measurement']:
+            item.clear()
     
     def stop_control(self):
         self.environment_command_queue.put(self.log_name,(TransientCommands.STOP_CONTROL,
@@ -754,6 +797,9 @@ class TransientUI(AbstractSysIdUI):
     
     def set_norepeat_from_profile(self,data):
         self.run_widget.repeat_signal_checkbox.setChecked(False)
+
+    def set_display_duration(self,value):
+        self.max_plot_samples = int(self.data_acquisition_parameters.sample_rate * value)
 
     def create_window(self,event,control_index = None):
         """Creates a subwindow to show a specific channel information
@@ -859,8 +905,9 @@ class TransientUI(AbstractSysIdUI):
         netcdf_handle.time_per_read = global_data_parameters.samples_per_read/global_data_parameters.sample_rate
         netcdf_handle.hardware = global_data_parameters.hardware
         netcdf_handle.hardware_file = 'None' if global_data_parameters.hardware_file is None else global_data_parameters.hardware_file
-        netcdf_handle.maximum_acquisition_processes = global_data_parameters.maximum_acquisition_processes
         netcdf_handle.output_oversample = global_data_parameters.output_oversample
+        for key,value in global_data_parameters.extra_parameters.items():
+            setattr(netcdf_handle,key,value)
         # Create Variables
         var = netcdf_handle.createVariable('environment_names',str,('num_environments',))
         this_environment_index = None
@@ -918,32 +965,40 @@ class TransientUI(AbstractSysIdUI):
 
     #%% Misc
     
-    def retrieve_metadata(self, netcdf_handle):
-        super().retrieve_metadata(netcdf_handle)
-        # Get the group
-        group = netcdf_handle.groups[self.environment_name]
-        # Spinboxes
-        self.definition_widget.ramp_selector.setValue(group.test_level_ramp_time)
+    def retrieve_metadata(self, netcdf_handle = None, environment_name = None):
+        group = super().retrieve_metadata(netcdf_handle, environment_name)
+            
         # Control channels
-        for i in group.variables['control_channel_indices'][...]:
-            item = self.definition_widget.control_channels_selector.item(i)
-            item.setCheckState(Qt.Checked)
+        try:
+            for i in group.variables['control_channel_indices'][...]:
+                item = self.definition_widget.control_channels_selector.item(i)
+                item.setCheckState(Qt.Checked)
+        except KeyError:
+            print('no variable control_channel_indices, please select control channels manually')
         # Other Data
         try:
             self.response_transformation_matrix = group.variables['response_transformation_matrix'][...].data
         except KeyError:
             self.response_transformation_matrix = None
         try:
-            self.output_transformation_matrix = group.variables['output_transformation_matrix'][...].data
+            self.output_transformation_matrix = group.variables['reference_transformation_matrix'][...].data
         except KeyError:
             self.output_transformation_matrix = None
         self.define_transformation_matrices(None,dialog=False)
-        self.specification_signal = group.variables['control_signal'][...].data
-        self.select_python_module(None,group.control_python_script)
-        self.definition_widget.control_function_input.setCurrentIndex(self.definition_widget.control_function_input.findText(group.control_python_function))
-        self.definition_widget.control_parameters_text_input.setText(group.control_python_function_parameters)
-        self.setup_specification_table()
-        self.show_signal()
+
+        if environment_name is None: # environment_name is passed when the saved environment doesn't match the current environment
+            self.definition_widget.ramp_selector.setValue(group.test_level_ramp_time)
+            self.specification_signal = group.variables['control_signal'][...].data
+            self.select_python_module(None,group.control_python_script)
+            index = self.definition_widget.control_function_input.findText(group.control_python_function)
+            if index == -1:
+                index = 0
+                default = self.definition_widget.control_function_input.itemText(index)
+                print('Warning: control function "%s" not found, defaulting to "%s"' % (group.control_python_function, default))
+            self.definition_widget.control_function_input.setCurrentIndex(index)
+            self.definition_widget.control_parameters_text_input.setText(group.control_python_function_parameters)
+            self.setup_specification_table()
+            self.show_signal()
     
     def update_gui(self,queue_data):
         if super().update_gui(queue_data):
@@ -954,38 +1009,77 @@ class TransientUI(AbstractSysIdUI):
             max_y = -1e15
             min_y = 1e15
             for curve,this_data in zip(self.plot_data_items['control_signal_measurement'],response_data):
-                x,y = curve.getData()
-                if np.max(y) > max_y:
-                    max_y = np.max(y)
-                if np.min(y) < min_y:
-                    min_y = np.min(y)
-                y = np.concatenate((y[this_data.size:],this_data[-x.size:]),axis=0)
-                curve.setData(x,y)
+                x,y = curve.getOriginalDataset()
+                if y is not None:
+                    if np.max(y) > max_y:
+                        max_y = np.max(y)
+                    if np.min(y) < min_y:
+                        min_y = np.min(y)
+                    if self.max_plot_samples == x.size:
+                        x += (this_data.size) / self.data_acquisition_parameters.sample_rate
+                        y = np.roll(y, -this_data.size)
+                        y[-this_data.size:] = this_data
+                    else:
+                        x = np.concatenate((x, x[-1] + ((1 + np.arange(this_data.size)) / self.data_acquisition_parameters.sample_rate)), axis=0)
+                        y = np.concatenate((y,this_data),axis=0)
+                else:
+                    x = np.arange(this_data.size) / self.data_acquisition_parameters.sample_rate
+                    y = this_data
+                curve.setData(x[-self.max_plot_samples:],y[-self.max_plot_samples:])
             # Display the data
             for curve,this_output in zip(self.plot_data_items['output_signal_measurement'],output_data):
-                x,y = curve.getData()
-                y = np.concatenate((y[this_output.size:],this_output[-x.size:]),axis=0)
-                curve.setData(x,y)
+                x,y = curve.getOriginalDataset()
+                if y is not None:
+                    if self.max_plot_samples == x.size:
+                        x += (this_output.size) / self.data_acquisition_parameters.sample_rate
+                        y = np.roll(y, -this_output.size)
+                        y[-this_output.size:] = this_output
+                    else:
+                        x = np.concatenate((x, x[-1] + ((1 + np.arange(this_output.size)) / self.data_acquisition_parameters.sample_rate)), axis=0)
+                        y = np.concatenate((y,this_output),axis=0)
+                else:
+                    x = np.arange(this_output.size) / self.data_acquisition_parameters.sample_rate
+                    y = this_output
+                curve.setData(x[-self.max_plot_samples:],y[-self.max_plot_samples:])
             if signal_delay is None:
                 self.plot_data_items['signal_range'].setData(
-                    np.zeros(5),np.zeros(5)
-                    )
-            else:
-                self.plot_data_items['signal_range'].setData(
-                    np.array((x[signal_delay],x[signal_delay],
-                              x[signal_delay+self.environment_parameters.control_signal.shape[-1]-1],
-                              x[signal_delay+self.environment_parameters.control_signal.shape[-1]-1],
-                              x[signal_delay])),1.05*np.array((min_y,max_y,max_y,min_y,min_y))
-                    )
+                    np.ones(5)*x[-1],np.zeros(5)
+                )                
         elif message == 'control_data':
             self.last_control_data,self.last_output_data = data
             self.update_control_plots()
+            max_y = np.max(self.last_control_data)
+            min_y = np.min(self.last_control_data)
+            for curve,this_data in zip(self.plot_data_items['control_signal_measurement'],self.last_control_data):
+                x,y = curve.getOriginalDataset()
+                x = np.arange(this_data.size) / self.data_acquisition_parameters.sample_rate
+                y = this_data
+                curve.setData(x,y)
+            # Display the data
+            for curve,this_output in zip(self.plot_data_items['output_signal_measurement'],self.last_output_data):
+                x,y = curve.getOriginalDataset()
+                x = np.arange(this_output.size) / self.data_acquisition_parameters.sample_rate
+                y = this_output
+                curve.setData(x,y)
+            sr = self.data_acquisition_parameters.sample_rate
+            self.plot_data_items['signal_range'].setData(
+                np.array((0,0,
+                        (self.environment_parameters.control_signal.shape[-1]-1)/sr,
+                        (self.environment_parameters.control_signal.shape[-1]-1)/sr,
+                        0)),1.05*np.array((min_y,max_y,max_y,min_y,min_y))
+                )
         elif message == 'control_predictions':
             (times,
             self.excitation_prediction,
             self.response_prediction,
             prediction) = data
             self.plot_predictions()
+        elif message == 'interactive_control_sysid_update':
+            if self.interactive_control_law_widget is not None:
+                self.interactive_control_law_widget.update_ui_sysid(*data)
+        elif message == 'interactive_control_update':
+            if self.interactive_control_law_widget is not None:
+                self.interactive_control_law_widget.update_ui_control(data)
         elif message == 'enable_control':
             self.enable_control(True)
         elif message == 'enable':
@@ -1050,6 +1144,12 @@ class TransientUI(AbstractSysIdUI):
         self.system_id_widget.averagingCoefficientDoubleSpinBox.setValue(float(worksheet.cell(12,2).value))
         self.system_id_widget.estimatorComboBox.setCurrentIndex(self.system_id_widget.estimatorComboBox.findText(worksheet.cell(13,2).value))
         self.system_id_widget.levelDoubleSpinBox.setValue(float(worksheet.cell(14,2).value))
+        # this should be a temporary solution - template file rework needed
+        low, high = worksheet.cell(14,3).value, worksheet.cell(14,4).value
+        if low is not None:
+            self.system_id_widget.lowFreqCutoffSpinBox.setValue(int(low))
+        if high is not None:
+            self.system_id_widget.highFreqCutoffSpinBox.setValue(int(high))
         self.system_id_widget.levelRampTimeDoubleSpinBox.setValue(float(worksheet.cell(15,2).value))
         self.system_id_widget.signalTypeComboBox.setCurrentIndex(self.system_id_widget.signalTypeComboBox.findText(worksheet.cell(16,2).value))
         self.system_id_widget.windowComboBox.setCurrentIndex(self.system_id_widget.windowComboBox.findText(worksheet.cell(17,2).value))
@@ -1169,6 +1269,8 @@ class TransientEnvironment(AbstractSysIdEnvironment):
         self.map_command(TransientCommands.PERFORM_CONTROL_PREDICTION,self.perform_control_prediction)
         self.map_command(TransientCommands.START_CONTROL,self.start_control)
         self.map_command(TransientCommands.STOP_CONTROL,self.stop_environment)
+        self.map_command(GlobalCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS, self.update_interactive_control_parameters)
+        self.map_command(GlobalCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command)
         # Persistent data
         self.data_acquisition_parameters = None
         self.environment_parameters = None
@@ -1196,6 +1298,8 @@ class TransientEnvironment(AbstractSysIdEnvironment):
         self.control_buffer = None
         self.output_buffer = None
         self.last_signal_found = None
+        self.has_sent_interactive_control_transfer_function_results = False
+        self.last_interactive_parameters = None
     
     def initialize_environment_test_parameters(self, environment_parameters : TransientMetadata):
         if self.environment_parameters is None or self.environment_parameters.control_signal.shape != environment_parameters.control_signal.shape:
@@ -1249,14 +1353,48 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                 self.environment_parameters.sysid_averages, # Total frames that could be in the CPSD and FRF matrices
                 self.aligned_output, # Last excitation signal for drive-based control
                 self.aligned_response) # Last response signal for error-based correction
+        elif self.control_function_type == 3: # Interactive Class
+            control_class = getattr(module,environment_parameters.control_python_function)
+            self.control_function = control_class(
+                self.environment_name, 
+                self.gui_update_queue,
+                self.data_acquisition_parameters.sample_rate,
+                self.environment_parameters.control_signal,
+                self.data_acquisition_parameters.output_oversample,
+                self.extra_control_parameters, # Required parameters
+                self.environment_parameters.sysid_frequency_spacing, # Frequency Spacing
+                self.frf, # Transfer Functions
+                self.sysid_response_noise,  # Noise levels and correlation 
+                self.sysid_reference_noise, # from the system identification
+                self.sysid_response_cpsd,  # Response levels and correlation
+                self.sysid_reference_cpsd, # from the system identification
+                self.coherence, # Coherence from the system identification
+                self.frames, # Number of frames in the CPSD and FRF matrices
+                self.environment_parameters.sysid_averages, # Total frames that could be in the CPSD and FRF matrices
+                self.aligned_output, # Last excitation signal for drive-based control
+                self.aligned_response) # Last response signal for error-based correction
+            self.last_interactive_parameters = None
+            self.has_sent_interactive_control_transfer_function_results = False
         else: # Function
             self.control_function = getattr(module,environment_parameters.control_python_function)
 
+    def update_interactive_control_parameters(self,interactive_control_parameters):
+        if self.environment_parameters.control_python_function_type == 3: # Interactive
+            self.control_function.update_parameters(interactive_control_parameters)
+            self.last_interactive_parameters = interactive_control_parameters
+        else:
+            raise ValueError('Received an UPDATE_INTERACTIVE_CONTROL_PARAMETERS signal without an interactive control law.  How did this happen?')
+        
+    def send_interactive_command(self, command):
+        """General method that can be used by an interactive UI object to pass commands and data to its corresponding computation object"""
+        if self.environment_parameters.control_python_function_type == 3: # Interactive
+            self.control_function.send_command(command)
+        else:
+            raise ValueError('Received an SEND_INTERACTIVE_COMMAND signal without an interactive control law.  How did this happen?')
+
+
     def system_id_complete(self,data):
-        self.log('Finished System Identification')
-        self.controller_communication_queue.put(
-            self.environment_name,
-            (GlobalCommands.COMPLETED_SYSTEM_ID,self.environment_name))
+        super().system_id_complete(data)
         (self.frames,
         avg,
         self.frequencies,
@@ -1292,20 +1430,37 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                 self.next_drive, # Last excitation signal for drive-based control
                 self.predicted_response, # Last response signal for error correction
                  ))
-        elif self.control_function_type == 2: # Class
-            if sysid_update:
-                self.control_function.system_id_update(
-                    self.environment_parameters.sysid_frequency_spacing,
-                    self.frf, # Transfer Functions
-                    self.sysid_response_noise,  # Noise levels and correlation 
-                    self.sysid_reference_noise, # from the system identification
-                    self.sysid_response_cpsd,  # Response levels and correlation
-                    self.sysid_reference_cpsd, # from the system identification
-                    self.coherence, # Coherence from the system identification
-                    self.frames, # Number of frames in the CPSD and FRF matrices
-                    self.environment_parameters.sysid_averages, # Total frames that could be in the CPSD and FRF matrices
-                    )
-            output_time_history = self.control_function.control(self.next_drive,self.predicted_response)
+        elif self.control_function_type in [2,3]: # Class or Interactive Class
+            if self.environment_parameters.control_python_function == 2 or not self.has_sent_interactive_control_transfer_function_results:
+                if sysid_update:
+                    self.control_function.system_id_update(
+                        self.environment_parameters.sysid_frequency_spacing,
+                        self.frf, # Transfer Functions
+                        self.sysid_response_noise,  # Noise levels and correlation 
+                        self.sysid_reference_noise, # from the system identification
+                        self.sysid_response_cpsd,  # Response levels and correlation
+                        self.sysid_reference_cpsd, # from the system identification
+                        self.coherence, # Coherence from the system identification
+                        self.frames, # Number of frames in the CPSD and FRF matrices
+                        self.environment_parameters.sysid_averages, # Total frames that could be in the CPSD and FRF matrices
+                        )
+                
+                if self.environment_parameters.control_python_function_type == 3:
+                    self.gui_update_queue.put((self.environment_name,('interactive_control_sysid_update',
+                                                                     (self.frf,
+                                                                      self.sysid_response_noise,
+                                                                      self.sysid_reference_noise,
+                                                                      self.sysid_response_cpsd,
+                                                                      self.sysid_reference_cpsd,
+                                                                      self.coherence,
+                                                                      ))))
+                    self.has_sent_interactive_control_transfer_function_results = True
+            if self.environment_parameters.control_python_function_type == 2 or self.last_interactive_parameters is not None:
+                output_time_history = self.control_function.control(self.next_drive,self.predicted_response)
+            else:
+                self.log('Have not yet received control parameters from interactive control law!')
+                output_time_history = None
+                return
         else: # Function
             output_time_history = self.control_function(
                 self.data_acquisition_parameters.sample_rate,
@@ -1356,7 +1511,7 @@ class TransientEnvironment(AbstractSysIdEnvironment):
     def get_signal_generation_metadata(self):
         return SignalGenerationMetadata(
             samples_per_write = self.data_acquisition_parameters.samples_per_write,
-            level_ramp_samples = self.environment_parameters.test_level_ramp_time * self.environment_parameters.sample_rate,
+            level_ramp_samples = self.environment_parameters.test_level_ramp_time * self.environment_parameters.sample_rate * self.data_acquisition_parameters.output_oversample,
             output_transformation_matrix = self.environment_parameters.reference_transformation_matrix,
             )
     
@@ -1444,16 +1599,19 @@ class TransientEnvironment(AbstractSysIdEnvironment):
             # Add the data to the buffers
             self.control_buffer.add_data(control_data)
             self.output_buffer.add_data(output_data)
-            # Find alignment with the specification via output
-            self.log('Aligning signal with specification')
-            self.aligned_output,sample_delay,phase_change = align_signals(self.output_buffer[:],self.next_drive[:,::self.data_acquisition_parameters.output_oversample],correlation_threshold = 0.5)
+            if last_acquisition:
+                # Find alignment with the specification via output
+                self.log('Aligning signal with specification')
+                self.aligned_output,sample_delay,phase_change,achieved_correlation = align_signals(self.output_buffer[:],self.next_drive[:,::self.data_acquisition_parameters.output_oversample],correlation_threshold = 0.5)
+            else:
+                self.aligned_output,sample_delay,phase_change,achieved_correlation = (None,None,None,None)
             self.queue_container.gui_update_queue.put((self.environment_name,('time_data',(control_data,output_data,sample_delay)))) # Sample_delay will be None if the alignment is not found
             if not self.aligned_output is None:
                 self.log('Alignment Found at {:} samples'.format(sample_delay))
                 self.aligned_response = shift_signal(self.control_buffer[:],self.environment_parameters.control_signal.shape[-1],sample_delay,phase_change)
                 time_trac = trac(self.aligned_response,self.environment_parameters.control_signal)
                 self.gui_update_queue.put((self.environment_name,('control_response_error_list',time_trac)))
-                self.queue_container.gui_update_queue.put((self.environment_name,('control_data',(self.aligned_response,self.aligned_output)))) # Sample_delay will be None if the alignment is not found
+                self.queue_container.gui_update_queue.put((self.environment_name,('control_data',(self.aligned_response,self.aligned_output))))
                 # Do the next control
                 self.log('Last Signal Found: {:}, Current Signal Found: {:}'.format(self.last_signal_found,sample_delay))
                 # We don't want to keep a signal if it starts during the last signal.  Multiply by 0.8 to give a little wiggle room in case the

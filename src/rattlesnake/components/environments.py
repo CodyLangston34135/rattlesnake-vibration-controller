@@ -25,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from enum import Enum
 import sys
 import os
+this_path = os.path.split(__file__)[0]
 
 ### Here is where the code needs to be modified to create a new environment.
 
@@ -33,7 +34,7 @@ class ControlTypes(Enum):
     COMBINED = 0
     RANDOM = 1
     TRANSIENT = 2
-    # SINE = 3
+    SINE = 3
     TIME = 4
     # NONLINEAR = 5
     MODAL = 6
@@ -43,7 +44,7 @@ class ControlTypes(Enum):
 environment_long_names = {}
 environment_long_names[ControlTypes.RANDOM] = 'MIMO Random Vibration'
 environment_long_names[ControlTypes.TRANSIENT] = 'MIMO Transient'
-# environment_long_names[ControlTypes.SINE] = 'Sine Vibration'
+environment_long_names[ControlTypes.SINE] = 'MIMO Sine Vibration'
 environment_long_names[ControlTypes.TIME] = 'Time Signal Generation'
 # environment_long_names[ControlTypes.NONLINEAR] = 'Nonlinear Normal Modes'
 environment_long_names[ControlTypes.MODAL] = 'Modal Testing'
@@ -53,6 +54,7 @@ environment_long_names[ControlTypes.COMBINED] = 'Combined Environments...'
 combined_environments_capable = [
     ControlTypes.RANDOM,
     ControlTypes.TRANSIENT,
+    ControlTypes.SINE,
     ControlTypes.TIME,
     ControlTypes.MODAL
     ]
@@ -65,7 +67,7 @@ environment_run_ui_paths = {}
 if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
     directory = sys._MEIPASS
 else:
-    directory = 'components'
+    directory = this_path
     
 # Base Controller UI
 ui_path = os.path.join(directory,'combined_environments_controller.ui')
@@ -84,6 +86,12 @@ environment_run_ui_paths[ControlTypes.TIME] = os.path.join(directory,'time_run.u
 environment_definition_ui_paths[ControlTypes.TRANSIENT] = os.path.join(directory,'transient_definition.ui')
 environment_prediction_ui_paths[ControlTypes.TRANSIENT] = os.path.join(directory,'transient_prediction.ui')
 environment_run_ui_paths[ControlTypes.TRANSIENT] = os.path.join(directory,'transient_run.ui')
+# Sine Environment
+environment_definition_ui_paths[ControlTypes.SINE] = os.path.join(directory,'sine_definition.ui')
+environment_prediction_ui_paths[ControlTypes.SINE] = os.path.join(directory,'sine_prediction.ui')
+environment_run_ui_paths[ControlTypes.SINE] = os.path.join(directory,'sine_run.ui')
+sine_sweep_table_ui_path = os.path.join(directory,'sine_sweep_table.ui')
+filter_explorer_ui_path = os.path.join(directory,'sine_filter_explorer.ui')
 # Modal Environments
 environment_definition_ui_paths[ControlTypes.MODAL] = os.path.join(directory,'modal_definition.ui')
 environment_run_ui_paths[ControlTypes.MODAL] = os.path.join(directory,'modal_run.ui')
@@ -105,6 +113,10 @@ environment_UIs[ControlTypes.TIME] = TimeUI
 from .transient_sys_id_environment import transient_process,TransientUI
 environment_processes[ControlTypes.TRANSIENT] = transient_process
 environment_UIs[ControlTypes.TRANSIENT] = TransientUI
+# Sine
+from .sine_sys_id_environment import sine_process, SineUI
+environment_processes[ControlTypes.SINE] = sine_process
+environment_UIs[ControlTypes.SINE] = SineUI
 # Modal
 from .modal_environment import modal_process,ModalUI
 environment_processes[ControlTypes.MODAL] = modal_process

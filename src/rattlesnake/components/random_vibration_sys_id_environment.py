@@ -31,10 +31,10 @@ from .abstract_sysid_environment import AbstractSysIdMetadata,AbstractSysIdUI,Ab
 from .environments import (ControlTypes,environment_definition_ui_paths,
                            environment_prediction_ui_paths,
                            environment_run_ui_paths)
-from .random_vibration_sys_id_utilities import load_specification
+from .random_vibration_sys_id_utilities import load_specification, _direction_map
 
 from .utilities import (VerboseMessageQueue, DataAcquisitionParameters,
-                        load_python_module, GlobalCommands, db2scale)
+                        load_python_module, GlobalCommands, db2scale, error_message_qt)
 from .ui_utilities import (TransformationMatrixWindow,
                            multiline_plotter,
                            PlotWindow)
@@ -64,6 +64,7 @@ class RandomVibrationCommands(Enum):
     STOP_CONTROL = 2
     CHECK_FOR_COMPLETE_SHUTDOWN = 3
     RECOMPUTE_PREDICTION = 4
+    # UPDATE_INTERACTIVE_CONTROL_PARAMETERS = 5
 
 # %% Queues
 
@@ -126,9 +127,9 @@ class RandomVibrationQueues:
 class RandomVibrationMetadata(AbstractSysIdMetadata):
     """Container to hold the signal processing parameters of the environment"""
     def __init__(self,number_of_channels,sample_rate,samples_per_frame,test_level_ramp_time,
-                 cola_window,cola_overlap,cola_window_exponent,
+                 cola_window,cola_overlap,cola_window_exponent,sigma_clip,
                  update_tf_during_control,frames_in_cpsd,
-                 cpsd_window,cpsd_overlap,allow_automatic_aborts,
+                 cpsd_window,cpsd_overlap,percent_lines_out,allow_automatic_aborts,
                  control_python_script,control_python_function,control_python_function_type,
                  control_python_function_parameters,control_channel_indices,
                  output_channel_indices,
@@ -144,6 +145,7 @@ class RandomVibrationMetadata(AbstractSysIdMetadata):
         self.cola_window = cola_window
         self.cola_overlap = cola_overlap
         self.cola_window_exponent = cola_window_exponent
+        self.sigma_clip = sigma_clip
         self.frames_in_cpsd = frames_in_cpsd
         self.cpsd_window = cpsd_window
         self.response_transformation_matrix = response_transformation_matrix
@@ -158,6 +160,7 @@ class RandomVibrationMetadata(AbstractSysIdMetadata):
         self.specification_cpsd_matrix = specification_cpsd_matrix
         self.specification_warning_matrix = specification_warning_matrix
         self.specification_abort_matrix = specification_abort_matrix
+        self.percent_lines_out = percent_lines_out
         self.allow_automatic_aborts = allow_automatic_aborts
     
     @property
@@ -237,6 +240,7 @@ class RandomVibrationMetadata(AbstractSysIdMetadata):
     
     @property
     def skip_frames(self):
+        """Property returning the number of frames to skip when changing levels"""
         return int(np.ceil(
             self.test_level_ramp_time
             *self.sample_rate/
@@ -254,7 +258,7 @@ class RandomVibrationMetadata(AbstractSysIdMetadata):
         attributes, dimensions, or variables.
         
         This function is the "write" counterpart to the retrieve_metadata 
-        function in the RandomVibrationUI class, which will read parameters from
+        function in the AbstractUI class, which will read parameters from
         the netCDF file to populate the parameters in the user interface.
 
         Parameters
@@ -324,6 +328,7 @@ from .data_collector import (data_collector_process,DataCollectorCommands,Collec
 from .random_vibration_sys_id_data_analysis import (
     random_data_analysis_process, RandomVibrationDataAnalysisCommands)
 from .signal_generation import (CPSDSignalGenerator)
+from .abstract_interactive_control_law import AbstractControlLawComputation
 
 class RandomVibrationUI(AbstractSysIdUI):
     """Class defining the user interface for a Random Vibration environment.
@@ -406,6 +411,8 @@ class RandomVibrationUI(AbstractSysIdUI):
         self.response_prediction = None
         self.rms_voltage_prediction = None
         self.rms_db_error_prediction = None
+        self.interactive_control_law_widget = None
+        self.interactive_control_law_window = None
         self.control_selector_widgets = [
                 self.definition_widget.specification_row_selector,
                 self.definition_widget.specification_column_selector,
@@ -446,6 +453,7 @@ class RandomVibrationUI(AbstractSysIdUI):
         # Complete the profile commands
         self.command_map['Set Test Level'] = self.change_test_level_from_profile
         self.command_map['Change Specification'] = self.change_specification_from_profile
+        self.command_map['Save Control Data'] = self.save_control_data_from_profile
 
     def connect_callbacks(self):
         # Definition
@@ -514,10 +522,10 @@ class RandomVibrationUI(AbstractSysIdUI):
         self.definition_widget.specification_single_plot.getPlotItem().addLegend()
         self.plot_data_items['specification_real'] = self.definition_widget.specification_single_plot.getPlotItem().plot(np.array([0,data_acquisition_parameters.sample_rate/2]),np.zeros(2),pen = {'color': "b", 'width': 1},name='Real Part')
         self.plot_data_items['specification_imag'] = self.definition_widget.specification_single_plot.getPlotItem().plot(np.array([0,data_acquisition_parameters.sample_rate/2]),np.zeros(2),pen = {'color': "r", 'width': 1},name='Imaginary Part')
-        self.plot_data_items['specification_warning_upper'] = self.definition_widget.specification_single_plot.getPlotItem().plot(np.array([0,data_acquisition_parameters.sample_rate/2]),np.zeros(2),pen = {'color': (255, 204, 0), 'width': 1, 'style':Qt.DashLine},name='Warning')
-        self.plot_data_items['specification_warning_lower'] = self.definition_widget.specification_single_plot.getPlotItem().plot(np.array([0,data_acquisition_parameters.sample_rate/2]),np.zeros(2),pen = {'color': (255, 204, 0), 'width': 1, 'style':Qt.DashLine})
-        self.plot_data_items['specification_abort_upper'] = self.definition_widget.specification_single_plot.getPlotItem().plot(np.array([0,data_acquisition_parameters.sample_rate/2]),np.zeros(2),pen = {'color': (153, 0, 0), 'width': 1, 'style':Qt.DashLine},name='Abort')
-        self.plot_data_items['specification_abort_lower'] = self.definition_widget.specification_single_plot.getPlotItem().plot(np.array([0,data_acquisition_parameters.sample_rate/2]),np.zeros(2),pen = {'color': (153, 0, 0), 'width': 1, 'style':Qt.DashLine})
+        self.plot_data_items['specification_warning_upper'] = self.definition_widget.specification_single_plot.getPlotItem().plot(np.array([0,data_acquisition_parameters.sample_rate/2]),np.zeros(2),pen = {'color': PlotWindow.WARNING_COLOR, 'width': 0.25},name='Warning')
+        self.plot_data_items['specification_warning_lower'] = self.definition_widget.specification_single_plot.getPlotItem().plot(np.array([0,data_acquisition_parameters.sample_rate/2]),np.zeros(2),pen = {'color': PlotWindow.WARNING_COLOR, 'width': 0.25})
+        self.plot_data_items['specification_abort_upper'] = self.definition_widget.specification_single_plot.getPlotItem().plot(np.array([0,data_acquisition_parameters.sample_rate/2]),np.zeros(2),pen = {'color': PlotWindow.ABORT_COLOR, 'width': 0.25},name='Abort')
+        self.plot_data_items['specification_abort_lower'] = self.definition_widget.specification_single_plot.getPlotItem().plot(np.array([0,data_acquisition_parameters.sample_rate/2]),np.zeros(2),pen = {'color': PlotWindow.ABORT_COLOR, 'width': 0.25})
         self.plot_data_items['specification_sum'] = self.definition_widget.specification_sum_asds_plot.getPlotItem().plot(np.array([0,data_acquisition_parameters.sample_rate/2]),np.zeros(2),pen = {'color': "b", 'width': 1})
         self.run_widget.global_test_performance_plot.getPlotItem().addLegend()
         self.plot_data_items['specification_sum_control'] = self.run_widget.global_test_performance_plot.getPlotItem().plot(np.array([0,data_acquisition_parameters.sample_rate/2]),np.zeros(2),pen = {'color': "b", 'width': 1},name='Specification')
@@ -591,12 +599,27 @@ class RandomVibrationUI(AbstractSysIdUI):
             if filename == '':
                 return
         self.definition_widget.specification_file_name_display.setText(filename)
-        (self.specification_frequency_lines,
-         self.specification_cpsd_matrix,
-         self.specification_warning_matrix,
-         self.specification_abort_matrix) = load_specification(
-             filename,self.definition_widget.fft_lines_display.value(),
-             self.definition_widget.frequency_spacing_display.value())
+        coord_dtype = np.dtype([('node', '<u8'), ('direction', 'i1')])
+        if self.response_transformation_matrix is not None:
+            control_coordinate = None
+        else:
+            control_coordinate = np.array([
+                (self.data_acquisition_parameters.channel_list[i].node_number, 
+                _direction_map[self.data_acquisition_parameters.channel_list[i].node_direction]) 
+                for i in self.physical_control_indices
+                ], dtype=coord_dtype)
+        try:
+            (self.specification_frequency_lines,
+            self.specification_cpsd_matrix,
+            self.specification_warning_matrix,
+            self.specification_abort_matrix) = load_specification(
+                filename,self.definition_widget.fft_lines_display.value(),
+                self.definition_widget.frequency_spacing_display.value(),
+                control_coordinate)
+        except ValueError as e:
+            error_message_qt(type(e).__name__, str(e))
+            return
+        
         if np.all(np.isnan(self.specification_abort_matrix)):
             self.definition_widget.auto_abort_checkbox.setChecked(False)
             self.definition_widget.auto_abort_checkbox.setEnabled(False)
@@ -624,7 +647,10 @@ class RandomVibrationUI(AbstractSysIdUI):
         functions = [function for function in inspect.getmembers(self.python_control_module)
                      if (inspect.isfunction(function[1]) and len(inspect.signature(function[1]).parameters)>=12)
                      or inspect.isgeneratorfunction(function[1])
-                     or (inspect.isclass(function[1]) and all([method in function[1].__dict__ for method in ['system_id_update','control']]))]
+                     or (inspect.isclass(function[1]) and all([(method in function[1].__dict__ 
+                                                                and not (hasattr(function[1].__dict__ [method], '__isabstractmethod__') 
+                                                                         and function[1].__dict__ [method].__isabstractmethod__)) 
+                                                                for method in ['system_id_update','control']]))]
         self.log('Loaded module {:} with functions {:}'.format(self.python_control_module.__name__,[function[0] for function in functions]))
         self.definition_widget.control_function_input.clear()
         self.definition_widget.control_script_file_path_input.setText(filename)
@@ -635,9 +661,14 @@ class RandomVibrationUI(AbstractSysIdUI):
         """Updates the function/generator selector based on the function selected"""
         if self.python_control_module is None:
             return
-        function = getattr(self.python_control_module,self.definition_widget.control_function_input.itemText(self.definition_widget.control_function_input.currentIndex()))
+        try:
+            function = getattr(self.python_control_module,self.definition_widget.control_function_input.itemText(self.definition_widget.control_function_input.currentIndex()))
+        except AttributeError:
+            return
         if inspect.isgeneratorfunction(function):
             self.definition_widget.control_function_generator_selector.setCurrentIndex(1)
+        elif inspect.isclass(function) and issubclass(function,AbstractControlLawComputation):
+            self.definition_widget.control_function_generator_selector.setCurrentIndex(3)
         elif inspect.isclass(function):
             self.definition_widget.control_function_generator_selector.setCurrentIndex(2)
         else:
@@ -820,6 +851,7 @@ class RandomVibrationUI(AbstractSysIdUI):
             cola_window=self.definition_widget.cola_window_selector.itemText(self.definition_widget.cola_window_selector.currentIndex()),
             cola_overlap=self.definition_widget.cola_overlap_percentage_selector.value()/100,
             cola_window_exponent=self.definition_widget.cola_exponent_selector.value(),
+            sigma_clip=self.definition_widget.sigma_clipping_selector.value(),
             update_tf_during_control=self.definition_widget.update_transfer_function_during_control_selector.isChecked(),
             frames_in_cpsd=self.definition_widget.cpsd_frames_selector.value(),
             cpsd_window=self.definition_widget.cpsd_computation_window_selector.itemText(self.definition_widget.cpsd_computation_window_selector.currentIndex()),
@@ -830,13 +862,14 @@ class RandomVibrationUI(AbstractSysIdUI):
             control_python_function=control_function,
             control_python_function_type=control_function_type,
             control_python_function_parameters=control_function_parameters,
-            control_channel_indices = self.physical_control_indices,
-            output_channel_indices = self.physical_output_indices,
-            specification_frequency_lines = self.specification_frequency_lines,
-            specification_cpsd_matrix = self.specification_cpsd_matrix,
-            specification_warning_matrix = self.specification_warning_matrix,
-            specification_abort_matrix = self.specification_abort_matrix,
-            allow_automatic_aborts = self.definition_widget.auto_abort_checkbox.isChecked())
+            control_channel_indices=self.physical_control_indices,
+            output_channel_indices=self.physical_output_indices,
+            specification_frequency_lines=self.specification_frequency_lines,
+            specification_cpsd_matrix=self.specification_cpsd_matrix,
+            specification_warning_matrix=self.specification_warning_matrix,
+            specification_abort_matrix=self.specification_abort_matrix,
+            percent_lines_out=self.definition_widget.frequency_lines_out_spinbox.value(),
+            allow_automatic_aborts=self.definition_widget.auto_abort_checkbox.isChecked())
     
     def initialize_environment(self) -> RandomVibrationMetadata:
         """
@@ -849,7 +882,7 @@ class RandomVibrationUI(AbstractSysIdUI):
 
         Returns
         -------
-        RandomVibrationMetadata
+        AbstractMetadata
             An AbstractMetadata-inheriting object that contains the parameters
             defining the environment.
 
@@ -886,10 +919,10 @@ class RandomVibrationUI(AbstractSysIdUI):
                 other_pen_options={'width':2},
                 names = ['Real Prediction','Real Spec','Imag Prediction','Imag Spec']
                 )
-        self.plot_data_items['prediction_warning_upper'] = self.prediction_widget.response_display_plot.getPlotItem().plot(np.array([0,self.data_acquisition_parameters.sample_rate/2]),np.zeros(2),pen = {'color': (255, 204, 0), 'width': 1, 'style':Qt.DashLine},name='Warning')
-        self.plot_data_items['prediction_warning_lower'] = self.prediction_widget.response_display_plot.getPlotItem().plot(np.array([0,self.data_acquisition_parameters.sample_rate/2]),np.zeros(2),pen = {'color': (255, 204, 0), 'width': 1, 'style':Qt.DashLine})
-        self.plot_data_items['prediction_abort_upper'] = self.prediction_widget.response_display_plot.getPlotItem().plot(np.array([0,self.data_acquisition_parameters.sample_rate/2]),np.zeros(2),pen = {'color': (153, 0, 0), 'width': 1, 'style':Qt.DashLine},name='Abort')
-        self.plot_data_items['prediction_abort_lower'] = self.prediction_widget.response_display_plot.getPlotItem().plot(np.array([0,self.data_acquisition_parameters.sample_rate/2]),np.zeros(2),pen = {'color': (153, 0, 0), 'width': 1, 'style':Qt.DashLine})
+        self.plot_data_items['prediction_warning_upper'] = self.prediction_widget.response_display_plot.getPlotItem().plot(np.array([0,self.data_acquisition_parameters.sample_rate/2]),np.zeros(2),pen = {'color': PlotWindow.WARNING_COLOR, 'width': PlotWindow.WARNING_LINEWIDTH, 'style': PlotWindow.WARNING_LINESTYLE},name='Warning')
+        self.plot_data_items['prediction_warning_lower'] = self.prediction_widget.response_display_plot.getPlotItem().plot(np.array([0,self.data_acquisition_parameters.sample_rate/2]),np.zeros(2),pen = {'color': PlotWindow.WARNING_COLOR, 'width': PlotWindow.WARNING_LINEWIDTH, 'style': PlotWindow.WARNING_LINESTYLE})
+        self.plot_data_items['prediction_abort_upper'] = self.prediction_widget.response_display_plot.getPlotItem().plot(np.array([0,self.data_acquisition_parameters.sample_rate/2]),np.zeros(2),pen = {'color': PlotWindow.ABORT_COLOR, 'width': PlotWindow.ABORT_LINEWIDTH, 'style': PlotWindow.ABORT_LINESTYLE},name='Abort')
+        self.plot_data_items['prediction_abort_lower'] = self.prediction_widget.response_display_plot.getPlotItem().plot(np.array([0,self.data_acquisition_parameters.sample_rate/2]),np.zeros(2),pen = {'color': PlotWindow.ABORT_COLOR, 'width': PlotWindow.ABORT_LINEWIDTH, 'style': PlotWindow.ABORT_LINESTYLE})
         self.plot_data_items['excitation_prediction'] = multiline_plotter(
                 np.arange(self.environment_parameters.fft_lines)*self.environment_parameters.frequency_spacing,
                 np.zeros((2,self.environment_parameters.fft_lines)),
@@ -897,6 +930,26 @@ class RandomVibrationUI(AbstractSysIdUI):
                 other_pen_options={'width':1},
                 names = ['Real Prediction','Imag Prediction']
                 )
+        # Create the interactive control law if necessary
+        if self.definition_widget.control_function_generator_selector.currentIndex() == 3:
+            control_class = getattr(self.python_control_module,self.definition_widget.control_function_input.itemText(self.definition_widget.control_function_input.currentIndex()))
+            self.log('Building Interactive UI for class {:}'.format(control_class.__name__))
+            ui_class = control_class.get_UI_class()
+            if ui_class == self.interactive_control_law_widget.__class__:
+                print('initializing data acquisition and environment parameters')
+                self.interactive_control_law_widget.initialize_parameters(self.data_acquisition_parameters,
+                                                                          self.environment_parameters)
+            else:
+                if self.interactive_control_law_widget is not None:
+                    self.interactive_control_law_widget.close()
+                self.interactive_control_law_window = QtWidgets.QDialog(self.definition_widget)
+                self.interactive_control_law_widget = ui_class(self.log_name,
+                                                                self.environment_command_queue,
+                                                                self.interactive_control_law_window,
+                                                                self,
+                                                                self.data_acquisition_parameters,
+                                                                self.environment_parameters)
+            self.interactive_control_law_window.show()
         return self.environment_parameters
 
     # %% Test Predictions
@@ -1033,7 +1086,7 @@ class RandomVibrationUI(AbstractSysIdUI):
                 else:
                     self.run_widget.test_progress_bar.setValue(0)
             else:
-                self.run_widget.test_progress_bar.setValue(time_elapsed/check_time_seconds*100)
+                self.run_widget.test_progress_bar.setValue(int(time_elapsed/check_time_seconds*100))
                 if time_elapsed > check_time_seconds:
                     self.stop_control()
     
@@ -1160,11 +1213,15 @@ class RandomVibrationUI(AbstractSysIdUI):
         for window in self.plot_windows:
             window.close()
     
-    def save_spectral_data(self):
+    def save_control_data_from_profile(self,filename):
+        self.save_spectral_data(None,filename)
+
+    def save_spectral_data(self,clicked,filename = None):
         """Save Spectral Data from the Controller"""
-        filename,file_filter = QtWidgets.QFileDialog.getSaveFileName(
-            self.definition_widget,'Select File to Save Spectral Data',
-            filter='NetCDF File (*.nc4)')
+        if filename is None:
+            filename,file_filter = QtWidgets.QFileDialog.getSaveFileName(
+                self.definition_widget,'Select File to Save Spectral Data',
+                filter='NetCDF File (*.nc4)')
         if filename == '':
             return
         labels = [['node_number',str],
@@ -1205,8 +1262,9 @@ class RandomVibrationUI(AbstractSysIdUI):
         netcdf_handle.time_per_read = global_data_parameters.samples_per_read/global_data_parameters.sample_rate
         netcdf_handle.hardware = global_data_parameters.hardware
         netcdf_handle.hardware_file = 'None' if global_data_parameters.hardware_file is None else global_data_parameters.hardware_file
-        netcdf_handle.maximum_acquisition_processes = global_data_parameters.maximum_acquisition_processes
         netcdf_handle.output_oversample = global_data_parameters.output_oversample
+        for key,value in global_data_parameters.extra_parameters.items():
+            setattr(netcdf_handle,key,value)
         # Create Variables
         var = netcdf_handle.createVariable('environment_names',str,('num_environments',))
         this_environment_index = None
@@ -1257,7 +1315,7 @@ class RandomVibrationUI(AbstractSysIdUI):
     
     # %% Miscellaneous
     
-    def retrieve_metadata(self, netcdf_handle : nc4._netCDF4.Dataset):
+    def retrieve_metadata(self, netcdf_handle: nc4._netCDF4.Dataset = None, environment_name: str = None):
         """Collects environment parameters from a netCDF dataset.
 
         This function retrieves parameters from a netCDF dataset that was written
@@ -1265,7 +1323,7 @@ class RandomVibrationUI(AbstractSysIdUI):
         in the user interface with the proper information.
 
         This function is the "read" counterpart to the store_to_netcdf 
-        function in the RandomVibrationMetadata class, which will write parameters to
+        function in the AbstractMetadata class, which will write parameters to
         the netCDF file to document the metadata.
         
         Note that the entire dataset is passed to this function, so the function
@@ -1277,49 +1335,62 @@ class RandomVibrationUI(AbstractSysIdUI):
         
         Parameters
         ----------
-        netcdf_handle : nc4._netCDF4.Dataset :
+        netcdf_handle : nc4._netCDF4.Dataset
             The netCDF dataset from which the data will be read.  It should have
             a group name with the enviroment's name.
+        environment_name : str (optional)
+            name of environment from which to retrieve metadata. Only needed if 
+            different from current environment.
 
         """
-        super().retrieve_metadata(netcdf_handle)
-        # Get the group
-        group = netcdf_handle.groups[self.environment_name]
-        # Spinboxes
-        self.definition_widget.samples_per_frame_selector.setValue(group.samples_per_frame)
-        self.definition_widget.ramp_time_spinbox.setValue(group.test_level_ramp_time)
-        self.definition_widget.cola_overlap_percentage_selector.setValue(group.cola_overlap*100)
-        self.definition_widget.cola_exponent_selector.setValue(group.cola_window_exponent)
-        self.definition_widget.cpsd_overlap_selector.setValue(group.cpsd_overlap*100)
-        self.definition_widget.cpsd_frames_selector.setValue(group.frames_in_cpsd)
-        # Checkboxes
-        self.definition_widget.update_transfer_function_during_control_selector.setChecked(bool(group.update_tf_during_control))
-        self.definition_widget.auto_abort_checkbox.setChecked(bool(group.allow_automatic_aborts))
-        # Comboboxes
-        self.definition_widget.cola_window_selector.setCurrentIndex(self.definition_widget.cola_window_selector.findText(group.cola_window))
-        self.definition_widget.cpsd_computation_window_selector.setCurrentIndex(self.definition_widget.cpsd_computation_window_selector.findText(group.cpsd_window))
+        group = super().retrieve_metadata(netcdf_handle, environment_name)
+        
         # Control channels
-        for i in group.variables['control_channel_indices'][...]:
-            item = self.definition_widget.control_channels_selector.item(i)
-            item.setCheckState(Qt.Checked)
+        try:
+            for i in group.variables['control_channel_indices'][...]:
+                item = self.definition_widget.control_channels_selector.item(i)
+                item.setCheckState(Qt.Checked)
+        except KeyError:
+            print('no variable control_channel_indices, please select control channels manually')
         # Other data
         try:
             self.response_transformation_matrix = group.variables['response_transformation_matrix'][...].data
         except KeyError:
             self.response_transformation_matrix = None
         try:
-            self.output_transformation_matrix = group.variables['output_transformation_matrix'][...].data
+            self.output_transformation_matrix = group.variables['reference_transformation_matrix'][...].data
         except KeyError:
             self.output_transformation_matrix = None
         self.define_transformation_matrices(None,dialog=False)
-        self.specification_frequency_lines = group.variables['specification_frequency_lines'][...].data
-        self.specification_cpsd_matrix = group.variables['specification_cpsd_matrix_real'][...].data + 1j*group.variables['specification_cpsd_matrix_imag'][...].data
-        self.specification_warning_matrix = group.variables['specification_warning_matrix'][...].data
-        self.specification_abort_matrix = group.variables['specification_abort_matrix'][...].data
-        self.select_python_module(None,group.control_python_script)
-        self.definition_widget.control_function_input.setCurrentIndex(self.definition_widget.control_function_input.findText(group.control_python_function))
-        self.definition_widget.control_parameters_text_input.setText(group.control_python_function_parameters)
-        self.show_specification()
+
+        if environment_name is None: # environment_name is passed when the saved environment doesn't match the current environment
+            # Spinboxes
+            self.definition_widget.samples_per_frame_selector.setValue(group.samples_per_frame)
+            self.definition_widget.ramp_time_spinbox.setValue(group.test_level_ramp_time)
+            self.definition_widget.cola_overlap_percentage_selector.setValue(group.cola_overlap*100)
+            self.definition_widget.cola_exponent_selector.setValue(group.cola_window_exponent)
+            self.definition_widget.cpsd_overlap_selector.setValue(group.cpsd_overlap*100)
+            self.definition_widget.cpsd_frames_selector.setValue(group.frames_in_cpsd)
+            # Checkboxes
+            self.definition_widget.update_transfer_function_during_control_selector.setChecked(bool(group.update_tf_during_control))
+            self.definition_widget.auto_abort_checkbox.setChecked(bool(group.allow_automatic_aborts))
+            # Comboboxes
+            self.definition_widget.cola_window_selector.setCurrentIndex(self.definition_widget.cola_window_selector.findText(group.cola_window))
+            self.definition_widget.cpsd_computation_window_selector.setCurrentIndex(self.definition_widget.cpsd_computation_window_selector.findText(group.cpsd_window))
+            # Specification
+            self.specification_frequency_lines = group.variables['specification_frequency_lines'][...].data
+            self.specification_cpsd_matrix = group.variables['specification_cpsd_matrix_real'][...].data + 1j*group.variables['specification_cpsd_matrix_imag'][...].data
+            self.specification_warning_matrix = group.variables['specification_warning_matrix'][...].data
+            self.specification_abort_matrix = group.variables['specification_abort_matrix'][...].data
+            self.select_python_module(None,group.control_python_script)
+            index = self.definition_widget.control_function_input.findText(group.control_python_function)
+            if index == -1: # error handling (older revisions of rattlesnake may be missing newer control laws)
+                index = 0
+                default = self.definition_widget.control_function_input.itemText(index)
+                print('Warning: control function "%s" not found, defaulting to "%s"' % (group.control_python_function, default))
+            self.definition_widget.control_function_input.setCurrentIndex(index)
+            self.definition_widget.control_parameters_text_input.setText(group.control_python_function_parameters)
+            self.show_specification()
     
     def update_gui(self,queue_data : tuple):
         """Update the environment's graphical user interface
@@ -1357,15 +1428,16 @@ class RandomVibrationUI(AbstractSysIdUI):
             # print('Sizes:\nfrequencies{:}\nexcitation_prediction{:}\nresponse_prediction{:}\nspec{:}\nrms_voltages{:}\nrms_db_error{:}\nfrequency_indices{:}\nwarning{:}\nabort{:}'.format(
             #     frequencies.shape,excitation_prediction.shape,response_prediction.shape,spec.shape,rms_voltages.shape,rms_db_error.shape,frequency_indices.shape,self.specification_warning_matrix.shape,self.specification_abort_matrix.shape))
             with np.errstate(invalid='ignore'):
+                lines_out = (self.environment_parameters.percent_lines_out/100)*self.environment_parameters.fft_lines
                 for i in range(self.prediction_widget.response_error_list.count()):
                     item = self.prediction_widget.response_error_list.item(i)
-                    if np.any(self.response_prediction[:,i,i] > self.environment_parameters.specification_abort_matrix[1,:,i]):
+                    if sum(self.response_prediction[:,i,i] > self.environment_parameters.specification_abort_matrix[1,:,i]) > lines_out:
                         item.setBackground(QColor(255,125,125))
-                    elif np.any(self.response_prediction[:,i,i] < self.environment_parameters.specification_abort_matrix[0,:,i]):
+                    elif sum(self.response_prediction[:,i,i] < self.environment_parameters.specification_abort_matrix[0,:,i]) > lines_out:
                         item.setBackground(QColor(255,125,125))
-                    elif np.any(self.response_prediction[:,i,i] > self.environment_parameters.specification_warning_matrix[1,:,i]):
+                    elif sum(self.response_prediction[:,i,i] > self.environment_parameters.specification_warning_matrix[1,:,i]) > lines_out:
                         item.setBackground(QColor(255,255,125))
-                    elif np.any(self.response_prediction[:,i,i] < self.environment_parameters.specification_warning_matrix[0,:,i]):
+                    elif sum(self.response_prediction[:,i,i] < self.environment_parameters.specification_warning_matrix[0,:,i]) > lines_out:
                         item.setBackground(QColor(255,255,125))
                     else:
                         item.setBackground(QColor(255,255,255))
@@ -1386,6 +1458,12 @@ class RandomVibrationUI(AbstractSysIdUI):
             self.plot_windows = [window for window in self.plot_windows if window.isVisible()]
             for window in self.plot_windows:
                 window.update_plot(self.last_response_cpsd)
+        elif message == 'interactive_control_sysid_update':
+            if self.interactive_control_law_widget is not None:
+                self.interactive_control_law_widget.update_ui_sysid(*data)
+        elif message == 'interactive_control_update':
+            if self.interactive_control_law_widget is not None:
+                self.interactive_control_law_widget.update_ui_control(data)
         elif message == 'update_test_response_error_list':
             rms_db_error,warning_channels,abort_channels = data
             self.run_widget.test_response_error_list.clear()
@@ -1450,7 +1528,7 @@ class RandomVibrationUI(AbstractSysIdUI):
         environment.
         
         This function is the "write" counterpart to the 
-        ``set_parameters_from_template`` function in the ``RandomVibrationUI`` class,
+        ``set_parameters_from_template`` function in the ``AbstractUI`` class,
         which reads the values from the template file to populate the user
         interface.
 
@@ -1570,6 +1648,15 @@ class RandomVibrationUI(AbstractSysIdUI):
         self.system_id_widget.averagingCoefficientDoubleSpinBox.setValue(float(worksheet.cell(19,2).value))
         self.system_id_widget.estimatorComboBox.setCurrentIndex(self.system_id_widget.estimatorComboBox.findText(worksheet.cell(20,2).value))
         self.system_id_widget.levelDoubleSpinBox.setValue(float(worksheet.cell(21,2).value))
+        # this should be a temporary solution - template file rework needed
+        low, high = worksheet.cell(21,3).value, worksheet.cell(21,4).value
+        sigma = worksheet.cell(21,5).value
+        if low is not None:
+            self.system_id_widget.lowFreqCutoffSpinBox.setValue(int(low))
+        if high is not None:
+            self.system_id_widget.highFreqCutoffSpinBox.setValue(int(high))
+        if sigma is not None:
+            self.definition_widget.sigma_clipping_selector.setValue(float(sigma)) # TODO: sigma clipping and bandwidths should get their own rows, but how to maintain backward compatibility? 
         self.system_id_widget.signalTypeComboBox.setCurrentIndex(self.system_id_widget.signalTypeComboBox.findText(worksheet.cell(22,2).value))
         self.system_id_widget.windowComboBox.setCurrentIndex(self.system_id_widget.windowComboBox.findText(worksheet.cell(23,2).value))
         self.system_id_widget.overlapDoubleSpinBox.setValue(float(worksheet.cell(24,2).value))
@@ -1651,6 +1738,8 @@ class RandomVibrationEnvironment(AbstractSysIdEnvironment):
         self.map_command(RandomVibrationCommands.ADJUST_TEST_LEVEL,self.adjust_test_level)
         self.map_command(RandomVibrationCommands.CHECK_FOR_COMPLETE_SHUTDOWN,self.check_for_control_shutdown)
         self.map_command(RandomVibrationCommands.RECOMPUTE_PREDICTION,self.recompute_prediction)
+        self.map_command(GlobalCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS, self.update_interactive_control_parameters)
+        self.map_command(GlobalCommands.SEND_INTERACTIVE_COMMAND, self.send_interactive_command)
         self.queue_container = queue_container
     
     def initialize_environment_test_parameters(self,environment_parameters : RandomVibrationMetadata):
@@ -1689,6 +1778,23 @@ class RandomVibrationEnvironment(AbstractSysIdEnvironment):
             (RandomVibrationDataAnalysisCommands.INITIALIZE_PARAMETERS,
              self.environment_parameters))
         
+    def update_interactive_control_parameters(self,parameters):
+        self.queue_container.data_analysis_command_queue.put(
+            self.environment_name,
+            (GlobalCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS,
+             parameters))
+        
+    def send_interactive_command(self, command):
+        """General method that can be used by an interactive UI object to pass commands and data to its corresponding computation object"""
+        if self.environment_parameters.control_python_function_type == 3: # Interactive
+            self.queue_container.data_analysis_command_queue.put(
+                self.environment_name,
+                (GlobalCommands.SEND_INTERACTIVE_COMMAND,
+                command))
+        else:
+            raise ValueError('Received an SEND_INTERACTIVE_COMMAND signal without an interactive control law.  How did this happen?')
+
+        
     def system_id_complete(self,data):
         super().system_id_complete(data)
         self.queue_container.data_analysis_command_queue.put(
@@ -1712,6 +1818,10 @@ class RandomVibrationEnvironment(AbstractSysIdEnvironment):
         pretrigger_fraction = 0
         frame_size = self.environment_parameters.samples_per_frame
         window = Window.HANN if self.environment_parameters.cpsd_window == 'Hann' else None
+        # use number of sysid averages as kurtosis buffer size
+        # (could maybe make this match the test duration if user is using the "Time at Level" function,
+        # would need to pass info from the RandomVibrationUI object)
+        kurtosis_buffer_length = self.environment_parameters.sysid_averages
         
         return CollectorMetadata(
             num_channels,
@@ -1729,13 +1839,14 @@ class RandomVibrationEnvironment(AbstractSysIdEnvironment):
             pretrigger_fraction,
             frame_size,
             window,
+            kurtosis_buffer_length=kurtosis_buffer_length,
             response_transformation_matrix = self.environment_parameters.response_transformation_matrix,
             reference_transformation_matrix = self.environment_parameters.reference_transformation_matrix)
     
     def get_signal_generation_metadata(self):
         return SignalGenerationMetadata(
             samples_per_write = self.data_acquisition_parameters.samples_per_write,
-            level_ramp_samples = self.environment_parameters.test_level_ramp_time * self.environment_parameters.sample_rate,
+            level_ramp_samples = self.environment_parameters.test_level_ramp_time * self.environment_parameters.sample_rate * self.data_acquisition_parameters.output_oversample,
             output_transformation_matrix = self.environment_parameters.reference_transformation_matrix,
             )
     
@@ -1747,7 +1858,8 @@ class RandomVibrationEnvironment(AbstractSysIdEnvironment):
             None, 
             self.environment_parameters.cola_overlap, 
             self.environment_parameters.cola_window, 
-            self.environment_parameters.cola_window_exponent, 
+            self.environment_parameters.cola_window_exponent,
+            self.environment_parameters.sigma_clip,
             self.data_acquisition_parameters.output_oversample)
     
     def get_spectral_processing_metadata(self):

@@ -34,6 +34,11 @@ import os
 import netCDF4 as nc4
 import openpyxl
 
+PICKLE_ON_ERROR = False
+
+if PICKLE_ON_ERROR:
+    import pickle
+
 class AbstractMetadata(ABC):
     """Abstract class for storing metadata for an environment.
     
@@ -354,6 +359,17 @@ class AbstractEnvironment(ABC):
     instruct the program to quit should not return any value that could be
     interpreted as true."""
     
+    def dump_to_dict(self):
+        state = self.__dict__.copy()
+        for key in state:
+            try:
+                pickle.dumps(state[key])
+                print(f'{key} is pickleable')
+            except Exception:
+                print(f'{key} is not pickleable')
+                state[key] = None
+        return state
+
     def __init__(self,
                  environment_name : str,
                  command_queue : VerboseMessageQueue,
@@ -541,6 +557,13 @@ class AbstractEnvironment(ABC):
                 tb = traceback.format_exc()
                 self.log('ERROR\n\n {:}'.format(tb))
                 self.gui_update_queue.put(('error',('{:} Error'.format(self.environment_name),'!!!UNKNOWN ERROR!!!\n\n{:}'.format(tb))))
+                if PICKLE_ON_ERROR:
+                    with open(f'debug_data/{self.environment_name}_error_state.txt','w') as f:
+                        f.write('{:}'.format(tb))
+                    with open(f'debug_data/{self.environment_name}_error_state.pkl','wb') as f:
+                        dic = self.dump_to_dict()
+                        pickle.dump(dic,f)
+                    print('Done Writing Pickle File from Error...')
                 halt_flag = False
             # If we get a true value, stop.
             if halt_flag:

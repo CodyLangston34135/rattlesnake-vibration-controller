@@ -1,6 +1,6 @@
 # This is a generated file! Please edit source .ksy file and use kaitai-struct-compiler to rebuild
 
-from pkg_resources import parse_version
+from packaging.version import Version
 import kaitaistruct
 from kaitaistruct import KaitaiStruct, KaitaiStream, BytesIO
 from enum import Enum
@@ -30,7 +30,7 @@ class OpenapiHeader(KaitaiStruct):
         self.time = OpenapiMessage.Time(self._io, self, self._root)
         self.message_length = self._io.read_u4le()
 
-if parse_version(kaitaistruct.__version__) < parse_version('0.9'):
+if Version(kaitaistruct.__version__) < Version('0.9'):
     raise Exception("Incompatible Kaitai Struct Python API: 0.9 or later is required, but you have %s" % (kaitaistruct.__version__))
 
 class OpenapiMessage(KaitaiStruct):

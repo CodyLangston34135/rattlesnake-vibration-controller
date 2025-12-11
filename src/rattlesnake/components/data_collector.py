@@ -160,6 +160,70 @@ class FrameBuffer:
     
     def __setitem__(self,key,val):
         self._buffer[key] = val
+
+class KurtosisBuffer:
+    def __init__(self, n_channels: int, averages: int = 100) -> None:
+        self.idx = 0 # this will keep track of our place in the buffers (alternative to using np.roll, this is more efficient since we don't actually care what order the buffer is in)
+        self.averages = averages # number of frames to keep for kurtosis calculation
+        self.G0 = np.zeros((n_channels, averages)) # number of samples per frame
+        self.G1 = np.zeros((n_channels, averages)) # sum of samples per frame
+        self.G2 = np.zeros((n_channels, averages)) # sum of (second moments * samples/frame) per frame
+        self.G3 = np.zeros((n_channels, averages)) # sum of (third moments * samples/frame) per frame
+        self.G4 = np.zeros((n_channels, averages)) # sum of (fourth moments * samples/frame) per frame
+
+    def clear(self) -> None:
+        self.idx = 0
+        self.G0[:] = 0.0
+        self.G1[:] = 0.0
+        self.G2[:] = 0.0
+        self.G3[:] = 0.0
+        self.G4[:] = 0.0
+
+    def add_data(self, arr: np.ndarray, axis=-1) -> None:
+        """
+        Choi M, Sweetman B. Efficient Calculation of Statistical Moments for Structural Health Monitoring.
+        Structural Health Monitoring. 2009;9(1):13-24. doi:10.1177/1475921709341014
+        (https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance)
+
+        Implements a method of moments approach used for kurtosis calculation. Gamma values
+        are calculated using raw moments and sample length. These gamma values can be combined
+        additively as new data appears, at which point the raw moments can be backed out. Using known
+        relationships between raw moments and central moments, we can calculate kurtosis.
+        """
+
+        # Calculate gamma values of new data (raw moment * sample length, equivalent to sum of moments if time delta is constant)
+        self.G0[:, self.idx] = arr.shape[axis] # gamma_0 is taken to be number of points (assuming constant time delta)
+        self.G1[:, self.idx] = np.sum(arr, axis=axis)
+        self.G2[:, self.idx] = np.sum(arr**2, axis=axis)
+        self.G3[:, self.idx] = np.sum(arr**3, axis=axis)
+        self.G4[:, self.idx] = np.sum(arr**4, axis=axis)
+
+        # increment our index (wrap around if buffer is full)
+        self.idx = (self.idx + 1) % self.averages
+
+
+    def get_kurtosis(self, fisher=False) -> None:
+        # sum the gamma values that are in the buffer
+        G0 = np.sum(self.G0, axis=-1)
+        G1 = np.sum(self.G1, axis=-1)
+        G2 = np.sum(self.G2, axis=-1)
+        G3 = np.sum(self.G3, axis=-1)
+        G4 = np.sum(self.G4, axis=-1)
+
+        # back out raw moments from gamma values
+        M1 = G1/G0
+        M2 = G2/G0
+        M3 = G3/G0
+        M4 = G4/G0
+
+        # compute central moments from raw moments
+        C2 = M2 - (M1**2)
+        # C3 = M3 - (3*M1*M2) + (2*(M1**3)) # not needed for kurtosis
+        C4 = M4 - (4*M1*M3) + (6*(M1**2)*M2) - (3*(M1**4))
+
+        # compute kurtosis
+        K = C4/(C2**2)
+        return K - 3 if fisher else K
     
 class DataCollectorCommands(Enum):
     """Commands that the Random Data Collector Process can accept"""
@@ -171,6 +235,7 @@ class DataCollectorCommands(Enum):
     SET_TEST_LEVEL = 6
     ACCEPTED = 7
     SHUTDOWN_ACHIEVED = 8
+    CLEAR_KURTOSIS_BUFFER = 9
 
 class AcquisitionType(Enum):
     FREE_RUN = 0
@@ -216,6 +281,7 @@ class CollectorMetadata:
                  window_parameter_2 = 0,
                  window_parameter_3 = 0,
                  wait_samples = 0,
+                 kurtosis_buffer_length = None,
                  response_transformation_matrix = None,
                  reference_transformation_matrix = None):
         self.num_channels = num_channels
@@ -239,6 +305,7 @@ class CollectorMetadata:
         self.response_transformation_matrix = response_transformation_matrix
         self.reference_transformation_matrix = reference_transformation_matrix
         self.wait_samples = wait_samples
+        self.kurtosis_buffer_length = kurtosis_buffer_length
         
     def __eq__(self,other):
         try:
@@ -283,10 +350,12 @@ class DataCollectorProcess(AbstractMessageProcess):
         self.map_command(DataCollectorCommands.STOP,self.stop)
         self.map_command(DataCollectorCommands.ACCEPT,self.accept)
         self.map_command(DataCollectorCommands.SET_TEST_LEVEL,self.set_test_level)
+        self.map_command(DataCollectorCommands.CLEAR_KURTOSIS_BUFFER,self.clear_kurtosis_buffer)
         self.environment_command_queue = environment_command_queue
         self.environment_name = environment_name
         self.collector_metadata = None
         self.frame_buffer = None
+        self.kurtosis_buffer = None
         self.reference_window = None
         self.response_window = None
         self.window_correction_factor = None
@@ -322,6 +391,10 @@ class DataCollectorProcess(AbstractMessageProcess):
             self.collector_metadata.acquisition_type != AcquisitionType.FREE_RUN,
             self.collector_metadata.acquisition_type == AcquisitionType.TRIGGER_FIRST_FRAME,
             self.collector_metadata.wait_samples)
+        if self.collector_metadata.kurtosis_buffer_length is not None:
+            self.kurtosis_buffer = KurtosisBuffer(
+                self.collector_metadata.num_channels,
+                self.collector_metadata.kurtosis_buffer_length)
         if self.collector_metadata.acceptance_function is None:
             self.acceptance_function = lambda x: True
         else:
@@ -436,6 +509,9 @@ class DataCollectorProcess(AbstractMessageProcess):
                 if accepted and not self.frame_buffer.manual_accept:
                     self.gui_update_queue.put((self.environment_name,('time_frame',(frame,True))))
                     self.log('Sending data')
+                    if self.collector_metadata.kurtosis_buffer_length is not None:
+                        self.kurtosis_buffer.add_data(frame)
+                        self.gui_update_queue.put((self.environment_name,('kurtosis', self.kurtosis_buffer.get_kurtosis())))
                     # Separate into response and reference
                     response_fft = rfft(response_frame,axis=-1)*self.window_correction
                     reference_fft = rfft(reference_frame,axis=-1)*self.window_correction
@@ -504,6 +580,10 @@ class DataCollectorProcess(AbstractMessageProcess):
         """
         self.skip_frames,self.test_level = data
         self.log('Setting Test Level to {:}, skipping next {:} frames'.format(self.test_level,self.skip_frames))
+
+    def clear_kurtosis_buffer(self,data):
+        if self.kurtosis_buffer is not None:
+            self.kurtosis_buffer.clear()
         
 def data_collector_process(environment_name : str,
                            command_queue : VerboseMessageQueue,

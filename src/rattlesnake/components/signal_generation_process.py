@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-Process that handles signal generation
-
 Rattlesnake Vibration Control Software
 Copyright (C) 2021  National Technology & Engineering Solutions of Sandia, LLC
 (NTESS). Under the terms of Contract DE-NA0003525 with NTESS, the U.S.
@@ -23,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import multiprocessing as mp
 import numpy as np
-from abc import ABC,abstractmethod,abstractproperty
+from abc import ABC,abstractmethod
 from .utilities import (flush_queue,GlobalCommands,VerboseMessageQueue,rms_time)
 from .abstract_message_process import AbstractMessageProcess
 from .signal_generation import SignalGenerator
@@ -32,6 +30,12 @@ import copy
 import scipy.signal as sig
 
 test_level_threshold = 1.01
+
+DEBUG = False
+if DEBUG:
+    from glob import glob
+    FILE_OUTPUT = 'debug_data/signal_generation_{:}.npz'
+    
 
 class SignalGenerationCommands(Enum):
     """Commands that the Random Vibration Signal Generation Process can accept"""
@@ -54,7 +58,7 @@ class SignalGenerationMetadata:
         self.output_transformation_matrix = output_transformation_matrix
         self.samples_per_write = samples_per_write
         self.new_signal_sample_threshold = self.samples_per_write if new_signal_sample_threshold is None else new_signal_sample_threshold
-        self.diabled_signals = [] if disabled_signals is None else disabled_signals
+        self.disabled_signals = [] if disabled_signals is None else disabled_signals
 
     def __eq__(self,other):
         try:
@@ -130,7 +134,7 @@ class SignalGenerationProcess(AbstractMessageProcess):
         self.output_transformation_matrix = None if data.output_transformation_matrix is None else np.linalg.pinv(data.output_transformation_matrix)
         self.samples_per_write = data.samples_per_write
         self.new_signal_sample_threshold = data.new_signal_sample_threshold
-        self.disabled_signals = data.diabled_signals
+        self.disabled_signals = data.disabled_signals
     
     def initialize_signal_generator(self,signal_generator : SignalGenerator):
         self.signal_generator = signal_generator
@@ -176,7 +180,7 @@ class SignalGenerationProcess(AbstractMessageProcess):
             self.signal_generator.update_parameters(*update_data[-1])
         if ((self.signal_remainder is None
             or self.signal_remainder.shape[-1] < self.new_signal_sample_threshold)
-            and not self.done_generating):
+            and not self.done_generating and self.signal_generator.ready_for_next_output):
             self.log('Generating Frame of Data')
             new_signal,self.done_generating = self.signal_generator.generate_frame()
             self.log('Generated Signal with RMS \n  {:}'.format(rms_time(new_signal,axis=-1)))
@@ -187,7 +191,7 @@ class SignalGenerationProcess(AbstractMessageProcess):
                 # Otherwise we just concatenate the new data at the end
                 self.signal_remainder = np.concatenate((self.signal_remainder,new_signal),axis=-1)
         # Now check if we need to send it to the output task
-        if self.data_out_queue.empty():
+        if self.data_out_queue.empty() and self.signal_remainder is not None and self.signal_remainder.shape[-1] > 0:
             self.log('Outputting Data')
             # Determine if this is the last output.  This will be the last output
             # if the shutdown flag is set and the current test level is zero,
@@ -257,6 +261,11 @@ class SignalGenerationProcess(AbstractMessageProcess):
         # self.write_index += 1
         # np.savez('signal_generation_output_data_check_{:}.npz'.format(self.write_index),write_data = write_data,test_level = test_level)
         self.log('Sending Output with RMS \n  {:}'.format(rms_time(write_data*test_level,axis=-1)))
+        if DEBUG:
+            num_files = len(glob(FILE_OUTPUT.format('*')))
+            np.savez(FILE_OUTPUT.format(num_files),
+                     write_data = write_data*test_level,
+                     last_signal = last_signal)
         self.data_out_queue.put((copy.deepcopy(write_data*test_level),last_signal))
 
     def mute(self,data):

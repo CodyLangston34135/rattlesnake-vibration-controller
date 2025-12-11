@@ -94,8 +94,9 @@ class StreamingProcess(AbstractMessageProcess):
         self.netcdf_handle.time_per_read = global_data_parameters.samples_per_read/global_data_parameters.sample_rate
         self.netcdf_handle.hardware = global_data_parameters.hardware
         self.netcdf_handle.hardware_file = 'None' if global_data_parameters.hardware_file is None else global_data_parameters.hardware_file
-        self.netcdf_handle.maximum_acquisition_processes = global_data_parameters.maximum_acquisition_processes
         self.netcdf_handle.output_oversample = global_data_parameters.output_oversample
+        for name, value in global_data_parameters.extra_parameters.items():
+            setattr(self.netcdf_handle,name,value)
         # Create Variables
         self.netcdf_handle.createVariable(self.stream_variable,'f8',('response_channels',self.stream_dimension))
         var = self.netcdf_handle.createVariable('environment_names',str,('num_environments',))

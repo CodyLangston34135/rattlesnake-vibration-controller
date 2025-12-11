@@ -28,6 +28,7 @@ import time
 import numpy as np
 import multiprocessing as mp
 import os
+import re
 from math import ceil
 
 from .abstract_hardware import HardwareAcquisition,HardwareOutput
@@ -48,6 +49,9 @@ LANXI_STATE_SHUTDOWN = {
     'RecorderStreaming':'/rest/rec/finish',
     'RecorderOpened':'/rest/rec/close',
     'Idle':None}
+
+ipv4_pattern = r'^((25[0-5]|(2[0-4]|1[0-9]|[1-9]|)[0-9])(\.(?!$)|$)){4}$'
+ipv6_pattern = r'\[\s*([0-9a-fA-F]{1,4}:){0,7}(:[0-9a-fA-F]{1,4})*%?\d*\s*\]'
 
 # TODO List
 # TODO Get responses each time a get or put is done so we know if it was successful
@@ -399,7 +403,14 @@ class LanXIAcquisition(HardwareAcquisition):
             response = requests.get('http://'+acquisition_device+'/rest/rec/destination/socket')
             port = response.json()['tcpPort']
             # Connect to the socket
-            self.sockets[acquisition_device] = socket.socket(socket.AF_INET, socket.SOCK_STREAM,socket.IPPROTO_TCP)
+            is_ipv4 = re.search(ipv4_pattern, acquisition_device) is not None
+            is_ipv6 = re.search(ipv6_pattern, acquisition_device) is not None
+            if is_ipv4:
+                self.sockets[acquisition_device] = socket.socket(socket.AF_INET, socket.SOCK_STREAM,socket.IPPROTO_TCP)
+            elif is_ipv6:
+                self.sockets[acquisition_device] = socket.socket(socket.AF_INET6, socket.SOCK_STREAM,socket.IPPROTO_TCP)
+            else: # This will crash but is fixed in overhaul version so...
+                self.sockets[acquisition_device] = socket.socket(socket.AF_INET, socket.SOCK_STREAM,socket.IPPROTO_TCP)
             self.sockets[acquisition_device].connect((acquisition_device,port))
         for slave_address in self.slave_addresses:
             if slave_address in self.acquisition_map:
@@ -520,7 +531,10 @@ class LanXIAcquisition(HardwareAcquisition):
         # Join the processes
         for acquisition_device,process in self.processes.items():
             print('Recovering process {:}'.format(acquisition_device))
-            process.join()
+            process.join(timeout=5)
+            if process.is_alive():
+                process.terminate()
+                process.join()
             print('Process {:} recovered'.format(acquisition_device))
         print('All processes recovered, ready for next acquire.')
         self.processes = {}
@@ -874,14 +888,22 @@ class LanXIOutput(HardwareOutput):
         self._get_states()
         
         # Now pull the socket information for the outputs
-        for generator_device,generator_dict in self.output_map.items():
+        for generator_device, generator_dict in self.output_map.items():
             response = requests.get('http://'+generator_device+'/rest/rec/generator/output')
             output_data = response.json()
             for channel_number in generator_dict:
                 output = [out for out in output_data['outputs'] if out['number'] == channel_number][0]
                 if not generator_device in self.sockets:
                     self.sockets[generator_device] = {}
-                self.sockets[generator_device][output['number']] = socket.socket(socket.AF_INET, socket.SOCK_STREAM,socket.IPPROTO_TCP)
+
+                is_ipv4 = re.search(ipv4_pattern, generator_device) is not None
+                is_ipv6 = re.search(ipv6_pattern, generator_device) is not None
+                if is_ipv4:
+                    self.sockets[generator_device][output['number']] = socket.socket(socket.AF_INET, socket.SOCK_STREAM,socket.IPPROTO_TCP)
+                elif is_ipv6:
+                    self.sockets[generator_device][output['number']] = socket.socket(socket.AF_INET6, socket.SOCK_STREAM,socket.IPPROTO_TCP)
+                else: # This will crash but is fixed in overhaul version so...
+                    self.sockets[generator_device][output['number']] = socket.socket(socket.AF_INET, socket.SOCK_STREAM,socket.IPPROTO_TCP)
                 self.sockets[generator_device][output['number']].connect((generator_device,output['inputs'][0]['port']))
                 print('Output Connected to Device {:} Channel {:} on Port {:}'.format(generator_device,output['number'],output['inputs'][0]['port']))
                 self.oversample_factor = round(OUTPUT_RATE/(2**output['inputs'][0]['samplingRate'])/self.sample_rate)

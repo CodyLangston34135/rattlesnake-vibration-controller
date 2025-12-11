@@ -25,7 +25,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from .utilities import VerboseMessageQueue
+from .utilities import VerboseMessageQueue, log_file_task
 
 from .user_interface import Ui,QueueContainer
 

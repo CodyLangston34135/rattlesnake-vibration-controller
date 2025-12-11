@@ -32,6 +32,12 @@ task_name = 'Output'
 
 volume_threshold = 1.01
 
+DEBUG = False
+if DEBUG:
+    from glob import glob
+    FILE_OUTPUT = 'debug_data/output_{:}.npz'
+    ENV_OUTPUT = 'debug_data/output_first_data_{:}.npz'
+
 class OutputProcess(AbstractMessageProcess):
     """Class defining the output behavior of the controller
     
@@ -123,13 +129,19 @@ class OutputProcess(AbstractMessageProcess):
             self.hardware.close()
         if data_acquisition_parameters.hardware == 0:
             from .nidaqmx_hardware_multitask import NIDAQmxOutput
-            self.hardware = NIDAQmxOutput()
+            self.hardware = NIDAQmxOutput(
+                data_acquisition_parameters.extra_parameters['task_trigger'],
+                data_acquisition_parameters.extra_parameters['task_trigger_output_channel'])
         elif data_acquisition_parameters.hardware == 1:
             from .lanxi_hardware_multiprocessing import LanXIOutput
-            self.hardware = LanXIOutput(data_acquisition_parameters.maximum_acquisition_processes)
+            self.hardware = LanXIOutput(
+                data_acquisition_parameters.extra_parameters['maximum_acquisition_processes'])
         elif data_acquisition_parameters.hardware == 2:
             from .data_physics_hardware import DataPhysicsOutput
             self.hardware = DataPhysicsOutput(self.queue_container.single_process_hardware_queue)
+        elif data_acquisition_parameters.hardware == 3:
+            from .data_physics_dp900_hardware import DataPhysicsDP900Output
+            self.hardware = DataPhysicsDP900Output(data_acquisition_parameters.hardware_file, self.queue_container.single_process_hardware_queue)
         elif data_acquisition_parameters.hardware == 4:
             from .exodus_modal_solution_hardware import ExodusOutput
             self.hardware = ExodusOutput(self.queue_container.single_process_hardware_queue)
@@ -139,6 +151,9 @@ class OutputProcess(AbstractMessageProcess):
         elif data_acquisition_parameters.hardware == 6:
             from .sdynpy_system_virtual_hardware import SDynPySystemOutput
             self.hardware = SDynPySystemOutput(self.queue_container.single_process_hardware_queue)
+        elif data_acquisition_parameters.hardware == 7:
+            from .sdynpy_frf_virtual_hardware import SDynPyFRFOutput
+            self.hardware = SDynPyFRFOutput(self.queue_container.single_process_hardware_queue)
         else:
             raise ValueError('Invalid Hardware or Hardware Not Implemented!')
         # Initialize hardware and create channels
@@ -251,7 +266,14 @@ class OutputProcess(AbstractMessageProcess):
                         self.log('Sending first data for environment {:} to Acquisition for syncing'.format(environment))
                         self.queue_container.input_output_sync_queue.put((environment,write_data[...,::self.output_oversample].copy()))
                         self.environment_first_data[environment] = False
-                self.hardware.write(write_data)
+                        if DEBUG:
+                            np.savez(ENV_OUTPUT.format(environment),
+                                     write_data = write_data)
+                if DEBUG:
+                    num_files = len(glob(FILE_OUTPUT.format('*')))
+                    np.savez(FILE_OUTPUT.format(num_files),
+                             write_data = write_data)
+                self.hardware.write(write_data.copy())
             else:
                 if self.environment_first_data[environment]:
                     self.queue_container.input_output_sync_queue.put((environment,0))

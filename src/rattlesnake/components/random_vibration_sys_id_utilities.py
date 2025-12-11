@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Utilities for the random vibration environment
+Random Vibration utilities
 
 Rattlesnake Vibration Control Software
 Copyright (C) 2021  National Technology & Engineering Solutions of Sandia, LLC
@@ -20,12 +20,26 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-
 import os
 import numpy as np
 from scipy.io import loadmat
+from .utilities import reduce_array_by_coordinate
 
-def load_specification(spec_path,n_freq_lines,df):
+_direction_map = {'X+': 1, 'X': 1, '+X': 1,
+                  'Y+': 2, 'Y': 2, '+Y': 2,
+                  'Z+': 3, 'Z': 3, '+Z': 3,
+                  'RX+': 4, 'RX': 4, '+RX': 4,
+                  'RY+': 5, 'RY': 5, '+RY': 5,
+                  'RZ+': 6, 'RZ': 6, '+RZ': 6,
+                  'X-': -1, '-X': -1,
+                  'Y-': -2, '-Y': -2,
+                  'Z-': -3, '-Z': -3,
+                  'RX-': -4, '-RX': -4,
+                  'RY-': -5, '-RY': -5,
+                  'RZ-': -6, '-RZ': -6,
+                  '': 0}
+
+def load_specification(spec_path,n_freq_lines,df,control_dofs=None):
     """Loads a specification CPSD matrix from a file.
 
     Parameters
@@ -36,6 +50,9 @@ def load_specification(spec_path,n_freq_lines,df):
         The number of frequency lines 
     df : float
         The frequency spacing
+    control_dofs : list | np.ndarray | None
+        1-D array of DOFs to use for control. If coordinates are provided in spec file,
+        the cpsd matrix will be indexed to match the provided control DOFs.
 
     Returns
     -------
@@ -61,6 +78,14 @@ def load_specification(spec_path,n_freq_lines,df):
         warning_lower = data['warning_lower'] if 'warning_lower' in data else None
         abort_upper = data['abort_upper'] if 'abort_upper' in data else None
         abort_lower = data['abort_lower'] if 'abort_lower' in data else None
+        coordinate = data['coordinate'] if 'coordinate' in data else None
+        if coordinate is not None and control_dofs is not None:
+            cpsd = reduce_array_by_coordinate(cpsd, coordinate, control_dofs)
+            limit_coordinate = coordinate.diagonal().T
+            warning_upper = reduce_array_by_coordinate(warning_upper, limit_coordinate, control_dofs) if warning_upper is not None else None
+            warning_lower = reduce_array_by_coordinate(warning_lower, limit_coordinate, control_dofs) if warning_lower is not None else None
+            abort_upper = reduce_array_by_coordinate(abort_upper, limit_coordinate, control_dofs) if abort_upper is not None else None
+            abort_lower = reduce_array_by_coordinate(abort_lower, limit_coordinate, control_dofs) if abort_lower is not None else None
     
     # Create the full CPSD matrix
     frequency_lines = df*np.arange(n_freq_lines)
