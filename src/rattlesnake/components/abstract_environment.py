@@ -22,22 +22,18 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from qtpy import QtWidgets
-from abc import ABC, abstractmethod
-from .utilities import (
-    Channel,
-    VerboseMessageQueue,
-    GlobalCommands,
-    DataAcquisitionParameters,
-)
-from typing import List
-from multiprocessing.queues import Queue
 import multiprocessing as mp
-from datetime import datetime
-import traceback
+import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import os
+import traceback
+from abc import ABC, abstractmethod
+from datetime import datetime
+from multiprocessing.queues import Queue
+
 import netCDF4 as nc4
 import openpyxl
+
+from .utilities import DataAcquisitionParameters, GlobalCommands, VerboseMessageQueue
 
 PICKLE_ON_ERROR = False
 
@@ -60,7 +56,9 @@ class AbstractMetadata(ABC):
     """
 
     @abstractmethod
-    def store_to_netcdf(self, netcdf_group_handle: nc4._netCDF4.Group):
+    def store_to_netcdf(
+        self, netcdf_group_handle: nc4._netCDF4.Group
+    ):  # pylint: disable=c-extension-no-member
         """Store parameters to a group in a netCDF streaming file.
 
         This function stores parameters from the environment into the netCDF
@@ -80,7 +78,6 @@ class AbstractMetadata(ABC):
             environment's metadata is stored.
 
         """
-        pass
 
 
 class AbstractUI(ABC):
@@ -141,12 +138,10 @@ class AbstractUI(ABC):
     @abstractmethod
     def start_control(self):
         """Runs the corresponding environment in the controller"""
-        pass
 
     @abstractmethod
     def stop_control(self):
         """Stops the corresponding environment in the controller"""
-        pass
 
     @abstractmethod
     def collect_environment_definition_parameters(self) -> AbstractMetadata:
@@ -160,12 +155,9 @@ class AbstractUI(ABC):
             the corresponding environment.
 
         """
-        pass
 
     @abstractmethod
-    def initialize_data_acquisition(
-        self, data_acquisition_parameters: DataAcquisitionParameters
-    ):
+    def initialize_data_acquisition(self, data_acquisition_parameters: DataAcquisitionParameters):
         """Update the user interface with data acquisition parameters
 
         This function is called when the Data Acquisition parameters are
@@ -179,7 +171,6 @@ class AbstractUI(ABC):
             channel table and sampling information.
 
         """
-        pass
 
     @abstractmethod
     def initialize_environment(self) -> AbstractMetadata:
@@ -198,10 +189,11 @@ class AbstractUI(ABC):
             defining the environment.
 
         """
-        pass
 
     @abstractmethod
-    def retrieve_metadata(self, netcdf_handle: nc4._netCDF4.Dataset):
+    def retrieve_metadata(
+        self, netcdf_handle: nc4._netCDF4.Dataset
+    ):  # pylint: disable=c-extension-no-member
         """Collects environment parameters from a netCDF dataset.
 
         This function retrieves parameters from a netCDF dataset that was written
@@ -226,7 +218,6 @@ class AbstractUI(ABC):
             a group name with the enviroment's name.
 
         """
-        pass
 
     @abstractmethod
     def update_gui(self, queue_data: tuple):
@@ -245,7 +236,6 @@ class AbstractUI(ABC):
             defines and operation or widget to be modified and ``data`` contains
             the data used to perform the operation.
         """
-        pass
 
     @property
     def log_file_queue(self) -> Queue:
@@ -292,9 +282,7 @@ class AbstractUI(ABC):
             A message that will be written to the log file.
 
         """
-        self.log_file_queue.put(
-            "{:}: {:} -- {:}\n".format(datetime.now(), self.log_name, message)
-        )
+        self.log_file_queue.put(f"{datetime.now()}: {self.log_name} -- {message}\n")
 
     @staticmethod
     @abstractmethod
@@ -321,12 +309,9 @@ class AbstractUI(ABC):
             A reference to an ``openpyxl`` workbook.
 
         """
-        pass
 
     @abstractmethod
-    def set_parameters_from_template(
-        self, worksheet: openpyxl.worksheet.worksheet.Worksheet
-    ):
+    def set_parameters_from_template(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
         """
         Collects parameters for the user interface from the Excel template file
 
@@ -348,7 +333,6 @@ class AbstractUI(ABC):
             user interface.
 
         """
-        pass
 
 
 class AbstractEnvironment(ABC):
@@ -380,15 +364,19 @@ class AbstractEnvironment(ABC):
     interpreted as true."""
 
     def dump_to_dict(self):
-        state = self.__dict__.copy()
-        for key in state:
-            try:
-                pickle.dumps(state[key])
-                print(f"{key} is pickleable")
-            except Exception:
-                print(f"{key} is not pickleable")
-                state[key] = None
-        return state
+        """Dumps the environment to a dictionary to be pickled if an error occurs"""
+        if PICKLE_ON_ERROR:
+            state = self.__dict__.copy()
+            for key, value in state.items():
+                try:
+                    pickle.dumps(value)
+                    print(f"{key} is pickleable")
+                except Exception:  # pylint: disable=broad-exception-caught
+                    print(f"{key} is not pickleable")
+                    state[key] = None
+            return state
+        else:
+            return self.__dict__.copy()
 
     def __init__(
         self,
@@ -399,8 +387,8 @@ class AbstractEnvironment(ABC):
         log_file_queue: Queue,
         data_in_queue: Queue,
         data_out_queue: Queue,
-        acquisition_active: mp.Value,
-        output_active: mp.Value,
+        acquisition_active: mp.sharedctypes.Synchronized,
+        output_active: mp.sharedctypes.Synchronized,
     ):
         self._environment_name = environment_name
         self._command_queue = command_queue
@@ -420,11 +408,13 @@ class AbstractEnvironment(ABC):
 
     @property
     def acquisition_active(self):
+        """Flag to check if acquisition is active"""
         # print('Checking if Acquisition Active: {:}'.format(bool(self._acquisition_active.value)))
         return bool(self._acquisition_active.value)
 
     @property
     def output_active(self):
+        """Flag to check if output is active"""
         # print('Checking if Output Active: {:}'.format(bool(self._output_active.value)))
         return bool(self._output_active.value)
 
@@ -443,12 +433,9 @@ class AbstractEnvironment(ABC):
             A container containing data acquisition parameters, including
             channels active in the environment as well as sampling parameters.
         """
-        pass
 
     @abstractmethod
-    def initialize_environment_test_parameters(
-        self, environment_parameters: AbstractMetadata
-    ):
+    def initialize_environment_test_parameters(self, environment_parameters: AbstractMetadata):
         """
         Initialize the environment parameters specific to this environment
 
@@ -461,8 +448,6 @@ class AbstractEnvironment(ABC):
             A container containing the parameters defining the environment
 
         """
-
-        pass
 
     @abstractmethod
     def stop_environment(self, data):
@@ -480,7 +465,6 @@ class AbstractEnvironment(ABC):
             ``command_map``
 
         """
-        pass
 
     @property
     def environment_command_queue(self) -> VerboseMessageQueue:
@@ -527,9 +511,7 @@ class AbstractEnvironment(ABC):
         message : str :
             A message that will be written to the log file.
         """
-        self.log_file_queue.put(
-            "{:}: {:} -- {:}\n".format(datetime.now(), self.environment_name, message)
-        )
+        self.log_file_queue.put(f"{datetime.now()}: {self.environment_name} -- {message}\n")
 
     @property
     def environment_name(self) -> str:
@@ -571,7 +553,7 @@ class AbstractEnvironment(ABC):
 
 
         """
-        self.log("Starting Process with PID {:}".format(os.getpid()))
+        self.log(f"Starting Process with PID {os.getpid()}")
         while True:
             # Get the message from the queue
             message, data = self.environment_command_queue.get(self.environment_name)
@@ -580,33 +562,29 @@ class AbstractEnvironment(ABC):
                 function = self.command_map[message]
             except KeyError:
                 self.log(
-                    "Undefined Message {:}, acceptable messages are {:}".format(
-                        message, [key for key in self.command_map]
-                    )
+                    f"Undefined Message {message}, acceptable messages are {[key for key in self.command_map]}"
                 )
                 continue
             try:
                 halt_flag = function(data)
-            except Exception:
+            except Exception:  # pylint: disable=broad-exception-caught
                 tb = traceback.format_exc()
-                self.log("ERROR\n\n {:}".format(tb))
+                self.log(f"ERROR\n\n {tb}")
                 self.gui_update_queue.put(
                     (
                         "error",
                         (
-                            "{:} Error".format(self.environment_name),
-                            "!!!UNKNOWN ERROR!!!\n\n{:}".format(tb),
+                            f"{self.environment_name} Error",
+                            f"!!!UNKNOWN ERROR!!!\n\n{tb}",
                         ),
                     )
                 )
                 if PICKLE_ON_ERROR:
                     with open(
-                        f"debug_data/{self.environment_name}_error_state.txt", "w"
+                        f"debug_data/{self.environment_name}_error_state.txt", "w", encoding="utf-8"
                     ) as f:
-                        f.write("{:}".format(tb))
-                    with open(
-                        f"debug_data/{self.environment_name}_error_state.pkl", "wb"
-                    ) as f:
+                        f.write(f"{tb}")
+                    with open(f"debug_data/{self.environment_name}_error_state.pkl", "wb") as f:
                         dic = self.dump_to_dict()
                         pickle.dump(dic, f)
                     print("Done Writing Pickle File from Error...")
@@ -616,7 +594,7 @@ class AbstractEnvironment(ABC):
                 self.log("Stopping Process")
                 break
 
-    def quit(self, data):
+    def quit(self, data):  # pylint: disable=unused-argument
         """Returns True to stop the ``run`` while loop and exit the process
 
         Parameters
@@ -644,8 +622,8 @@ def run_process(
     log_file_queue: Queue,
     data_in_queue: Queue,
     data_out_queue: Queue,
-    acquisition_active: mp.Value,
-    output_active: mp.Value,
+    acquisition_active: mp.sharedctypes.Synchronized,
+    output_active: mp.sharedctypes.Synchronized,
 ):
     """A function called by ``multiprocessing.Process`` to start the environment
 
@@ -678,7 +656,7 @@ def run_process(
         to the excitation devices in the output hardware
 
     """
-    process_class = AbstractEnvironment(
+    process_class = AbstractEnvironment(  # pylint: disable=abstract-class-instantiated
         environment_name,
         input_queue,
         gui_update_queue,
