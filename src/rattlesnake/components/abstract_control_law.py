@@ -27,6 +27,8 @@ import numpy as np
 
 
 class AbstractControlClass(ABC):
+    """Abstract class to define a random vibration control law"""
+
     @abstractmethod
     def __init__(
         self,
@@ -89,7 +91,6 @@ class AbstractControlClass(ABC):
             drive outputs.  Will only be passed if the
             control is switched mid-run.  The default is None.
         """
-        pass
 
     @abstractmethod
     def system_id_update(
@@ -113,7 +114,6 @@ class AbstractControlClass(ABC):
             by the system identification process
 
         """
-        pass
 
     @abstractmethod
     def control(
@@ -151,4 +151,3 @@ class AbstractControlClass(ABC):
             drive outputs that should be played to the shakers.  If None is
             returned instead, it will signal the software to shut down.
         """
-        pass
