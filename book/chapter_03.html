@@ -188,7 +188,8 @@
 <h3 id="31-environment-selection"><a class="header" href="#31-environment-selection">3.1. Environment Selection</a></h3>
 <p>When Rattlesnake is opened, the first GUI window that the user will see allows the user to select the environment that they will run (Figure 3-3.).  Users can select a single environment, or alternatively select a combined environments test (see Section 16 <!--\ref{sec:rattlesnake_environments_combining_environments}--><a href="./chapter_16.html">Combined Environments</a>).  The selection made in this dialog box will determine which tabs are set up in the main GUI.</p>
 <p><img src="figures/environment_selection.png" alt="environment_selection" /></p>
-<p><strong>Figure 3-3. Initial Rattlesnake dialog to select the type of control that will be run.</strong></p>
+<h6 id="figure-3-3-initial-rattlesnake-dialog-to-select-the-type-of-control-that-will-be-run"><a class="header" href="#figure-3-3-initial-rattlesnake-dialog-to-select-the-type-of-control-that-will-be-run">Figure 3-3. Initial Rattlesnake dialog to select the type of control that will be run.</a></h6>
+<!--**Figure 3-3. Initial Rattlesnake dialog to select the type of control that will be run.**-->
 <h3 id="32-global-data-acquisition-settings"><a class="header" href="#32-global-data-acquisition-settings">3.2. Global Data Acquisition Settings</a></h3>
 <p>The <code>Data Acquisition Setup</code> tab of the Rattlesnake GUI specifies the global test parameters that the controller will use.  Parameters are determined to be global when they affect all environments or the controller itself.  The three main sections of this portion of the interface are the Channel Table, Environment Table, and Global Data Acquisition Parameters.  Figure 3-4 shows this.</p>
 <p><img src="figures/data_acquisition_setup.png" alt="data_acquisition_setup" /></p>
@@ -296,7 +297,7 @@
 <li><strong>Timestamp (s)</strong> The time in seconds after the timeline has started that the event will be executed.</li>
 <li><strong>Environment</strong> The environment in which the event will occur.</li>
 <li><strong>Operation</strong> The operation that will occur to the event.  Each environment defines its own set of operations that can be executed through the test profile interface.</li>
-<li><strong>Data</strong> Any additional data that the operation requires.  For example, if a ``Set Test Level'' event is chosen, the Data field should specify the value that the test level is set to.</li>
+<li><strong>Data</strong> Any additional data that the operation requires.  For example, if a "Set Test Level" event is chosen, the Data field should specify the value that the test level is set to.</li>
 </ul>
 <p>Figure 3-9 shows an example of a test profile that ramps up the test level of environment <code>A</code> from -6 to 0 dB, and then subsequently starts environment <code>B</code>.</p>
 <p><img src="figures/test_profile.png" alt="test_profile" /></p>
@@ -354,7 +355,7 @@
 <li><strong><code>time_data</code></strong> The measured data from the test. Type: 64-bit float; Dimensions: <code>response_channels</code> by <code>time_samples</code></li>
 <li><strong><code>time_data_X</code></strong> If manual streaming is used and streaming is started multiple times, each subsequent stream will have the <code>time_data</code> name with an underscore and appended number (e.g. <code>time_data_1</code>, <code>time_data_2</code>)</li>
 <li><strong><code>environment_names</code></strong> The name of each environment. Type: string; Dimensions: <code>num_environments</code></li>
-<li><strong><code>environment_active_channels</code></strong> The channels active in each environment.  1 if active, 0 if not. Type: 8-bit int; Dimensions: <code>response_channels</code> $\times$ <code>num_environments</code></li>
+<li><strong><code>environment_active_channels</code></strong> The channels active in each environment.  1 if active, 0 if not. Type: 8-bit int; Dimensions: <code>response_channels</code> <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="mord">×</span></span></span></span> <code>num_environments</code></li>
 </ul>
 <h4 id="384-channels-group"><a class="header" href="#384-channels-group">3.8.4. Channels Group <!--Subsection 3.8.4--></a></h4>
 <p>The netCDF files from Rattlesnake store all channel information into a separate group called <code>channels</code>.  Inside the <code>channels</code> group, there is a variable for each column of the channel table.  See Section <a href="#channel-table">Channel Table</a> for more complete descriptions of each channel variable.</p>
