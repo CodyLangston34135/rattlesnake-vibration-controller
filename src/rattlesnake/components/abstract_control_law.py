@@ -22,23 +22,26 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from abc import ABC,abstractmethod
+from abc import ABC, abstractmethod
 import numpy as np
+
 
 class AbstractControlClass(ABC):
     @abstractmethod
-    def __init__(self,specification : np.ndarray, # The specification to control to
-                 warning_levels : np.ndarray, # Warning threshold levels
-                 abort_levels : np.ndarray, # Abort levels
-                 extra_control_parameters : str, # Extra parameters specified by the controller
-                 transfer_function : np.ndarray = None,  # Transfer Functions
-                 buzz_cpsd : np.ndarray = None, # Buzz test in case cross terms are to be computed
-                 last_response_cpsd : np.ndarray = None, # Last Response for Error Correction
-                 last_output_cpsd : np.ndarray = None, # Last output for Drive-based control
-                 ):
+    def __init__(
+        self,
+        specification: np.ndarray,  # The specification to control to
+        warning_levels: np.ndarray,  # Warning threshold levels
+        abort_levels: np.ndarray,  # Abort levels
+        extra_control_parameters: str,  # Extra parameters specified by the controller
+        transfer_function: np.ndarray = None,  # Transfer Functions
+        buzz_cpsd: np.ndarray = None,  # Buzz test in case cross terms are to be computed
+        last_response_cpsd: np.ndarray = None,  # Last Response for Error Correction
+        last_output_cpsd: np.ndarray = None,  # Last output for Drive-based control
+    ):
         """
         Initializes the control law
-        
+
         Note that to facilitate the updating of the control law while the test
         is running, the init function will take all control data.  If control
         is not running, these will be Nones.
@@ -77,21 +80,23 @@ class AbstractControlClass(ABC):
             control is switched mid-run.  The default is None.
         last_response_cpsd : np.ndarray, optional
             A complex 3d numpy ndarray with dimensions frequency lines x control
-            channels x control channels representing the last CPSD matrix of 
+            channels x control channels representing the last CPSD matrix of
             control channel responses.  Will only be passed if the
             control is switched mid-run.  The default is None.
         last_output_cpsd : np.ndarray, optional
             A complex 3d numpy ndarray with dimensions frequency lines x drive
-            channels x drive channels representing the last CPSD matrix of 
+            channels x drive channels representing the last CPSD matrix of
             drive outputs.  Will only be passed if the
             control is switched mid-run.  The default is None.
         """
         pass
-    
+
     @abstractmethod
-    def system_id_update(self,transfer_function : np.ndarray, # The transfer function from the system identification
-                         buzz_cpsd : np.ndarray # The CPSD from the system identification
-                         ):
+    def system_id_update(
+        self,
+        transfer_function: np.ndarray,  # The transfer function from the system identification
+        buzz_cpsd: np.ndarray,  # The CPSD from the system identification
+    ):
         """
         Updates the control law with the data from the system identification
 
@@ -109,12 +114,14 @@ class AbstractControlClass(ABC):
 
         """
         pass
-    
+
     @abstractmethod
-    def control(self,transfer_function : np.ndarray, # The last update of the transfer function
-                last_response_cpsd : np.ndarray = None,  # Last Response for Error Correction
-                last_output_cpsd : np.ndarray = None # Last output for Drive-based control
-                ) -> np.ndarray:
+    def control(
+        self,
+        transfer_function: np.ndarray,  # The last update of the transfer function
+        last_response_cpsd: np.ndarray = None,  # Last Response for Error Correction
+        last_output_cpsd: np.ndarray = None,  # Last output for Drive-based control
+    ) -> np.ndarray:
         """
         Perform the control operations
 
@@ -127,12 +134,12 @@ class AbstractControlClass(ABC):
             control response
         last_response_cpsd : np.ndarray
             A complex 3d numpy ndarray with dimensions frequency lines x control
-            channels x control channels representing the last CPSD matrix of 
+            channels x control channels representing the last CPSD matrix of
             control channel responses.  If no previous data exists (first time
             through control) it will be None.  The default is None.
         last_output_cpsd : np.ndarray
             A complex 3d numpy ndarray with dimensions frequency lines x drive
-            channels x drive channels representing the last CPSD matrix of 
+            channels x drive channels representing the last CPSD matrix of
             drive outputs.  If no previous data exists (first time
             through control) it will be None.  The default is None.
 
@@ -140,7 +147,7 @@ class AbstractControlClass(ABC):
         -------
         next_output_cpsd : np.ndarray
             A complex 3d numpy ndarray with dimensions frequency lines x drive
-            channels x drive channels representing the new CPSD matrix of 
+            channels x drive channels representing the new CPSD matrix of
             drive outputs that should be played to the shakers.  If None is
             returned instead, it will signal the software to shut down.
         """

@@ -27,24 +27,25 @@ from ctypes import c_int, c_double, c_char_p, c_float, c_bool
 from enum import Enum
 import numpy as np
 from numpy.ctypeslib import ndpointer
-from time import sleep,time
+from time import sleep, time
 import datetime
 
 DEBUG = False
 
 if DEBUG:
-    __log_file__ = 'DataPhysics_Log.txt'
+    __log_file__ = "DataPhysics_Log.txt"
     _print_message = True
     _write_message = True
     if _write_message:
-        log_file = open(__log_file__,'w')
-    
+        log_file = open(__log_file__, "w")
+
     def debug_fn(message):
         now = datetime.datetime.now()
         if _print_message:
-            print('{:} -- {:}'.format(now,message))
+            print("{:} -- {:}".format(now, message))
         if _write_message:
-            log_file.write('{:} -- {:}\n'.format(now,message))
+            log_file.write("{:} -- {:}\n".format(now, message))
+
 
 class DP900Status(Enum):
     DISCONNECTED = -1
@@ -52,7 +53,8 @@ class DP900Status(Enum):
     INIT = 1
     RUNNING = 2
     STOPPED = 3
-    
+
+
 class DP900Coupling(Enum):
     AC_DIFFERENTIAL = 0
     DC_DIFFERENTIAL = 1
@@ -60,13 +62,14 @@ class DP900Coupling(Enum):
     DC_SINGLE_ENDED = 3
     AC_COUPLED_IEPE = 4
 
+
 class DP900:
     """An interface to the data physics C API for the DP900 hardware"""
-    
-    def __init__(self, library_path : str):
+
+    def __init__(self, library_path: str):
         """
         Connects to the library
-        
+
         Parameters
         ----------
         library_path : str
@@ -79,146 +82,157 @@ class DP900:
         """
         self._api = ctypes.WinDLL(library_path)
         self._valid_input_ranges = np.array([0.1, 0.3, 1.0, 3.0, 10.0, 30.0])
-        self._valid_output_ranges = np.array([2.0,10.0])
+        self._valid_output_ranges = np.array([2.0, 10.0])
         self._num_inputs = 0
         self._num_outputs = 0
-        
+
         # Set up prototypes for the various function calls
         # Define the argument and return types for each function
-        
+
         # DP900_API int      IsHwConnected();
         # self._api.IsHwConnected.argtypes = []
         # self._api.IsHwConnected.restype = c_int
-        
+
         # DP900_API int      Connect(char* testName);
         self._api.Connect.argtypes = [c_char_p]
         self._api.Connect.restype = c_int
-        
+
         # DP900_API int      Disconnect();
         self._api.Disconnect.argtypes = []
         self._api.Disconnect.restype = c_int
-        
+
         # DP900_API int      SetSampleRate(double sampleRate);
         self._api.SetSampleRate.argtypes = [c_double]
         self._api.SetSampleRate.restype = c_int
-        
+
         # DP900_API int      Init();
         self._api.Init.argtypes = []
         self._api.Init.restype = c_int
-        
+
         # DP900_API int      SetInpParams(int* coupling, int* chNum, float* sensitivity, float* range, int numInps);
-        self._api.SetInpParams.argtypes = [ndpointer(c_int), ndpointer(c_int), ndpointer(c_float), ndpointer(c_float), c_int]
+        self._api.SetInpParams.argtypes = [
+            ndpointer(c_int),
+            ndpointer(c_int),
+            ndpointer(c_float),
+            ndpointer(c_float),
+            c_int,
+        ]
         self._api.SetInpParams.restype = c_int
-        
+
         # DP900_API int      SetOutParams(float* sensitivity, float* range, int* chNums,int numOuts);
-        self._api.SetOutParams.argtypes = [ndpointer(c_float), ndpointer(c_float), ndpointer(c_int), c_int]
+        self._api.SetOutParams.argtypes = [
+            ndpointer(c_float),
+            ndpointer(c_float),
+            ndpointer(c_int),
+            c_int,
+        ]
         self._api.SetOutParams.restype = c_int
-        
+
         # DP900_API int      Start();
         self._api.Start.argtypes = []
         self._api.Start.restype = c_int
-        
+
         # DP900_API int      Stop();
         self._api.Stop.argtypes = []
         self._api.Stop.restype = c_int
-        
+
         # DP900_API int      End();
         self._api.End.argtypes = []
         self._api.End.restype = c_int
-        
+
         # DP900_API int      EmergencyEnd();
         self._api.EmergencyEnd.argtypes = []
         self._api.EmergencyEnd.restype = c_int
-        
+
         # DP900_API char*      GetSystemList(bool online);
         self._api.GetSystemList.argtypes = [c_bool]
         self._api.GetSystemList.restype = c_char_p
-        
+
         # DP900_API char*      GetTestList();
         self._api.GetTestList.argtypes = []
         self._api.GetTestList.restype = c_char_p
-        
+
         # DP900_API int       SetSystemList(char* sysList);
         self._api.SetSystemList.argtypes = [c_char_p]
         self._api.SetSystemList.restype = c_int
-        
+
         # DP900_API int       SaveTest(char* testName);
         self._api.SaveTest.argtypes = [c_char_p]
         self._api.SaveTest.restype = c_int
-        
+
         # DP900_API int       DeleteTest(char* testName);
         self._api.DeleteTest.argtypes = [c_char_p]
         self._api.DeleteTest.restype = c_int
-        
+
         # DP900_API int      GetData(float* outputBuf, int dataType, int length);
         self._api.GetData.argtypes = [ndpointer(c_float), c_int, c_int]
         self._api.GetData.restype = c_int
-        
+
         # DP900_API int      GetAvailableDataLength();
         self._api.GetAvailableDataLength.argtypes = []
         self._api.GetAvailableDataLength.restype = c_int
-        
+
         # DP900_API int      GetSpaceInOutBuffer();
         self._api.GetSpaceInOutBuffer.argtypes = []
         self._api.GetSpaceInOutBuffer.restype = c_int
-        
+
         # DP900_API int      GetTotalSamplesInOutputBuffer();
         self._api.GetTotalSamplesInOutputBuffer.argtypes = []
         self._api.GetTotalSamplesInOutputBuffer.restype = c_int
-        
+
         # DP900_API int      PutOutData(float* outputBuf, int length);
         self._api.PutOutData.argtypes = [ndpointer(c_float), c_int]
         self._api.PutOutData.restype = c_int
-        
+
         # DP900_API char*     GetErrorList();
         self._api.GetErrorList.argtypes = []
         self._api.GetErrorList.restype = c_char_p
-        
+
         # DP900_API int      SetCBufSize(int buffSz);
         self._api.SetCBufSize.argtypes = [c_int]
         self._api.SetCBufSize.restype = c_int
-        
+
         # DP900_API int      SetSaveRecording(int bEnabled);
         self._api.SetSaveRecording.argtypes = [c_int]
         self._api.SetSaveRecording.restype = c_int
-        
+
         # DP900_API int      GetNumInpsAvailable();
         self._api.GetNumInpsAvailable.argtypes = []
         self._api.GetNumInpsAvailable.restype = c_int
-        
+
         # DP900_API int      GetNumInpsSelected();
         self._api.GetNumInpsSelected.argtypes = []
         self._api.GetNumInpsSelected.restype = c_int
-        
+
         # DP900_API int      GetNumOutsAvailable();
         self._api.GetNumOutsAvailable.argtypes = []
         self._api.GetNumOutsAvailable.restype = c_int
-        
+
         # DP900_API int      GetNumOutsSelected();
         self._api.GetNumOutsSelected.argtypes = []
         self._api.GetNumOutsSelected.restype = c_int
-        
+
         # DP900_API int      GetCBufSize();
         self._api.GetCBufSize.argtypes = []
         self._api.GetCBufSize.restype = c_int
-        
+
         # DP900_API int      GetInputChannelBNCs(int* bncs);
         self._api.GetInputChannelBNCs.argtypes = [ndpointer(c_int)]
         self._api.GetInputChannelBNCs.restype = c_int
-        
+
         # DP900_API int      GetOutputChannelBNCs(int* bncs);
         self._api.GetOutputChannelBNCs.argtypes = [ndpointer(c_int)]
         self._api.GetOutputChannelBNCs.restype = c_int
-        
+
         # if self.is_hardware_connected():
         #     self.status = DP900Status.IDLE
         # else:
         self.status = DP900Status.DISCONNECTED
-        
+
     @property
     def num_outputs(self):
         return self._num_outputs
-    
+
     @property
     def num_inputs(self):
         return self._num_inputs
@@ -239,8 +253,8 @@ class DP900:
         """
         error = self.get_error_list()
         if DEBUG:
-            debug_fn('DP Error: {:}'.format(error))
-        raise RuntimeError('DP Error: {:}'.format(error))
+            debug_fn("DP Error: {:}".format(error))
+        raise RuntimeError("DP Error: {:}".format(error))
 
     # def is_hw_connected(self):
     #     """
@@ -272,8 +286,8 @@ class DP900:
         """
         # if not self.is_hw_connected():
         if DEBUG:
-            debug_fn('Calling Connect with\n    test_name = {:}'.format(test_name))
-        success = self._api.Connect(test_name.encode('utf-8'))
+            debug_fn("Calling Connect with\n    test_name = {:}".format(test_name))
+        success = self._api.Connect(test_name.encode("utf-8"))
         # else:
         #     raise RuntimeError('Hardware is already connected')
         if not success == 1:
@@ -293,7 +307,7 @@ class DP900:
         """
         # if self.is_hw_connected():
         if DEBUG:
-            debug_fn('Calling Disconnect')
+            debug_fn("Calling Disconnect")
         success = self._api.Disconnect()
         # else:
         #     raise RuntimeError('Hardware is not connected')
@@ -316,7 +330,9 @@ class DP900:
             The sample rate for the test.
         """
         if DEBUG:
-            debug_fn('Calling SetSampleRate with\n    sample_rate = {:}'.format(sample_rate))
+            debug_fn(
+                "Calling SetSampleRate with\n    sample_rate = {:}".format(sample_rate)
+            )
         success = self._api.SetSampleRate(sample_rate)
         if not success == 1:
             self.raise_error()
@@ -333,17 +349,22 @@ class DP900:
         """
         if self.status == DP900Status.IDLE:
             if DEBUG:
-                debug_fn('Calling Init')
+                debug_fn("Calling Init")
             success = self._api.Init()
             if not success == 1:
                 self.raise_error()
             else:
                 self.status = DP900Status.INIT
         else:
-            raise RuntimeError('Hardware status must be IDLE to initialize.  Current status is {:}.'.format(self.status.name))
+            raise RuntimeError(
+                "Hardware status must be IDLE to initialize.  Current status is {:}.".format(
+                    self.status.name
+                )
+            )
 
     def setup_input_parameters(
-        self,coupling_array,channel_array, sensitivity_array, range_array):
+        self, coupling_array, channel_array, sensitivity_array, range_array
+    ):
         """
         Tells the API how many channels will be used; as well as the hardware
         settings for those parameters.
@@ -370,45 +391,68 @@ class DP900:
         """
         # Set up the channel arrays
         if len(coupling_array) != len(sensitivity_array):
-            raise ValueError('Coupling array must have same size as Sensitivity Array')
+            raise ValueError("Coupling array must have same size as Sensitivity Array")
         if len(range_array) != len(sensitivity_array):
-            raise ValueError('Range array must have same size as Sensitivity Array')
+            raise ValueError("Range array must have same size as Sensitivity Array")
         if len(channel_array) != len(sensitivity_array):
-            raise ValueError('Channel array must have same size as Sensitivity Array')
+            raise ValueError("Channel array must have same size as Sensitivity Array")
         self._num_inputs = len(coupling_array)
-        coupling_array = np.array([int(coupling.value) for coupling in coupling_array],dtype=np.int32)
-        sensitivity_array = np.array([float(val) for val in sensitivity_array],dtype=np.float32)
-        channel_array = np.array([int(channel) for channel in channel_array],dtype=np.int32)
+        coupling_array = np.array(
+            [int(coupling.value) for coupling in coupling_array], dtype=np.int32
+        )
+        sensitivity_array = np.array(
+            [float(val) for val in sensitivity_array], dtype=np.float32
+        )
+        channel_array = np.array(
+            [int(channel) for channel in channel_array], dtype=np.int32
+        )
         validated_range_array = []
         for rng in range_array:
-            close_ranges = self._valid_input_ranges[np.isclose(self._valid_input_ranges,rng)]
+            close_ranges = self._valid_input_ranges[
+                np.isclose(self._valid_input_ranges, rng)
+            ]
             if len(close_ranges) == 0:
-                raise ValueError('Range {:} is not valid.  Valid sample rates are {:}'.format(
-                    rng,', '.join(['{:0.1f}'.format(v) for v in self._valid_input_ranges])))
+                raise ValueError(
+                    "Range {:} is not valid.  Valid sample rates are {:}".format(
+                        rng,
+                        ", ".join(
+                            ["{:0.1f}".format(v) for v in self._valid_input_ranges]
+                        ),
+                    )
+                )
             elif len(close_ranges) > 1:
-                raise ValueError("Multiple Ranges are close to the specified rate ({:}, {:}).  This shouldn't happen!".format(
-                    rng,close_ranges))
+                raise ValueError(
+                    "Multiple Ranges are close to the specified rate ({:}, {:}).  This shouldn't happen!".format(
+                        rng, close_ranges
+                    )
+                )
             validated_range_array.append(close_ranges[0])
-        validated_range_array = np.array(validated_range_array,dtype=np.float32)
+        validated_range_array = np.array(validated_range_array, dtype=np.float32)
         # Call the API function
         if DEBUG:
-            debug_fn('Calling SetInpParams with\n    coupling_array = {:}\n    channel_array = {:}\n    sensitivity_array = {:}\n    range_array = {:}\n    num_inputs = {:}'.format(
-                coupling_array.tolist(),channel_array.tolist(),sensitivity_array.tolist(),validated_range_array.tolist(),self._num_inputs))
+            debug_fn(
+                "Calling SetInpParams with\n    coupling_array = {:}\n    channel_array = {:}\n    sensitivity_array = {:}\n    range_array = {:}\n    num_inputs = {:}".format(
+                    coupling_array.tolist(),
+                    channel_array.tolist(),
+                    sensitivity_array.tolist(),
+                    validated_range_array.tolist(),
+                    self._num_inputs,
+                )
+            )
         success = self._api.SetInpParams(
             coupling_array,
             channel_array,
             sensitivity_array,
             validated_range_array,
-            ctypes.c_int(self._num_inputs)
-            )
+            ctypes.c_int(self._num_inputs),
+        )
         if not success == 1:
             self.raise_error()
 
-    def setup_output_parameters(
-            self, sensitivity_array, range_array, channel_array):
+    def setup_output_parameters(self, sensitivity_array, range_array, channel_array):
         """
         Configures the settings for the output channels to use during test.
-        
+
         This must be run before a test is Initialized (Init()).
 
         Parameters
@@ -435,77 +479,105 @@ class DP900:
 
         """
         if len(range_array) != len(sensitivity_array):
-            raise ValueError('Range array must have same size as Sensitivity Array')
+            raise ValueError("Range array must have same size as Sensitivity Array")
         if len(channel_array) != len(sensitivity_array):
-            raise ValueError('Channel number array must have same size as Sensitivity Array')
+            raise ValueError(
+                "Channel number array must have same size as Sensitivity Array"
+            )
         self._num_outputs = len(sensitivity_array)
-        sensitivity_array = np.array([float(val) for val in sensitivity_array],dtype=np.float32)
-        channel_array = np.array([int(val) for val in channel_array],dtype=np.int32)
+        sensitivity_array = np.array(
+            [float(val) for val in sensitivity_array], dtype=np.float32
+        )
+        channel_array = np.array([int(val) for val in channel_array], dtype=np.int32)
         validated_range_array = []
         for rng in range_array:
-            close_ranges = self._valid_output_ranges[np.isclose(self._valid_output_ranges,rng)]
+            close_ranges = self._valid_output_ranges[
+                np.isclose(self._valid_output_ranges, rng)
+            ]
             if len(close_ranges) == 0:
-                raise ValueError('Range {:} is not valid.  Valid sample rates are {:}'.format(
-                    rng,', '.join(['{:0.1f}'.format(v) for v in self._valid_output_ranges])))
+                raise ValueError(
+                    "Range {:} is not valid.  Valid sample rates are {:}".format(
+                        rng,
+                        ", ".join(
+                            ["{:0.1f}".format(v) for v in self._valid_output_ranges]
+                        ),
+                    )
+                )
             elif len(close_ranges) > 1:
-                raise ValueError("Multiple Ranges are close to the specified rate ({:}, {:}).  This shouldn't happen!".format(
-                    rng,close_ranges))
+                raise ValueError(
+                    "Multiple Ranges are close to the specified rate ({:}, {:}).  This shouldn't happen!".format(
+                        rng, close_ranges
+                    )
+                )
             validated_range_array.append(close_ranges[0])
-        validated_range_array = np.array(validated_range_array,dtype=np.float32)
+        validated_range_array = np.array(validated_range_array, dtype=np.float32)
         # Call the API function
         if DEBUG:
-            debug_fn('Calling SetOutParams with \n    sensitivity_array = {:}\n    range_array = {:}\n    channel_array = {:}\n    num_outputs = {:}'.format(
-                sensitivity_array.tolist(), validated_range_array.tolist(), channel_array.tolist(), self._num_outputs))
+            debug_fn(
+                "Calling SetOutParams with \n    sensitivity_array = {:}\n    range_array = {:}\n    channel_array = {:}\n    num_outputs = {:}".format(
+                    sensitivity_array.tolist(),
+                    validated_range_array.tolist(),
+                    channel_array.tolist(),
+                    self._num_outputs,
+                )
+            )
         success = self._api.SetOutParams(
             sensitivity_array,
             validated_range_array,
             channel_array,
-            ctypes.c_int(self._num_outputs)
-            )
+            ctypes.c_int(self._num_outputs),
+        )
         if not success == 1:
             self.raise_error()
-            
+
     def start(self):
         """
         Starts data acquisition (and output through output channel). The test
         must be initialized (init()) before running start().
         """
-        if self.status in [DP900Status.INIT,DP900Status.STOPPED]:
+        if self.status in [DP900Status.INIT, DP900Status.STOPPED]:
             if DEBUG:
-                debug_fn('Calling Start')
+                debug_fn("Calling Start")
             success = self._api.Start()
             if not success == 1:
                 self.raise_error()
             else:
                 self.status = DP900Status.RUNNING
         else:
-            raise RuntimeError('Current hardware status is {:}.  Hardware must be initialized or stopped prior to starting a measurement'.format(self.status.name))
-    
+            raise RuntimeError(
+                "Current hardware status is {:}.  Hardware must be initialized or stopped prior to starting a measurement".format(
+                    self.status.name
+                )
+            )
 
     def stop(self):
         """
         Stops data acquisition (and output through output channel). The test
-        must be started (start()) before running stop(). 
+        must be started (start()) before running stop().
         """
         if self.status == DP900Status.RUNNING:
             if DEBUG:
-                debug_fn('Calling Stop')
+                debug_fn("Calling Stop")
             success = self._api.Stop()
             if not success == 1:
                 self.raise_error()
             else:
                 self.status = DP900Status.STOPPED
         else:
-            raise RuntimeError('Current hardware status is {:}.  Hardware must be running prior to stopping a measurement'.format(self.status.name))
+            raise RuntimeError(
+                "Current hardware status is {:}.  Hardware must be running prior to stopping a measurement".format(
+                    self.status.name
+                )
+            )
 
     def end(self):
         """
         Ends the current test. The test must be stopped (stop()) before running
         Stop().
         """
-        if self.status in [DP900Status.STOPPED,DP900Status.INIT]:
+        if self.status in [DP900Status.STOPPED, DP900Status.INIT]:
             if DEBUG:
-                debug_fn('Calling End')
+                debug_fn("Calling End")
             success = self._api.End()
             if not success == 1:
                 self.raise_error()
@@ -518,13 +590,13 @@ class DP900:
         the API crashes or goes into a bad state; the client code can be
         relaunched and execute this function to Stop/End a test that is in
         progress.
-        
+
         Stops or Ends a test that is currently running, but the API is not
         connected to. This is intended to be used if your code crashes or goes
         into a bad state while the API is running a test.
         """
         if DEBUG:
-            debug_fn('Calling EmergencyEnd')
+            debug_fn("Calling EmergencyEnd")
         success = self._api.EmergencyEnd()
         if not success == 1:
             self.raise_error()
@@ -543,7 +615,7 @@ class DP900:
         ----------
         online : bool
             If True, the returned list will only contain systems that are all
-            online (detected by the 900 API).  
+            online (detected by the 900 API).
 
         Returns
         -------
@@ -553,8 +625,8 @@ class DP900:
 
         """
         if DEBUG:
-            debug_fn('Calling GetSystemList with\n    online = {:}'.format(online))
-        return self._api.GetSystemList(online).decode('utf-8').split(',')
+            debug_fn("Calling GetSystemList with\n    online = {:}".format(online))
+        return self._api.GetSystemList(online).decode("utf-8").split(",")
 
     def get_test_list(self):
         """
@@ -573,8 +645,8 @@ class DP900:
 
         """
         if DEBUG:
-            debug_fn('Calling GetTestList')
-        return self._api.GetTestList().decode('utf-8')
+            debug_fn("Calling GetTestList")
+        return self._api.GetTestList().decode("utf-8")
 
     def set_system_list(self, sys_list):
         """
@@ -583,22 +655,24 @@ class DP900:
         Parameters
         ----------
         sys_list : array of strings
-            A list of the names of systems to include in the test (eg. 
+            A list of the names of systems to include in the test (eg.
             ["dp912-98012","dp901-94019"]).
         """
-        if isinstance(sys_list,str):
+        if isinstance(sys_list, str):
             sys_list = [sys_list]
-        sys_list = ','.join(sys_list)
+        sys_list = ",".join(sys_list)
         if DEBUG:
-            debug_fn('Calling SetSystemList with\n    system_list = {:}'.format(sys_list))
-        success = self._api.SetSystemList(sys_list.encode('utf-8'))
+            debug_fn(
+                "Calling SetSystemList with\n    system_list = {:}".format(sys_list)
+            )
+        success = self._api.SetSystemList(sys_list.encode("utf-8"))
         if not success == 1:
             self.raise_error()
 
     def save_test(self, test_name):
         """
         Saves the test setup for recalling with the connect() command.
-        
+
         The test will be saved in the 900 Series database, and can be recalled
         with the connect() call.
 
@@ -609,8 +683,8 @@ class DP900:
 
         """
         if DEBUG:
-            debug_fn('Calling SaveTest with\n    test_name = {:}'.format(test_name))
-        success = self._api.SaveTest(test_name.encode('utf-8'))
+            debug_fn("Calling SaveTest with\n    test_name = {:}".format(test_name))
+        success = self._api.SaveTest(test_name.encode("utf-8"))
         if not success == 1:
             self.raise_error()
 
@@ -624,12 +698,12 @@ class DP900:
             String containing the name of the test to be deleted
         """
         if DEBUG:
-            debug_fn('Calling DeleteTest with\n    test_name = {:}'.format(test_name))
-        success = self._api.DeleteTest(test_name.encode('utf-8'))
+            debug_fn("Calling DeleteTest with\n    test_name = {:}".format(test_name))
+        success = self._api.DeleteTest(test_name.encode("utf-8"))
         if not success == 1:
             self.raise_error()
 
-    def read_input_data(self,num_samples,newest_data=False):
+    def read_input_data(self, num_samples, newest_data=False):
         """
         Reads data from the data acquisition software
 
@@ -638,7 +712,7 @@ class DP900:
         num_samples : int
             The number of samples to read
         newest_data : TYPE, optional
-            If True, gets the newest data in the buffer, otherwise gets the 
+            If True, gets the newest data in the buffer, otherwise gets the
             oldest data in the buffer. The default is False.
 
         Returns
@@ -647,17 +721,16 @@ class DP900:
             An array of data with shape (num_inputs + num_outputs) x num_samples
 
         """
-        read_array = np.zeros((self._num_inputs+self._num_outputs)*num_samples,dtype=np.float32)
+        read_array = np.zeros(
+            (self._num_inputs + self._num_outputs) * num_samples, dtype=np.float32
+        )
         read_type = ctypes.c_int(0 if newest_data else 1)
         if DEBUG:
-            debug_fn('Calling GetData with\n    length = {:}'.format(num_samples))
-        success = self._api.GetData(
-            read_array,
-            read_type,
-            ctypes.c_int(num_samples))
+            debug_fn("Calling GetData with\n    length = {:}".format(num_samples))
+        success = self._api.GetData(read_array, read_type, ctypes.c_int(num_samples))
         # if not success == 1:
         #     self.raise_error()
-        return read_array.reshape((self._num_inputs+self._num_outputs,num_samples))
+        return read_array.reshape((self._num_inputs + self._num_outputs, num_samples))
 
     def get_available_input_data_samples(self):
         """
@@ -672,10 +745,10 @@ class DP900:
 
         """
         if DEBUG:
-            debug_fn('Calling GetAvailableDataLength')
-        samples =  self._api.GetAvailableDataLength()
+            debug_fn("Calling GetAvailableDataLength")
+        samples = self._api.GetAvailableDataLength()
         if DEBUG:
-            debug_fn('{:} Samples Available'.format(samples))
+            debug_fn("{:} Samples Available".format(samples))
         return samples
 
     def get_space_in_out_buffer(self):
@@ -691,10 +764,10 @@ class DP900:
 
         """
         if DEBUG:
-            debug_fn('Calling GetSpaceInOutBuffer')
+            debug_fn("Calling GetSpaceInOutBuffer")
         samples = self._api.GetSpaceInOutBuffer()
         if DEBUG:
-            debug_fn('    {:} Samples Available in Buffer'.format(samples))
+            debug_fn("    {:} Samples Available in Buffer".format(samples))
         return samples
 
     def get_total_output_samples_on_buffer(self):
@@ -709,13 +782,13 @@ class DP900:
 
         """
         if DEBUG:
-            debug_fn('Calling GetTotalSamplesInOutputBuffer')
+            debug_fn("Calling GetTotalSamplesInOutputBuffer")
         samples = self._api.GetTotalSamplesInOutputBuffer()
         if DEBUG:
-            debug_fn('    {:} Output Samples Available'.format(samples))
+            debug_fn("    {:} Output Samples Available".format(samples))
         return samples
 
-    def write_output_data(self,output_data):
+    def write_output_data(self, output_data):
         """
         The function will fill the output buffer with data specified, which will
         result in it eventually getting output from the system.
@@ -737,29 +810,33 @@ class DP900:
 
         """
         if output_data.ndim != 2:
-            raise ValueError('`output_data` should have 2 dimensions (num_outputs x num_samples)')
+            raise ValueError(
+                "`output_data` should have 2 dimensions (num_outputs x num_samples)"
+            )
         if output_data.shape[0] != self._num_outputs:
-            raise ValueError('`output_data` must have number of rows equal to the number of outputs ({:})'.format(self._num_outputs))
+            raise ValueError(
+                "`output_data` must have number of rows equal to the number of outputs ({:})".format(
+                    self._num_outputs
+                )
+            )
         num_samples = output_data.shape[-1]
-        this_output_data = np.zeros(np.prod(output_data.shape),dtype=np.float32)
+        this_output_data = np.zeros(np.prod(output_data.shape), dtype=np.float32)
         this_output_data[:] = output_data.flatten().astype(np.float32)
         # debug_fn(this_output_data.shape, num_samples, self._num_outputs)
         if DEBUG:
-            debug_fn('Calling PutOutData with\n    length {:}'.format(num_samples))
-        success = self._api.PutOutData(
-            this_output_data,
-            ctypes.c_int(num_samples))
+            debug_fn("Calling PutOutData with\n    length {:}".format(num_samples))
+        success = self._api.PutOutData(this_output_data, ctypes.c_int(num_samples))
         # if not success == 1:
         #     self.raise_error()
 
     def get_raw_error_list(self):
         if DEBUG:
-            debug_fn('Calling GetErrorList')
+            debug_fn("Calling GetErrorList")
         return self._api.GetErrorList()
-    
+
     def get_error_list(self):
         if DEBUG:
-            debug_fn('Calling GetErrorList')
+            debug_fn("Calling GetErrorList")
         data = self._api.GetErrorList()
         return data.decode()
 
@@ -776,7 +853,7 @@ class DP900:
             memory in the PC.
         """
         if DEBUG:
-            debug_fn('Calling SetCBufSize')
+            debug_fn("Calling SetCBufSize")
         success = self._api.SetCBufSize(buff_sz)
         if not success == 1:
             self.raise_error()
@@ -794,12 +871,10 @@ class DP900:
             If True, enables the recording.  If False, disables it.
         """
         if DEBUG:
-            debug_fn('Calling SetSaveRecording')
+            debug_fn("Calling SetSaveRecording")
         success = self._api.SetSaveRecording(enabled)
         if not success == 1:
             self.raise_error()
-
-        
 
     def get_num_inps_available(self):
         """
@@ -814,10 +889,10 @@ class DP900:
 
         """
         if DEBUG:
-            debug_fn('Calling GetNumInpsAvailable')
+            debug_fn("Calling GetNumInpsAvailable")
         inps_available = self._api.GetNumInpsAvailable()
         if DEBUG:
-            debug_fn('    {:} Inputs Available'.format(inps_available))
+            debug_fn("    {:} Inputs Available".format(inps_available))
         return inps_available
 
     def get_num_inps_selected(self):
@@ -831,12 +906,11 @@ class DP900:
 
         """
         if DEBUG:
-            debug_fn('Calling GetNumInpsSelected')
+            debug_fn("Calling GetNumInpsSelected")
         inps_selected = self._api.GetNumInpsSelected()
         if DEBUG:
-            debug_fn('    {:} Inputs Selected'.format(inps_selected))
+            debug_fn("    {:} Inputs Selected".format(inps_selected))
         return inps_selected
-        
 
     def get_num_outs_available(self):
         """
@@ -851,12 +925,11 @@ class DP900:
 
         """
         if DEBUG:
-            debug_fn('Calling GetNumOutsAvailable')
+            debug_fn("Calling GetNumOutsAvailable")
         outs_available = self._api.GetNumOutsAvailable()
         if DEBUG:
-            debug_fn('    {:} Outputs Available'.format(outs_available))
+            debug_fn("    {:} Outputs Available".format(outs_available))
         return outs_available
-        
 
     def get_num_outs_selected(self):
         """
@@ -869,10 +942,10 @@ class DP900:
 
         """
         if DEBUG:
-            debug_fn('Calling GetNumOutsSelected')
+            debug_fn("Calling GetNumOutsSelected")
         outs_selected = self._api.GetNumOutsSelected()
         if DEBUG:
-            debug_fn('    {:} Outputs Selected'.format(outs_selected))
+            debug_fn("    {:} Outputs Selected".format(outs_selected))
         return outs_selected
 
     def get_cbuf_size(self):
@@ -887,17 +960,16 @@ class DP900:
 
         """
         if DEBUG:
-            debug_fn('Calling GetCBufSize')
+            debug_fn("Calling GetCBufSize")
         cbuf_size = self._api.GetCBufSize()
         if DEBUG:
-            debug_fn('    CBuf Size {:}'.format(cbuf_size))
+            debug_fn("    CBuf Size {:}".format(cbuf_size))
         return cbuf_size
-        
 
     def get_input_channel_bncs(self):
         """
         Gets the BNC numbers of available input channels on the currently selected hardware.
-        
+
         Returns
         -------
         bncs : array of int
@@ -905,19 +977,19 @@ class DP900:
 
         """
         num_inputs = self.get_num_inps_available()
-        bncs = np.zeros((num_inputs,),dtype=np.int32)
+        bncs = np.zeros((num_inputs,), dtype=np.int32)
         if DEBUG:
-            debug_fn('Calling GetInputChannelBNCs')
+            debug_fn("Calling GetInputChannelBNCs")
         success = self._api.GetInputChannelBNCs(bncs)
         if not success == 1:
             self.raise_error()
         if DEBUG:
-            debug_fn('    Input BNCs: {:}'.format(bncs.tolist()))
+            debug_fn("    Input BNCs: {:}".format(bncs.tolist()))
         return bncs
 
     def get_output_channel_bncs(self):
         """
-        
+
 
         Parameters
         ----------
@@ -931,20 +1003,20 @@ class DP900:
 
         """
         num_outputs = self.get_num_outs_available()
-        bncs = np.zeros((num_outputs,),dtype=np.int32)
+        bncs = np.zeros((num_outputs,), dtype=np.int32)
         if DEBUG:
-            debug_fn('Calling GetOutputChannelBNCs')
+            debug_fn("Calling GetOutputChannelBNCs")
         success = self._api.GetOutputChannelBNCs(bncs)
         if not success == 1:
             self.raise_error()
         if DEBUG:
-            debug_fn('    Output BNCs: {:}'.format(bncs.tolist()))
+            debug_fn("    Output BNCs: {:}".format(bncs.tolist()))
         return bncs
 
     def __del__(self):
         if DEBUG:
             log_file.close()
-            
+
 
 # Example usage:
 # wrapper = DP900("path_to_your_dll.dll")

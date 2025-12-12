@@ -29,15 +29,16 @@ import multiprocessing.queues as mp_queues
 from enum import Enum
 import time
 from datetime import datetime
-from typing import List,Tuple,Dict
+from typing import List, Tuple, Dict
 import importlib.util
 import os
 import string
 import random
-    
+
 time_reporting_threshold = 0.01
 
-def log_file_task(queue : mp.queues.Queue):
+
+def log_file_task(queue: mp.queues.Queue):
     """A multiprocessing function that collects logging data and writes to file
 
     Parameters
@@ -47,19 +48,20 @@ def log_file_task(queue : mp.queues.Queue):
 
 
     """
-    with open('Rattlesnake.log','w') as f:
+    with open("Rattlesnake.log", "w") as f:
         while True:
             output = queue.get()
-            if output == 'quit':
-                f.write('Program quitting, logging terminated.')
+            if output == "quit":
+                f.write("Program quitting, logging terminated.")
                 break
-            num_newlines = output.count('\n')
+            num_newlines = output.count("\n")
             if num_newlines > 1:
-                output = output.replace('\n','////',num_newlines-1)
+                output = output.replace("\n", "////", num_newlines - 1)
             f.write(output)
             f.flush()
 
-def coherence(cpsd_matrix : np.ndarray,row_column : Tuple[int] = None ):
+
+def coherence(cpsd_matrix: np.ndarray, row_column: Tuple[int] = None):
     """Compute coherence from a CPSD matrix
 
     Parameters
@@ -78,29 +80,56 @@ def coherence(cpsd_matrix : np.ndarray,row_column : Tuple[int] = None ):
         3D array of coherence values where the [i,j,k] entry corresponds to the
         coherence of the CPSD matrix for the ith frequency line, jth row, and
         kth column.
-    
+
     """
     if row_column is None:
-        diag = np.einsum('ijj->ij',cpsd_matrix)
-        return np.real(np.abs(cpsd_matrix)**2/(diag[:,:,np.newaxis]*diag[:,np.newaxis,:]))
+        diag = np.einsum("ijj->ij", cpsd_matrix)
+        return np.real(
+            np.abs(cpsd_matrix) ** 2 / (diag[:, :, np.newaxis] * diag[:, np.newaxis, :])
+        )
     else:
-        row,column = row_column
-        return np.real(np.abs(cpsd_matrix[:,row,column])**2/(cpsd_matrix[:,row,row]*cpsd_matrix[:,column,column]))
+        row, column = row_column
+        return np.real(
+            np.abs(cpsd_matrix[:, row, column]) ** 2
+            / (cpsd_matrix[:, row, row] * cpsd_matrix[:, column, column])
+        )
+
 
 class Channel:
     """Property container for a single channel in the controller."""
-    def __init__(self,node_number,node_direction,comment,
-                 serial_number,triax_dof,sensitivity,unit,make,model,expiration,
-                 physical_device,physical_channel,channel_type,
-                 minimum_value,maximum_value,coupling,excitation_source,excitation,
-                 feedback_device,feedback_channel,warning_level,abort_level):
+
+    def __init__(
+        self,
+        node_number,
+        node_direction,
+        comment,
+        serial_number,
+        triax_dof,
+        sensitivity,
+        unit,
+        make,
+        model,
+        expiration,
+        physical_device,
+        physical_channel,
+        channel_type,
+        minimum_value,
+        maximum_value,
+        coupling,
+        excitation_source,
+        excitation,
+        feedback_device,
+        feedback_channel,
+        warning_level,
+        abort_level,
+    ):
         """Property container for a single channel in the controller.
-        
+
         Parameters
         ----------
         node_number : str :
             Metadata specifying the node number
-        node_direction : str : 
+        node_direction : str :
             Metadata specifying the direction at a node
         comment : str :
             Metadata specifying any additional comments on the channel
@@ -166,25 +195,25 @@ class Channel:
         self.feedback_channel = feedback_channel
         self.warning_level = warning_level
         self.abort_level = abort_level
-    
+
     @classmethod
-    def from_channel_table_row(cls,row : Tuple[str]):
+    def from_channel_table_row(cls, row: Tuple[str]):
         """Creates a Channel object from a row in the channel table
 
         Parameters
         ----------
         row : iterable :
             Iterable of strings from a single row of the channel table
-            
+
 
         Returns
         -------
         channel : Channel
             A channel object containing the data in the given row of the
             channel table.
-        
+
         """
-        new_row = [None if val.strip() == '' else val for val in row]
+        new_row = [None if val.strip() == "" else val for val in row]
         physical_device = new_row[10]
         if physical_device is None:
             return None
@@ -209,19 +238,50 @@ class Channel:
         feedback_channel = new_row[19]
         warning_level = new_row[20]
         abort_level = new_row[21]
-        return cls(node_number,node_direction,comment,
-                 serial_number,triax_dof,sensitivity,unit,make,model,expiration,
-                 physical_device,physical_channel,channel_type,
-                 minimum_value,maximum_value,coupling,excitation_source,excitation,
-                 feedback_device,feedback_channel,warning_level,abort_level)
+        return cls(
+            node_number,
+            node_direction,
+            comment,
+            serial_number,
+            triax_dof,
+            sensitivity,
+            unit,
+            make,
+            model,
+            expiration,
+            physical_device,
+            physical_channel,
+            channel_type,
+            minimum_value,
+            maximum_value,
+            coupling,
+            excitation_source,
+            excitation,
+            feedback_device,
+            feedback_channel,
+            warning_level,
+            abort_level,
+        )
+
 
 class DataAcquisitionParameters:
     """Container to hold the global data acquisition parameters of the controller"""
-    def __init__(self,channel_list : List[Channel],sample_rate,samples_per_read,
-                 samples_per_write,hardware,hardware_file,environment_names,
-                 environment_bools,output_oversample,**extra_parameters):
+
+    def __init__(
+        self,
+        channel_list: List[Channel],
+        sample_rate,
+        samples_per_read,
+        samples_per_write,
+        hardware,
+        hardware_file,
+        environment_names,
+        environment_bools,
+        output_oversample,
+        **extra_parameters,
+    ):
         """Container to hold the global data acquisition parameters of the controller
-        
+
         Parameters
         ----------
         channel_list : List[Channel]:
@@ -240,7 +300,7 @@ class DataAcquisitionParameters:
             and stopping environments, but will be more computationally
             intensive to run.
         hardware : int :
-            Hardware index corresponding to the QCombobox selector on the 
+            Hardware index corresponding to the QCombobox selector on the
             Channel Table tab of the main controller
         hardware_file : str :
             Path to an optional file that completes the hardware specification,
@@ -266,18 +326,19 @@ class DataAcquisitionParameters:
         self.environment_active_channels = environment_bools
         self.output_oversample = output_oversample
         self.extra_parameters = extra_parameters
-    
+
     @property
     def nyquist_frequency(self):
         """Property returning the Nyquist frequency of the data acquisition."""
-        return self.sample_rate/2
-    
+        return self.sample_rate / 2
+
     @property
     def output_sample_rate(self):
         """Property returning the output sample rate"""
-        return self.sample_rate*self.output_oversample
-        
-def error_message_qt(title,message):
+        return self.sample_rate * self.output_oversample
+
+
+def error_message_qt(title, message):
     """Helper class to create an error dialog.
 
     Parameters
@@ -286,13 +347,15 @@ def error_message_qt(title,message):
         Title of the window that the error message will appear in.
     message : str :
         Error message that will be displayed.
-    
-    """
-    QtWidgets.QMessageBox.critical(None,title,message)
 
-class VerboseMessageQueue():
+    """
+    QtWidgets.QMessageBox.critical(None, title, message)
+
+
+class VerboseMessageQueue:
     """A queue class that contains automatic logging information"""
-    def __init__(self,log_queue,queue_name):
+
+    def __init__(self, log_queue, queue_name):
         """
         A queue class that contains automatic logging information
 
@@ -309,14 +372,14 @@ class VerboseMessageQueue():
         self.log_queue = log_queue
         self.queue_name = queue_name
         self.last_put_message = None
-        self.last_put_time = -float('inf')
-        self.last_flush = -float('inf')
+        self.last_put_time = -float("inf")
+        self.last_flush = -float("inf")
         self.time_threshold = 1.0
-    
+
     def generate_message_id(self, size=6, chars=string.ascii_letters + string.digits):
-        return ''.join(random.choice(chars) for _ in range(size))
-    
-    def put(self,task_name,message_data_tuple,*args,**kwargs):
+        return "".join(random.choice(chars) for _ in range(size))
+
+    def put(self, task_name, message_data_tuple, *args, **kwargs):
         """Puts data to a verbose queue
 
         Parameters
@@ -335,16 +398,27 @@ class VerboseMessageQueue():
 
         """
         put_time = time.time()
-        if self.last_put_message != message_data_tuple[0] or put_time - self.last_put_time > self.time_threshold:
+        if (
+            self.last_put_message != message_data_tuple[0]
+            or put_time - self.last_put_time > self.time_threshold
+        ):
             message_id = self.generate_message_id(8)
-            self.log_queue.put('{:}: {:} put {:} ({:}) to {:}\n'.format(datetime.now(),task_name,message_data_tuple[0].name,message_id,self.queue_name))
+            self.log_queue.put(
+                "{:}: {:} put {:} ({:}) to {:}\n".format(
+                    datetime.now(),
+                    task_name,
+                    message_data_tuple[0].name,
+                    message_id,
+                    self.queue_name,
+                )
+            )
             self.last_put_message = message_data_tuple[0]
             self.last_put_time = put_time
         else:
-            message_id = ''
-        self.queue.put((message_id,message_data_tuple),*args,**kwargs)
-        
-    def get(self,task_name,*args,**kwargs):
+            message_id = ""
+        self.queue.put((message_id, message_data_tuple), *args, **kwargs)
+
+    def get(self, task_name, *args, **kwargs):
         """Gets data from a verbose queue
 
         Parameters
@@ -357,71 +431,95 @@ class VerboseMessageQueue():
         **kwargs :
             Additional arguments that will be passed to the mp.queues.Queue.get
             function
-            
+
 
         Returns
         -------
-        message_data_tuple : 
+        message_data_tuple :
             A (message,data) tuple
-        
+
         """
-        (message_id, message_data_tuple) = self.queue.get(*args,**kwargs)
+        (message_id, message_data_tuple) = self.queue.get(*args, **kwargs)
         get_time = datetime.now()
-        if message_id != '':
-            self.log_queue.put('{:}: {:} got {:} ({:}) from {:}\n'.format(get_time,task_name,message_data_tuple[0].name,message_id,self.queue_name))
+        if message_id != "":
+            self.log_queue.put(
+                "{:}: {:} got {:} ({:}) from {:}\n".format(
+                    get_time,
+                    task_name,
+                    message_data_tuple[0].name,
+                    message_id,
+                    self.queue_name,
+                )
+            )
         return message_data_tuple
-    
-    def flush(self,task_name):
+
+    def flush(self, task_name):
         """Flushes a verbose queue getting all data currently in the queue
-        
+
         After execution the queue should be empty barring race conditions.
 
         Parameters
         ----------
         task_name : str :
             Name of the task that is flushing the queue
-            
+
 
         Returns
         -------
         data : iterable of message_data_tuples :
             A list of all (message,data) tuples currently in the queue.
-        
+
         """
         flush_time = time.time()
         if flush_time - self.last_flush > 0.1:
-            self.log_queue.put('{:}: {:} flushed {:}\n'.format(datetime.now(),task_name,self.queue_name))
+            self.log_queue.put(
+                "{:}: {:} flushed {:}\n".format(
+                    datetime.now(), task_name, self.queue_name
+                )
+            )
             self.last_flush = flush_time
         data = []
         while True:
             try:
                 message_id, this_data = self.queue.get(False)
                 data.append(this_data)
-                if message_id != '':
-                    self.log_queue.put('{:}: {:} got {:} ({:}) from {:} during flush\n'.format(datetime.now(),task_name,data[-1][0].name,message_id if message_id != '' else 'put not logged', self.queue_name))
+                if message_id != "":
+                    self.log_queue.put(
+                        "{:}: {:} got {:} ({:}) from {:} during flush\n".format(
+                            datetime.now(),
+                            task_name,
+                            data[-1][0].name,
+                            message_id if message_id != "" else "put not logged",
+                            self.queue_name,
+                        )
+                    )
             except mp.queues.Empty:
                 return data
-            
+
     def empty(self):
         """Return true if the queue is empty."""
         return self.queue.empty()
 
+
 class QueueContainer:
     """A container class for the queues that the controller will manage"""
-    def __init__(self,controller_communication_queue: VerboseMessageQueue,
-                      acquisition_command_queue: VerboseMessageQueue,
-                      output_command_queue: VerboseMessageQueue,
-                      streaming_command_queue: VerboseMessageQueue,
-                      log_file_queue: mp_queues.Queue,
-                      input_output_sync_queue: mp_queues.Queue,
-                      single_process_hardware_queue: mp_queues.Queue,
-                      gui_update_queue: mp_queues.Queue,
-                      environment_command_queues: Dict[str,VerboseMessageQueue],
-                      environment_data_in_queues: Dict[str,mp_queues.Queue],
-                      environment_data_out_queues: Dict[str,mp_queues.Queue]
-                      ):
+
+    def __init__(
+        self,
+        controller_communication_queue: VerboseMessageQueue,
+        acquisition_command_queue: VerboseMessageQueue,
+        output_command_queue: VerboseMessageQueue,
+        streaming_command_queue: VerboseMessageQueue,
+        log_file_queue: mp_queues.Queue,
+        input_output_sync_queue: mp_queues.Queue,
+        single_process_hardware_queue: mp_queues.Queue,
+        gui_update_queue: mp_queues.Queue,
+        environment_command_queues: Dict[str, VerboseMessageQueue],
+        environment_data_in_queues: Dict[str, mp_queues.Queue],
+        environment_data_out_queues: Dict[str, mp_queues.Queue],
+    ):
         """A container class for the queues that the controller will manage.
-        
+
         The controller uses many queues to pass data between the various pieces.
         This class organizes those queues into one common namespace.
 
@@ -475,6 +573,7 @@ class QueueContainer:
         self.environment_data_in_queues = environment_data_in_queues
         self.environment_data_out_queues = environment_data_out_queues
 
+
 def load_csv_matrix(file):
     """Loads a matrix from a CSV file
 
@@ -482,23 +581,24 @@ def load_csv_matrix(file):
     ----------
     file : str :
         Path to the file that will be loaded
-        
+
 
     Returns
     -------
     data : list[list[str]]
         A 2D nested list of strings containing the matrix in the CSV file.
-    
+
     """
-    with open(file,'r') as f:
+    with open(file, "r") as f:
         data = []
         for line in f:
             data.append([])
-            for v in line.split(','):
+            for v in line.split(","):
                 data[-1].append(v.strip())
     return data
 
-def save_csv_matrix(data,file):
+
+def save_csv_matrix(data, file):
     """Saves 2D matrix data to a file
 
     Parameters
@@ -507,13 +607,14 @@ def save_csv_matrix(data,file):
         A 2D nested iterable of strings that will be written to a file
     file : str :
         The path to a file where the data will be written.
-    
+
     """
-    text = '\n'.join([','.join(row) for row in data])
-    with open(file,'w') as f:
+    text = "\n".join([",".join(row) for row in data])
+    with open(file, "w") as f:
         f.write(text)
-        
-def cpsd_to_time_history(cpsd_matrix,sample_rate,df,output_oversample = 1):
+
+
+def cpsd_to_time_history(cpsd_matrix, sample_rate, df, output_oversample=1):
     """Generates a time history realization from a CPSD matrix
 
     Parameters
@@ -526,66 +627,91 @@ def cpsd_to_time_history(cpsd_matrix,sample_rate,df,output_oversample = 1):
         The sample rate of the controller in samples per second
     df : float :
         The frequency spacing of the cpsd matrix
-        
+
 
     Returns
     -------
     output : np.ndarray :
         A numpy array containing the generated signals
-        
+
     Notes
     -----
     Uses the process described in [1]_
-    
+
     .. [1] R. Schultz and G. Nelson, "Input signal synthesis for open-loop
        multiple-input/multiple-output testing," Proceedings of the International
        Modal Analysis Conference, 2019.
-    
+
     """
     # Compute SVD broadcasting over all frequency lines
-    [U,S,Vh] = np.linalg.svd(cpsd_matrix,full_matrices=False)
+    [U, S, Vh] = np.linalg.svd(cpsd_matrix, full_matrices=False)
     # Reform using the sqrt of the S matrix
-    Lsvd = U*np.sqrt(S[:,np.newaxis,:])@Vh
+    Lsvd = U * np.sqrt(S[:, np.newaxis, :]) @ Vh
     # Compute Random Process
-    W = np.sqrt(0.5)*(np.random.randn(*cpsd_matrix.shape[:-1],1)+1j*np.random.randn(*cpsd_matrix.shape[:-1],1))
-    Xv = 1/np.sqrt(df) * Lsvd@W
+    W = np.sqrt(0.5) * (
+        np.random.randn(*cpsd_matrix.shape[:-1], 1)
+        + 1j * np.random.randn(*cpsd_matrix.shape[:-1], 1)
+    )
+    Xv = 1 / np.sqrt(df) * Lsvd @ W
     # Ensure that the signal is real by setting the nyquist and DC component to 0
-    Xv[[0,-1],:,:] = 0
+    Xv[[0, -1], :, :] = 0
     # Compute the IFFT, using the real version makes it so you don't need negative frequencies
-    zero_padding = np.zeros([((output_oversample-1)*(Xv.shape[0]-1))]+list(Xv.shape[1:]),dtype=Xv.dtype)
-    xv = np.fft.irfft(np.concatenate((Xv,zero_padding),axis=0)/np.sqrt(2),axis=0)*output_oversample*sample_rate
-    output = xv[:,:,0].T
+    zero_padding = np.zeros(
+        [(output_oversample - 1) * (Xv.shape[0] - 1)] + list(Xv.shape[1:]),
+        dtype=Xv.dtype,
+    )
+    xv = (
+        np.fft.irfft(np.concatenate((Xv, zero_padding), axis=0) / np.sqrt(2), axis=0)
+        * output_oversample
+        * sample_rate
+    )
+    output = xv[:, :, 0].T
     return output
 
-def reduce_array_by_coordinate(array: np.ndarray, coordinate: np.ndarray, control_coordinate: np.ndarray, excitation_coordinate: np.ndarray = None):
+
+def reduce_array_by_coordinate(
+    array: np.ndarray,
+    coordinate: np.ndarray,
+    control_coordinate: np.ndarray,
+    excitation_coordinate: np.ndarray = None,
+):
     if excitation_coordinate is None:
         excitation_coordinate = control_coordinate.copy()
     # transforming control_coordinate from array of shape (N,) to (N, N, 2) (equivalent to SDynPy outer_product)
     if array.ndim == 3:
-        control_coordinate = np.array(np.meshgrid(control_coordinate, excitation_coordinate)).T
+        control_coordinate = np.array(
+            np.meshgrid(control_coordinate, excitation_coordinate)
+        ).T
     elif array.ndim == 2:
         control_coordinate = np.tile(control_coordinate, (2, 1)).T
     output_shape = control_coordinate.shape[:-1]
     ordinate = np.moveaxis(array, 0, -1)
     flat_array = ordinate.reshape(-1, ordinate.shape[-1])
-    flat_coord = coordinate.flatten().reshape(-1,2)
+    flat_coord = coordinate.flatten().reshape(-1, 2)
     index_array = np.empty(output_shape, dtype=int)
     positive_coordinates = flat_coord.copy()
-    positive_coordinates['direction'] = abs(flat_coord['direction'])
+    positive_coordinates["direction"] = abs(flat_coord["direction"])
     positive_control_coordinates = control_coordinate.copy()
-    positive_control_coordinates['direction'] = abs(control_coordinate['direction'])
+    positive_control_coordinates["direction"] = abs(control_coordinate["direction"])
     for index in np.ndindex(output_shape):
         positive_key = positive_control_coordinates[index]
         try:
             index_array[index] = np.where(
-                np.all(positive_coordinates == positive_key, axis=-1))[0][0]
+                np.all(positive_coordinates == positive_key, axis=-1)
+            )[0][0]
         except IndexError:
-            raise ValueError('Coordinate {:} not found in data array'.format(str(control_coordinate[index])))
+            raise ValueError(
+                "Coordinate {:} not found in data array".format(
+                    str(control_coordinate[index])
+                )
+            )
     return_array = flat_array[index_array]
     return_coord = flat_coord[index_array]
 
     ordinate_multiplication_array = np.prod(
-        np.sign(return_coord['direction']) * np.sign(control_coordinate['direction']), axis=-1)
+        np.sign(return_coord["direction"]) * np.sign(control_coordinate["direction"]),
+        axis=-1,
+    )
     # Set up for broadcasting
     ordinate_multiplication_array = ordinate_multiplication_array[..., np.newaxis]
     # Remove zeros and replace with 1s because we don't flip signs if
@@ -594,66 +720,81 @@ def reduce_array_by_coordinate(array: np.ndarray, coordinate: np.ndarray, contro
     return_array *= ordinate_multiplication_array
     return np.moveaxis(return_array, -1, 0)
 
-def pseudorandom_signal(fmin,fmax,df,sample_rate,rms,nsignals = 1):
-    fnyq = sample_rate/2
-    f = np.arange(fnyq/df+1)*df
-    xfft = np.zeros((nsignals,f.size),dtype='complex128')
+
+def pseudorandom_signal(fmin, fmax, df, sample_rate, rms, nsignals=1):
+    fnyq = sample_rate / 2
+    f = np.arange(fnyq / df + 1) * df
+    xfft = np.zeros((nsignals, f.size), dtype="complex128")
     freq_indices = (f > fmin) & (f <= fmax)
-    xfft[:,freq_indices] = np.random.randn(nsignals,freq_indices.sum()) + 1j*np.random.randn(nsignals,freq_indices.sum())
+    xfft[:, freq_indices] = np.random.randn(
+        nsignals, freq_indices.sum()
+    ) + 1j * np.random.randn(nsignals, freq_indices.sum())
     # Make sure nyquist and dc are real
-    xfft[:,0] = 0 # DC is zero
-    xfft[:,-1] = xfft[:,-1].real
-    x = np.fft.irfft(xfft,axis=-1)
-    x /= rms_time(x,-1,True)/rms
+    xfft[:, 0] = 0  # DC is zero
+    xfft[:, -1] = xfft[:, -1].real
+    x = np.fft.irfft(xfft, axis=-1)
+    x /= rms_time(x, -1, True) / rms
     return x
 
-def flush_queue(queue,timeout=None):
+
+def flush_queue(queue, timeout=None):
     """Flushes a queue by getting all the data currently in it.
 
     Parameters
     ----------
     queue : mp.queues.Queue or VerboseMessageQueue:
         The queue to flush
-        
+
 
     Returns
     -------
     data : iterable
         A list of all data that were in the queue at flush
-    
+
     """
     data = []
     while True:
         try:
-            if isinstance(queue,VerboseMessageQueue):
-                data.append(queue.get('Flush',block = False if timeout is None else True,timeout=timeout))
+            if isinstance(queue, VerboseMessageQueue):
+                data.append(
+                    queue.get(
+                        "Flush",
+                        block=False if timeout is None else True,
+                        timeout=timeout,
+                    )
+                )
             else:
-                data.append(queue.get(block = False if timeout is None else True,timeout=timeout))
+                data.append(
+                    queue.get(block=False if timeout is None else True, timeout=timeout)
+                )
         except mp.queues.Empty:
             return data
-        
+
+
 def db2scale(dB):
-    """ Converts a decibel value to a scale factor
+    """Converts a decibel value to a scale factor
 
     Parameters
     ----------
     dB : float :
         Value in decibels
-        
+
 
     Returns
     -------
     scale : float :
         Value in linear
-    
+
     """
-    return 10**(dB/20)
+    return 10 ** (dB / 20)
 
-power2db = lambda power: 10*np.log10(power)
 
-scale2db = lambda scale: 20*np.log10(scale)
+power2db = lambda power: 10 * np.log10(power)
 
-def rms_time(signal,axis=None,keepdims=False):
+scale2db = lambda scale: 20 * np.log10(scale)
+
+
+def rms_time(signal, axis=None, keepdims=False):
     """Computes RMS over a time signal
 
     Parameters
@@ -669,11 +810,12 @@ def rms_time(signal,axis=None,keepdims=False):
     -------
     rms : numpy scalar or numpy.ndarray
         The root-mean-square value of signal
-    
-    """
-    return np.sqrt(np.mean(signal**2,axis=axis,keepdims=keepdims))
 
-def rms_csd(csd,df):
+    """
+    return np.sqrt(np.mean(signal**2, axis=axis, keepdims=keepdims))
+
+
+def rms_csd(csd, df):
     """Computes RMS of a CPSD matrix
 
     Parameters
@@ -689,104 +831,149 @@ def rms_csd(csd,df):
     -------
     rms : numpy scalar or numpy.ndarray
         The root-mean-square value of signals in the CPSD matrix
-    
-    """
-    return np.sqrt(np.einsum('ijj->j',csd).real*df)
 
-def trac(th_1,th_2=None):
+    """
+    return np.sqrt(np.einsum("ijj->j", csd).real * df)
+
+
+def trac(th_1, th_2=None):
     if th_2 is None:
         th_2 = th_1
     th_1_original_shape = th_1.shape
-    th_1_flattened = th_1.reshape(-1,th_1.shape[-1])
-    th_2_flattened = th_2.reshape(-1,th_2.shape[-1])
-    trac = np.abs(np.sum(th_1_flattened*th_2_flattened.conj(),axis=-1))**2/((np.sum(th_1_flattened*th_1_flattened.conj(),axis=-1))*np.sum(th_2_flattened*th_2_flattened.conj(),axis=-1))
+    th_1_flattened = th_1.reshape(-1, th_1.shape[-1])
+    th_2_flattened = th_2.reshape(-1, th_2.shape[-1])
+    trac = np.abs(np.sum(th_1_flattened * th_2_flattened.conj(), axis=-1)) ** 2 / (
+        (np.sum(th_1_flattened * th_1_flattened.conj(), axis=-1))
+        * np.sum(th_2_flattened * th_2_flattened.conj(), axis=-1)
+    )
     return trac.reshape(th_1_original_shape[:-1])
+
 
 def moving_sum(signal, n):
     return_value = np.cumsum(signal, axis=-1)
-    return_value[...,n:] = return_value[...,n:] - return_value[...,:-n]
-    return return_value[...,n-1:]
+    return_value[..., n:] = return_value[..., n:] - return_value[..., :-n]
+    return return_value[..., n - 1 :]
+
 
 def corr_norm_signal_spec(signal, specification):
-    correlation = sig.correlate(signal,specification,mode='valid').squeeze()
+    correlation = sig.correlate(signal, specification, mode="valid").squeeze()
     norm_specification = np.linalg.norm(specification)
-    norm_signal = np.sqrt(np.sum(moving_sum(signal**2, specification.shape[-1]),axis=0))
-    norm_signal[norm_signal==0] = 1e14
-    return correlation/norm_specification/norm_signal
+    norm_signal = np.sqrt(
+        np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0)
+    )
+    norm_signal[norm_signal == 0] = 1e14
+    return correlation / norm_specification / norm_signal
+
 
 def corr_norm_spec2(signal, specification):
-    correlation = sig.correlate(signal,specification,mode='valid').squeeze()
+    correlation = sig.correlate(signal, specification, mode="valid").squeeze()
     norm_specification = np.linalg.norm(specification)
-    return correlation/norm_specification**2
+    return correlation / norm_specification**2
 
-def norm_ratio(signal,specification):
-    norm_specification = np.linalg.norm(specification)
-    norm_signal = np.sqrt(np.sum(moving_sum(signal**2, specification.shape[-1]),axis=0))
-    return 1-np.abs((norm_signal/norm_specification)**2-1)
 
-def correlation_norm_spec_ratio(signal,specification):
-    correlation = sig.correlate(signal,specification,mode='valid').squeeze()
+def norm_ratio(signal, specification):
     norm_specification = np.linalg.norm(specification)
-    norm_signal = np.sqrt(np.sum(moving_sum(signal**2, specification.shape[-1]),axis=0))
-    return correlation/norm_specification**2 - abs(1-(norm_signal/norm_specification)**2)
+    norm_signal = np.sqrt(
+        np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0)
+    )
+    return 1 - np.abs((norm_signal / norm_specification) ** 2 - 1)
 
-def correlation_norm_signal_spec_ratio(signal,specification):
-    correlation = sig.correlate(signal,specification,mode='valid').squeeze()
+
+def correlation_norm_spec_ratio(signal, specification):
+    correlation = sig.correlate(signal, specification, mode="valid").squeeze()
     norm_specification = np.linalg.norm(specification)
-    norm_signal = np.sqrt(np.sum(moving_sum(signal**2, specification.shape[-1]),axis=0))
+    norm_signal = np.sqrt(
+        np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0)
+    )
+    return correlation / norm_specification**2 - abs(
+        1 - (norm_signal / norm_specification) ** 2
+    )
+
+
+def correlation_norm_signal_spec_ratio(signal, specification):
+    correlation = sig.correlate(signal, specification, mode="valid").squeeze()
+    norm_specification = np.linalg.norm(specification)
+    norm_signal = np.sqrt(
+        np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0)
+    )
     norm_signal_divide = norm_signal.copy()
-    norm_signal_divide[norm_signal_divide==0] = 1e14
-    return correlation/norm_specification/norm_signal_divide - abs(1-(norm_signal/norm_specification)**2)
+    norm_signal_divide[norm_signal_divide == 0] = 1e14
+    return correlation / norm_specification / norm_signal_divide - abs(
+        1 - (norm_signal / norm_specification) ** 2
+    )
 
-def align_signals(measurement_buffer,specification, correlation_threshold = 0.9, perform_subsample = True,
-                  correlation_metric = None):
+
+def align_signals(
+    measurement_buffer,
+    specification,
+    correlation_threshold=0.9,
+    perform_subsample=True,
+    correlation_metric=None,
+):
     if correlation_metric is None:
         maximum_possible_correlation = np.sum(specification**2)
-        correlation = sig.correlate(measurement_buffer,specification,mode='valid').squeeze()/maximum_possible_correlation
+        correlation = (
+            sig.correlate(measurement_buffer, specification, mode="valid").squeeze()
+            / maximum_possible_correlation
+        )
     else:
         correlation = correlation_metric(measurement_buffer, specification)
     delay = np.argmax(correlation)
     found_correlation = correlation[delay]
-    print('Max Correlation: {:}'.format(found_correlation))
+    print("Max Correlation: {:}".format(found_correlation))
     if found_correlation < correlation_threshold:
-        return None,None,None,None
+        return None, None, None, None
     # np.savez('alignment_debug.npz',measurement_buffer=measurement_buffer,
     #          specification = specification,
     #          correlation_threshold = correlation_threshold)
-    specification_portion = measurement_buffer[:,delay:delay+specification.shape[-1]]
-    
+    specification_portion = measurement_buffer[
+        :, delay : delay + specification.shape[-1]
+    ]
+
     if perform_subsample:
         # Compute ffts for subsample alignment
-        spec_fft = np.fft.rfft(specification,axis=-1)
-        spec_portion_fft = np.fft.rfft(specification_portion,axis=-1)
-        
+        spec_fft = np.fft.rfft(specification, axis=-1)
+        spec_portion_fft = np.fft.rfft(specification_portion, axis=-1)
+
         # Compute phase angle differences for subpixel alignment
-        phase_difference = np.angle(spec_portion_fft/spec_fft)
-        phase_slope = phase_difference[...,1:-1] / np.arange(phase_difference.shape[-1])[1:-1]
-        mean_phase_slope = np.median(phase_slope) # Use Median to discard outliers due to potentially noisy phase
-        
-        spec_portion_aligned_fft = spec_portion_fft*np.exp(-1j*mean_phase_slope*np.arange(spec_portion_fft.shape[-1]))
+        phase_difference = np.angle(spec_portion_fft / spec_fft)
+        phase_slope = (
+            phase_difference[..., 1:-1] / np.arange(phase_difference.shape[-1])[1:-1]
+        )
+        mean_phase_slope = np.median(
+            phase_slope
+        )  # Use Median to discard outliers due to potentially noisy phase
+
+        spec_portion_aligned_fft = spec_portion_fft * np.exp(
+            -1j * mean_phase_slope * np.arange(spec_portion_fft.shape[-1])
+        )
         spec_portion_aligned = np.fft.irfft(spec_portion_aligned_fft)
     else:
         spec_portion_aligned = specification_portion.copy()
         mean_phase_slope = None
-    return spec_portion_aligned,delay,mean_phase_slope,found_correlation
+    return spec_portion_aligned, delay, mean_phase_slope, found_correlation
 
-def shift_signal(signal,samples_to_keep,sample_delay,phase_slope):
+
+def shift_signal(signal, samples_to_keep, sample_delay, phase_slope):
     # np.savez('shift_debug.npz',signal=signal,
     #          samples_to_keep = samples_to_keep,
     #          sample_delay = sample_delay,
     #          phase_slope=phase_slope)
-    signal_sample_aligned = signal[...,sample_delay:sample_delay+samples_to_keep]
-    sample_aligned_fft = np.fft.rfft(signal_sample_aligned,axis=-1)
-    subsample_aligned_fft = sample_aligned_fft*np.exp(-1j*phase_slope*np.arange(sample_aligned_fft.shape[-1]))
+    signal_sample_aligned = signal[..., sample_delay : sample_delay + samples_to_keep]
+    sample_aligned_fft = np.fft.rfft(signal_sample_aligned, axis=-1)
+    subsample_aligned_fft = sample_aligned_fft * np.exp(
+        -1j * phase_slope * np.arange(sample_aligned_fft.shape[-1])
+    )
     return np.fft.irfft(subsample_aligned_fft)
 
-def wrap(data, period = 2*np.pi):
-    return (data+period/2) % period - period/2
+
+def wrap(data, period=2 * np.pi):
+    return (data + period / 2) % period - period / 2
+
 
 class GlobalCommands(Enum):
     """An enumeration that lists the commands that the controller can accept"""
+
     QUIT = -1
     INITIALIZE_DATA_ACQUISITION = -2
     INITIALIZE_ENVIRONMENT_PARAMETERS = -3
@@ -805,13 +992,15 @@ class GlobalCommands(Enum):
     UPDATE_METADATA = -16
     UPDATE_INTERACTIVE_CONTROL_PARAMETERS = -17
     SEND_INTERACTIVE_COMMAND = -18
-    
+
+
 class OverlapBuffer:
     """Class to hold a buffer stored in a numpy array.
-    
+
     This buffer supports overlap; when you pull data out, it doesn't remove the
     data from the buffer."""
-    def __init__(self,shape,buffer_axis=-1,starting_value=0,dtype='float64'):
+
+    def __init__(self, shape, buffer_axis=-1, starting_value=0, dtype="float64"):
         """
         Creates a buffer object
 
@@ -827,85 +1016,107 @@ class OverlapBuffer:
         dtype : numpy dtype, optional
             The data type of the buffer array. The default is 'float64'.
         """
-        self._buffer_data = np.empty(shape,dtype)
+        self._buffer_data = np.empty(shape, dtype)
         self._buffer_data[:] = starting_value
-        self._buffer_axis = buffer_axis % self.buffer_data.ndim # Makes a positive index
+        self._buffer_axis = (
+            buffer_axis % self.buffer_data.ndim
+        )  # Makes a positive index
         self._buffer_position = 0
-        
+
     @property
     def buffer_position(self):
         return self._buffer_position
-    
+
     @property
     def buffer_axis(self):
         return self._buffer_axis
-    
+
     @property
     def buffer_data(self):
         return self._buffer_data
-        
-    def add_data_noshift(self,data):
+
+    def add_data_noshift(self, data):
         data = np.array(data)
         # Make sure the data will fit into the buffer
-        data_slice = tuple([
-            slice(-self.buffer_data.shape[self.buffer_axis],None)
-            if i==self.buffer_axis else slice(None)
-            for i in range(self.buffer_data.ndim)])
+        data_slice = tuple(
+            [
+                (
+                    slice(-self.buffer_data.shape[self.buffer_axis], None)
+                    if i == self.buffer_axis
+                    else slice(None)
+                )
+                for i in range(self.buffer_data.ndim)
+            ]
+        )
         data = data[data_slice]
         # Figure out how much we need to roll the buffer
         new_data_size = data.shape[self.buffer_axis]
-        old_data_slice = tuple([
-            slice(new_data_size,None) if i==self.buffer_axis else slice(None)
-            for i in range(self.buffer_data.ndim)])
-        self.buffer_data[:] = np.concatenate((self.buffer_data[old_data_slice],
-                                           data),axis=self.buffer_axis)
-        
-    def add_data(self,data):
+        old_data_slice = tuple(
+            [
+                slice(new_data_size, None) if i == self.buffer_axis else slice(None)
+                for i in range(self.buffer_data.ndim)
+            ]
+        )
+        self.buffer_data[:] = np.concatenate(
+            (self.buffer_data[old_data_slice], data), axis=self.buffer_axis
+        )
+
+    def add_data(self, data):
         self.add_data_noshift(data)
         self._buffer_position += data.shape[self.buffer_axis]
         if self.buffer_position > self.buffer_data.shape[self.buffer_axis]:
             self._buffer_position = self.buffer_data.shape[self.buffer_axis]
-            
-    def get_data_noshift(self,num_samples):
+
+    def get_data_noshift(self, num_samples):
         data_start = -self.buffer_position
         data_end = -self.buffer_position + num_samples
         if data_end > 0:
-            raise ValueError('Too many samples requested {:} > buffer position of {:}'.format(num_samples,self.buffer_position))
-        data_slice = tuple([
-            slice(data_start,None if data_end == 0 else data_end)
-            if i==self.buffer_axis else slice(None)
-            for i in range(self.buffer_data.ndim)])
+            raise ValueError(
+                "Too many samples requested {:} > buffer position of {:}".format(
+                    num_samples, self.buffer_position
+                )
+            )
+        data_slice = tuple(
+            [
+                (
+                    slice(data_start, None if data_end == 0 else data_end)
+                    if i == self.buffer_axis
+                    else slice(None)
+                )
+                for i in range(self.buffer_data.ndim)
+            ]
+        )
         return self.buffer_data[data_slice]
-    
-    def get_data(self,num_samples,buffer_shift = None):
+
+    def get_data(self, num_samples, buffer_shift=None):
         data = self.get_data_noshift(num_samples)
         if buffer_shift is None:
             self.shift_buffer_position(-num_samples)
         else:
             self.shift_buffer_position(buffer_shift)
         return data
-    
-    def shift_buffer_position(self,samples):
+
+    def shift_buffer_position(self, samples):
         self._buffer_position += samples
         if self._buffer_position < 0:
             self._buffer_position = 0
         if self._buffer_position > self.buffer_data.shape[self.buffer_axis]:
             self._buffer_position = self.buffer_data.shape[self.buffer_axis]
-            
-    def set_buffer_position(self,position = 0):
+
+    def set_buffer_position(self, position=0):
         self._buffer_position = position
         if self._buffer_position < 0:
             self._buffer_position = 0
         if self._buffer_position > self.buffer_data.shape[self.buffer_axis]:
             self._buffer_position = self.buffer_data.shape[self.buffer_axis]
-            
-    def __getitem__(self,key):
+
+    def __getitem__(self, key):
         return self.buffer_data[key]
-    
+
     @property
     def shape(self):
         return self.buffer_data.shape
-    
+
 
 def load_python_module(module_path):
     """Loads in the Python file at the specified path as a module at runtime
@@ -914,15 +1125,15 @@ def load_python_module(module_path):
     ----------
     module_path : str:
         Path to the module to be loaded
-        
+
 
     Returns
     -------
     module : module:
         A reference to the loaded module
     """
-    path,file = os.path.split(module_path)
-    file,ext = os.path.splitext(file)
+    path, file = os.path.split(module_path)
+    file, ext = os.path.splitext(file)
     spec = importlib.util.spec_from_file_location(file, module_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

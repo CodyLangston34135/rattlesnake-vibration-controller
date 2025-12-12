@@ -68,9 +68,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from abc import ABC,abstractmethod
+from abc import ABC, abstractmethod
 
 from .utilities import GlobalCommands
+
 
 class AbstractControlLawUI(ABC):
 
@@ -81,72 +82,83 @@ class AbstractControlLawUI(ABC):
         self.window = window
         self.parent_ui_class = parent_ui_class
 
-    def initialize_parameters(self, data_acquisition_parameters, environment_parameters):
+    def initialize_parameters(
+        self, data_acquisition_parameters, environment_parameters
+    ):
         self.data_acquisition_parameters = data_acquisition_parameters
         self.environment_parameters = environment_parameters
-    
-    def send_parameters(self,*args,**kwargs):
+
+    def send_parameters(self, *args, **kwargs):
         self.send_parameters_queue.put(
             self.process_name,
-            (GlobalCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS,
-             self.collect_parameters()))
-        
+            (
+                GlobalCommands.UPDATE_INTERACTIVE_CONTROL_PARAMETERS,
+                self.collect_parameters(),
+            ),
+        )
+
     def run_callback(self, command, *args):
         self.send_parameters_queue.put(
             self.process_name,
-            (GlobalCommands.SEND_INTERACTIVE_COMMAND,
-             (command, args))
+            (GlobalCommands.SEND_INTERACTIVE_COMMAND, (command, args)),
         )
-    
+
     @abstractmethod
     def collect_parameters(self) -> dict:
         pass
-    
+
     @abstractmethod
-    def update_ui_control(self, results : dict):
+    def update_ui_control(self, results: dict):
         pass
-    
+
     @abstractmethod
-    def update_ui_sysid(self,sysid_frf,  # Transfer Functions
-                    sysid_response_noise,  # Noise levels and correlation 
-                    sysid_reference_noise, # from the system identification
-                    sysid_response_cpsd,  # Response levels and correlation
-                    sysid_reference_cpsd, # from the system identification
-                    sysid_coherence, # Coherence from the system identification
-                    ):
+    def update_ui_sysid(
+        self,
+        sysid_frf,  # Transfer Functions
+        sysid_response_noise,  # Noise levels and correlation
+        sysid_reference_noise,  # from the system identification
+        sysid_response_cpsd,  # Response levels and correlation
+        sysid_reference_cpsd,  # from the system identification
+        sysid_coherence,  # Coherence from the system identification
+    ):
         pass
 
     def close(self):
         self.window.close()
 
+
 class AbstractControlLawComputation(ABC):
-    
+
     @abstractmethod
     def __init__(self, environment_name, gui_update_queue):
         self.environment_name = environment_name
         self.gui_update_queue = gui_update_queue
         self._command_map = {}
-    
+
     def send_results(self):
-        self.gui_update_queue.put((self.environment_name,('interactive_control_update',
-                                                           self.collect_results())))
-    
+        self.gui_update_queue.put(
+            (
+                self.environment_name,
+                ("interactive_control_update", self.collect_results()),
+            )
+        )
+
     @abstractmethod
-    def update_parameters(self, parameters : dict):
+    def update_parameters(self, parameters: dict):
         pass
-    
+
     @abstractmethod
     def collect_results(self) -> dict:
         pass
-    
+
     @abstractmethod
     def control(self):
         pass
-    
+
     @abstractmethod
     def system_id_update(self):
         pass
-        
+
     @staticmethod
     @abstractmethod
     def get_UI_class():
@@ -156,15 +168,15 @@ class AbstractControlLawComputation(ABC):
     def command_map(self) -> dict:
         """A dictionary that maps commands received by the ``command_queue`` to functions in the class"""
         return self._command_map
-    
-    def map_command(self,key,function):
+
+    def map_command(self, key, function):
         """A function that maps an instruction to a function in the ``command_map``
 
         Parameters
         ----------
         key :
             The instruction that will be pulled from the ``command_queue``
-            
+
         function :
             A reference to the function that will be called when the ``key``
             message is received.

@@ -6,6 +6,7 @@ Created on Mon Mar 31 10:19:37 2025
 """
 
 import os
+
 # import time
 
 import numpy as np
@@ -16,7 +17,7 @@ from scipy import sparse
 from scipy.signal import lfilter, lfiltic, butter
 import pyqtgraph as pqtg
 from qtpy import QtWidgets, uic
-from qtpy.QtCore import Qt,QLocale
+from qtpy.QtCore import Qt, QLocale
 
 from .environments import (
     sine_sweep_table_ui_path,
@@ -100,7 +101,17 @@ def load_specification(spec_path):
         name = data["name"][()]
     else:
         name = None
-    return frequency, amplitude, phase, sweep_type, sweep_rate, warning, abort, start_time, name
+    return (
+        frequency,
+        amplitude,
+        phase,
+        sweep_type,
+        sweep_rate,
+        warning,
+        abort,
+        start_time,
+        name,
+    )
 
 
 def sine_sweep(
@@ -226,9 +237,13 @@ def sine_sweep(
         if sweep_type.lower() in ["lin", "linear"]:
             sweep_time = +(end_frequency - start_frequency) / sweep_rate
         elif sweep_type.lower() in ["log", "logarithmic"]:
-            sweep_time = np.log(end_frequency / start_frequency) / (sweep_rate * np.log(2))
+            sweep_time = np.log(end_frequency / start_frequency) / (
+                sweep_rate * np.log(2)
+            )
         else:
-            raise ValueError('Sweep type should be one of lin, linear, log, or logarithmic')
+            raise ValueError(
+                "Sweep type should be one of lin, linear, log, or logarithmic"
+            )
         if sweep_time < 0:
             raise ValueError(
                 f"Sweep time for segment index {i} is negative.  Check sweep rate."
@@ -249,9 +264,13 @@ def sine_sweep(
             this_argument = 2 ** (sweep_rate * this_abscissa) * omega_start / (
                 sweep_rate * np.log(2)
             ) - omega_start / (sweep_rate * np.log(2))
-            this_frequency = 2 ** (sweep_rate * this_abscissa) * omega_start / (2 * np.pi)
+            this_frequency = (
+                2 ** (sweep_rate * this_abscissa) * omega_start / (2 * np.pi)
+            )
         else:
-            raise ValueError("Invalid sweep type, should be linear, lin, logarithmic, or log")
+            raise ValueError(
+                "Invalid sweep type, should be linear, lin, logarithmic, or log"
+            )
         # Compute the phase at each time step
         if end_frequency > start_frequency:
             freq_interp = [start_frequency, end_frequency]
@@ -268,11 +287,15 @@ def sine_sweep(
         #     this_phase = np.interp(np.log(this_frequency),np.log(freq_interp),np.log(phase_interp))
         # Compute the amplitude at each time step
         this_amplitudes = np.interp(this_frequency, freq_interp, amp_interp)
-        this_ordinate = this_amplitudes * np.cos(this_argument + this_phases + last_phase)
+        this_ordinate = this_amplitudes * np.cos(
+            this_argument + this_phases + last_phase
+        )
         if i == len(frequencies) - 2:
             last_index = None  # If it's the last segment, go up until the end
         else:
-            last_index = -1  # Otherwise, we remove the last point because the first point of the
+            last_index = (
+                -1
+            )  # Otherwise, we remove the last point because the first point of the
             # next segment will be this value
         arg_over_time.append(this_argument[:last_index] + last_phase)
         last_phase += this_argument[-1]
@@ -303,9 +326,11 @@ def sine_sweep(
 
 class NoWheelSpinBox(QtWidgets.QDoubleSpinBox):
     """A simple class to remove the scroll wheel capability from a spin box"""
+
     def wheelEvent(self, event):
         """Capture the wheel event but ignore it"""
         event.ignore()
+
 
 class AdaptiveNoWheelSpinBox(NoWheelSpinBox):
     localization = QLocale(QLocale.English, QLocale.UnitedStates)
@@ -316,11 +341,12 @@ class AdaptiveNoWheelSpinBox(NoWheelSpinBox):
         self.setDecimals(10)
 
     def textFromValue(self, value):
-        return AdaptiveNoWheelSpinBox.localization.toString(value, 'g', self.decimals())
+        return AdaptiveNoWheelSpinBox.localization.toString(value, "g", self.decimals())
 
 
 class NoWheelComboBox(QtWidgets.QComboBox):
     """A simple class to remove the scroll wheel capability from a combo box"""
+
     def wheelEvent(self, event):
         """Capture the wheel event but ignore it"""
         event.ignore()
@@ -328,6 +354,7 @@ class NoWheelComboBox(QtWidgets.QComboBox):
 
 class SineSweepTable:
     """A class representing a breakpoint table defining a sine sweep"""
+
     def __init__(
         self,
         parent_tabwidget: QtWidgets.QTabWidget,
@@ -374,7 +401,9 @@ class SineSweepTable:
         self.widget.remove_breakpoint_button.clicked.connect(self.remove_breakpoint)
         self.widget.load_breakpoints_button.clicked.connect(self.load_specification)
         self.widget.name_editor.editingFinished.connect(self.update_name)
-        self.widget.start_time_selector.valueChanged.connect(self.update_specification_function)
+        self.widget.start_time_selector.valueChanged.connect(
+            self.update_specification_function
+        )
         self.widget.remove_tone_button.clicked.connect(self.remove_tone)
 
     def add_breakpoint(self):
@@ -450,12 +479,16 @@ class SineSweepTable:
                     item = self.widget.warning_table.item(selected_row, 1 + k + j * 4)
                     if item is None:
                         item = QtWidgets.QTableWidgetItem()
-                        self.widget.warning_table.setItem(selected_row, 1 + k + j * 4, item)
+                        self.widget.warning_table.setItem(
+                            selected_row, 1 + k + j * 4, item
+                        )
                     item.setFlags(item.flags() & ~Qt.ItemIsEditable)
                     item = self.widget.abort_table.item(selected_row, 1 + k + j * 4)
                     if item is None:
                         item = QtWidgets.QTableWidgetItem()
-                        self.widget.abort_table.setItem(selected_row, 1 + k + j * 4, item)
+                        self.widget.abort_table.setItem(
+                            selected_row, 1 + k + j * 4, item
+                        )
                     item.setFlags(item.flags() & ~Qt.ItemIsEditable)
                 spinbox = AdaptiveNoWheelSpinBox()
                 spinbox.setRange(0, 1000000)
@@ -505,15 +538,21 @@ class SineSweepTable:
         if last_row:
             new_last_row_index = self.widget.breakpoint_table.rowCount() - 1
             for column in [1, 2]:
-                widget = self.widget.breakpoint_table.cellWidget(new_last_row_index, column)
+                widget = self.widget.breakpoint_table.cellWidget(
+                    new_last_row_index, column
+                )
                 if widget:
                     # Remove the widget from the cell
-                    self.widget.breakpoint_table.removeCellWidget(new_last_row_index, column)
+                    self.widget.breakpoint_table.removeCellWidget(
+                        new_last_row_index, column
+                    )
                     widget.deleteLater()
                 item = self.widget.breakpoint_table.item(new_last_row_index, column)
                 if item is None:
                     item = QtWidgets.QTableWidgetItem()
-                    self.widget.breakpoint_table.setItem(new_last_row_index, column, item)
+                    self.widget.breakpoint_table.setItem(
+                        new_last_row_index, column, item
+                    )
                 item.setFlags(item.flags() & ~Qt.ItemIsEditable)
             for column in np.arange(2, self.widget.warning_table.columnCount(), 2):
                 for table in [self.widget.warning_table, self.widget.abort_table]:
@@ -542,7 +581,9 @@ class SineSweepTable:
                     item.setFlags(item.flags() & ~Qt.ItemIsEditable)
         self.update_specification_function()
 
-    def load_specification(self, clicked, filename=None):  # pylint: disable=unused-argument
+    def load_specification(
+        self, clicked, filename=None
+    ):  # pylint: disable=unused-argument
         """Loads a breakpoint table using a dialog or the specified filename
 
         Parameters
@@ -556,7 +597,9 @@ class SineSweepTable:
         """
         if filename is None:
             filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                self.widget, "Select Specification File", filter="Numpy or Mat (*.npy *.npz *.mat)"
+                self.widget,
+                "Select Specification File",
+                filter="Numpy or Mat (*.npy *.npz *.mat)",
             )
             if filename == "":
                 return
@@ -788,24 +831,32 @@ class SineSweepTable:
                         if warning_amplitudes is None:
                             spinbox.setValue(0)
                         else:
-                            val = warning_amplitudes[np.unravel_index(k, (2, 2)) + (j, row)]
+                            val = warning_amplitudes[
+                                np.unravel_index(k, (2, 2)) + (j, row)
+                            ]
                             spinbox.setValue(0 if np.isnan(val) else val)
                         spinbox.setKeyboardTracking(False)
                         spinbox.setSpecialValueText("Disabled")
                         spinbox.valueChanged.connect(self.update_specification_function)
-                        self.widget.warning_table.setCellWidget(row, 1 + k + j * 4, spinbox)
+                        self.widget.warning_table.setCellWidget(
+                            row, 1 + k + j * 4, spinbox
+                        )
                         spinbox = AdaptiveNoWheelSpinBox()
                         spinbox.setRange(0, 1000000)
                         spinbox.setSingleStep(1)
                         if abort_amplitudes is None:
                             spinbox.setValue(0)
                         else:
-                            val = abort_amplitudes[np.unravel_index(k, (2, 2)) + (j, row)]
+                            val = abort_amplitudes[
+                                np.unravel_index(k, (2, 2)) + (j, row)
+                            ]
                             spinbox.setValue(0 if np.isnan(val) else val)
                         spinbox.setKeyboardTracking(False)
                         spinbox.setSpecialValueText("Disabled")
                         spinbox.valueChanged.connect(self.update_specification_function)
-                        self.widget.abort_table.setCellWidget(row, 1 + k + j * 4, spinbox)
+                        self.widget.abort_table.setCellWidget(
+                            row, 1 + k + j * 4, spinbox
+                        )
         if sine_name is not None:
             self.widget.name_editor.setText(sine_name)
             self.update_name()
@@ -830,19 +881,25 @@ class SineSweepTable:
             self.widget.breakpoint_table.rowCount(),
         )
         for row, spec_row in enumerate(spec.breakpoint_table):
-            spec_row["frequency"] = self.widget.breakpoint_table.cellWidget(row, 0).value()
+            spec_row["frequency"] = self.widget.breakpoint_table.cellWidget(
+                row, 0
+            ).value()
             if row < len(spec.breakpoint_table) - 1:
                 spec_row["sweep_type"] = self.widget.breakpoint_table.cellWidget(
                     row, 1
                 ).currentIndex()
-                spec_row["sweep_rate"] = self.widget.breakpoint_table.cellWidget(row, 2).value()
+                spec_row["sweep_rate"] = self.widget.breakpoint_table.cellWidget(
+                    row, 2
+                ).value()
             for i in range(num_control):
                 spec_row["amplitude"][i] = self.widget.breakpoint_table.cellWidget(
                     row, 3 + 2 * i
                 ).value()
-                spec_row["phase"][i] = self.widget.breakpoint_table.cellWidget(
-                    row, 4 + 2 * i
-                ).value()*np.pi/180  # Convert degrees to radians for all calculations
+                spec_row["phase"][i] = (
+                    self.widget.breakpoint_table.cellWidget(row, 4 + 2 * i).value()
+                    * np.pi
+                    / 180
+                )  # Convert degrees to radians for all calculations
                 for k in range(4):
                     ind = np.unravel_index(k, (2, 2))
                     if (row == 0 and k in (0, 2)) or (
@@ -851,9 +908,13 @@ class SineSweepTable:
                         spec_row["warning"][ind + (i,)] = np.nan
                         spec_row["abort"][ind + (i,)] = np.nan
                     else:
-                        val = self.widget.warning_table.cellWidget(row, 1 + k + i * 4).value()
+                        val = self.widget.warning_table.cellWidget(
+                            row, 1 + k + i * 4
+                        ).value()
                         spec_row["warning"][ind + (i,)] = np.nan if val == 0 else val
-                        val = self.widget.abort_table.cellWidget(row, 1 + k + i * 4).value()
+                        val = self.widget.abort_table.cellWidget(
+                            row, 1 + k + i * 4
+                        ).value()
                         spec_row["abort"][ind + (i,)] = np.nan if val == 0 else val
         return spec
 
@@ -929,11 +990,17 @@ def digital_tracking_filter_generator(
         if xi_0_filt is None:
             # Set up some fake data to initialize the filter to a good value
             past_ts = np.arange(-filter_order * 2 - 1, 0) * dt
-            past_xs = amplitude_estimate * np.cos(2 * np.pi * fi[0] * past_ts + phase_estimate)
+            past_xs = amplitude_estimate * np.cos(
+                2 * np.pi * fi[0] * past_ts + phase_estimate
+            )
             xi_0 = np.cos(2 * np.pi * fi[0] * past_ts) * past_xs
             xi_90 = -np.sin(2 * np.pi * fi[0] * past_ts) * past_xs
-            xi_0_filt = 0.5 * amplitude_estimate * np.cos(phase_estimate) * np.ones(xi_0.shape)
-            xi_90_filt = 0.5 * amplitude_estimate * np.sin(phase_estimate) * np.ones(xi_90.shape)
+            xi_0_filt = (
+                0.5 * amplitude_estimate * np.cos(phase_estimate) * np.ones(xi_0.shape)
+            )
+            xi_90_filt = (
+                0.5 * amplitude_estimate * np.sin(phase_estimate) * np.ones(xi_90.shape)
+            )
             # if plot_results:
             #     ax[1,0].plot(past_ts,xi_0,'r')
             #     ax[1,0].plot(past_ts,xi_0_filt,'m')
@@ -965,6 +1032,7 @@ def digital_tracking_filter_generator(
 
 class DefaultSineControlLaw:
     """A default control law for the sine environment"""
+
     def __unpickleable_fields__(self):
         """Defines fields that can't be pickled in the case of an error"""
         return ["tracking_filters"]
@@ -1070,7 +1138,9 @@ class DefaultSineControlLaw:
             _,
             _,
         ) = SineSpecification.create_combined_signals(
-            self.specifications, self.sample_rate * self.output_oversample, self.ramp_samples
+            self.specifications,
+            self.sample_rate * self.output_oversample,
+            self.ramp_samples,
         )
         self.specified_phase = self.specified_phase  # Radians
         self.tone_slices = []
@@ -1218,7 +1288,9 @@ class DefaultSineControlLaw:
         # print('Updating System ID Information')
         self.frf_frequency_spacing = sysid_frequency_spacing
         self.frfs = sysid_transfer_functions
-        self.frf_frequencies = self.frf_frequency_spacing * np.arange(self.frfs.shape[0])
+        self.frf_frequencies = self.frf_frequency_spacing * np.arange(
+            self.frfs.shape[0]
+        )
         # print('Inverting FRFs')
         self.frf_pinv = np.linalg.pinv(self.frfs)
         self.max_singular_values = np.max(
@@ -1234,7 +1306,9 @@ class DefaultSineControlLaw:
         # Go through and compute the response amplitudes and phases from each of the sine tones
         # print('Preallocating Amplitude, Phase, FRFs, and Correction Factors')
         if self.harddisk_storage is not None:
-            filename = os.path.join(self.harddisk_storage, "preshaped_drive_amplitudes.mmap")
+            filename = os.path.join(
+                self.harddisk_storage, "preshaped_drive_amplitudes.mmap"
+            )
             shape = (
                 self.specified_frequency.shape[0],
                 self.frfs.shape[-1],
@@ -1243,14 +1317,20 @@ class DefaultSineControlLaw:
             self.preshaped_drive_amplitudes = np.memmap(
                 filename, dtype=float, shape=shape, mode="w+"
             )
-            filename = os.path.join(self.harddisk_storage, "preshaped_drive_phases.mmap")
+            filename = os.path.join(
+                self.harddisk_storage, "preshaped_drive_phases.mmap"
+            )
             shape = (
                 self.specified_frequency.shape[0],
                 self.frfs.shape[-1],
                 self.specified_frequency.shape[-1],
             )
-            self.preshaped_drive_phases = np.memmap(filename, dtype=float, shape=shape, mode="w+")
-            filename = os.path.join(self.harddisk_storage, "largest_correction_factors.mmap")
+            self.preshaped_drive_phases = np.memmap(
+                filename, dtype=float, shape=shape, mode="w+"
+            )
+            filename = os.path.join(
+                self.harddisk_storage, "largest_correction_factors.mmap"
+            )
             shape = self.specified_frequency.shape
             self.largest_correction_factors = np.memmap(
                 filename, dtype=float, shape=shape, mode="w+"
@@ -1260,7 +1340,9 @@ class DefaultSineControlLaw:
                 self.specified_frequency.shape[0],
                 self.specified_frequency.shape[-1],
             ) + self.frf_pinv.shape[-2:]
-            self.interpolated_frf_pinv = np.memmap(filename, dtype="c16", shape=shape, mode="w+")
+            self.interpolated_frf_pinv = np.memmap(
+                filename, dtype="c16", shape=shape, mode="w+"
+            )
         else:
             self.preshaped_drive_amplitudes = np.zeros(
                 (
@@ -1307,15 +1389,24 @@ class DefaultSineControlLaw:
                 )
             # print('Computing Largest Correction Factors')
             self.largest_correction_factors[tone_index, control_slice] = (
-                1 / np.interp(control_freq, self.frf_frequencies, self.max_singular_values) ** 2
+                1
+                / np.interp(
+                    control_freq, self.frf_frequencies, self.max_singular_values
+                )
+                ** 2
             )
             # print('Computing Complex Response')
-            complex_response = np.moveaxis(control_amp * np.exp(1j * control_phs), -1, 0)[  # Radians
+            complex_response = np.moveaxis(
+                control_amp * np.exp(1j * control_phs), -1, 0
+            )[  # Radians
                 ..., np.newaxis
             ]
             # print('Computing Complex Excitation')
             complex_excitation = np.moveaxis(
-                (self.interpolated_frf_pinv[tone_index, control_slice] @ complex_response)[..., 0],
+                (
+                    self.interpolated_frf_pinv[tone_index, control_slice]
+                    @ complex_response
+                )[..., 0],
                 0,
                 1,
             )
@@ -1337,7 +1428,8 @@ class DefaultSineControlLaw:
             ] = -self.maximum_drive_voltage
         # print('Computing Excitation Signal')
         self.preshaped_drive_signals = self.preshaped_drive_amplitudes * np.cos(
-            self.specified_argument[:, np.newaxis, :] + self.preshaped_drive_phases  # Radians
+            self.specified_argument[:, np.newaxis, :]
+            + self.preshaped_drive_phases  # Radians
         )
 
         if self.harddisk_storage is not None:
@@ -1361,7 +1453,7 @@ class DefaultSineControlLaw:
             self.specified_frequency,
             self.specified_argument,
             self.preshaped_drive_amplitudes,
-            self.preshaped_drive_phases  # Radians for return value
+            self.preshaped_drive_phases,  # Radians for return value
         )
 
     def get_control_targets(self, block_start, block_end):
@@ -1390,10 +1482,14 @@ class DefaultSineControlLaw:
         ramp_up_end = block_end - self.ramp_samples
         if ramp_up_end >= 0:
             ramp_up_end = self.ramp_samples
-        ramp_down_start = block_start - self.end_index + self.start_index + self.ramp_samples
+        ramp_down_start = (
+            block_start - self.end_index + self.start_index + self.ramp_samples
+        )
         if ramp_down_start < 0:
             ramp_down_start = 0
-        ramp_down_end = block_end - self.end_index + self.start_index + self.ramp_samples
+        ramp_down_end = (
+            block_end - self.end_index + self.start_index + self.ramp_samples
+        )
         if ramp_down_end < 0:
             ramp_down_end = 0
         middle_start = block_start
@@ -1421,11 +1517,17 @@ class DefaultSineControlLaw:
         phases = self.specified_phase[  # Radians
             self.control_tones,
             ...,
-            self.start_index + block_start : self.start_index + block_start + amplitudes.shape[-1],
+            self.start_index
+            + block_start : self.start_index
+            + block_start
+            + amplitudes.shape[-1],
         ]
         arguments = self.specified_argument[
             self.control_tones,
-            self.start_index + block_start : self.start_index + block_start + amplitudes.shape[-1],
+            self.start_index
+            + block_start : self.start_index
+            + block_start
+            + amplitudes.shape[-1],
         ]
         return amplitudes, phases, arguments  # Radians
 
@@ -1455,10 +1557,14 @@ class DefaultSineControlLaw:
         ramp_up_end = block_end - self.ramp_samples
         if ramp_up_end >= 0:
             ramp_up_end = self.ramp_samples
-        ramp_down_start = block_start - self.end_index + self.start_index + self.ramp_samples
+        ramp_down_start = (
+            block_start - self.end_index + self.start_index + self.ramp_samples
+        )
         if ramp_down_start < 0:
             ramp_down_start = 0
-        ramp_down_end = block_end - self.end_index + self.start_index + self.ramp_samples
+        ramp_down_end = (
+            block_end - self.end_index + self.start_index + self.ramp_samples
+        )
         if ramp_down_end < 0:
             ramp_down_end = 0
         middle_start = block_start
@@ -1486,11 +1592,17 @@ class DefaultSineControlLaw:
         phases = self.preshaped_drive_phases[  # Radians
             self.control_tones,
             ...,
-            self.start_index + block_start : self.start_index + block_start + amplitudes.shape[-1],
+            self.start_index
+            + block_start : self.start_index
+            + block_start
+            + amplitudes.shape[-1],
         ]
         arguments = self.specified_argument[
             self.control_tones,
-            self.start_index + block_start : self.start_index + block_start + amplitudes.shape[-1],
+            self.start_index
+            + block_start : self.start_index
+            + block_start
+            + amplitudes.shape[-1],
         ]
         return amplitudes, phases, arguments  # Phase in Radians
 
@@ -1522,23 +1634,32 @@ class DefaultSineControlLaw:
         # about
         self.control_tones = control_tones
         self.start_index = start_index
-        self.end_index = self.preshaped_drive_signals.shape[-1] if end_index is None else end_index
+        self.end_index = (
+            self.preshaped_drive_signals.shape[-1] if end_index is None else end_index
+        )
 
         if DEBUG:
             print("Writing Sine Debug Pickle")
-            with open("debug_data/sine_control_law_initialize_control_debug.pkl", "wb") as f:
+            with open(
+                "debug_data/sine_control_law_initialize_control_debug.pkl", "wb"
+            ) as f:
                 pickle.dump(self, f)
             print("Done!")
 
         # Set up the analysis and write_indices
         self.control_analysis_index = 0
-        self.control_write_index = self.ramp_samples + self.buffer_blocks * self.block_size
+        self.control_write_index = (
+            self.ramp_samples + self.buffer_blocks * self.block_size
+        )
 
         # Set up the ramp-ups and ramp downs for the excitation signal
         self.control_ramp_up = (
             np.linspace(0, 1, self.ramp_samples)
             * self.preshaped_drive_amplitudes[
-                self.control_tones, ..., self.start_index + self.ramp_samples, np.newaxis
+                self.control_tones,
+                ...,
+                self.start_index + self.ramp_samples,
+                np.newaxis,
             ]
         )
         self.control_ramp_down = (
@@ -1550,7 +1671,10 @@ class DefaultSineControlLaw:
         self.target_ramp_up = (
             np.linspace(0, 1, self.ramp_samples)
             * self.specified_amplitude[
-                self.control_tones, ..., self.start_index + self.ramp_samples, np.newaxis
+                self.control_tones,
+                ...,
+                self.start_index + self.ramp_samples,
+                np.newaxis,
             ]
         )
         self.target_ramp_down = (
@@ -1560,19 +1684,29 @@ class DefaultSineControlLaw:
             ]
         )
 
-        starting_drive_amplitudes, starting_drive_phases, starting_arguments = (  # Radians
-            self.get_control_preshaped_excitations(0, self.control_write_index)   # Radians
-        )
+        (
+            starting_drive_amplitudes,
+            starting_drive_phases,
+            starting_arguments,
+        ) = self.get_control_preshaped_excitations(  # Radians
+            0, self.control_write_index
+        )  # Radians
 
-        complex_excitation = starting_drive_amplitudes * (np.exp(1j * starting_drive_phases))  # Radians
+        complex_excitation = starting_drive_amplitudes * (
+            np.exp(1j * starting_drive_phases)
+        )  # Radians
         excitation_signals = np.sum(
             starting_drive_amplitudes
-            * np.cos(starting_drive_phases + starting_arguments[:, np.newaxis, :]),  # Radians
+            * np.cos(
+                starting_drive_phases + starting_arguments[:, np.newaxis, :]
+            ),  # Radians
             axis=0,
         )
 
         # Set up control parameters
-        self.control_drive_correction = np.zeros(starting_drive_amplitudes.shape[:2], dtype=complex)
+        self.control_drive_correction = np.zeros(
+            starting_drive_amplitudes.shape[:2], dtype=complex
+        )
 
         # Set up the amplitude and phase tracking
         self.control_response_amplitudes = []
@@ -1594,8 +1728,12 @@ class DefaultSineControlLaw:
         return excitation_signals
 
     def update_control(
-        self, control_signals, control_amplitudes, control_phases,  # Radians
-        control_frequencies, time_delay  # pylint: disable=unused-argument
+        self,
+        control_signals,
+        control_amplitudes,
+        control_phases,  # Radians
+        control_frequencies,
+        time_delay,  # pylint: disable=unused-argument
     ):
         """
         Updates the control parameters based on previous responses
@@ -1632,14 +1770,17 @@ class DefaultSineControlLaw:
 
         if DEBUG:
             print("Writing Sine Debug Pickle")
-            with open("debug_data/sine_control_law_update_control_debug.pkl", "wb") as f:
+            with open(
+                "debug_data/sine_control_law_update_control_debug.pkl", "wb"
+            ) as f:
                 pickle.dump(self, f)
             print("Done!")
 
         # Find the equivalent block in the signal
         block_start_index = self.control_analysis_index
         block_end_index = (
-            control_signals.shape[-1] * self.output_oversample + self.control_analysis_index
+            control_signals.shape[-1] * self.output_oversample
+            + self.control_analysis_index
         )
         if self.convergence_factor != 0:
             reduction_slice = slice(
@@ -1651,15 +1792,19 @@ class DefaultSineControlLaw:
             target_response_amplitudes, target_response_phases, _ = (  # Radians
                 self.get_control_targets(block_start_index, block_end_index)
             )
-            complex_targets = target_response_amplitudes[..., :: self.output_oversample] * np.exp(
-                1j * target_response_phases[..., :: self.output_oversample]
-            )
-            complex_achieved = control_amplitudes * np.exp(1j * control_phases)  # Radians
+            complex_targets = target_response_amplitudes[
+                ..., :: self.output_oversample
+            ] * np.exp(1j * target_response_phases[..., :: self.output_oversample])
+            complex_achieved = control_amplitudes * np.exp(
+                1j * control_phases
+            )  # Radians
             complex_error = (
                 complex_targets - complex_achieved
             )  # Number of Tones x Num Responses x Num Freqs
             block_correction_factor = self.convergence_factor * np.min(
-                self.largest_correction_factors[self.control_tones, ..., reduction_slice],
+                self.largest_correction_factors[
+                    self.control_tones, ..., reduction_slice
+                ],
                 axis=-1,
                 keepdims=True,
             )  # Num Tones x 1
@@ -1697,7 +1842,9 @@ class DefaultSineControlLaw:
         """
         if DEBUG:
             print("Writing Sine Debug Pickle")
-            with open("debug_data/sine_control_law_generate_signal_debug.pkl", "wb") as f:
+            with open(
+                "debug_data/sine_control_law_generate_signal_debug.pkl", "wb"
+            ) as f:
                 pickle.dump(self, f)
             print("Done!")
 
@@ -1958,7 +2105,9 @@ def vold_kalman_filter(
                 col_indices[:, off_diagonal_index] = np.arange(
                     col_index * n_samples, (col_index + 1) * n_samples
                 )
-                CHC[:, off_diagonal_index] = phasor[row_index].conj() * phasor[col_index]
+                CHC[:, off_diagonal_index] = (
+                    phasor[row_index].conj() * phasor[col_index]
+                )
                 off_diagonal_index += 1
         # We set up the variables as multidimensional so we could store them easier,
         # but now we need to flatten them to put them into the sparse matrix.
@@ -2103,7 +2252,10 @@ def vold_kalman_filter_generator(
     start_window = window[:overlap_samples]
     end_window = window[overlap_samples:]
     buffer = CircularBufferWithOverlap(
-        buffer_size_factor * block_size, block_size, overlap_samples, data_shape=(num_orders + 1,)
+        buffer_size_factor * block_size,
+        block_size,
+        overlap_samples,
+        data_shape=(num_orders + 1,),
     )
     first_output = True
     last_signal = False
@@ -2148,11 +2300,13 @@ def vold_kalman_filter_generator(
             # If necessary, do the overlap
             if previous_envelope is not None:
                 vk_envelope[..., :overlap_samples] = (
-                    vk_envelope[..., :overlap_samples] + previous_envelope[..., -overlap_samples:]
+                    vk_envelope[..., :overlap_samples]
+                    + previous_envelope[..., -overlap_samples:]
                 )
             if not last_signal:
                 reconstructed_signals = np.real(
-                    vk_envelope[..., :-overlap_samples] * vk_phasor[..., :-overlap_samples]
+                    vk_envelope[..., :-overlap_samples]
+                    * vk_phasor[..., :-overlap_samples]
                 )
                 reconstructed_amplitudes = np.abs(vk_envelope[..., :-overlap_samples])
                 reconstructed_phases = np.angle(vk_envelope[..., :-overlap_samples])
@@ -2173,7 +2327,10 @@ class CircularBufferWithOverlap:
     A Circular buffer that allows data to be added and removed
     from the buffer with overlap
     """
-    def __init__(self, buffer_size, block_size, overlap_size, dtype="float", data_shape=()):
+
+    def __init__(
+        self, buffer_size, block_size, overlap_size, dtype="float", data_shape=()
+    ):
         """Initialize the circular buffer
 
         Parameters
@@ -2231,7 +2388,9 @@ class CircularBufferWithOverlap:
         """
         # Compute the end index for the write operation
         indices = (
-            np.arange(self.write_index, self.write_index + data.shape[-1] + self.overlap_size)
+            np.arange(
+                self.write_index, self.write_index + data.shape[-1] + self.overlap_size
+            )
             % self.buffer_size
         )
 
@@ -2240,8 +2399,12 @@ class CircularBufferWithOverlap:
                 "Overwriting data on buffer that has not been read.  Read data before writing again."
             )
 
-        self.buffer[..., indices[: None if self.overlap_size == 0 else -self.overlap_size]] = data
-        self.buffer_read[indices[: None if self.overlap_size == 0 else -self.overlap_size]] = False
+        self.buffer[
+            ..., indices[: None if self.overlap_size == 0 else -self.overlap_size]
+        ] = data
+        self.buffer_read[
+            indices[: None if self.overlap_size == 0 else -self.overlap_size]
+        ] = False
 
         # Update the write index
         self.write_index = (self.write_index + data.shape[-1]) % self.buffer_size
@@ -2275,7 +2438,9 @@ class CircularBufferWithOverlap:
 
         """
         indices = (
-            np.arange(self.read_index - self.overlap_size, self.read_index + self.block_size)
+            np.arange(
+                self.read_index - self.overlap_size, self.read_index + self.block_size
+            )
             % self.buffer_size
         )
         if read_remaining:
@@ -2285,12 +2450,16 @@ class CircularBufferWithOverlap:
             indices = np.concatenate(
                 (
                     indices[: self.overlap_size],
-                    indices[self.overlap_size :][~self.buffer_read[indices[self.overlap_size :]]],
+                    indices[self.overlap_size :][
+                        ~self.buffer_read[indices[self.overlap_size :]]
+                    ],
                 )
             )
             # print(f"{indices.copy()=}")
         if np.any(self.buffer_read[indices[self.overlap_size :]]):
-            raise ValueError("Data would be read multiple times.  Write data before reading again.")
+            raise ValueError(
+                "Data would be read multiple times.  Write data before reading again."
+            )
         return_data = self.buffer[..., indices]
         self.buffer_read[indices[self.overlap_size :]] = True
         self.read_index = (
@@ -2306,6 +2475,7 @@ class CircularBufferWithOverlap:
 
 class SineSpecification:
     """A class representing a sine specification"""
+
     def __init__(
         self,
         name,
@@ -2382,11 +2552,15 @@ class SineSpecification:
             ("abort", "f8", (2, 2, num_control)),
         ]
         if frequency_breakpoints is None and num_breakpoints is None:
-            raise ValueError("Must specify either number of breakpoints or breakpoint frequencies.")
+            raise ValueError(
+                "Must specify either number of breakpoints or breakpoint frequencies."
+            )
         if frequency_breakpoints is None:
             self.breakpoint_table = np.zeros(num_breakpoints, dtype=spec_dtype)
         else:
-            self.breakpoint_table = np.zeros(frequency_breakpoints.shape[0], dtype=spec_dtype)
+            self.breakpoint_table = np.zeros(
+                frequency_breakpoints.shape[0], dtype=spec_dtype
+            )
             self.breakpoint_table["frequency"] = frequency_breakpoints
         if amplitude_breakpoints is not None:
             self.breakpoint_table["amplitude"] = amplitude_breakpoints
@@ -2487,21 +2661,26 @@ class SineSpecification:
             amplitude = []
             phase = []
             for control_index in range(self.breakpoint_table["amplitude"].shape[-1]):
-                this_ordinate, argument, frequency, this_amplitude, this_phase, abscissa = (
-                    sine_sweep(
-                        1 / sample_rate,
-                        self.breakpoint_table["frequency"],
-                        sweep_rates,
-                        sweep_types,
-                        self.breakpoint_table["amplitude"][:, control_index],
-                        self.breakpoint_table["phase"][:, control_index],
-                        return_frequency=True,
-                        return_argument=True,
-                        return_amplitude=True,
-                        return_phase=True,
-                        return_abscissa=True,
-                        only_breakpoints=only_breakpoints,
-                    )
+                (
+                    this_ordinate,
+                    argument,
+                    frequency,
+                    this_amplitude,
+                    this_phase,
+                    abscissa,
+                ) = sine_sweep(
+                    1 / sample_rate,
+                    self.breakpoint_table["frequency"],
+                    sweep_rates,
+                    sweep_types,
+                    self.breakpoint_table["amplitude"][:, control_index],
+                    self.breakpoint_table["phase"][:, control_index],
+                    return_frequency=True,
+                    return_argument=True,
+                    return_amplitude=True,
+                    return_phase=True,
+                    return_abscissa=True,
+                    only_breakpoints=only_breakpoints,
                 )
                 ordinate.append(this_ordinate)
                 amplitude.append(this_amplitude)
@@ -2536,7 +2715,9 @@ class SineSpecification:
             begin_arguments = 2 * np.pi * frequency[0] * begin_abscissa + argument[0]
             begin_frequencies = np.ones(ramp_samples + delay_samples) * frequency[0]
             begin_amplitudes = (
-                np.concatenate((np.zeros(delay_samples), np.linspace(0, 1, ramp_samples)))
+                np.concatenate(
+                    (np.zeros(delay_samples), np.linspace(0, 1, ramp_samples))
+                )
                 * amplitude[..., [0]]
             )
             begin_phases = np.ones(ramp_samples + delay_samples) * phase[..., [0]]
@@ -2564,7 +2745,16 @@ class SineSpecification:
             phase = np.concatenate((phase, end_phases), axis=-1)
         end_index = abscissa.shape[-1] - ramp_samples
 
-        return ordinate, frequency, argument, amplitude, phase, abscissa, start_index, end_index
+        return (
+            ordinate,
+            frequency,
+            argument,
+            amplitude,
+            phase,
+            abscissa,
+            start_index,
+            end_index,
+        )
 
     def interpolate_warning(self, channel_index, frequencies):
         """
@@ -2587,8 +2777,12 @@ class SineSpecification:
 
         """
         abscissa = np.repeat(self.breakpoint_table["frequency"], 2)
-        lower_ordinate = self.breakpoint_table["warning"][:, 0, :, channel_index].flatten()
-        upper_ordinate = self.breakpoint_table["warning"][:, 1, :, channel_index].flatten()
+        lower_ordinate = self.breakpoint_table["warning"][
+            :, 0, :, channel_index
+        ].flatten()
+        upper_ordinate = self.breakpoint_table["warning"][
+            :, 1, :, channel_index
+        ].flatten()
         return np.array(
             [
                 np.interp(frequencies, abscissa, lower_ordinate),
@@ -2617,8 +2811,12 @@ class SineSpecification:
 
         """
         abscissa = np.repeat(self.breakpoint_table["frequency"], 2)
-        lower_ordinate = self.breakpoint_table["abort"][:, 0, :, channel_index].flatten()
-        upper_ordinate = self.breakpoint_table["abort"][:, 1, :, channel_index].flatten()
+        lower_ordinate = self.breakpoint_table["abort"][
+            :, 0, :, channel_index
+        ].flatten()
+        upper_ordinate = self.breakpoint_table["abort"][
+            :, 1, :, channel_index
+        ].flatten()
         return np.array(
             [
                 np.interp(frequencies, abscissa, lower_ordinate),
@@ -2681,7 +2879,9 @@ class SineSpecification:
         return True
 
     @staticmethod
-    def create_combined_signals(specifications, sample_rate, ramp_samples, control_index=None):
+    def create_combined_signals(
+        specifications, sample_rate, ramp_samples, control_index=None
+    ):
         """
         Creates a combined signal from many specifications
 
@@ -2736,9 +2936,16 @@ class SineSpecification:
         order_end_samples = []
         longest_signal = 0
         for spec in specifications:
-            ordinate, frequency, argument, amplitude, phase, _, start_index, end_index = (
-                spec.create_signal(sample_rate, ramp_samples, control_index)
-            )
+            (
+                ordinate,
+                frequency,
+                argument,
+                amplitude,
+                phase,
+                _,
+                start_index,
+                end_index,
+            ) = spec.create_signal(sample_rate, ramp_samples, control_index)
             order_signals.append(ordinate)
             order_frequencies.append(frequency)
             order_amplitudes.append(amplitude)
@@ -2756,16 +2963,23 @@ class SineSpecification:
             extra_samples = longest_signal - signal.shape[-1]
             end_abscissa = np.arange(1, extra_samples + 1) / sample_rate
             end_arguments = (
-                2 * np.pi * order_frequencies[i][-1] * end_abscissa + order_arguments[i][-1]
+                2 * np.pi * order_frequencies[i][-1] * end_abscissa
+                + order_arguments[i][-1]
             )
             end_frequencies = np.ones(extra_samples) * order_frequencies[i][-1]
             end_amplitudes = np.zeros((extra_samples)) * order_amplitudes[i][..., [-1]]
             end_phases = np.ones(extra_samples) * order_phases[i][..., [-1]]
             end_signal = np.zeros(extra_samples) * signal[..., [-1]]
             order_signals[i] = np.concatenate((order_signals[i], end_signal), axis=-1)
-            order_frequencies[i] = np.concatenate((order_frequencies[i], end_frequencies), axis=-1)
-            order_arguments[i] = np.concatenate((order_arguments[i], end_arguments), axis=-1)
-            order_amplitudes[i] = np.concatenate((order_amplitudes[i], end_amplitudes), axis=-1)
+            order_frequencies[i] = np.concatenate(
+                (order_frequencies[i], end_frequencies), axis=-1
+            )
+            order_arguments[i] = np.concatenate(
+                (order_arguments[i], end_arguments), axis=-1
+            )
+            order_amplitudes[i] = np.concatenate(
+                (order_amplitudes[i], end_amplitudes), axis=-1
+            )
             order_phases[i] = np.concatenate((order_phases[i], end_phases), axis=-1)
 
         order_signals = np.array(order_signals)
@@ -2791,6 +3005,7 @@ class SineSpecification:
 
 class FilterExplorer(QtWidgets.QDialog):
     """Dialog box for exploring the Vold-Kalman Filter Settings"""
+
     @staticmethod
     def explore_filter_settings(
         channel_names,
@@ -2931,7 +3146,9 @@ class FilterExplorer(QtWidgets.QDialog):
         self.order_time_history_plotter = VaryingNumberOfLinePlot(
             self.order_time_history_plot.getPlotItem()
         )
-        self.order_phase_plotter = VaryingNumberOfLinePlot(self.order_phase_plot.getPlotItem())
+        self.order_phase_plotter = VaryingNumberOfLinePlot(
+            self.order_phase_plot.getPlotItem()
+        )
         self.order_amplitude_plotter = VaryingNumberOfLinePlot(
             self.order_amplitude_plot.getPlotItem()
         )
@@ -2977,18 +3194,32 @@ class FilterExplorer(QtWidgets.QDialog):
         self.reject_button.clicked.connect(self.reject)
         self.order_selector.itemSelectionChanged.connect(self.update_plots)
         self.channel_selector.currentIndexChanged.connect(self.create_and_plot_signals)
-        self.filter_type_selector.currentIndexChanged.connect(self.remove_filter_data_and_replot)
-        self.filter_order_selector.currentIndexChanged.connect(self.remove_filter_data_and_replot)
-        self.filter_bandwidth_selector.valueChanged.connect(self.remove_filter_data_and_replot)
-        self.filter_block_size_selector.valueChanged.connect(self.remove_filter_data_and_replot)
-        self.filter_block_overlap_selector.valueChanged.connect(self.remove_filter_data_and_replot)
+        self.filter_type_selector.currentIndexChanged.connect(
+            self.remove_filter_data_and_replot
+        )
+        self.filter_order_selector.currentIndexChanged.connect(
+            self.remove_filter_data_and_replot
+        )
+        self.filter_bandwidth_selector.valueChanged.connect(
+            self.remove_filter_data_and_replot
+        )
+        self.filter_block_size_selector.valueChanged.connect(
+            self.remove_filter_data_and_replot
+        )
+        self.filter_block_overlap_selector.valueChanged.connect(
+            self.remove_filter_data_and_replot
+        )
         self.tracking_filter_cutoff_selector.valueChanged.connect(
             self.remove_filter_data_and_replot
         )
-        self.tracking_filter_order_selector.valueChanged.connect(self.remove_filter_data_and_replot)
+        self.tracking_filter_order_selector.valueChanged.connect(
+            self.remove_filter_data_and_replot
+        )
         self.noise_selector.valueChanged.connect(self.remove_filter_data_and_replot)
         self.compute_button.clicked.connect(self.compute_filter)
-        self.filter_type_selector.currentIndexChanged.connect(self.change_filter_setting_visibility)
+        self.filter_type_selector.currentIndexChanged.connect(
+            self.change_filter_setting_visibility
+        )
 
     @property
     def ramp_samples(self):
@@ -3059,7 +3290,8 @@ class FilterExplorer(QtWidgets.QDialog):
             generator = [
                 digital_tracking_filter_generator(
                     dt=1 / self.sample_rate,
-                    cutoff_frequency_ratio=self.tracking_filter_cutoff_selector.value() / 100,
+                    cutoff_frequency_ratio=self.tracking_filter_cutoff_selector.value()
+                    / 100,
                     filter_order=self.tracking_filter_order_selector.value(),
                 )
                 for tone in self.order_signals
@@ -3095,7 +3327,9 @@ class FilterExplorer(QtWidgets.QDialog):
             if self.filter_type_selector.currentIndex() == 0:
                 amps = []
                 phss = []
-                for arg, freq, gen in zip(block_arguments, block_frequencies, generator):
+                for arg, freq, gen in zip(
+                    block_arguments, block_frequencies, generator
+                ):
                     amp, phs = gen.send((block, freq, arg))
                     amps.append(amp)
                     phss.append(phs)
@@ -3136,7 +3370,8 @@ class FilterExplorer(QtWidgets.QDialog):
 
         try:
             selected_index = [
-                idx.row() for idx in self.order_selector.selectionModel().selectedIndexes()
+                idx.row()
+                for idx in self.order_selector.selectionModel().selectedIndexes()
             ][0]
         except IndexError:
             selected_index = 0
@@ -3145,7 +3380,7 @@ class FilterExplorer(QtWidgets.QDialog):
         signal_plot_vals.append(self.order_signals[selected_index])
         frequency_plot_vals.append(self.order_frequencies[selected_index])
         amplitude_plot_vals.append(self.order_amplitudes[selected_index])
-        phase_plot_vals.append(self.order_phases[selected_index]*180/np.pi)
+        phase_plot_vals.append(self.order_phases[selected_index] * 180 / np.pi)
 
         if self.reconstructed_order_signals is not None:
             if self.plot_separate_frames_selector.isChecked():
@@ -3163,30 +3398,46 @@ class FilterExplorer(QtWidgets.QDialog):
                 ):
                     end_index = start_index + block_signal.shape[-1]
                     block_abscissa = abscissa[start_index:end_index]
-                    block_frequency = self.order_frequencies[selected_index, start_index:end_index]
+                    block_frequency = self.order_frequencies[
+                        selected_index, start_index:end_index
+                    ]
                     abscissa_plot_vals.append(block_abscissa)
                     full_signal_plot_vals.append(block_signal)
                     signal_plot_vals.append(block_order_signal[selected_index])
                     frequency_plot_vals.append(block_frequency)
                     amplitude_plot_vals.append(block_order_amplitude[selected_index])
-                    phase_plot_vals.append(block_order_phase[selected_index]*180/np.pi)
+                    phase_plot_vals.append(
+                        block_order_phase[selected_index] * 180 / np.pi
+                    )
                     start_index = end_index
             else:
                 abscissa_plot_vals.append(abscissa)
-                full_signal_plot_vals.append(np.concatenate(self.reconstructed_signal, axis=-1))
+                full_signal_plot_vals.append(
+                    np.concatenate(self.reconstructed_signal, axis=-1)
+                )
                 signal_plot_vals.append(
-                    np.concatenate(self.reconstructed_order_signals, axis=-1)[selected_index]
+                    np.concatenate(self.reconstructed_order_signals, axis=-1)[
+                        selected_index
+                    ]
                 )
                 # print(f"{[v.shape for v in self.reconstructed_order_amplitudes]}")
                 amplitude_plot_vals.append(
-                    np.concatenate(self.reconstructed_order_amplitudes, axis=-1)[selected_index]
+                    np.concatenate(self.reconstructed_order_amplitudes, axis=-1)[
+                        selected_index
+                    ]
                 )
                 phase_plot_vals.append(
-                    np.concatenate(self.reconstructed_order_phases, axis=-1)[selected_index]*180/np.pi
+                    np.concatenate(self.reconstructed_order_phases, axis=-1)[
+                        selected_index
+                    ]
+                    * 180
+                    / np.pi
                 )
                 frequency_plot_vals.append(self.order_frequencies[selected_index])
 
-        self.full_time_history_plotter.set_data(abscissa_plot_vals, full_signal_plot_vals)
+        self.full_time_history_plotter.set_data(
+            abscissa_plot_vals, full_signal_plot_vals
+        )
         self.order_time_history_plotter.set_data(abscissa_plot_vals, signal_plot_vals)
         self.order_amplitude_plotter.set_data(frequency_plot_vals, amplitude_plot_vals)
         self.order_phase_plotter.set_data(frequency_plot_vals, phase_plot_vals)
@@ -3199,6 +3450,7 @@ class FilterExplorer(QtWidgets.QDialog):
 
 class PlotSineWindow(QtWidgets.QDialog):
     """Class defining a subwindow that displays specific channel information"""
+
     def __init__(self, parent, ui, tone_index, channel_index):
         """
         Creates a window showing amplitude and phase information.
@@ -3242,26 +3494,39 @@ class PlotSineWindow(QtWidgets.QDialog):
             plot_item.showGrid(True, True, 0.25)
             plot_item.enableAutoRange()
             plot_item.getViewBox().enableAutoRange(enable=True)
-        amp_plot_item.plot(spec_frequency, spec_amplitude, pen={"color": "b", "width": 1})
+        amp_plot_item.plot(
+            spec_frequency, spec_amplitude, pen={"color": "b", "width": 1}
+        )
         phs_plot_item.plot(spec_frequency, spec_phase, pen={"color": "b", "width": 1})
         amp_plot_item.plot(
-            warn_freq, warn_low, pen={"color": (255, 204, 0), "width": 1, "style": Qt.DashLine}
+            warn_freq,
+            warn_low,
+            pen={"color": (255, 204, 0), "width": 1, "style": Qt.DashLine},
         )
         amp_plot_item.plot(
-            warn_freq, warn_high, pen={"color": (255, 204, 0), "width": 1, "style": Qt.DashLine}
+            warn_freq,
+            warn_high,
+            pen={"color": (255, 204, 0), "width": 1, "style": Qt.DashLine},
         )
         amp_plot_item.plot(
-            warn_freq, abort_low, pen={"color": (153, 0, 0), "width": 1, "style": Qt.DashLine}
+            warn_freq,
+            abort_low,
+            pen={"color": (153, 0, 0), "width": 1, "style": Qt.DashLine},
         )
         amp_plot_item.plot(
-            warn_freq, abort_high, pen={"color": (153, 0, 0), "width": 1, "style": Qt.DashLine}
+            warn_freq,
+            abort_high,
+            pen={"color": (153, 0, 0), "width": 1, "style": Qt.DashLine},
         )
         if ui.achieved_excitation_frequencies is not None:
             achieved_frequency = np.concatenate(
                 [fh[tone_index] for fh in ui.achieved_excitation_frequencies]
             )
             achieved_amplitude = np.concatenate(
-                [ah[tone_index, channel_index] for ah in ui.achieved_response_amplitudes]
+                [
+                    ah[tone_index, channel_index]
+                    for ah in ui.achieved_response_amplitudes
+                ]
             )
             achieved_phase = np.concatenate(
                 [ph[tone_index, channel_index] for ph in ui.achieved_response_phases]
@@ -3293,7 +3558,10 @@ class PlotSineWindow(QtWidgets.QDialog):
                 ]
             )
             achieved_phase = np.concatenate(
-                [ph[self.tone_index, self.channel_index] for ph in self.ui.achieved_response_phases]
+                [
+                    ph[self.tone_index, self.channel_index]
+                    for ph in self.ui.achieved_response_phases
+                ]
             )
         else:
             achieved_frequency = np.array([0, 1])

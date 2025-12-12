@@ -21,40 +21,70 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from .abstract_hardware import HardwareAcquisition,HardwareOutput
-from .utilities import Channel,DataAcquisitionParameters,flush_queue,reduce_array_by_coordinate
+from .abstract_hardware import HardwareAcquisition, HardwareOutput
+from .utilities import (
+    Channel,
+    DataAcquisitionParameters,
+    flush_queue,
+    reduce_array_by_coordinate,
+)
 import numpy as np
 from typing import List
 import multiprocessing as mp
 import time
 import os
+
 try:
     import cupy as cp
     from cupyx.scipy.signal import oaconvolve
+
     xp = cp
     CUDA = True
 except ModuleNotFoundError:
     from scipy.signal import oaconvolve
+
     xp = np
     CUDA = False
 
-_direction_map = {'X+': 1, 'X': 1, '+X': 1,
-                  'Y+': 2, 'Y': 2, '+Y': 2,
-                  'Z+': 3, 'Z': 3, '+Z': 3,
-                  'RX+': 4, 'RX': 4, '+RX': 4,
-                  'RY+': 5, 'RY': 5, '+RY': 5,
-                  'RZ+': 6, 'RZ': 6, '+RZ': 6,
-                  'X-': -1, '-X': -1,
-                  'Y-': -2, '-Y': -2,
-                  'Z-': -3, '-Z': -3,
-                  'RX-': -4, '-RX': -4,
-                  'RY-': -5, '-RY': -5,
-                  'RZ-': -6, '-RZ': -6,
-                  '': 0, None:0}
+_direction_map = {
+    "X+": 1,
+    "X": 1,
+    "+X": 1,
+    "Y+": 2,
+    "Y": 2,
+    "+Y": 2,
+    "Z+": 3,
+    "Z": 3,
+    "+Z": 3,
+    "RX+": 4,
+    "RX": 4,
+    "+RX": 4,
+    "RY+": 5,
+    "RY": 5,
+    "+RY": 5,
+    "RZ+": 6,
+    "RZ": 6,
+    "+RZ": 6,
+    "X-": -1,
+    "-X": -1,
+    "Y-": -2,
+    "-Y": -2,
+    "Z-": -3,
+    "-Z": -3,
+    "RX-": -4,
+    "-RX": -4,
+    "RY-": -5,
+    "-RY": -5,
+    "RZ-": -6,
+    "-RZ": -6,
+    "": 0,
+    None: 0,
+}
+
 
 class SDynPyFRFAcquisition(HardwareAcquisition):
     """Class defining the interface between the controller and synthetic acquisition
-    
+
     This class defines the interfaces between the controller and the data
     acquisition portion of the hardware.  In this case, the hardware is simulated
     by convolving an IRF with each new frame of data, where the IRF is supplied from
@@ -62,8 +92,8 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
     It is run by the acquisition process, and must define how to get data from
     the test hardware into the controller.
     """
-    
-    def __init__(self,frf_file : str, queue : mp.queues.Queue):
+
+    def __init__(self, frf_file: str, queue: mp.queues.Queue):
         """
         Loads in the SDynPy file and sets initial parameters to null
         values.
@@ -87,7 +117,9 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
         """
         self.sdynpy_data, self.function_type = np.load(frf_file).values()
         if self.function_type.item() not in [4, 29]:
-            raise ValueError('File must be SDynPy TransferFunctionArray or ImpulseResponseFunctionArray')
+            raise ValueError(
+                "File must be SDynPy TransferFunctionArray or ImpulseResponseFunctionArray"
+            )
         self.system = None
         self.times = None
         self.sample_rate = None
@@ -102,13 +134,13 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
         self.integration_oversample = None
         self.response_channels = None
         self.output_channels = None
-        
-    def set_up_data_acquisition_parameters_and_channels(self,
-                                                        test_data : DataAcquisitionParameters,
-                                                        channel_data : List[Channel]):
+
+    def set_up_data_acquisition_parameters_and_channels(
+        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
+    ):
         """
         Initialize the hardware and set up channels and sampling properties
-        
+
         The function must create channels on the hardware corresponding to
         the channels in the test.  It must also set the sampling rates.
 
@@ -127,10 +159,10 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
         """
         self.set_parameters(test_data)
         self.create_response_channels(channel_data)
-    
-    def create_response_channels(self,channel_data : List[Channel]):
+
+    def create_response_channels(self, channel_data: List[Channel]):
         """Method to set up response channels
-        
+
         This function takes channels from the supplied list of channels and
         extracts the mode shape coefficients corresponding to those channels.
 
@@ -141,46 +173,53 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
 
         """
         self.response_channels = np.array(
-            [channel.feedback_device is None or channel.feedback_device == ''  for channel in channel_data],
-            dtype='bool'
+            [
+                channel.feedback_device is None or channel.feedback_device == ""
+                for channel in channel_data
+            ],
+            dtype="bool",
         )
         self.output_channels = ~self.response_channels
         # Need to add a signal buffer in case the write size is not equal to the read size
-        self.force_buffer = np.zeros((0,np.sum(~self.response_channels)))
-        
+        self.force_buffer = np.zeros((0, np.sum(~self.response_channels)))
+
         # Figure out which channels go with which indices
         response_coord = []
         excitation_coord = []
         for channel in channel_data:
             node_number = int(channel.node_number)
             direction = _direction_map[channel.node_direction]
-            channel_coord = (node_number,direction) 
-            if channel.feedback_device is None or channel.feedback_device == '':
+            channel_coord = (node_number, direction)
+            if channel.feedback_device is None or channel.feedback_device == "":
                 response_coord.append(channel_coord)
             else:
                 excitation_coord.append(channel_coord)
-        coord_dtype = np.dtype([('node', '<u8'), ('direction', 'i1')])
+        coord_dtype = np.dtype([("node", "<u8"), ("direction", "i1")])
         response_coord = np.array(response_coord, dtype=coord_dtype)
         excitation_coord = np.array(excitation_coord, dtype=coord_dtype)
-        
+
         # check for even abscissa spacing
-        spacing = np.diff(self.sdynpy_data['abscissa'], axis=-1)
+        spacing = np.diff(self.sdynpy_data["abscissa"], axis=-1)
         mean_spacing = np.mean(spacing)
         if not np.allclose(spacing, mean_spacing):
-            raise ValueError('SDynPy array does not have evenly spaced abscissa')
+            raise ValueError("SDynPy array does not have evenly spaced abscissa")
         # index array by coordinate. `reduce_array_by_coordinate` expects frequency on first axis
         array = reduce_array_by_coordinate(
-            np.moveaxis(self.sdynpy_data['ordinate'], -1, 0), 
-            self.sdynpy_data['coordinate'], 
-            response_coord, 
-            excitation_coord
+            np.moveaxis(self.sdynpy_data["ordinate"], -1, 0),
+            self.sdynpy_data["coordinate"],
+            response_coord,
+            excitation_coord,
         )
         # convert to irf if needed
         if self.function_type == 4:
             # compute irf and transpose so that shape becomes (nref, nresp, nsamples)
-            self.irf = np.fft.irfft(array,axis=0).T
+            self.irf = np.fft.irfft(array, axis=0).T
             num_samples = self.irf.shape[-1]
-            dt = 1 / (self.sdynpy_data['abscissa'].max()*num_samples/np.floor(num_samples/2))
+            dt = 1 / (
+                self.sdynpy_data["abscissa"].max()
+                * num_samples
+                / np.floor(num_samples / 2)
+            )
         elif self.function_type == 29:
             self.irf = array.T
             dt = mean_spacing
@@ -188,25 +227,31 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
             self.irf = cp.asarray(self.irf)
 
         # Checking to see if the transfer function sampling rate matches the acquisition rate
-        if not np.isclose(self.sample_rate, 1/dt):
-            raise ValueError('The transfer function sampling rate {:} does not match the hardware sampling rate {:}.'.format(
-                1/dt,self.sample_rate
-            ))
+        if not np.isclose(self.sample_rate, 1 / dt):
+            raise ValueError(
+                "The transfer function sampling rate {:} does not match the hardware sampling rate {:}.".format(
+                    1 / dt, self.sample_rate
+                )
+            )
 
         # check that all channels from channel table will have a corresponding irf
         _, number_responses, model_order = self.irf.shape
         if number_responses != np.sum(self.response_channels):
             # TODO: should extra channels in channel table be filled with zeros?
-            raise ValueError(f'Number of responses in FRF ({number_responses}) does not match channel table ({np.sum(self.response_channels)})')
+            raise ValueError(
+                f"Number of responses in FRF ({number_responses}) does not match channel table ({np.sum(self.response_channels)})"
+            )
         # each frame of the convolution must include M - 1 samples of previous data to maintain causality (where M is length of impulse response)
         self.convolution_samples = self.samples_per_read + model_order - 1
         # initialize convolution and output arrays (read function will overwrite rather than re-allocate)
-        self.output_signal_time = xp.zeros((number_responses, self.convolution_samples), dtype=xp.float64)
+        self.output_signal_time = xp.zeros(
+            (number_responses, self.convolution_samples), dtype=xp.float64
+        )
         self.sys_out = np.zeros((len(channel_data), self.times.size), dtype=np.float64)
-        
-    def set_parameters(self,test_data : DataAcquisitionParameters):
+
+    def set_parameters(self, test_data: DataAcquisitionParameters):
         """Method to set up sampling rate and other test parameters
-        
+
         For the synthetic case, we will set up the integration parameters using
         the sample rates provided.
 
@@ -219,22 +264,22 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
         """
         self.integration_oversample = test_data.output_oversample
         self.sample_rate = test_data.sample_rate
-        self.times = np.arange(test_data.samples_per_read)/(test_data.sample_rate)
-        self.frame_time = test_data.samples_per_read/test_data.sample_rate
+        self.times = np.arange(test_data.samples_per_read) / (test_data.sample_rate)
+        self.frame_time = test_data.samples_per_read / test_data.sample_rate
         self.acquisition_delay = test_data.samples_per_write
         self.samples_per_read = test_data.samples_per_read
         self.samples_per_write = test_data.samples_per_write
-        
+
     def start(self):
         """Method to start acquiring data.
-        
+
         For the synthetic case, doesn't need to do anything"""
         pass
-    
+
     def get_acquisition_delay(self) -> int:
         """
         Get the number of samples between output and acquisition.
-        
+
         This function returns the number of samples that need to be read to
         ensure that the last output is read by the acquisition.  If there is
         buffering in the output, this delay should be adjusted accordingly.
@@ -247,40 +292,42 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
 
         """
         return self.acquisition_delay
-    
+
     def read(self):
         """Method to read a frame of data from the hardware
-        
+
         This function gets the force from the output queue and adds it to the
         buffer of time signals that represents the force. It then convolves
         a frame of time and sends it to the acquisition.
 
         For large datasets, computation time may exceed the acquisition
-        time in which this function is expected to return. This may result in 
-        slower than real-time execution. GPU hardware acceleration is 
-        available to increase computation speed if a CuPy installation is found. 
-        (requires Nvidia CUDA toolkit and CUDA compatible GPU, 
+        time in which this function is expected to return. This may result in
+        slower than real-time execution. GPU hardware acceleration is
+        available to increase computation speed if a CuPy installation is found.
+        (requires Nvidia CUDA toolkit and CUDA compatible GPU,
         see https://docs.cupy.dev/en/stable/install.html)
-        
+
         Returns
         -------
-        read_data : 
+        read_data :
             2D Data read from the controller with shape ``n_channels`` x
             ``n_samples``
-        
+
         """
         start_time = time.time()
         while self.force_buffer.shape[0] < self.convolution_samples:
             try:
                 forces = self.queue.get(timeout=self.frame_time)
-            except mp.queues.Empty: # If we don't get an output in time, this likely means output has stopped so just put zeros.
+            except (
+                mp.queues.Empty
+            ):  # If we don't get an output in time, this likely means output has stopped so just put zeros.
                 forces = np.zeros((self.force_buffer.shape[-1], self.times.size))
-            self.force_buffer = np.concatenate((self.force_buffer,forces.T),axis=0)
-        
+            self.force_buffer = np.concatenate((self.force_buffer, forces.T), axis=0)
+
         # Now extract a force that is the correct size (including past samples for convolution)
-        this_force = self.force_buffer[:self.convolution_samples].T
+        this_force = self.force_buffer[: self.convolution_samples].T
         # And leave the rest for next time
-        self.force_buffer = self.force_buffer[self.times.size:]
+        self.force_buffer = self.force_buffer[self.times.size :]
 
         if np.any(this_force):
             if CUDA:
@@ -289,55 +336,65 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
             self.output_signal_time[:] = 0
             # Setting up and doing the convolution (using GPU if possible) (see sdynpy.data.TimeHistoryArray.mimo_forward)
             for reference_irfs, inputs in zip(self.irf, this_force):
-                self.output_signal_time += oaconvolve(reference_irfs, inputs[np.newaxis, :])[:, :self.convolution_samples]
+                self.output_signal_time += oaconvolve(
+                    reference_irfs, inputs[np.newaxis, :]
+                )[:, : self.convolution_samples]
 
             # assign latest frame of data to correct channels (transfer from GPU to CPU if necessary)
             if CUDA:
-                self.sys_out[self.response_channels, :] = self.output_signal_time[:, -self.times.size:].get()
-                self.sys_out[self.output_channels,  :] = this_force[:, -self.times.size:].get()
+                self.sys_out[self.response_channels, :] = self.output_signal_time[
+                    :, -self.times.size :
+                ].get()
+                self.sys_out[self.output_channels, :] = this_force[
+                    :, -self.times.size :
+                ].get()
             else:
-                self.sys_out[self.response_channels, :] = self.output_signal_time[:, -self.times.size:]
-                self.sys_out[self.output_channels,  :] = this_force[:, -self.times.size:]
+                self.sys_out[self.response_channels, :] = self.output_signal_time[
+                    :, -self.times.size :
+                ]
+                self.sys_out[self.output_channels, :] = this_force[
+                    :, -self.times.size :
+                ]
         else:
             self.sys_out[:] = 0
-        
+
         computation_time = time.time() - start_time
         remaining_time = self.frame_time - computation_time
         if remaining_time > 0.0:
             time.sleep(remaining_time)
 
         return self.sys_out
-    
+
     def read_remaining(self):
         """Method to read the rest of the data on the acquisition
-        
+
         This function simply returns one sample of zeros.
-        
+
         Returns
         -------
-        read_data : 
+        read_data :
             2D Data read from the controller with shape ``n_channels`` x
             ``n_samples``
         """
-        return np.zeros((len(self.response_channels),1))
-    
+        return np.zeros((len(self.response_channels), 1))
+
     def stop(self):
         """Method to stop the acquisition."""
         pass
-    
+
     def close(self):
-        """Method to close down the hardware
-        
-        """
+        """Method to close down the hardware"""
         pass
-    
+
+
 class SDynPyFRFOutput(HardwareOutput):
     """Class defining the interface between the controller and synthetic output
-    
+
     Note that the only thing that this class does is pass data to the acquisition
     hardware task which actually performs the integration.  Therefore, many of
     the functions here are actually empty."""
-    def __init__(self,queue : mp.queues.Queue):
+
+    def __init__(self, queue: mp.queues.Queue):
         """
         Initializes the hardware by simply storing the data passing queue.
 
@@ -349,13 +406,13 @@ class SDynPyFRFOutput(HardwareOutput):
 
         """
         self.queue = queue
-    
-    def set_up_data_output_parameters_and_channels(self,
-                                                   test_data : DataAcquisitionParameters,
-                                                   channel_data : List[Channel]):
+
+    def set_up_data_output_parameters_and_channels(
+        self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
+    ):
         """
         Initialize the hardware and set up sources and sampling properties
-        
+
         This does nothing for the synthetic hardware
 
         Parameters
@@ -372,16 +429,16 @@ class SDynPyFRFOutput(HardwareOutput):
 
         """
         pass
-    
+
     def start(self):
         """Method to start acquiring data
-        
+
         Does nothing for synthetic hardware."""
         pass
-    
-    def write(self,data : np.ndarray):
+
+    def write(self, data: np.ndarray):
         """Method to write a frame of data
-        
+
         For the synthetic excitation, this simply puts the data into the data-
         passing queue.
 
@@ -392,22 +449,22 @@ class SDynPyFRFOutput(HardwareOutput):
 
         """
         self.queue.put(data)
-    
+
     def stop(self):
         """Method to stop the acquisition
-        
+
         Does nothing for synthetic hardware."""
         flush_queue(self.queue)
-    
+
     def close(self):
         """Method to close down the hardware
-        
+
         Does nothing for synthetic hardware."""
         pass
 
     def ready_for_new_output(self):
         """Signals that the hardware is ready for new output
-        
+
         Returns ``True`` if the data-passing queue is empty.
         """
         return self.queue.empty()

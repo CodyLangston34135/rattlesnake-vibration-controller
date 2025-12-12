@@ -24,7 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from enum import Enum
 from .abstract_message_process import AbstractMessageProcess
-from .utilities import flush_queue,rms_time,VerboseMessageQueue
+from .utilities import flush_queue, rms_time, VerboseMessageQueue
 from .utilities import load_python_module, rms_time
 import multiprocessing as mp
 import copy
@@ -40,71 +40,123 @@ DEBUG = False
 if DEBUG:
     import pickle
 
+
 class FrameBuffer:
-    def __init__(self,num_channels,trigger_index,pretrigger,positive_slope,trigger_level,
-                 hysteresis_level,hysteresis_samples,samples_per_frame,maximum_overlap,manual_accept,
-                 trigger_enabled,trigger_only_first,wait_samples,
-                 dtype='float64',starting_value=np.nan,buffer_size_frame_multiplier = 2):
+    def __init__(
+        self,
+        num_channels,
+        trigger_index,
+        pretrigger,
+        positive_slope,
+        trigger_level,
+        hysteresis_level,
+        hysteresis_samples,
+        samples_per_frame,
+        maximum_overlap,
+        manual_accept,
+        trigger_enabled,
+        trigger_only_first,
+        wait_samples,
+        dtype="float64",
+        starting_value=np.nan,
+        buffer_size_frame_multiplier=2,
+    ):
         self.samples_per_frame = samples_per_frame
         self.trigger_index = trigger_index
-        self.pretrigger_samples = int(pretrigger*samples_per_frame) if trigger_enabled else 0
+        self.pretrigger_samples = (
+            int(pretrigger * samples_per_frame) if trigger_enabled else 0
+        )
         self.positive_slope = positive_slope
         self.trigger_level = trigger_level
         self.hysteresis_level = hysteresis_level
         self.hysteresis_samples = hysteresis_samples
         self.samples_per_frame = samples_per_frame
-        self.overlap_samples = samples_per_frame - int(maximum_overlap*samples_per_frame)
+        self.overlap_samples = samples_per_frame - int(
+            maximum_overlap * samples_per_frame
+        )
         self.manual_accept = manual_accept
         self.waiting_for_accept = False
-        self._buffer = starting_value*np.ones((num_channels,int(np.ceil(buffer_size_frame_multiplier*samples_per_frame))))
+        self._buffer = starting_value * np.ones(
+            (
+                num_channels,
+                int(np.ceil(buffer_size_frame_multiplier * samples_per_frame)),
+            )
+        )
         self.buffer_size_frame_multiplier = buffer_size_frame_multiplier
         self.wait_samples = wait_samples
-        self.last_trigger = self.overlap_samples-self.wait_samples
-        self.last_reset = self.overlap_samples+1-self.wait_samples
+        self.last_trigger = self.overlap_samples - self.wait_samples
+        self.last_reset = self.overlap_samples + 1 - self.wait_samples
         self.trigger_enabled = trigger_enabled
         self.trigger_only_first = trigger_only_first
         self.first_trigger = True
-    
+
     @property
     def buffer_data(self):
         return self._buffer
-    
-    def add_data(self,data):
+
+    def add_data(self, data):
         data = np.array(data)
         self.last_trigger += data.shape[-1]
         self.last_reset += data.shape[-1]
         # Make sure the data will fit into the buffer
-        data = data[...,-self.buffer_data.shape[-1]:]
+        data = data[..., -self.buffer_data.shape[-1] :]
         # Figure out how much we need to roll the buffer
-        self.buffer_data[:] = np.concatenate((self.buffer_data[...,data.shape[-1]:],
-                                           data),axis=-1)
-    
+        self.buffer_data[:] = np.concatenate(
+            (self.buffer_data[..., data.shape[-1] :], data), axis=-1
+        )
+
     def find_triggers(self):
         # print('Finding Triggers, first trigger {:}'.format(self.first_trigger))
         if self.manual_accept and self.waiting_for_accept:
             # print('Waiting for Accept')
             return []
-        if self.trigger_enabled and ((self.trigger_only_first and self.first_trigger) or 
-                                     not self.trigger_only_first):
+        if self.trigger_enabled and (
+            (self.trigger_only_first and self.first_trigger)
+            or not self.trigger_only_first
+        ):
             # print('Getting trigger based on signal')
-            trigger_data = self.buffer_data[self.trigger_index,self.pretrigger_samples:self.samples_per_frame+self.pretrigger_samples]
+            trigger_data = self.buffer_data[
+                self.trigger_index,
+                self.pretrigger_samples : self.samples_per_frame
+                + self.pretrigger_samples,
+            ]
             if self.positive_slope:
-                indices = (trigger_data[:-1] < self.trigger_level) & (trigger_data[1:] > self.trigger_level)
+                indices = (trigger_data[:-1] < self.trigger_level) & (
+                    trigger_data[1:] > self.trigger_level
+                )
                 reset_indices = trigger_data < self.hysteresis_level
             else:
-                indices = (trigger_data[:-1] > self.trigger_level) & (trigger_data[1:] < self.trigger_level)
+                indices = (trigger_data[:-1] > self.trigger_level) & (
+                    trigger_data[1:] < self.trigger_level
+                )
                 reset_indices = trigger_data > self.hysteresis_level
             if self.hysteresis_samples > 1:
                 zeros = ~reset_indices
                 iszero = np.concatenate(([0], np.equal(zeros, 0).view(np.int8), [0]))
                 absdiff = np.abs(np.diff(iszero))
                 ranges = np.where(absdiff == 1)[0].reshape(-1, 2)
-                reset_indices = np.array([r[-1]-1 for r in ranges if r[1]-r[0] > self.hysteresis_samples-2])
-            triggers = list(self.buffer_size_frame_multiplier*self.samples_per_frame - (np.where(indices)[0]+1+self.pretrigger_samples))
-            resets = np.concatenate([[self.last_reset],self.buffer_size_frame_multiplier*self.samples_per_frame - reset_indices - self.pretrigger_samples])
-            
+                reset_indices = np.array(
+                    [
+                        r[-1] - 1
+                        for r in ranges
+                        if r[1] - r[0] > self.hysteresis_samples - 2
+                    ]
+                )
+            triggers = list(
+                self.buffer_size_frame_multiplier * self.samples_per_frame
+                - (np.where(indices)[0] + 1 + self.pretrigger_samples)
+            )
+            resets = np.concatenate(
+                [
+                    [self.last_reset],
+                    self.buffer_size_frame_multiplier * self.samples_per_frame
+                    - reset_indices
+                    - self.pretrigger_samples,
+                ]
+            )
+
             final_triggers = []
-            
+
             while len(triggers) > 0:
                 trigger = triggers.pop(0)
                 # Check to see if the trigger is far enough away from the last one
@@ -113,17 +165,17 @@ class FrameBuffer:
                 # Check to see if there has been a reset since the last trigger
                 if not np.any((resets < self.last_trigger) & (resets > trigger)):
                     continue
-                if (self.trigger_only_first and not self.first_trigger):
+                if self.trigger_only_first and not self.first_trigger:
                     continue
                 final_triggers.append(trigger)
                 self.first_trigger = False
                 self.last_trigger = trigger
-                
+
             self.last_reset = resets.min()
-            
+
             if self.manual_accept and len(final_triggers) > 0:
                 self.last_trigger = self.overlap_samples
-                self.last_reset = self.overlap_samples-1
+                self.last_reset = self.overlap_samples - 1
                 self.waiting_for_accept = True
                 return [final_triggers[0]]
             else:
@@ -131,45 +183,65 @@ class FrameBuffer:
         else:
             # Get the next triggers that are in the data
             # print('Getting trigger based on spacing')
-            last_trigger_rectified = self.buffer_size_frame_multiplier*self.samples_per_frame - self.last_trigger
-            triggers_available = int((self.samples_per_frame - last_trigger_rectified)/self.overlap_samples)
-            final_triggers = [self.last_trigger - (i+1)*self.overlap_samples for i in range(triggers_available)]
+            last_trigger_rectified = (
+                self.buffer_size_frame_multiplier * self.samples_per_frame
+                - self.last_trigger
+            )
+            triggers_available = int(
+                (self.samples_per_frame - last_trigger_rectified) / self.overlap_samples
+            )
+            final_triggers = [
+                self.last_trigger - (i + 1) * self.overlap_samples
+                for i in range(triggers_available)
+            ]
             if len(final_triggers) > 0:
                 self.last_trigger = final_triggers[-1]
             return final_triggers
-    
+
     def reset_trigger(self):
-        self.last_trigger = self.overlap_samples-self.wait_samples
-        self.last_reset = self.overlap_samples-1-self.wait_samples
-    
+        self.last_trigger = self.overlap_samples - self.wait_samples
+        self.last_reset = self.overlap_samples - 1 - self.wait_samples
+
     def accept(self):
         self.last_trigger = self.overlap_samples
-        self.last_reset = self.overlap_samples-1
+        self.last_reset = self.overlap_samples - 1
         self.waiting_for_accept = False
-    
-    def add_data_get_frame(self,data):
+
+    def add_data_get_frame(self, data):
         self.add_data(data)
         # print('Last Trigger: {:}'.format(self.last_trigger))
         triggers = self.find_triggers()
         # print('Triggers: {:}'.format(triggers))
-        frame_indices = (self.buffer_size_frame_multiplier*self.samples_per_frame - np.array(triggers)[:,np.newaxis] + np.arange(self.samples_per_frame) - self.pretrigger_samples).astype(int)
-        return np.moveaxis(self.buffer_data[:,frame_indices],1,0)
-    
-    def __getitem__(self,key):
+        frame_indices = (
+            self.buffer_size_frame_multiplier * self.samples_per_frame
+            - np.array(triggers)[:, np.newaxis]
+            + np.arange(self.samples_per_frame)
+            - self.pretrigger_samples
+        ).astype(int)
+        return np.moveaxis(self.buffer_data[:, frame_indices], 1, 0)
+
+    def __getitem__(self, key):
         return self._buffer[key]
-    
-    def __setitem__(self,key,val):
+
+    def __setitem__(self, key, val):
         self._buffer[key] = val
+
 
 class KurtosisBuffer:
     def __init__(self, n_channels: int, averages: int = 100) -> None:
-        self.idx = 0 # this will keep track of our place in the buffers (alternative to using np.roll, this is more efficient since we don't actually care what order the buffer is in)
-        self.averages = averages # number of frames to keep for kurtosis calculation
-        self.G0 = np.zeros((n_channels, averages)) # number of samples per frame
-        self.G1 = np.zeros((n_channels, averages)) # sum of samples per frame
-        self.G2 = np.zeros((n_channels, averages)) # sum of (second moments * samples/frame) per frame
-        self.G3 = np.zeros((n_channels, averages)) # sum of (third moments * samples/frame) per frame
-        self.G4 = np.zeros((n_channels, averages)) # sum of (fourth moments * samples/frame) per frame
+        self.idx = 0  # this will keep track of our place in the buffers (alternative to using np.roll, this is more efficient since we don't actually care what order the buffer is in)
+        self.averages = averages  # number of frames to keep for kurtosis calculation
+        self.G0 = np.zeros((n_channels, averages))  # number of samples per frame
+        self.G1 = np.zeros((n_channels, averages))  # sum of samples per frame
+        self.G2 = np.zeros(
+            (n_channels, averages)
+        )  # sum of (second moments * samples/frame) per frame
+        self.G3 = np.zeros(
+            (n_channels, averages)
+        )  # sum of (third moments * samples/frame) per frame
+        self.G4 = np.zeros(
+            (n_channels, averages)
+        )  # sum of (fourth moments * samples/frame) per frame
 
     def clear(self) -> None:
         self.idx = 0
@@ -192,7 +264,9 @@ class KurtosisBuffer:
         """
 
         # Calculate gamma values of new data (raw moment * sample length, equivalent to sum of moments if time delta is constant)
-        self.G0[:, self.idx] = arr.shape[axis] # gamma_0 is taken to be number of points (assuming constant time delta)
+        self.G0[:, self.idx] = arr.shape[
+            axis
+        ]  # gamma_0 is taken to be number of points (assuming constant time delta)
         self.G1[:, self.idx] = np.sum(arr, axis=axis)
         self.G2[:, self.idx] = np.sum(arr**2, axis=axis)
         self.G3[:, self.idx] = np.sum(arr**3, axis=axis)
@@ -200,7 +274,6 @@ class KurtosisBuffer:
 
         # increment our index (wrap around if buffer is full)
         self.idx = (self.idx + 1) % self.averages
-
 
     def get_kurtosis(self, fisher=False) -> None:
         # sum the gamma values that are in the buffer
@@ -211,22 +284,24 @@ class KurtosisBuffer:
         G4 = np.sum(self.G4, axis=-1)
 
         # back out raw moments from gamma values
-        M1 = G1/G0
-        M2 = G2/G0
-        M3 = G3/G0
-        M4 = G4/G0
+        M1 = G1 / G0
+        M2 = G2 / G0
+        M3 = G3 / G0
+        M4 = G4 / G0
 
         # compute central moments from raw moments
         C2 = M2 - (M1**2)
         # C3 = M3 - (3*M1*M2) + (2*(M1**3)) # not needed for kurtosis
-        C4 = M4 - (4*M1*M3) + (6*(M1**2)*M2) - (3*(M1**4))
+        C4 = M4 - (4 * M1 * M3) + (6 * (M1**2) * M2) - (3 * (M1**4))
 
         # compute kurtosis
-        K = C4/(C2**2)
+        K = C4 / (C2**2)
         return K - 3 if fisher else K
-    
+
+
 class DataCollectorCommands(Enum):
     """Commands that the Random Data Collector Process can accept"""
+
     INITIALIZE_COLLECTOR = 1
     FORCE_INITIALIZE_COLLECTOR = 2
     ACQUIRE = 3
@@ -237,19 +312,23 @@ class DataCollectorCommands(Enum):
     SHUTDOWN_ACHIEVED = 8
     CLEAR_KURTOSIS_BUFFER = 9
 
+
 class AcquisitionType(Enum):
     FREE_RUN = 0
     TRIGGER_EVERY_FRAME = 1
     TRIGGER_FIRST_FRAME = 2
-    
+
+
 class Acceptance(Enum):
     MANUAL = 0
     AUTOMATIC = 1
-    
+
+
 class TriggerSlope(Enum):
     POSITIVE = 0
     NEGATIVE = 1
-    
+
+
 class Window(Enum):
     RECTANGLE = 0
     HANN = 1
@@ -260,30 +339,33 @@ class Window(Enum):
     EXPONENTIAL = 6
     EXPONENTIAL_FORCE = 7
 
+
 class CollectorMetadata:
-    def __init__(self,
-                 num_channels,
-                 response_channel_indices,
-                 reference_channel_indices,
-                 acquisition_type,
-                 acceptance,
-                 acceptance_function,
-                 overlap_fraction,
-                 trigger_channel_index,
-                 trigger_slope,
-                 trigger_level,
-                 trigger_hysteresis,
-                 trigger_hysteresis_samples,
-                 pretrigger_fraction,
-                 frame_size,
-                 window,
-                 window_parameter_1 = 0,
-                 window_parameter_2 = 0,
-                 window_parameter_3 = 0,
-                 wait_samples = 0,
-                 kurtosis_buffer_length = None,
-                 response_transformation_matrix = None,
-                 reference_transformation_matrix = None):
+    def __init__(
+        self,
+        num_channels,
+        response_channel_indices,
+        reference_channel_indices,
+        acquisition_type,
+        acceptance,
+        acceptance_function,
+        overlap_fraction,
+        trigger_channel_index,
+        trigger_slope,
+        trigger_level,
+        trigger_hysteresis,
+        trigger_hysteresis_samples,
+        pretrigger_fraction,
+        frame_size,
+        window,
+        window_parameter_1=0,
+        window_parameter_2=0,
+        window_parameter_3=0,
+        wait_samples=0,
+        kurtosis_buffer_length=None,
+        response_transformation_matrix=None,
+        reference_transformation_matrix=None,
+    ):
         self.num_channels = num_channels
         self.response_channel_indices = response_channel_indices
         self.reference_channel_indices = reference_channel_indices
@@ -306,27 +388,37 @@ class CollectorMetadata:
         self.reference_transformation_matrix = reference_transformation_matrix
         self.wait_samples = wait_samples
         self.kurtosis_buffer_length = kurtosis_buffer_length
-        
-    def __eq__(self,other):
+
+    def __eq__(self, other):
         try:
-            return np.all([np.all(self.__dict__[field] == other.__dict__[field]) for field in self.__dict__])
-        except (AttributeError,KeyError):
+            return np.all(
+                [
+                    np.all(self.__dict__[field] == other.__dict__[field])
+                    for field in self.__dict__
+                ]
+            )
+        except (AttributeError, KeyError):
             return False
+
 
 class DataCollectorProcess(AbstractMessageProcess):
     """Class that takes data from the data_in_queue and distributes to the environment
-    
-    This class keeps track of the test level used when acquiring data so the 
+
+    This class keeps track of the test level used when acquiring data so the
     data can be scaled back to full level for control.  It will also skip
     frames that are acquired while the system is ramping."""
-    def __init__(self,process_name : str, 
-                 command_queue : VerboseMessageQueue,
-                 data_in_queue : mp.queues.Queue,
-                 data_out_queues : List[mp.queues.Queue],
-                 environment_command_queue : VerboseMessageQueue,
-                 log_file_queue : mp.queues.Queue,
-                 gui_update_queue : mp.queues.Queue,
-                 environment_name):
+
+    def __init__(
+        self,
+        process_name: str,
+        command_queue: VerboseMessageQueue,
+        data_in_queue: mp.queues.Queue,
+        data_out_queues: List[mp.queues.Queue],
+        environment_command_queue: VerboseMessageQueue,
+        log_file_queue: mp.queues.Queue,
+        gui_update_queue: mp.queues.Queue,
+        environment_name,
+    ):
         """
         Constructs the data collector class
 
@@ -341,16 +433,21 @@ class DataCollectorProcess(AbstractMessageProcess):
             The name of the environment that this process is generating signals for.
 
         """
-        super().__init__(process_name,log_file_queue,command_queue,gui_update_queue)
-        self.map_command(DataCollectorCommands.INITIALIZE_COLLECTOR,
-                         self.initialize_collector)
-        self.map_command(DataCollectorCommands.FORCE_INITIALIZE_COLLECTOR,
-                         self.force_initialize_collector)
-        self.map_command(DataCollectorCommands.ACQUIRE,self.acquire)
-        self.map_command(DataCollectorCommands.STOP,self.stop)
-        self.map_command(DataCollectorCommands.ACCEPT,self.accept)
-        self.map_command(DataCollectorCommands.SET_TEST_LEVEL,self.set_test_level)
-        self.map_command(DataCollectorCommands.CLEAR_KURTOSIS_BUFFER,self.clear_kurtosis_buffer)
+        super().__init__(process_name, log_file_queue, command_queue, gui_update_queue)
+        self.map_command(
+            DataCollectorCommands.INITIALIZE_COLLECTOR, self.initialize_collector
+        )
+        self.map_command(
+            DataCollectorCommands.FORCE_INITIALIZE_COLLECTOR,
+            self.force_initialize_collector,
+        )
+        self.map_command(DataCollectorCommands.ACQUIRE, self.acquire)
+        self.map_command(DataCollectorCommands.STOP, self.stop)
+        self.map_command(DataCollectorCommands.ACCEPT, self.accept)
+        self.map_command(DataCollectorCommands.SET_TEST_LEVEL, self.set_test_level)
+        self.map_command(
+            DataCollectorCommands.CLEAR_KURTOSIS_BUFFER, self.clear_kurtosis_buffer
+        )
         self.environment_command_queue = environment_command_queue
         self.environment_name = environment_name
         self.collector_metadata = None
@@ -366,12 +463,12 @@ class DataCollectorProcess(AbstractMessageProcess):
         self.data_out_queues = data_out_queues
         if DEBUG:
             self.received_data_index = 0
-        
-    def initialize_collector(self,data : CollectorMetadata):
+
+    def initialize_collector(self, data: CollectorMetadata):
         if not (self.collector_metadata == data):
             self.force_initialize_collector(data)
-        
-    def force_initialize_collector(self,data : CollectorMetadata):
+
+    def force_initialize_collector(self, data: CollectorMetadata):
         # Flush the outputs to make sure that there's nothing hanging out on
         # the queue when we start up.
         for queue in self.data_out_queues:
@@ -389,73 +486,95 @@ class DataCollectorProcess(AbstractMessageProcess):
             self.collector_metadata.overlap_fraction,
             self.collector_metadata.acceptance == Acceptance.MANUAL,
             self.collector_metadata.acquisition_type != AcquisitionType.FREE_RUN,
-            self.collector_metadata.acquisition_type == AcquisitionType.TRIGGER_FIRST_FRAME,
-            self.collector_metadata.wait_samples)
+            self.collector_metadata.acquisition_type
+            == AcquisitionType.TRIGGER_FIRST_FRAME,
+            self.collector_metadata.wait_samples,
+        )
         if self.collector_metadata.kurtosis_buffer_length is not None:
             self.kurtosis_buffer = KurtosisBuffer(
                 self.collector_metadata.num_channels,
-                self.collector_metadata.kurtosis_buffer_length)
+                self.collector_metadata.kurtosis_buffer_length,
+            )
         if self.collector_metadata.acceptance_function is None:
             self.acceptance_function = lambda x: True
         else:
             module = load_python_module(self.collector_metadata.acceptance_function[0])
-            self.acceptance_function = getattr(module,self.collector_metadata.acceptance_function[1])
-            self.log('Loaded acceptance function')
+            self.acceptance_function = getattr(
+                module, self.collector_metadata.acceptance_function[1]
+            )
+            self.log("Loaded acceptance function")
         if self.collector_metadata.window == Window.RECTANGLE:
             self.reference_window = 1
             self.response_window = 1
         elif self.collector_metadata.window == Window.HANN:
             self.reference_window = sig.get_window(
-                'hann',self.collector_metadata.frame_size)
+                "hann", self.collector_metadata.frame_size
+            )
             self.response_window = self.reference_window.copy()
         elif self.collector_metadata.window == Window.HAMMING:
             self.reference_window = sig.get_window(
-                'hamming',self.collector_metadata.frame_size)
+                "hamming", self.collector_metadata.frame_size
+            )
             self.response_window = self.reference_window.copy()
         elif self.collector_metadata.window == Window.FLATTOP:
             self.reference_window = sig.get_window(
-                'flattop',self.collector_metadata.frame_size)
+                "flattop", self.collector_metadata.frame_size
+            )
             self.response_window = self.reference_window.copy()
         elif self.collector_metadata.window == Window.TUKEY:
             self.reference_window = sig.get_window(
-                ('tukey',self.collector_metadata.window_parameter_1),
-                 self.collector_metadata.frame_size)
+                ("tukey", self.collector_metadata.window_parameter_1),
+                self.collector_metadata.frame_size,
+            )
             self.response_window = self.reference_window.copy()
         elif self.collector_metadata.window == Window.BLACKMANHARRIS:
             self.reference_window = sig.get_window(
-                'blackmanharris',self.collector_metadata.frame_size)
+                "blackmanharris", self.collector_metadata.frame_size
+            )
             self.response_window = self.reference_window.copy()
         elif self.collector_metadata.window == Window.EXPONENTIAL:
             self.reference_window = sig.get_window(
-                ('exponential',self.collector_metadata.window_parameter_1,
-                 self.collector_metadata.window_parameter_2),
-                 self.collector_metadata.frame_size)
+                (
+                    "exponential",
+                    self.collector_metadata.window_parameter_1,
+                    self.collector_metadata.window_parameter_2,
+                ),
+                self.collector_metadata.frame_size,
+            )
             self.response_window = self.reference_window.copy()
         elif self.collector_metadata.window == Window.EXPONENTIAL_FORCE:
             self.reference_window = sig.get_window(
-                ('exponential',self.collector_metadata.window_parameter_2,
-                 self.collector_metadata.window_parameter_3),
-                 self.collector_metadata.frame_size)
+                (
+                    "exponential",
+                    self.collector_metadata.window_parameter_2,
+                    self.collector_metadata.window_parameter_3,
+                ),
+                self.collector_metadata.frame_size,
+            )
             self.response_window = self.reference_window.copy()
-            non_pulse_samples = (np.arange(self.collector_metadata.frame_size)+1) / self.collector_metadata.frame_size > self.collector_metadata.window_parameter_1
+            non_pulse_samples = (
+                (np.arange(self.collector_metadata.frame_size) + 1)
+                / self.collector_metadata.frame_size
+                > self.collector_metadata.window_parameter_1
+            )
             self.reference_window[non_pulse_samples] = 0
         else:
-            raise ValueError('Invalid Window Type')
+            raise ValueError("Invalid Window Type")
         self.window_correction = np.sqrt(1 / np.mean(self.response_window**2))
         if DEBUG:
-            with open('debug_data/collector_metadata.pkl','wb') as f:
-                pickle.dump(self.collector_metadata,f)
-            with open('debug_data/framebuffer.pkl','wb') as f:
-                pickle.dump(self.frame_buffer,f)
+            with open("debug_data/collector_metadata.pkl", "wb") as f:
+                pickle.dump(self.collector_metadata, f)
+            with open("debug_data/framebuffer.pkl", "wb") as f:
+                pickle.dump(self.frame_buffer, f)
             self.received_data_index = 0
-        
-    def acquire(self,data):
+
+    def acquire(self, data):
         """Acquires data from the data_in_queue and sends to the environment
-        
+
         This function will take data and scale it by the test level, or skip
         sending the data if the test level is currently changing.  It will
-        also apply the transformation matrices if they are defined.  
-        
+        also apply the transformation matrices if they are defined.
+
         It will stop itself if the last data is acquired.
 
         Parameters
@@ -466,90 +585,134 @@ class DataCollectorProcess(AbstractMessageProcess):
             accepting any data passed along with the instruction.
         """
         try:
-            acquisition_data,last_data = self.data_in_queue.get(timeout=10)
-            self.log('Acquired Data with shape {:} and Last Data {:}'.format(acquisition_data.shape,last_data))
-            self.log('Data Average RMS: {:0.4f}'.format(rms_time(acquisition_data)))
+            acquisition_data, last_data = self.data_in_queue.get(timeout=10)
+            self.log(
+                "Acquired Data with shape {:} and Last Data {:}".format(
+                    acquisition_data.shape, last_data
+                )
+            )
+            self.log("Data Average RMS: {:0.4f}".format(rms_time(acquisition_data)))
         except mp.queues.Empty:
             # Keep running until stopped
-#            self.log('No Incoming Data!')
-            self.command_queue.put(self.process_name,(DataCollectorCommands.ACQUIRE,None))
+            #            self.log('No Incoming Data!')
+            self.command_queue.put(
+                self.process_name, (DataCollectorCommands.ACQUIRE, None)
+            )
             return
         # Add data to buffer
-        self.log('Putting Data to Buffer')
+        self.log("Putting Data to Buffer")
         output_frames = self.frame_buffer.add_data_get_frame(acquisition_data)
         if DEBUG:
-            np.save('debug_data/acquisition_data_{:05d}.npy'.format(self.received_data_index),
-                    acquisition_data)
-            np.save('debug_data/output_frames_{:05d}.npy'.format(self.received_data_index),
-                    output_frames)
-            with open('debug_data/framebuffer_{:05d}.pkl'.format(self.received_data_index),'wb') as f:
-                pickle.dump(self.frame_buffer,f)
+            np.save(
+                "debug_data/acquisition_data_{:05d}.npy".format(
+                    self.received_data_index
+                ),
+                acquisition_data,
+            )
+            np.save(
+                "debug_data/output_frames_{:05d}.npy".format(self.received_data_index),
+                output_frames,
+            )
+            with open(
+                "debug_data/framebuffer_{:05d}.pkl".format(self.received_data_index),
+                "wb",
+            ) as f:
+                pickle.dump(self.frame_buffer, f)
             self.received_data_index += 1
         if output_frames.shape[0] > 0:
-            self.log('Measurement Frames Received ({:})'.format(output_frames.shape[0]))
+            self.log("Measurement Frames Received ({:})".format(output_frames.shape[0]))
             for frame in output_frames:
                 if self.skip_frames > 0:
                     self.skip_frames -= 1
-                    self.log('Skipped Frame, {:} left to skip'.format(self.skip_frames))
+                    self.log("Skipped Frame, {:} left to skip".format(self.skip_frames))
                     # Reset the buffer.  It isn't clear if this is needed, and in the current implementation it breaks things...
                     # self.frame_buffer.reset_trigger()
                     continue
                 frame = np.copy(frame)
                 accepted = self.acceptance_function(frame)
                 response_frame = frame[self.collector_metadata.response_channel_indices]
-                reference_frame = frame[self.collector_metadata.reference_channel_indices]
+                reference_frame = frame[
+                    self.collector_metadata.reference_channel_indices
+                ]
                 if self.collector_metadata.response_transformation_matrix is not None:
-                    response_frame = self.collector_metadata.response_transformation_matrix@response_frame
+                    response_frame = (
+                        self.collector_metadata.response_transformation_matrix
+                        @ response_frame
+                    )
                 if self.collector_metadata.reference_transformation_matrix is not None:
-                    reference_frame = self.collector_metadata.reference_transformation_matrix@reference_frame
-                self.log('Received output from framebuffer with RMS: \n  {:}'.format(rms_time(reference_frame,axis=-1)))
+                    reference_frame = (
+                        self.collector_metadata.reference_transformation_matrix
+                        @ reference_frame
+                    )
+                self.log(
+                    "Received output from framebuffer with RMS: \n  {:}".format(
+                        rms_time(reference_frame, axis=-1)
+                    )
+                )
                 # Apply window functions
-                response_frame*= self.response_window/self.test_level
-                reference_frame*= self.reference_window/self.test_level
+                response_frame *= self.response_window / self.test_level
+                reference_frame *= self.reference_window / self.test_level
                 if accepted and not self.frame_buffer.manual_accept:
-                    self.gui_update_queue.put((self.environment_name,('time_frame',(frame,True))))
-                    self.log('Sending data')
+                    self.gui_update_queue.put(
+                        (self.environment_name, ("time_frame", (frame, True)))
+                    )
+                    self.log("Sending data")
                     if self.collector_metadata.kurtosis_buffer_length is not None:
                         self.kurtosis_buffer.add_data(frame)
-                        self.gui_update_queue.put((self.environment_name,('kurtosis', self.kurtosis_buffer.get_kurtosis())))
+                        self.gui_update_queue.put(
+                            (
+                                self.environment_name,
+                                ("kurtosis", self.kurtosis_buffer.get_kurtosis()),
+                            )
+                        )
                     # Separate into response and reference
-                    response_fft = rfft(response_frame,axis=-1)*self.window_correction
-                    reference_fft = rfft(reference_frame,axis=-1)*self.window_correction
+                    response_fft = (
+                        rfft(response_frame, axis=-1) * self.window_correction
+                    )
+                    reference_fft = (
+                        rfft(reference_frame, axis=-1) * self.window_correction
+                    )
                     for queue in self.data_out_queues:
-                        queue.put(copy.deepcopy(
-                            (response_fft,
-                             reference_fft)))
-                    self.log('Sent Data')
+                        queue.put(copy.deepcopy((response_fft, reference_fft)))
+                    self.log("Sent Data")
                 elif self.frame_buffer.manual_accept:
                     self.last_frame = frame
-                    self.gui_update_queue.put((self.environment_name,('time_frame',(frame,False))))
+                    self.gui_update_queue.put(
+                        (self.environment_name, ("time_frame", (frame, False)))
+                    )
                 else:
-                    self.gui_update_queue.put((self.environment_name,('time_frame',(frame,False))))
+                    self.gui_update_queue.put(
+                        (self.environment_name, ("time_frame", (frame, False)))
+                    )
         # Keep running until stopped
         if not last_data:
-            self.command_queue.put(self.process_name,(DataCollectorCommands.ACQUIRE,None))
+            self.command_queue.put(
+                self.process_name, (DataCollectorCommands.ACQUIRE, None)
+            )
         else:
             self.stop(None)
-        
-    def accept(self,keep_frame):
-        self.log('Received Accept Signal {:}'.format(keep_frame))
+
+    def accept(self, keep_frame):
+        self.log("Received Accept Signal {:}".format(keep_frame))
         self.frame_buffer.accept()
         if keep_frame:
-            self.log('Sending data manually')
-            self.gui_update_queue.put((self.environment_name,('time_frame',(self.last_frame,True))))
-            frame_fft = rfft(self.last_frame,axis=-1)*self.window_correction
+            self.log("Sending data manually")
+            self.gui_update_queue.put(
+                (self.environment_name, ("time_frame", (self.last_frame, True)))
+            )
+            frame_fft = rfft(self.last_frame, axis=-1) * self.window_correction
             # Separate into response and reference
             reference_fft = frame_fft[self.collector_metadata.reference_channel_indices]
             response_fft = frame_fft[self.collector_metadata.response_channel_indices]
             for queue in self.data_out_queues:
-                queue.put(copy.deepcopy(
-                    (response_fft,
-                     reference_fft)))
-            self.log('Sent Data')
+                queue.put(copy.deepcopy((response_fft, reference_fft)))
+            self.log("Sent Data")
         self.last_frame = None
-        self.environment_command_queue.put(self.process_name,(DataCollectorCommands.ACCEPTED,keep_frame))
-        
-    def stop(self,data):
+        self.environment_command_queue.put(
+            self.process_name, (DataCollectorCommands.ACCEPTED, keep_frame)
+        )
+
+    def stop(self, data):
         """Stops acquiring data from the data_in_queue and flushes queues.
 
         Parameters
@@ -560,14 +723,16 @@ class DataCollectorProcess(AbstractMessageProcess):
             accepting any data passed along with the instruction.
         """
         sleep(0.05)
-        self.log('Stopping Data Collection')
+        self.log("Stopping Data Collection")
         for queue in self.data_out_queues:
             flush_queue(queue)
         self.command_queue.flush(self.process_name)
         self.frame_buffer.reset_trigger()
-        self.environment_command_queue.put(self.process_name,(DataCollectorCommands.SHUTDOWN_ACHIEVED,None))
-        
-    def set_test_level(self,data):
+        self.environment_command_queue.put(
+            self.process_name, (DataCollectorCommands.SHUTDOWN_ACHIEVED, None)
+        )
+
+    def set_test_level(self, data):
         """Updates the value of the current test level due and sets the number
         of frames to skip.
 
@@ -578,23 +743,30 @@ class DataCollectorProcess(AbstractMessageProcess):
             level
 
         """
-        self.skip_frames,self.test_level = data
-        self.log('Setting Test Level to {:}, skipping next {:} frames'.format(self.test_level,self.skip_frames))
+        self.skip_frames, self.test_level = data
+        self.log(
+            "Setting Test Level to {:}, skipping next {:} frames".format(
+                self.test_level, self.skip_frames
+            )
+        )
 
-    def clear_kurtosis_buffer(self,data):
+    def clear_kurtosis_buffer(self, data):
         if self.kurtosis_buffer is not None:
             self.kurtosis_buffer.clear()
-        
-def data_collector_process(environment_name : str,
-                           command_queue : VerboseMessageQueue,
-                           data_in_queue : mp.queues.Queue,
-                           data_out_queues : List[mp.queues.Queue],
-                           environment_command_queue : VerboseMessageQueue,
-                           log_file_queue : mp.queues.Queue,
-                           gui_update_queue : mp.queues.Queue,
-                           process_name : str = None):
+
+
+def data_collector_process(
+    environment_name: str,
+    command_queue: VerboseMessageQueue,
+    data_in_queue: mp.queues.Queue,
+    data_out_queues: List[mp.queues.Queue],
+    environment_command_queue: VerboseMessageQueue,
+    log_file_queue: mp.queues.Queue,
+    gui_update_queue: mp.queues.Queue,
+    process_name: str = None,
+):
     """Random vibration data collector process function called by multiprocessing
-    
+
     This function defines the Random Vibration Data Collector process that
     gets run by the multiprocessing module when it creates a new process.  It
     creates a ModalDataCollectorProcess object and runs it.
@@ -606,12 +778,14 @@ def data_collector_process(environment_name : str,
     """
 
     data_collector_instance = DataCollectorProcess(
-        environment_name + ' Data Collector' if process_name is None else process_name,
+        environment_name + " Data Collector" if process_name is None else process_name,
         command_queue,
         data_in_queue,
         data_out_queues,
         environment_command_queue,
         log_file_queue,
-        gui_update_queue, environment_name)
-    
+        gui_update_queue,
+        environment_name,
+    )
+
     data_collector_instance.run()
