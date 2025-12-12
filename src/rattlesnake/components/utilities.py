@@ -21,21 +21,20 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import numpy as np
-from qtpy import QtWidgets
-import scipy.signal as sig
+import importlib.util
 import multiprocessing as mp
 import multiprocessing.queues as mp_queues
-from enum import Enum
+import os
+import random
+import string
 import time
 from datetime import datetime
-from typing import List, Tuple, Dict
-import importlib.util
-import os
-import string
-import random
+from enum import Enum
+from typing import Dict, List, Tuple
 
-time_reporting_threshold = 0.01
+import numpy as np
+import scipy.signal as sig
+from qtpy import QtWidgets
 
 
 def log_file_task(queue: mp.queues.Queue):
@@ -48,7 +47,7 @@ def log_file_task(queue: mp.queues.Queue):
 
 
     """
-    with open("Rattlesnake.log", "w") as f:
+    with open("Rattlesnake.log", "w", encoding="utf-8") as f:
         while True:
             output = queue.get()
             if output == "quit":
@@ -84,9 +83,7 @@ def coherence(cpsd_matrix: np.ndarray, row_column: Tuple[int] = None):
     """
     if row_column is None:
         diag = np.einsum("ijj->ij", cpsd_matrix)
-        return np.real(
-            np.abs(cpsd_matrix) ** 2 / (diag[:, :, np.newaxis] * diag[:, np.newaxis, :])
-        )
+        return np.real(np.abs(cpsd_matrix) ** 2 / (diag[:, :, np.newaxis] * diag[:, np.newaxis, :]))
     else:
         row, column = row_column
         return np.real(
@@ -377,6 +374,7 @@ class VerboseMessageQueue:
         self.time_threshold = 1.0
 
     def generate_message_id(self, size=6, chars=string.ascii_letters + string.digits):
+        """Generates a random identifier for log file messages"""
         return "".join(random.choice(chars) for _ in range(size))
 
     def put(self, task_name, message_data_tuple, *args, **kwargs):
@@ -404,13 +402,8 @@ class VerboseMessageQueue:
         ):
             message_id = self.generate_message_id(8)
             self.log_queue.put(
-                "{:}: {:} put {:} ({:}) to {:}\n".format(
-                    datetime.now(),
-                    task_name,
-                    message_data_tuple[0].name,
-                    message_id,
-                    self.queue_name,
-                )
+                f"{datetime.now()}: {task_name} put "
+                f"{message_data_tuple[0].name} ({message_id}) to {self.queue_name}\n"
             )
             self.last_put_message = message_data_tuple[0]
             self.last_put_time = put_time
@@ -443,13 +436,8 @@ class VerboseMessageQueue:
         get_time = datetime.now()
         if message_id != "":
             self.log_queue.put(
-                "{:}: {:} got {:} ({:}) from {:}\n".format(
-                    get_time,
-                    task_name,
-                    message_data_tuple[0].name,
-                    message_id,
-                    self.queue_name,
-                )
+                f"{get_time}: {task_name} got "
+                f"{message_data_tuple[0].name} ({message_id}) from {self.queue_name}\n"
             )
         return message_data_tuple
 
@@ -472,11 +460,7 @@ class VerboseMessageQueue:
         """
         flush_time = time.time()
         if flush_time - self.last_flush > 0.1:
-            self.log_queue.put(
-                "{:}: {:} flushed {:}\n".format(
-                    datetime.now(), task_name, self.queue_name
-                )
-            )
+            self.log_queue.put(f"{datetime.now()}: {task_name} flushed {self.queue_name}\n")
             self.last_flush = flush_time
         data = []
         while True:
@@ -485,13 +469,9 @@ class VerboseMessageQueue:
                 data.append(this_data)
                 if message_id != "":
                     self.log_queue.put(
-                        "{:}: {:} got {:} ({:}) from {:} during flush\n".format(
-                            datetime.now(),
-                            task_name,
-                            data[-1][0].name,
-                            message_id if message_id != "" else "put not logged",
-                            self.queue_name,
-                        )
+                        f"{datetime.now()}: {task_name} got {data[-1][0].name} ("
+                        f"{message_id if message_id != '' else 'put not logged'})"
+                        f" from {self.queue_name} during flush\n"
                     )
             except mp.queues.Empty:
                 return data
@@ -589,7 +569,7 @@ def load_csv_matrix(file):
         A 2D nested list of strings containing the matrix in the CSV file.
 
     """
-    with open(file, "r") as f:
+    with open(file, "r", encoding="utf-8") as f:
         data = []
         for line in f:
             data.append([])
@@ -610,11 +590,12 @@ def save_csv_matrix(data, file):
 
     """
     text = "\n".join([",".join(row) for row in data])
-    with open(file, "w") as f:
+    with open(file, "w", encoding="utf-8") as f:
         f.write(text)
 
 
 def cpsd_to_time_history(cpsd_matrix, sample_rate, df, output_oversample=1):
+    # pylint: disable=invalid-name
     """Generates a time history realization from a CPSD matrix
 
     Parameters
@@ -675,13 +656,35 @@ def reduce_array_by_coordinate(
     control_coordinate: np.ndarray,
     excitation_coordinate: np.ndarray = None,
 ):
+    """Picks out entries in an array based on coordinate strings
+
+    Parameters
+    ----------
+    array : np.ndarray
+        Array to parse
+    coordinate : np.ndarray
+        Coordinate names associated with the array
+    control_coordinate : np.ndarray
+        Coordinate names associated with control degrees of freedom
+    excitation_coordinate : np.ndarray, optional
+        Coordinate names associated with excitation degrees of freedom
+
+    Returns
+    -------
+    np.ndarray
+        An array sorted by the provided coordinate strings
+
+    Raises
+    ------
+    ValueError
+        If requested coordinate strings do not exist in the array strings
+    """
     if excitation_coordinate is None:
         excitation_coordinate = control_coordinate.copy()
-    # transforming control_coordinate from array of shape (N,) to (N, N, 2) (equivalent to SDynPy outer_product)
+    # transforming control_coordinate from array of shape (N,) to (N, N, 2)
+    # (equivalent to SDynPy outer_product)
     if array.ndim == 3:
-        control_coordinate = np.array(
-            np.meshgrid(control_coordinate, excitation_coordinate)
-        ).T
+        control_coordinate = np.array(np.meshgrid(control_coordinate, excitation_coordinate)).T
     elif array.ndim == 2:
         control_coordinate = np.tile(control_coordinate, (2, 1)).T
     output_shape = control_coordinate.shape[:-1]
@@ -696,15 +699,13 @@ def reduce_array_by_coordinate(
     for index in np.ndindex(output_shape):
         positive_key = positive_control_coordinates[index]
         try:
-            index_array[index] = np.where(
-                np.all(positive_coordinates == positive_key, axis=-1)
-            )[0][0]
-        except IndexError:
+            index_array[index] = np.where(np.all(positive_coordinates == positive_key, axis=-1))[0][
+                0
+            ]
+        except IndexError as exc:
             raise ValueError(
-                "Coordinate {:} not found in data array".format(
-                    str(control_coordinate[index])
-                )
-            )
+                f"Coordinate {str(control_coordinate[index])} not found in data array"
+            ) from exc
     return_array = flat_array[index_array]
     return_coord = flat_coord[index_array]
 
@@ -719,22 +720,6 @@ def reduce_array_by_coordinate(
     ordinate_multiplication_array[ordinate_multiplication_array == 0] = 1
     return_array *= ordinate_multiplication_array
     return np.moveaxis(return_array, -1, 0)
-
-
-def pseudorandom_signal(fmin, fmax, df, sample_rate, rms, nsignals=1):
-    fnyq = sample_rate / 2
-    f = np.arange(fnyq / df + 1) * df
-    xfft = np.zeros((nsignals, f.size), dtype="complex128")
-    freq_indices = (f > fmin) & (f <= fmax)
-    xfft[:, freq_indices] = np.random.randn(
-        nsignals, freq_indices.sum()
-    ) + 1j * np.random.randn(nsignals, freq_indices.sum())
-    # Make sure nyquist and dc are real
-    xfft[:, 0] = 0  # DC is zero
-    xfft[:, -1] = xfft[:, -1].real
-    x = np.fft.irfft(xfft, axis=-1)
-    x /= rms_time(x, -1, True) / rms
-    return x
 
 
 def flush_queue(queue, timeout=None):
@@ -764,19 +749,17 @@ def flush_queue(queue, timeout=None):
                     )
                 )
             else:
-                data.append(
-                    queue.get(block=False if timeout is None else True, timeout=timeout)
-                )
+                data.append(queue.get(block=False if timeout is None else True, timeout=timeout))
         except mp.queues.Empty:
             return data
 
 
-def db2scale(dB):
+def db2scale(decibel):
     """Converts a decibel value to a scale factor
 
     Parameters
     ----------
-    dB : float :
+    decibel : float :
         Value in decibels
 
 
@@ -786,12 +769,17 @@ def db2scale(dB):
         Value in linear
 
     """
-    return 10 ** (dB / 20)
+    return 10 ** (decibel / 20)
 
 
-power2db = lambda power: 10 * np.log10(power)
+def power2db(power):
+    """Converts a power quantity to decibels"""
+    return 10 * np.log10(power)
 
-scale2db = lambda scale: 20 * np.log10(scale)
+
+def scale2db(scale):
+    """Converts a scale quantity to decibels"""
+    return 20 * np.log10(scale)
 
 
 def rms_time(signal, axis=None, keepdims=False):
@@ -837,65 +825,154 @@ def rms_csd(csd, df):
 
 
 def trac(th_1, th_2=None):
+    """Computes the time response assurance criterion
+
+    Parameters
+    ----------
+    th_1 : np.ndarray
+        Signals to compute the trac on.
+    th_2 : np.ndarray, optional
+        Signals to compute the trac against th_1 on.  If not specified, the trac of th_1 to itself
+        is computed
+
+    Returns
+    -------
+    np.ndarray
+        Trac values for each signal or pair of signals
+    """
     if th_2 is None:
         th_2 = th_1
     th_1_original_shape = th_1.shape
     th_1_flattened = th_1.reshape(-1, th_1.shape[-1])
     th_2_flattened = th_2.reshape(-1, th_2.shape[-1])
-    trac = np.abs(np.sum(th_1_flattened * th_2_flattened.conj(), axis=-1)) ** 2 / (
+    trac_val = np.abs(np.sum(th_1_flattened * th_2_flattened.conj(), axis=-1)) ** 2 / (
         (np.sum(th_1_flattened * th_1_flattened.conj(), axis=-1))
         * np.sum(th_2_flattened * th_2_flattened.conj(), axis=-1)
     )
-    return trac.reshape(th_1_original_shape[:-1])
+    return trac_val.reshape(th_1_original_shape[:-1])
 
 
 def moving_sum(signal, n):
+    """Computes a moving sum of the specified number of items
+
+    Parameters
+    ----------
+    signal : np.ndarray
+        The signal(s) to compute the moving sum on
+    n : int
+        The number of items to use in the moving sum
+
+    Returns
+    -------
+    np.array
+        The moving sum computed at each time step in the signal
+    """
     return_value = np.cumsum(signal, axis=-1)
     return_value[..., n:] = return_value[..., n:] - return_value[..., :-n]
     return return_value[..., n - 1 :]
 
 
 def corr_norm_signal_spec(signal, specification):
+    """Computes correlation weighted by the norm of the signals
+
+    Parameters
+    ----------
+    signal : np.ndarray
+        The signal to compute the correlation on
+    specification : np.ndarray
+        The signal to compute the correlation against
+
+    Returns
+    -------
+    np.ndarray
+        The weighted correlation signal
+    """
     correlation = sig.correlate(signal, specification, mode="valid").squeeze()
     norm_specification = np.linalg.norm(specification)
-    norm_signal = np.sqrt(
-        np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0)
-    )
+    norm_signal = np.sqrt(np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0))
     norm_signal[norm_signal == 0] = 1e14
     return correlation / norm_specification / norm_signal
 
 
 def corr_norm_spec2(signal, specification):
+    """Computes correlation weighted by the norm of the specification signal
+
+    Parameters
+    ----------
+    signal : np.ndarray
+        The signal to compute the correlation on
+    specification : np.ndarray
+        The signal to compute the correlation against
+
+    Returns
+    -------
+    np.ndarray
+        The weighted correlation signal
+    """
     correlation = sig.correlate(signal, specification, mode="valid").squeeze()
     norm_specification = np.linalg.norm(specification)
     return correlation / norm_specification**2
 
 
 def norm_ratio(signal, specification):
+    """Computes the ratio of the norms of two signals
+
+    Parameters
+    ----------
+    signal : np.ndarray
+        The signal to compute the correlation on
+    specification : np.ndarray
+        The signal to compute the correlation against
+
+    Returns
+    -------
+    np.ndarray
+        The norm ratio signal
+    """
     norm_specification = np.linalg.norm(specification)
-    norm_signal = np.sqrt(
-        np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0)
-    )
+    norm_signal = np.sqrt(np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0))
     return 1 - np.abs((norm_signal / norm_specification) ** 2 - 1)
 
 
 def correlation_norm_spec_ratio(signal, specification):
+    """Computes correlation weighted by the ratio of the norms of the signals
+
+    Parameters
+    ----------
+    signal : np.ndarray
+        The signal to compute the correlation on
+    specification : np.ndarray
+        The signal to compute the correlation against
+
+    Returns
+    -------
+    np.ndarray
+        The weighted correlation signal
+    """
     correlation = sig.correlate(signal, specification, mode="valid").squeeze()
     norm_specification = np.linalg.norm(specification)
-    norm_signal = np.sqrt(
-        np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0)
-    )
-    return correlation / norm_specification**2 - abs(
-        1 - (norm_signal / norm_specification) ** 2
-    )
+    norm_signal = np.sqrt(np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0))
+    return correlation / norm_specification**2 - abs(1 - (norm_signal / norm_specification) ** 2)
 
 
 def correlation_norm_signal_spec_ratio(signal, specification):
+    """Computes correlation weighted by the ratio of the norms of the signals
+
+    Parameters
+    ----------
+    signal : np.ndarray
+        The signal to compute the correlation on
+    specification : np.ndarray
+        The signal to compute the correlation against
+
+    Returns
+    -------
+    np.ndarray
+        The weighted correlation signal
+    """
     correlation = sig.correlate(signal, specification, mode="valid").squeeze()
     norm_specification = np.linalg.norm(specification)
-    norm_signal = np.sqrt(
-        np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0)
-    )
+    norm_signal = np.sqrt(np.sum(moving_sum(signal**2, specification.shape[-1]), axis=0))
     norm_signal_divide = norm_signal.copy()
     norm_signal_divide[norm_signal_divide == 0] = 1e14
     return correlation / norm_specification / norm_signal_divide - abs(
@@ -910,6 +987,35 @@ def align_signals(
     perform_subsample=True,
     correlation_metric=None,
 ):
+    """Computes the time shift between two signals in time
+
+    Parameters
+    ----------
+    measurement_buffer : np.ndarray
+        Signal coming from the measurement
+    specification : np.ndarray
+        Signal to align the measurement to
+    correlation_threshold : float, optional
+        Threshold for a "good" correlation, by default 0.9
+    perform_subsample : bool, optional
+        If True, computes a time shift that could be between samples using the phase of the FFT of
+        the signals, by default True
+    correlation_metric : function, optional
+        An optional function to use to change the matching criterion, by default A simple
+        correlation is used
+
+    Returns
+    -------
+    spec_portion_aligned : np.ndarray
+        The portion of the measurement that lines up with the specification
+    delay : float
+        The time difference between the measurement and specification
+    mean_phase_slope : float
+        The slope of the phase computed in the FFT from the subsample alignment.  Will be None
+        if subsample matching is not used
+    found_correlation : float
+        The value of the correlation metric used to find the match
+    """
     if correlation_metric is None:
         maximum_possible_correlation = np.sum(specification**2)
         correlation = (
@@ -920,15 +1026,13 @@ def align_signals(
         correlation = correlation_metric(measurement_buffer, specification)
     delay = np.argmax(correlation)
     found_correlation = correlation[delay]
-    print("Max Correlation: {:}".format(found_correlation))
+    print(f"Max Correlation: {found_correlation}")
     if found_correlation < correlation_threshold:
         return None, None, None, None
     # np.savez('alignment_debug.npz',measurement_buffer=measurement_buffer,
     #          specification = specification,
     #          correlation_threshold = correlation_threshold)
-    specification_portion = measurement_buffer[
-        :, delay : delay + specification.shape[-1]
-    ]
+    specification_portion = measurement_buffer[:, delay : delay + specification.shape[-1]]
 
     if perform_subsample:
         # Compute ffts for subsample alignment
@@ -937,9 +1041,7 @@ def align_signals(
 
         # Compute phase angle differences for subpixel alignment
         phase_difference = np.angle(spec_portion_fft / spec_fft)
-        phase_slope = (
-            phase_difference[..., 1:-1] / np.arange(phase_difference.shape[-1])[1:-1]
-        )
+        phase_slope = phase_difference[..., 1:-1] / np.arange(phase_difference.shape[-1])[1:-1]
         mean_phase_slope = np.median(
             phase_slope
         )  # Use Median to discard outliers due to potentially noisy phase
@@ -955,10 +1057,24 @@ def align_signals(
 
 
 def shift_signal(signal, samples_to_keep, sample_delay, phase_slope):
-    # np.savez('shift_debug.npz',signal=signal,
-    #          samples_to_keep = samples_to_keep,
-    #          sample_delay = sample_delay,
-    #          phase_slope=phase_slope)
+    """Applies a time shift to a signal by modifying the phase of the FFT
+
+    Parameters
+    ----------
+    signal : np.ndarray
+        The signal to shift
+    samples_to_keep : int
+        The number of samples to keep in the shifted signal
+    sample_delay : int
+        The number of samples to delay
+    phase_slope : float
+        The slope of the phase if subsample shift is used
+
+    Returns
+    -------
+    np.ndarray
+        The shifted signal
+    """
     signal_sample_aligned = signal[..., sample_delay : sample_delay + samples_to_keep]
     sample_aligned_fft = np.fft.rfft(signal_sample_aligned, axis=-1)
     subsample_aligned_fft = sample_aligned_fft * np.exp(
@@ -968,6 +1084,7 @@ def shift_signal(signal, samples_to_keep, sample_delay, phase_slope):
 
 
 def wrap(data, period=2 * np.pi):
+    """Wraps angle data between -pi/2 and pi/2"""
     return (data + period / 2) % period - period / 2
 
 
@@ -1018,24 +1135,26 @@ class OverlapBuffer:
         """
         self._buffer_data = np.empty(shape, dtype)
         self._buffer_data[:] = starting_value
-        self._buffer_axis = (
-            buffer_axis % self.buffer_data.ndim
-        )  # Makes a positive index
+        self._buffer_axis = buffer_axis % self.buffer_data.ndim  # Makes a positive index
         self._buffer_position = 0
 
     @property
     def buffer_position(self):
+        """The current buffer position"""
         return self._buffer_position
 
     @property
     def buffer_axis(self):
+        """The axis of the data that is used as buffer dimension"""
         return self._buffer_axis
 
     @property
     def buffer_data(self):
+        """Gets the data currently on the buffer"""
         return self._buffer_data
 
     def add_data_noshift(self, data):
+        """Adds data to the buffer without shifting the buffer"""
         data = np.array(data)
         # Make sure the data will fit into the buffer
         data_slice = tuple(
@@ -1062,19 +1181,20 @@ class OverlapBuffer:
         )
 
     def add_data(self, data):
+        """Adds data to the buffer and shifts the buffer position"""
         self.add_data_noshift(data)
         self._buffer_position += data.shape[self.buffer_axis]
         if self.buffer_position > self.buffer_data.shape[self.buffer_axis]:
             self._buffer_position = self.buffer_data.shape[self.buffer_axis]
 
     def get_data_noshift(self, num_samples):
+        """Gets data from the buffer without shifting the buffer position"""
         data_start = -self.buffer_position
         data_end = -self.buffer_position + num_samples
         if data_end > 0:
             raise ValueError(
-                "Too many samples requested {:} > buffer position of {:}".format(
-                    num_samples, self.buffer_position
-                )
+                f"Too many samples requested {num_samples} > "
+                f"buffer position of {self.buffer_position}"
             )
         data_slice = tuple(
             [
@@ -1089,6 +1209,7 @@ class OverlapBuffer:
         return self.buffer_data[data_slice]
 
     def get_data(self, num_samples, buffer_shift=None):
+        """Gets data from the buffer and updates the position"""
         data = self.get_data_noshift(num_samples)
         if buffer_shift is None:
             self.shift_buffer_position(-num_samples)
@@ -1097,6 +1218,7 @@ class OverlapBuffer:
         return data
 
     def shift_buffer_position(self, samples):
+        """Moves the buffer positions"""
         self._buffer_position += samples
         if self._buffer_position < 0:
             self._buffer_position = 0
@@ -1104,6 +1226,7 @@ class OverlapBuffer:
             self._buffer_position = self.buffer_data.shape[self.buffer_axis]
 
     def set_buffer_position(self, position=0):
+        """Sets the buffer positions"""
         self._buffer_position = position
         if self._buffer_position < 0:
             self._buffer_position = 0
@@ -1115,6 +1238,7 @@ class OverlapBuffer:
 
     @property
     def shape(self):
+        """Gets the shape of the buffer"""
         return self.buffer_data.shape
 
 
@@ -1132,8 +1256,8 @@ def load_python_module(module_path):
     module : module:
         A reference to the loaded module
     """
-    path, file = os.path.split(module_path)
-    file, ext = os.path.splitext(file)
+    _, file = os.path.split(module_path)
+    file, _ = os.path.splitext(file)
     spec = importlib.util.spec_from_file_location(file, module_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
