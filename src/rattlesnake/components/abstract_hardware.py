@@ -22,9 +22,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 from abc import ABC, abstractmethod
-from .utilities import Channel, DataAcquisitionParameters
 from typing import List
+
 import numpy as np
+
+from .utilities import Channel, DataAcquisitionParameters
 
 
 class HardwareAcquisition(ABC):
@@ -58,34 +60,28 @@ class HardwareAcquisition(ABC):
         None.
 
         """
-        pass
 
     @abstractmethod
     def start(self):
         """Method to start acquiring data from the hardware"""
-        pass
 
     @abstractmethod
     def read(self) -> np.ndarray:
         """Method to read a frame of data from the hardware that returns
         an appropriately sized np.ndarray"""
-        pass
 
     @abstractmethod
     def read_remaining(self) -> np.ndarray:
         """Method to read the rest of the data on the acquisition from the hardware
         that returns an appropriately sized np.ndarray"""
-        pass
 
     @abstractmethod
     def stop(self):
         """Method to stop the acquisition"""
-        pass
 
     @abstractmethod
     def close(self):
         """Method to close down the hardware"""
-        pass
 
     @abstractmethod
     def get_acquisition_delay(self) -> int:
@@ -129,29 +125,23 @@ class HardwareOutput(ABC):
         None.
 
         """
-        pass
 
     @abstractmethod
     def start(self):
         """Method to start outputting data to the hardware"""
-        pass
 
     @abstractmethod
     def write(self, data):
         """Method to write a np.ndarray with a frame of data to the hardware"""
-        pass
 
     @abstractmethod
     def stop(self):
         """Method to stop the output"""
-        pass
 
     @abstractmethod
     def close(self):
         """Method to close down the hardware"""
-        pass
 
     @abstractmethod
     def ready_for_new_output(self) -> bool:
         """Method that returns true if the hardware should accept a new signal"""
-        pass
