@@ -22,17 +22,14 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from .utilities import (
-    QueueContainer,
-    GlobalCommands,
-    DataAcquisitionParameters,
-    flush_queue,
-)
-from .abstract_message_process import AbstractMessageProcess
-from .abstract_environment import AbstractMetadata
-import numpy as np
-import netCDF4 as nc
 from typing import Dict
+
+import netCDF4 as nc
+import numpy as np
+
+from .abstract_environment import AbstractMetadata
+from .abstract_message_process import AbstractMessageProcess
+from .utilities import DataAcquisitionParameters, GlobalCommands, QueueContainer
 
 
 class StreamingProcess(AbstractMessageProcess):
@@ -93,7 +90,9 @@ class StreamingProcess(AbstractMessageProcess):
         self.stream_variable = "time_data"
         self.stream_dimension = "time_samples"
         self.stream_index = 0
-        self.netcdf_handle = nc.Dataset(filename, "w", format="NETCDF4", clobber=True)
+        self.netcdf_handle = nc.Dataset(  # pylint: disable=no-member
+            filename, "w", format="NETCDF4", clobber=True
+        )
         # Create dimensions
         self.netcdf_handle.createDimension(
             "response_channels", len(global_data_parameters.channel_list)
@@ -104,7 +103,7 @@ class StreamingProcess(AbstractMessageProcess):
                 [
                     channel
                     for channel in global_data_parameters.channel_list
-                    if not channel.feedback_device is None
+                    if channel.feedback_device is not None
                 ]
             ),
         )
@@ -116,8 +115,7 @@ class StreamingProcess(AbstractMessageProcess):
         self.netcdf_handle.file_version = "3.0.0"
         self.netcdf_handle.sample_rate = global_data_parameters.sample_rate
         self.netcdf_handle.time_per_write = (
-            global_data_parameters.samples_per_write
-            / global_data_parameters.output_sample_rate
+            global_data_parameters.samples_per_write / global_data_parameters.output_sample_rate
         )
         self.netcdf_handle.time_per_read = (
             global_data_parameters.samples_per_read / global_data_parameters.sample_rate
@@ -135,9 +133,7 @@ class StreamingProcess(AbstractMessageProcess):
         self.netcdf_handle.createVariable(
             self.stream_variable, "f8", ("response_channels", self.stream_dimension)
         )
-        var = self.netcdf_handle.createVariable(
-            "environment_names", str, ("num_environments",)
-        )
+        var = self.netcdf_handle.createVariable("environment_names", str, ("num_environments",))
         for i, name in enumerate(global_data_parameters.environment_names):
             var[i] = name
         var = self.netcdf_handle.createVariable(
@@ -176,8 +172,7 @@ class StreamingProcess(AbstractMessageProcess):
                 "/channels/" + label, netcdf_datatype, ("response_channels",)
             )
             channel_data = [
-                getattr(channel, label)
-                for channel in global_data_parameters.channel_list
+                getattr(channel, label) for channel in global_data_parameters.channel_list
             ]
             if netcdf_datatype == "i1":
                 channel_data = np.array([1 if val else 0 for val in channel_data])
@@ -203,23 +198,22 @@ class StreamingProcess(AbstractMessageProcess):
         if self.netcdf_handle is None:
             return
         test_data = data
-        timesteps = slice(
-            self.netcdf_handle.dimensions[self.stream_dimension].size, None, None
-        )
+        timesteps = slice(self.netcdf_handle.dimensions[self.stream_dimension].size, None, None)
         self.netcdf_handle.variables[self.stream_variable][:, timesteps] = test_data
 
-    def create_new_stream(self, data):
+    def create_new_stream(self, data):  # pylint: disable=unused-argument
+        """Creates a new stream in the streaming file"""
         if self.netcdf_handle is None:
             return
         self.stream_index += 1
-        self.stream_variable = "time_data_{:}".format(self.stream_index)
-        self.stream_dimension = "time_samples_{:}".format(self.stream_index)
+        self.stream_variable = f"time_data_{self.stream_index}"
+        self.stream_dimension = f"time_samples_{self.stream_index}"
         self.netcdf_handle.createDimension(self.stream_dimension, None)
         self.netcdf_handle.createVariable(
             self.stream_variable, "f8", ("response_channels", self.stream_dimension)
         )
 
-    def finalize(self, data):
+    def finalize(self, data):  # pylint: disable=unused-argument
         """Closes the netCDF file when data writing is complete
 
         Parameters
@@ -229,7 +223,7 @@ class StreamingProcess(AbstractMessageProcess):
             due to the calling signature of functions called through the
             ``command_map``
         """
-        if not self.netcdf_handle is None:
+        if self.netcdf_handle is not None:
             self.netcdf_handle.close()
             self.netcdf_handle = None
 
