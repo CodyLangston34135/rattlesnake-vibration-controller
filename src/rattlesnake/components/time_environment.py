@@ -24,32 +24,35 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from qtpy import QtWidgets, uic, QtCore
+import copy
+import multiprocessing as mp
+import multiprocessing.sharedctypes  # pylint: disable=unused-import
+from multiprocessing.queues import Queue
+
+import netCDF4 as nc4
+import numpy as np
+import openpyxl
+from qtpy import QtCore, QtWidgets, uic
+
 from .abstract_environment import AbstractEnvironment, AbstractMetadata, AbstractUI
-from .utilities import (
-    DataAcquisitionParameters,
-    VerboseMessageQueue,
-    GlobalCommands,
-    rms_time,
-    db2scale,
-)
-from .ui_utilities import multiline_plotter, load_time_history
 from .environments import (
     ControlTypes,
     environment_definition_ui_paths,
     environment_run_ui_paths,
 )
-import netCDF4 as nc4
-from multiprocessing.queues import Queue
-import numpy as np
-import multiprocessing as mp
-import copy
-import openpyxl
+from .ui_utilities import load_time_history, multiline_plotter
+from .utilities import (
+    DataAcquisitionParameters,
+    GlobalCommands,
+    VerboseMessageQueue,
+    db2scale,
+    rms_time,
+)
 
-control_type = ControlTypes.TIME
-test_level_threshold = 1.01
-max_responses_to_plot = 20
-max_samples_to_plot = 100000
+CONTROL_TYPE = ControlTypes.TIME
+TEST_LEVEL_THRESHOLD = 1.01
+MAX_RESPONSES_TO_PLOT = 20
+MAX_SAMPLES_TO_PLOT = 100000
 
 
 class TimeQueues:
@@ -133,7 +136,9 @@ class TimeParameters(AbstractMetadata):
         """The number of samples required to ramp down the signal when cancelled"""
         return int(self.cancel_rampdown_time * self.sample_rate)
 
-    def store_to_netcdf(self, netcdf_group_handle: nc4._netCDF4.Group):
+    def store_to_netcdf(
+        self, netcdf_group_handle: nc4._netCDF4.Group  # pylint: disable=c-extension-no-member
+    ):
         """
         Stores parameters to a netCDF group so they can be recovered.
 
@@ -189,8 +194,8 @@ class TimeUI(AbstractUI):
         self,
         environment_name: str,
         definition_tabwidget: QtWidgets.QTabWidget,
-        system_id_tabwidget: QtWidgets.QTabWidget,
-        test_predictions_tabwidget: QtWidgets.QTabWidget,
+        system_id_tabwidget: QtWidgets.QTabWidget,  # pylint: disable=unused-argument
+        test_predictions_tabwidget: QtWidgets.QTabWidget,  # pylint: disable=unused-argument
         run_tabwidget: QtWidgets.QTabWidget,
         environment_command_queue: VerboseMessageQueue,
         controller_communication_queue: VerboseMessageQueue,
@@ -235,13 +240,11 @@ class TimeUI(AbstractUI):
         )
         # Add the page to the control definition tabwidget
         self.definition_widget = QtWidgets.QWidget()
-        uic.loadUi(
-            environment_definition_ui_paths[control_type], self.definition_widget
-        )
+        uic.loadUi(environment_definition_ui_paths[CONTROL_TYPE], self.definition_widget)
         definition_tabwidget.addTab(self.definition_widget, self.environment_name)
         # Add the page to the run tabwidget
         self.run_widget = QtWidgets.QWidget()
-        uic.loadUi(environment_run_ui_paths[control_type], self.run_widget)
+        uic.loadUi(environment_run_ui_paths[CONTROL_TYPE], self.run_widget)
         run_tabwidget.addTab(self.run_widget, self.environment_name)
 
         # Set up some persistent data
@@ -275,13 +278,13 @@ class TimeUI(AbstractUI):
     def complete_ui(self):
         """Helper Function to continue setting up the user interface"""
         # Set common look and feel for plots
-        plotWidgets = [
+        plot_widgets = [
             self.definition_widget.signal_display_plot,
             self.run_widget.output_signal_plot,
             self.run_widget.response_signal_plot,
         ]
-        for plotWidget in plotWidgets:
-            plot_item = plotWidget.getPlotItem()
+        for plot_widget in plot_widgets:
+            plot_item = plot_widget.getPlotItem()
             plot_item.showGrid(True, True, 0.25)
             plot_item.enableAutoRange()
             plot_item.getViewBox().enableAutoRange(enable=True)
@@ -292,9 +295,7 @@ class TimeUI(AbstractUI):
         self.run_widget.start_test_button.clicked.connect(self.start_control)
         self.run_widget.stop_test_button.clicked.connect(self.stop_control)
 
-    def initialize_data_acquisition(
-        self, data_acquisition_parameters: DataAcquisitionParameters
-    ):
+    def initialize_data_acquisition(self, data_acquisition_parameters: DataAcquisitionParameters):
         """Update the user interface with data acquisition parameters
 
         This function is called when the Data Acquisition parameters are
@@ -312,27 +313,17 @@ class TimeUI(AbstractUI):
         self.signal = None
         # Get channel information
         channels = data_acquisition_parameters.channel_list
-        num_measurements = len(
-            [channel for channel in channels if channel.feedback_device is None]
-        )
-        num_output = len(
-            [channel for channel in channels if not channel.feedback_device is None]
-        )
+        num_measurements = len([channel for channel in channels if channel.feedback_device is None])
+        num_output = len([channel for channel in channels if channel.feedback_device is not None])
         self.physical_output_names = [
-            "{:} {:}{:}".format(
-                "" if channel.channel_type is None else channel.channel_type,
-                channel.node_number,
-                channel.node_direction,
-            )
+            f"{'' if channel.channel_type is None else channel.channel_type} "
+            f"{channel.node_number}{channel.node_direction}"
             for channel in channels
             if channel.feedback_device
         ]
         self.physical_measurement_names = [
-            "{:} {:}{:}".format(
-                "" if channel.channel_type is None else channel.channel_type,
-                channel.node_number,
-                channel.node_direction,
-            )
+            f"{'' if channel.channel_type is None else channel.channel_type} "
+            "{channel.node_number}{channel.node_direction}"
             for channel in channels
             if channel.feedback_device is None
         ]
@@ -348,9 +339,7 @@ class TimeUI(AbstractUI):
             checkbox.setChecked(True)
             checkbox.stateChanged.connect(self.show_signal)
             self.show_signal_checkboxes.append(checkbox)
-            self.definition_widget.signal_information_table.setCellWidget(
-                i, 0, checkbox
-            )
+            self.definition_widget.signal_information_table.setCellWidget(i, 0, checkbox)
             item = QtWidgets.QTableWidgetItem()
             item.setText("0.0")
             item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
@@ -360,12 +349,9 @@ class TimeUI(AbstractUI):
             item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
             self.definition_widget.signal_information_table.setItem(i, 3, item)
         # Fill in the info at the bottom
-        self.definition_widget.sample_rate_display.setValue(
-            data_acquisition_parameters.sample_rate
-        )
+        self.definition_widget.sample_rate_display.setValue(data_acquisition_parameters.sample_rate)
         self.definition_widget.output_sample_rate_display.setValue(
-            data_acquisition_parameters.sample_rate
-            * data_acquisition_parameters.output_oversample
+            data_acquisition_parameters.sample_rate * data_acquisition_parameters.output_oversample
         )
         self.definition_widget.output_channels_display.setValue(num_output)
 
@@ -395,8 +381,8 @@ class TimeUI(AbstractUI):
                 (
                     (
                         num_measurements
-                        if num_measurements < max_responses_to_plot
-                        else max_responses_to_plot
+                        if num_measurements < MAX_RESPONSES_TO_PLOT
+                        else MAX_RESPONSES_TO_PLOT
                     ),
                     2,
                 )
@@ -408,7 +394,7 @@ class TimeUI(AbstractUI):
 
         self.data_acquisition_parameters = data_acquisition_parameters
 
-    def load_signal(self, clicked, filename=None):
+    def load_signal(self, clicked, filename=None):  # pylint: disable=unused-argument
         """Loads a time signal using a dialog or the specified filename
 
         Parameters
@@ -421,7 +407,7 @@ class TimeUI(AbstractUI):
 
         """
         if filename is None:
-            filename, file_filter = QtWidgets.QFileDialog.getOpenFileName(
+            filename, _ = QtWidgets.QFileDialog.getOpenFileName(
                 self.definition_widget,
                 "Select Signal File",
                 filter="Numpy or Mat (*.npy *.npz *.mat)",
@@ -434,18 +420,13 @@ class TimeUI(AbstractUI):
         )
         self.definition_widget.signal_samples_display.setValue(self.signal.shape[-1])
         self.definition_widget.signal_time_display.setValue(
-            self.signal.shape[-1]
-            / self.definition_widget.output_sample_rate_display.value()
+            self.signal.shape[-1] / self.definition_widget.output_sample_rate_display.value()
         )
         maxs = np.max(np.abs(self.signal), axis=-1)
         rmss = rms_time(self.signal, axis=-1)
         for i, (mx, rms) in enumerate(zip(maxs, rmss)):
-            self.definition_widget.signal_information_table.item(i, 2).setText(
-                "{:0.2f}".format(mx)
-            )
-            self.definition_widget.signal_information_table.item(i, 3).setText(
-                "{:0.2f}".format(rms)
-            )
+            self.definition_widget.signal_information_table.item(i, 2).setText(f"{mx:0.2f}")
+            self.definition_widget.signal_information_table.item(i, 3).setText(f"{rms:0.2f}")
         self.show_signal()
 
     def show_signal(self):
@@ -498,8 +479,8 @@ class TimeUI(AbstractUI):
                             if data.output_signal.shape[-1]
                             // self.data_acquisition_parameters.output_oversample
                             * 2
-                            < max_samples_to_plot
-                            else max_samples_to_plot
+                            < MAX_SAMPLES_TO_PLOT
+                            else MAX_SAMPLES_TO_PLOT
                         )
                     )
                     / self.data_acquisition_parameters.sample_rate,
@@ -511,15 +492,17 @@ class TimeUI(AbstractUI):
                             if data.output_signal.shape[-1]
                             // self.data_acquisition_parameters.output_oversample
                             * 2
-                            < max_samples_to_plot
-                            else max_samples_to_plot
+                            < MAX_SAMPLES_TO_PLOT
+                            else MAX_SAMPLES_TO_PLOT
                         )
                     ),
                 )
         self.environment_parameters = data
         return data
 
-    def retrieve_metadata(self, netcdf_handle: nc4._netCDF4.Dataset):
+    def retrieve_metadata(
+        self, netcdf_handle: nc4._netCDF4.Dataset  # pylint: disable=c-extension-no-member
+    ):
         """Collects environment parameters from a netCDF dataset.
 
         This function retrieves parameters from a netCDF dataset that was written
@@ -545,18 +528,12 @@ class TimeUI(AbstractUI):
         """
         group = netcdf_handle.groups[self.environment_name]
         self.signal = group.variables["output_signal"][...].data
-        self.definition_widget.cancel_rampdown_selector.setValue(
-            group.cancel_rampdown_time
-        )
+        self.definition_widget.cancel_rampdown_selector.setValue(group.cancel_rampdown_time)
         maxs = np.max(np.abs(self.signal), axis=-1)
         rmss = rms_time(self.signal, axis=-1)
         for i, (mx, rms) in enumerate(zip(maxs, rmss)):
-            self.definition_widget.signal_information_table.item(i, 2).setText(
-                "{:0.2f}".format(mx)
-            )
-            self.definition_widget.signal_information_table.item(i, 3).setText(
-                "{:0.2f}".format(rms)
-            )
+            self.definition_widget.signal_information_table.item(i, 2).setText(f"{mx:0.2f}")
+            self.definition_widget.signal_information_table.item(i, 3).setText(f"{rms:0.2f}")
         self.show_signal()
 
     def start_control(self):
@@ -584,9 +561,7 @@ class TimeUI(AbstractUI):
 
     def stop_control(self):
         """Stops running the environment"""
-        self.environment_command_queue.put(
-            self.log_name, (GlobalCommands.STOP_ENVIRONMENT, None)
-        )
+        self.environment_command_queue.put(self.log_name, (GlobalCommands.STOP_ENVIRONMENT, None))
 
     def change_test_level_from_profile(self, test_level):
         """Sets the test level from a profile instruction
@@ -598,7 +573,7 @@ class TimeUI(AbstractUI):
         """
         self.run_widget.test_level_selector.setValue(int(test_level))
 
-    def set_repeat_from_profile(self, data):
+    def set_repeat_from_profile(self, data):  # pylint: disable=unused-argument
         """Sets the the signal to repeat from a profile instruction
 
         Parameters
@@ -609,7 +584,7 @@ class TimeUI(AbstractUI):
         """
         self.run_widget.repeat_signal_checkbox.setChecked(True)
 
-    def set_norepeat_from_profile(self, data):
+    def set_norepeat_from_profile(self, data):  # pylint: disable=unused-argument
         """Sets the the signal to not repeat from a profile instruction
 
         Parameters
@@ -644,9 +619,7 @@ class TimeUI(AbstractUI):
                 self.plot_data_items["output_signal_measurement"], output_data
             ):
                 x, y = curve.getData()
-                y = np.concatenate(
-                    (y[this_output.size :], this_output[-x.size :]), axis=0
-                )
+                y = np.concatenate((y[this_output.size :], this_output[-x.size :]), axis=0)
                 curve.setData(x, y)
         elif message == "enable":
             widget = None
@@ -657,9 +630,7 @@ class TimeUI(AbstractUI):
                 except AttributeError:
                     continue
             if widget is None:
-                raise ValueError(
-                    "Cannot Enable Widget {:}: not found in UI".format(data)
-                )
+                raise ValueError(f"Cannot Enable Widget {data}: not found in UI")
             widget.setEnabled(True)
         elif message == "disable":
             widget = None
@@ -670,9 +641,7 @@ class TimeUI(AbstractUI):
                 except AttributeError:
                     continue
             if widget is None:
-                raise ValueError(
-                    "Cannot Disable Widget {:}: not found in UI".format(data)
-                )
+                raise ValueError(f"Cannot Disable Widget {data}: not found in UI")
             widget.setEnabled(False)
         else:
             widget = None
@@ -683,18 +652,16 @@ class TimeUI(AbstractUI):
                 except AttributeError:
                     continue
             if widget is None:
-                raise ValueError(
-                    "Cannot Update Widget {:}: not found in UI".format(message)
-                )
-            if type(widget) is QtWidgets.QDoubleSpinBox:
+                raise ValueError(f"Cannot Update Widget {message}: not found in UI")
+            if isinstance(widget, QtWidgets.QDoubleSpinBox):
                 widget.setValue(data)
-            elif type(widget) is QtWidgets.QSpinBox:
+            elif isinstance(widget, QtWidgets.QSpinBox):
                 widget.setValue(data)
-            elif type(widget) is QtWidgets.QLineEdit:
+            elif isinstance(widget, QtWidgets.QLineEdit):
                 widget.setText(data)
-            elif type(widget) is QtWidgets.QListWidget:
+            elif isinstance(widget, QtWidgets.QListWidget):
                 widget.clear()
-                widget.addItems(["{:.3f}".format(d) for d in data])
+                widget.addItems([f"{d:.3f}" for d in data])
 
     @staticmethod
     def create_environment_template(
@@ -729,9 +696,7 @@ class TimeUI(AbstractUI):
             "Note: Replace cells with hash marks (#) to provide the requested parameters.",
         )
         worksheet.cell(2, 1, "Signal File")
-        worksheet.cell(
-            2, 2, "# Path to the file that contains the time signal that will be output"
-        )
+        worksheet.cell(2, 2, "# Path to the file that contains the time signal that will be output")
         worksheet.cell(3, 1, "Cancel Rampdown Time")
         worksheet.cell(
             3,
@@ -739,9 +704,7 @@ class TimeUI(AbstractUI):
             "# Time for the environment to ramp to zero if the environment is cancelled.",
         )
 
-    def set_parameters_from_template(
-        self, worksheet: openpyxl.worksheet.worksheet.Worksheet
-    ):
+    def set_parameters_from_template(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
         """
         Collects parameters for the user interface from the Excel template file
 
@@ -764,9 +727,7 @@ class TimeUI(AbstractUI):
 
         """
         self.load_signal(None, worksheet.cell(2, 2).value)
-        self.definition_widget.cancel_rampdown_selector.setValue(
-            float(worksheet.cell(3, 2).value)
-        )
+        self.definition_widget.cancel_rampdown_selector.setValue(float(worksheet.cell(3, 2).value))
 
 
 class TimeEnvironment(AbstractEnvironment):
@@ -776,8 +737,8 @@ class TimeEnvironment(AbstractEnvironment):
         self,
         environment_name: str,
         queue_container: TimeQueues,
-        acquisition_active: mp.Value,
-        output_active: mp.Value,
+        acquisition_active: mp.sharedctypes.Synchronized,
+        output_active: mp.sharedctypes.Synchronized,
     ):
         """
         Time History Generation Environment Constructor
@@ -814,6 +775,7 @@ class TimeEnvironment(AbstractEnvironment):
         self.shutdown_flag = False
         self.current_test_level = 0.0
         self.target_test_level = 0.0
+        self.test_level_target = 0.0
         self.test_level_change = 0.0
         self.repeat = False
         self.signal_remainder = None
@@ -838,22 +800,16 @@ class TimeEnvironment(AbstractEnvironment):
         self.data_acquisition_parameters = data_acquisition_parameters
         self.measurement_channels = [
             index
-            for index, channel in enumerate(
-                self.data_acquisition_parameters.channel_list
-            )
+            for index, channel in enumerate(self.data_acquisition_parameters.channel_list)
             if channel.feedback_device is None
         ]
         self.output_channels = [
             index
-            for index, channel in enumerate(
-                self.data_acquisition_parameters.channel_list
-            )
-            if not channel.feedback_device is None
+            for index, channel in enumerate(self.data_acquisition_parameters.channel_list)
+            if channel.feedback_device is not None
         ]
 
-    def initialize_environment_test_parameters(
-        self, environment_parameters: TimeParameters
-    ):
+    def initialize_environment_test_parameters(self, environment_parameters: TimeParameters):
         """
         Initialize the environment parameters specific to this environment
 
@@ -896,16 +852,14 @@ class TimeEnvironment(AbstractEnvironment):
 
         """
         if self.startup:
-            if not data is None:
+            if data is not None:
                 self.current_test_level, self.repeat = data
-                self.log("Test Level set to {:}".format(self.current_test_level))
+                self.log(f"Test Level set to {self.current_test_level}")
             self.signal_remainder = self.environment_parameters.output_signal
             self.startup = False
         # See if any data has come in
         try:
-            acquisition_data, last_acquisition = (
-                self.queue_container.data_in_queue.get_nowait()
-            )
+            acquisition_data, last_acquisition = self.queue_container.data_in_queue.get_nowait()
             measurement_data = acquisition_data[self.measurement_channels]
             output_data = acquisition_data[self.output_channels]
             self.queue_container.gui_update_queue.put(
@@ -918,8 +872,7 @@ class TimeEnvironment(AbstractEnvironment):
             last_signal = False
             # See if there is enough in the remainder
             if (
-                self.data_acquisition_parameters.samples_per_write
-                > self.signal_remainder.shape[-1]
+                self.data_acquisition_parameters.samples_per_write > self.signal_remainder.shape[-1]
                 and self.repeat
             ):
                 self.signal_remainder = np.concatenate(
@@ -933,9 +886,7 @@ class TimeEnvironment(AbstractEnvironment):
             ) or self.current_test_level == 0.0:
                 last_signal = True
             self.output(
-                self.signal_remainder[
-                    :, : self.data_acquisition_parameters.samples_per_write
-                ],
+                self.signal_remainder[:, : self.data_acquisition_parameters.samples_per_write],
                 last_signal,
             )
             self.signal_remainder = self.signal_remainder[
@@ -945,9 +896,7 @@ class TimeEnvironment(AbstractEnvironment):
                 # Wait until we get the last signal from the acquisition
                 while not last_acquisition:
                     self.log("Waiting for Last Acquisition")
-                    acquisition_data, last_acquisition = (
-                        self.queue_container.data_in_queue.get()
-                    )
+                    acquisition_data, last_acquisition = self.queue_container.data_in_queue.get()
                     measurement_data = acquisition_data[self.measurement_channels]
                     output_data = acquisition_data[self.output_channels]
                     self.queue_container.gui_update_queue.put(
@@ -985,16 +934,17 @@ class TimeEnvironment(AbstractEnvironment):
         # Compute the test_level scaling for this dataset
         if self.test_level_change == 0.0:
             test_level = self.current_test_level
-            self.log("Test Level at {:}".format(test_level))
+            self.log(f"Test Level at {test_level}")
         else:
             test_level = (
                 self.current_test_level
                 + (np.arange(write_data.shape[-1]) + 1) * self.test_level_change
             )
-            # Compute distance in steps from the target test_level and find where it is near the target
+            # Compute distance in steps from the target test_level
+            # and find where it is near the target
             full_level_index = np.nonzero(
                 abs(test_level - self.test_level_target) / abs(self.test_level_change)
-                < test_level_threshold
+                < TEST_LEVEL_THRESHOLD
             )[0]
             # Check if any are
             if len(full_level_index) > 0:
@@ -1006,7 +956,7 @@ class TimeEnvironment(AbstractEnvironment):
             else:
                 # Otherwise, our current test_level is the last entry in the test_level scaling
                 self.current_test_level = test_level[-1]
-            self.log("Test level from {:} to {:}".format(test_level[0], test_level[-1]))
+            self.log(f"Test level from {test_level[0]} to {test_level[-1]}")
         # Write the test level-scaled data to the task
         self.log("Sending data to data_out queue")
         self.queue_container.data_out_queue.put(
@@ -1040,11 +990,8 @@ class TimeEnvironment(AbstractEnvironment):
         ) / self.environment_parameters.cancel_rampdown_samples
         if self.test_level_change != 0.0:
             self.log(
-                "Changed test level to {:} from {:}, {:} change per sample".format(
-                    self.test_level_target,
-                    self.current_test_level,
-                    self.test_level_change,
-                )
+                f"Changed test level to {self.test_level_target} from "
+                f"{self.current_test_level}, {self.test_level_change} change per sample"
             )
 
     def shutdown(self):
@@ -1083,8 +1030,8 @@ def time_process(
     log_file_queue: Queue,
     data_in_queue: Queue,
     data_out_queue: Queue,
-    acquisition_active: mp.Value,
-    output_active: mp.Value,
+    acquisition_active: mp.sharedctypes.Synchronized,
+    output_active: mp.sharedctypes.Synchronized,
 ):
     """Time signal generation environment process function called by multiprocessing
 
