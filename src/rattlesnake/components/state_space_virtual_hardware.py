@@ -22,15 +22,17 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from .abstract_hardware import HardwareAcquisition, HardwareOutput
-from .utilities import Channel, DataAcquisitionParameters, flush_queue
-import numpy as np
-from typing import List
 import multiprocessing as mp
+import os
+import time
+from typing import List
+
+import numpy as np
 import scipy.signal as signal
 from scipy.io import loadmat
-import time
-import os
+
+from .abstract_hardware import HardwareAcquisition, HardwareOutput
+from .utilities import Channel, DataAcquisitionParameters, flush_queue
 
 
 class StateSpaceAcquisition(HardwareAcquisition):
@@ -60,7 +62,7 @@ class StateSpaceAcquisition(HardwareAcquisition):
             pass the output data to the acquisition which does the integration.
 
         """
-        file_base, extension = os.path.splitext(state_space_file)
+        _, extension = os.path.splitext(state_space_file)
 
         if extension.lower() == ".npz":
             data = np.load(state_space_file)
@@ -68,9 +70,8 @@ class StateSpaceAcquisition(HardwareAcquisition):
             data = loadmat(state_space_file)
         else:
             raise ValueError(
-                "Unknown extension to file {:}, should be {:} or {:}, not {:}".format(
-                    state_space_file, ".npz", ".mat", extension
-                )
+                f"Unknown extension to file {state_space_file}, "
+                f"should be .npz or .mat, not {extension}"
             )
         self.system = signal.StateSpace(data["A"], data["B"], data["C"], data["D"])
         self.times = None
@@ -80,6 +81,8 @@ class StateSpaceAcquisition(HardwareAcquisition):
         self.force_buffer = None
         self.integration_oversample = None
         self.acquisition_delay = None
+        self.response_channels: np.ndarray
+        self.response_channels = None
 
     def set_up_data_acquisition_parameters_and_channels(
         self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
@@ -146,13 +149,11 @@ class StateSpaceAcquisition(HardwareAcquisition):
         self.integration_oversample = test_data.output_oversample
         # Need to get one more sample than you would think because lsim doesn't bridge the gap
         # between integrations
-        self.times = np.arange(
-            test_data.samples_per_read * self.integration_oversample + 1
-        ) / (test_data.sample_rate * self.integration_oversample)
-        self.frame_time = test_data.samples_per_read / test_data.sample_rate
-        self.acquisition_delay = (
-            test_data.samples_per_write / test_data.output_oversample
+        self.times = np.arange(test_data.samples_per_read * self.integration_oversample + 1) / (
+            test_data.sample_rate * self.integration_oversample
         )
+        self.frame_time = test_data.samples_per_read / test_data.sample_rate
+        self.acquisition_delay = test_data.samples_per_write / test_data.output_oversample
 
     def start(self):
         """Method to start acquiring data.
@@ -195,9 +196,9 @@ class StateSpaceAcquisition(HardwareAcquisition):
         while self.force_buffer.shape[0] < self.times.size:
             try:
                 forces = self.queue.get(timeout=self.frame_time)
-            except (
-                mp.queues.Empty
-            ):  # If we don't get an output in time, this likely means output has stopped so just put zeros.
+            except mp.queues.Empty:
+                # If we don't get an output in time, this likely means output
+                # has stopped so just put zeros.
                 forces = np.zeros((self.force_buffer.shape[-1], self.times.size))
             self.force_buffer = np.concatenate((self.force_buffer, forces.T), axis=0)
 
@@ -208,9 +209,7 @@ class StateSpaceAcquisition(HardwareAcquisition):
         # buffer because it will be the next force sample we use
         self.force_buffer = self.force_buffer[self.times.size - 1 :]
 
-        times_out, sys_out, x_out = signal.lsim(
-            self.system, this_force, self.times, self.state
-        )
+        _, sys_out, x_out = signal.lsim(self.system, this_force, self.times, self.state)
 
         self.state[:] = x_out[-1]
 
@@ -244,7 +243,6 @@ class StateSpaceAcquisition(HardwareAcquisition):
 
     def close(self):
         """Method to close down the hardware"""
-        pass
 
 
 class StateSpaceOutput(HardwareOutput):
@@ -288,13 +286,11 @@ class StateSpaceOutput(HardwareOutput):
         None.
 
         """
-        pass
 
     def start(self):
         """Method to start acquiring data
 
         Does nothing for synthetic hardware."""
-        pass
 
     def write(self, data: np.ndarray):
         """Method to write a frame of data
@@ -320,7 +316,6 @@ class StateSpaceOutput(HardwareOutput):
         """Method to close down the hardware
 
         Does nothing for synthetic hardware."""
-        pass
 
     def ready_for_new_output(self):
         """Signals that the hardware is ready for new output
