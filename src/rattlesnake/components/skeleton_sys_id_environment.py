@@ -293,7 +293,8 @@ def skeleton_process(
     )
     spectral_proc.start()
     analysis_proc = mp.Process(
-        target=data_analysis_process,
+        # Will need to define and import a data_analysis_process
+        target=data_analysis_process,  # type: ignore
         args=(
             environment_name,
             queue_container.data_analysis_command_queue,
