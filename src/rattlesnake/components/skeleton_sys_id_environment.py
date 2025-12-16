@@ -21,11 +21,19 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+# flake8: noqa
+# pylint: skip-file
+import multiprocessing as mp
+from enum import Enum
+from multiprocessing.queues import Queue
+
+import netCDF4 as nc4
+from qtpy import QtWidgets, uic
 
 from .abstract_sysid_environment import (
+    AbstractSysIdEnvironment,
     AbstractSysIdMetadata,
     AbstractSysIdUI,
-    AbstractSysIdEnvironment,
 )
 from .environments import (
     ControlTypes,
@@ -33,26 +41,14 @@ from .environments import (
     environment_prediction_ui_paths,
     environment_run_ui_paths,
 )
-from .utilities import (
-    VerboseMessageQueue,
-    DataAcquisitionParameters,
-    load_python_module,
-    GlobalCommands,
-    db2scale,
-)
+from .utilities import VerboseMessageQueue
 
-from enum import Enum
-import multiprocessing as mp
-from multiprocessing.queues import Queue
-from qtpy import QtWidgets, uic
-import netCDF4 as nc4
+# Update this line to define the controller type, and add to the ControlTypes enumeration in
+# components/environments.py
+control_type = ControlTypes.Skeleton  # noqa pylint: disable=no-member
 
-control_type = ControlTypes.Skeleton
-maximum_name_length = 50
 
 # %% Queues
-
-
 class SkeletonQueues:
     """A container class for the queues that this environment will manage."""
 
@@ -114,12 +110,11 @@ class SkeletonQueues:
         self.data_out_queue = data_out_queue
         self.data_for_spectral_computation_queue = mp.Queue()
         self.updated_spectral_quantities_queue = mp.Queue()
+        self.time_histories_to_generate_queue = mp.Queue()
         self.log_file_queue = log_file_queue
 
 
 # %% Metadata
-
-
 class SkeletonMetadata(AbstractSysIdMetadata):
     def __init__(self):
         pass
@@ -154,26 +149,14 @@ class SkeletonMetadata(AbstractSysIdMetadata):
 
 # %% UI
 
-from .spectral_processing import (
-    spectral_processing_process,
-    SpectralProcessingCommands,
-    SpectralProcessingMetadata,
-    AveragingTypes,
-    Estimator,
+from .data_collector import (
+    data_collector_process,
 )
 from .signal_generation_process import (
     signal_generation_process,
-    SignalGenerationCommands,
-    SignalGenerationMetadata,
 )
-from .data_collector import (
-    data_collector_process,
-    DataCollectorCommands,
-    CollectorMetadata,
-    AcquisitionType,
-    Acceptance,
-    TriggerSlope,
-    Window,
+from .spectral_processing import (
+    spectral_processing_process,
 )
 
 
@@ -198,15 +181,11 @@ class SkeletonUI(AbstractSysIdUI):
         )
         # Add the page to the control definition tabwidget
         self.definition_widget = QtWidgets.QWidget()
-        uic.loadUi(
-            environment_definition_ui_paths[control_type], self.definition_widget
-        )
+        uic.loadUi(environment_definition_ui_paths[control_type], self.definition_widget)
         definition_tabwidget.addTab(self.definition_widget, self.environment_name)
         # Add the page to the control prediction tabwidget
         self.prediction_widget = QtWidgets.QWidget()
-        uic.loadUi(
-            environment_prediction_ui_paths[control_type], self.prediction_widget
-        )
+        uic.loadUi(environment_prediction_ui_paths[control_type], self.prediction_widget)
         test_predictions_tabwidget.addTab(self.prediction_widget, self.environment_name)
         # Add the page to the run tabwidget
         self.run_widget = QtWidgets.QWidget()
@@ -319,7 +298,7 @@ def skeleton_process(
             environment_name,
             queue_container.data_analysis_command_queue,
             queue_container.updated_spectral_quantities_queue,
-            queue_container.data_analysis_output_queue,
+            queue_container.time_histories_to_generate_queue,
             queue_container.environment_command_queue,
             queue_container.gui_update_queue,
             queue_container.log_file_queue,
@@ -331,7 +310,7 @@ def skeleton_process(
         args=(
             environment_name,
             queue_container.signal_generation_command_queue,
-            queue_container.data_analysis_output_queue,
+            queue_container.time_histories_to_generate_queue,
             queue_container.data_out_queue,
             queue_container.environment_command_queue,
             queue_container.log_file_queue,
