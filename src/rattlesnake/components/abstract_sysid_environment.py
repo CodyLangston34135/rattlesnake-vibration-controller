@@ -575,13 +575,11 @@ class AbstractSysIdUI(AbstractUI):
     @abstractmethod
     def initialized_control_names(self):
         """Names of control channels that have been initialized and will be used in displays"""
-        pass
 
     @property
     @abstractmethod
     def initialized_output_names(self):
         """Names of output channels that have been initialized and will be used in displays"""
-        pass
 
     @abstractmethod
     def initialize_environment(self) -> AbstractMetadata:
