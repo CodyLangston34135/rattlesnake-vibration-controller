@@ -19,16 +19,17 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import numpy as np
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from enum import Enum
+
+import numpy as np
 import scipy.signal as sig
 from scipy.stats import norm
-from time import time
-from .utilities import rms_csd
 
 
 class SignalTypes(Enum):
+    """Enumeration of valid types of signals we can generate"""
+
     RANDOM = 0
     PSEUDORANDOM = 1
     BURST_RANDOM = 2
@@ -98,9 +99,7 @@ def cola(
     last_signal, current_signal = signals
     output = current_signal[:, :signal_samples] * window[:signal_samples]
     if end_samples > 0:
-        output[:, :end_samples] += (
-            np.array(last_signal)[:, -end_samples:] * window[-end_samples:]
-        )
+        output[:, :end_samples] += np.array(last_signal)[:, -end_samples:] * window[-end_samples:]
     return output
 
 
@@ -133,6 +132,7 @@ def cpsd_to_time_history(cpsd_matrix, sample_rate, df, output_oversample=1):
        Modal Analysis Conference, 2019.
 
     """
+    # pylint: disable=invalid-name
     # svd_start = time()
     # Compute SVD broadcasting over all frequency lines
     [U, S, Vh] = np.linalg.svd(cpsd_matrix, full_matrices=False)
@@ -165,21 +165,30 @@ def cpsd_to_time_history(cpsd_matrix, sample_rate, df, output_oversample=1):
     return output
 
 
-class SignalGenerator:
+class SignalGenerator(ABC):
+    """Abstract base class showing required methods of each signal generator class"""
+
     @abstractmethod
     def generate_frame(self):
+        """This method generates and returns a frame of data from the signal generator"""
         pass
 
-    def update_parameters(self, *args, **kwargs):
+    # TODO: update the parameters passing approach to take one argument (like a dictionary)
+    # so calling signature is maintained in child classes.
+    def update_parameters(self):
+        """This method accepts various arguments to update the parameters of the signal generator"""
         pass
 
     @property
     @abstractmethod
     def ready_for_next_output(self):
+        """This method returns True if the signal generator can currently produce a frame of data"""
         pass
 
 
 class RandomSignalGenerator(SignalGenerator):
+    """Signal generator that produces true random signals using a COLA procedure"""
+
     def __init__(
         self,
         rms,
@@ -197,9 +206,7 @@ class RandomSignalGenerator(SignalGenerator):
         self.sample_rate = sample_rate
         self.num_samples = num_samples_per_frame
         self.num_signals = num_signals
-        self.low_frequency_cutoff = (
-            0 if low_frequency_cutoff is None else low_frequency_cutoff
-        )
+        self.low_frequency_cutoff = 0 if low_frequency_cutoff is None else low_frequency_cutoff
         self.high_frequency_cutoff = (
             sample_rate / 2 if high_frequency_cutoff is None else high_frequency_cutoff
         )
@@ -207,9 +214,7 @@ class RandomSignalGenerator(SignalGenerator):
         self.cola_window = cola_window.lower()
         self.cola_exponent = cola_exponent
         self.output_oversample = output_oversample
-        self.cola_queue = np.zeros(
-            (2, self.num_signals, self.num_samples * self.output_oversample)
-        )
+        self.cola_queue = np.zeros((2, self.num_signals, self.num_samples * self.output_oversample))
 
         # Set up the queue the first time
         self.generate_frame()
@@ -226,18 +231,18 @@ class RandomSignalGenerator(SignalGenerator):
 
     @property
     def ready_for_next_output(self):
+        """Random signals are always ready to produce next outputs"""
         return True
 
     def generate_frame(self):
+        """Generates a random frame of data and overlaps and adds it to the previous data"""
         # Create a signal
         signal = self.rms * np.random.randn(
             self.num_signals, self.num_samples * self.output_oversample
         )
         # Band limit it
         fft = np.fft.rfft(signal, axis=-1)
-        freq = np.fft.rfftfreq(
-            signal.shape[-1], 1 / (self.sample_rate * self.output_oversample)
-        )
+        freq = np.fft.rfftfreq(signal.shape[-1], 1 / (self.sample_rate * self.output_oversample))
         invalid_frequencies = (freq < self.low_frequency_cutoff) | (
             freq > self.high_frequency_cutoff
         )
@@ -258,6 +263,8 @@ class RandomSignalGenerator(SignalGenerator):
 
 
 class PseudorandomSignalGenerator(SignalGenerator):
+    """Signal generator that produces a periodic signal that looks like a random signal"""
+
     def __init__(
         self,
         rms,
@@ -276,15 +283,11 @@ class PseudorandomSignalGenerator(SignalGenerator):
             (num_signals, num_samples_per_frame * output_oversample // 2 + 1),
             dtype=complex,
         )
-        low_frequency_cutoff = (
-            0 if low_frequency_cutoff is None else low_frequency_cutoff
-        )
+        low_frequency_cutoff = 0 if low_frequency_cutoff is None else low_frequency_cutoff
         high_frequency_cutoff = (
             sample_rate / 2 if high_frequency_cutoff is None else high_frequency_cutoff
         )
-        valid_frequencies = (freq >= low_frequency_cutoff) & (
-            freq <= high_frequency_cutoff
-        )
+        valid_frequencies = (freq >= low_frequency_cutoff) & (freq <= high_frequency_cutoff)
         fft[..., valid_frequencies] = np.exp(
             1j * 2 * np.pi * np.random.rand(num_signals, valid_frequencies.sum())
         )
@@ -293,14 +296,18 @@ class PseudorandomSignalGenerator(SignalGenerator):
         self.signal *= rms / signal_rms
 
     def generate_frame(self):
+        """Generates one realization of the periodic pseudorandom signal"""
         return self.signal.copy(), False
 
     @property
     def ready_for_next_output(self):
+        """Pseudorandom signals are always ready, as they just repeat the frame"""
         return True
 
 
 class BurstRandomSignalGenerator(SignalGenerator):
+    """Signal generator that produces a burst random excitation signal"""
+
     def __init__(
         self,
         rms,
@@ -317,9 +324,7 @@ class BurstRandomSignalGenerator(SignalGenerator):
         self.sample_rate = sample_rate
         self.num_samples = num_samples_per_frame
         self.num_signals = num_signals
-        self.low_frequency_cutoff = (
-            0 if low_frequency_cutoff is None else low_frequency_cutoff
-        )
+        self.low_frequency_cutoff = 0 if low_frequency_cutoff is None else low_frequency_cutoff
         self.high_frequency_cutoff = (
             sample_rate / 2 if high_frequency_cutoff is None else high_frequency_cutoff
         )
@@ -333,41 +338,37 @@ class BurstRandomSignalGenerator(SignalGenerator):
         self.envelope[: self.ramp_samples] = np.linspace(0, 1, self.ramp_samples)
         self.envelope[self.ramp_samples : self.ramp_samples + self.on_samples] = 1
         self.envelope[
-            self.ramp_samples
-            + self.on_samples : self.ramp_samples * 2
-            + self.on_samples
+            self.ramp_samples + self.on_samples : self.ramp_samples * 2 + self.on_samples
         ] = np.linspace(1, 0, self.ramp_samples)
 
     @property
     def ramp_samples(self):
+        """Property computing how many samples are in the ramp-up and ramp-down of the burst"""
         return int(
-            self.num_samples
-            * self.output_oversample
-            * self.on_fraction
-            * self.ramp_fraction
+            self.num_samples * self.output_oversample * self.on_fraction * self.ramp_fraction
         )
 
     @property
     def on_samples(self):
+        """Property computing how many samples the burst is active for"""
         return int(
-            self.num_samples * self.output_oversample * self.on_fraction
-            - 2 * self.ramp_samples
+            self.num_samples * self.output_oversample * self.on_fraction - 2 * self.ramp_samples
         )
 
     @property
     def ready_for_next_output(self):
+        """Burst random is always ready for the next output"""
         return True
 
     def generate_frame(self):
+        """Generates one burst cycle of data"""
         # Create a signal
         signal = self.rms * np.random.randn(
             self.num_signals, self.num_samples * self.output_oversample
         )
         # Band limit it
         fft = np.fft.rfft(signal, axis=-1)
-        freq = np.fft.rfftfreq(
-            signal.shape[-1], 1 / (self.sample_rate * self.output_oversample)
-        )
+        freq = np.fft.rfftfreq(signal.shape[-1], 1 / (self.sample_rate * self.output_oversample))
         invalid_frequencies = (freq < self.low_frequency_cutoff) | (
             freq > self.high_frequency_cutoff
         )
@@ -378,6 +379,8 @@ class BurstRandomSignalGenerator(SignalGenerator):
 
 
 class ChirpSignalGenerator(SignalGenerator):
+    """Signal generator that generates a periodic fast sine sweep from low to high frequency"""
+
     def __init__(
         self,
         level,
@@ -399,14 +402,18 @@ class ChirpSignalGenerator(SignalGenerator):
         self.signal = np.tile(level * np.sin(2 * np.pi * argument), (num_signals, 1))
 
     def generate_frame(self):
+        """Generates a single realization of the sweep"""
         return self.signal.copy(), False
 
     @property
     def ready_for_next_output(self):
+        """Chirp signals are always ready for next output, as they just repeat the same signal"""
         return True
 
 
 class SineSignalGenerator(SignalGenerator):
+    """Signal generator that produces stationary sine signals and tracks the instantaneous phase"""
+
     def __init__(
         self,
         level,
@@ -430,32 +437,54 @@ class SineSignalGenerator(SignalGenerator):
 
     @property
     def phase_per_sample(self):
+        """Property computing the phase change per sample"""
         return 2 * np.pi * self.frequency / self.sample_rate
 
     @property
     def phase_per_frame(self):
+        """Property computing the phase change per frame"""
         return self.phase_per_sample * self.num_samples
 
     @property
     def ready_for_next_output(self):
+        """Sine signals are ready for output if all parameters are defined"""
         return self.frequency is not None and self.phase is not None
 
     def update_parameters(self, frequency, level, phase=None):
+        """Updates the parameters of the sinusoidal signal
+
+        Parameters
+        ----------
+        frequency : np.ndarray
+            The new frequencies to use for the sine waves
+        level : np.ndarray
+            The new amplitudes to use for the sine waves
+        phase : np.ndarray, optional
+            The new phases to use for the sine waves.  If not specified, it will not be updated
+
+        Notes
+        -----
+        All parameters broadcast when creating the sine signals.  The time dimension will be
+        appended to each of these parameters as a new axis.  However, they must consistently
+        broadcast with one another.
+        """
         self.frequency[...] = frequency
         self.level[...] = level
         if phase is not None:
             self.phase[...] = phase
 
     def generate_frame(self):
+        """Generates a frame of sine data while tracking the phase change"""
         signal = self.level * np.sin(
-            2 * np.pi * self.frequency[..., np.newaxis] * self.times
-            + self.phase[..., np.newaxis]
+            2 * np.pi * self.frequency[..., np.newaxis] * self.times + self.phase[..., np.newaxis]
         )
         self.phase += self.phase_per_frame
         return signal, False
 
 
 class SquareSignalGenerator(SignalGenerator):
+    """Signal generator that produces a square wave and tracks the instantaneous phase"""
+
     def __init__(
         self,
         level,
@@ -481,22 +510,41 @@ class SquareSignalGenerator(SignalGenerator):
 
     @property
     def phase_per_sample(self):
+        """Computes the phase change per sample based on the frequency"""
         return 2 * np.pi * self.frequency / self.sample_rate
 
     @property
     def phase_per_frame(self):
+        """Computes the phase change per frame based on frequency and number of samples"""
         return self.phase_per_sample * self.num_samples
 
     @property
     def ready_for_next_output(self):
+        """Square waves are ready for output as long as frequency and phase are defined"""
         return self.frequency is not None and self.phase is not None
 
     def update_parameters(self, frequency, phase=None):
+        """Updates the parameters of the square wave signal
+
+        Parameters
+        ----------
+        frequency : np.ndarray
+            The new frequencies to use for the square waves
+        phase : np.ndarray, optional
+            The new phases to use for the square waves.  If not specified, it will not be updated
+
+        Notes
+        -----
+        All parameters broadcast when creating the sine signals.  The time dimension will be
+        appended to each of these parameters as a new axis.  However, they must consistently
+        broadcast with one another.
+        """
         self.frequency[...] = frequency
         if phase is not None:
             self.phase[...] = phase
 
     def generate_frame(self):
+        """Generates a frame of data while tracking the instantaneous phase change"""
         signal = self.level * (
             2
             * (
@@ -516,6 +564,8 @@ class SquareSignalGenerator(SignalGenerator):
 
 
 class CPSDSignalGenerator(SignalGenerator):
+    """Signal generator that generates time histories satisfying a prescribed CPSD matrix"""
+
     def __init__(
         self,
         sample_rate,
@@ -534,9 +584,7 @@ class CPSDSignalGenerator(SignalGenerator):
         if sigma_clip is None:
             self.sigma_clip = None
         elif isinstance(sigma_clip, np.ndarray):
-            self.sigma_clip = sigma_clip.squeeze()[
-                :, np.newaxis
-            ]  # force to n x 1 array
+            self.sigma_clip = sigma_clip.squeeze()[:, np.newaxis]  # force to n x 1 array
             if np.all(self.sigma_clip >= 5.0):
                 self.sigma_clip = None
         elif isinstance(sigma_clip, (int, float)):
@@ -548,9 +596,7 @@ class CPSDSignalGenerator(SignalGenerator):
         self.cola_window = cola_window.lower()
         self.cola_exponent = cola_exponent
         self.output_oversample = output_oversample
-        self.cola_queue = np.zeros(
-            (2, self.num_signals, self.num_samples * self.output_oversample)
-        )
+        self.cola_queue = np.zeros((2, self.num_signals, self.num_samples * self.output_oversample))
         self.cola_initialized = False
 
     @property
@@ -570,16 +616,26 @@ class CPSDSignalGenerator(SignalGenerator):
 
     @property
     def ready_for_next_output(self):
+        """Ready for output as long as the CPSD matrix we are targetting is defined"""
         return self.cpsd_matrix is not None
 
     def update_parameters(self, cpsd_matrix):
+        """Updates the CPSD target
+
+        Parameters
+        ----------
+        cpsd_matrix : np.ndarray
+            A 3D CPSD matrix that will be matched by the time histories being generated
+        """
+        # pylint: disable=invalid-name
         self.cpsd_matrix = cpsd_matrix
         if self.cpsd_matrix is None:
             self.Lsvd = None
             return
-        # Determine rms and rescaling factors for sigma clipping (rescale factors used to maintain rms levels when using low clipping thresholds)
+        # Determine rms and rescaling factors for sigma clipping (rescale factors used to
+        # maintain rms levels when using low clipping thresholds)
         self._rms = (
-            np.trapz(
+            np.trapz(  # TODO: This is deprecated, fix to use Trapezoid
                 self.cpsd_matrix.diagonal(axis1=1, axis2=2),
                 np.arange(self.cpsd_matrix.shape[0]) * self.frequency_spacing,
                 axis=0,
@@ -589,9 +645,9 @@ class CPSDSignalGenerator(SignalGenerator):
         if self.sigma_clip is None:
             self._scale_factor = None
         else:
-            self._scale_factor = (
-                -1 / (self.sigma_clip + 0.5) ** 3 + 1
-            )  # this is based on a curve fit between clipping threshold and rms error: [-1/(x + 0.5)^3 + 1] (less effective at lower clipping threshold)
+            # this is based on a curve fit between clipping threshold and
+            # rms error: [-1/(x + 0.5)^3 + 1] (less effective at lower clipping threshold)
+            self._scale_factor = -1 / (self.sigma_clip + 0.5) ** 3 + 1
         self._size = (*self.cpsd_matrix.shape[:-1], 1)
         # svd_start = time()
         # Compute SVD broadcasting over all frequency lines
@@ -602,34 +658,33 @@ class CPSDSignalGenerator(SignalGenerator):
         self.Lsvd = U * np.sqrt(S[:, np.newaxis, :]) @ Vh
 
     def rejection_sample(self, size, threshold=None) -> np.ndarray:
-        # `size` should be (n_samples x n_channels x 1) (this is the size needed to add to the cola queue)
+        """Handles sigma clipping for the randomly generated signals"""
+        # `size` should be (n_samples x n_channels x 1)
+        # (this is the size needed to add to the cola queue)
         if threshold is None:
             return
-        oversample = np.max(
-            size[0] + np.ceil((1 - norm.cdf(threshold)) * 100 * size[0])
-        ).astype(int)
-        arr = np.random.randn(
-            size[1], oversample
-        )  # arr needs to be (n_channels x n_samples) (so that when we mask it, it gets flattened in the right order)
+        oversample = np.max(size[0] + np.ceil((1 - norm.cdf(threshold)) * 100 * size[0])).astype(
+            int
+        )
+        # arr needs to be (n_channels x n_samples) (so that when we mask it,
+        # it gets flattened in the right order)
+        arr = np.random.randn(size[1], oversample)
         mask = np.abs(arr) <= threshold
-        num_rejected = np.cumsum(
-            np.sum(~mask, axis=1)
-        )  # total number of samples rejected for each channel
-        num_rejected = np.roll(
-            num_rejected, 1, axis=0
-        )  # roll forward by 1 and set first value to zero
+        # total number of samples rejected for each channel
+        num_rejected = np.cumsum(np.sum(~mask, axis=1))
+        # roll forward by 1 and set first value to zero
+        num_rejected = np.roll(num_rejected, 1, axis=0)
         num_rejected[0] = 0
+        # starting indices from original arr after masked values are removed
         shifted_indices = (
             np.array([oversample * j for j in range(size[1])], dtype=int) - num_rejected
-        )  # starting indices from original arr after masked values are removed
-        indices = np.concatenate(
-            [np.arange(ind, ind + size[0]) for ind in shifted_indices]
         )
-        return (
-            arr[mask][indices].reshape((size[1], size[0], size[2])).swapaxes(0, 1)
-        )  # pull out masked values, reshape in correct order, and swapaxes to match dims of `size`
+        indices = np.concatenate([np.arange(ind, ind + size[0]) for ind in shifted_indices])
+        # pull out masked values, reshape in correct order, and swapaxes to match dims of `size`
+        return arr[mask][indices].reshape((size[1], size[0], size[2])).swapaxes(0, 1)
 
     def generate_frame(self):
+        """Generates a single frame of data and overlaps it with the previous frame of data"""
         if not self.cola_initialized:
             self.cola_initialized = True
             self.generate_frame()
@@ -638,17 +693,14 @@ class CPSDSignalGenerator(SignalGenerator):
             real = np.random.randn(*self._size)
             imag = np.random.randn(*self._size)
         else:
-            # Apply sigma clipping via rejection sampling (apply correction factor to attempt to preserve rms levels)
-            real = (
-                self.rejection_sample(self._size, self.sigma_clip) / self._scale_factor
-            )
-            imag = (
-                self.rejection_sample(self._size, self.sigma_clip) / self._scale_factor
-            )
+            # Apply sigma clipping via rejection sampling
+            # (apply correction factor to attempt to preserve rms levels)
+            real = self.rejection_sample(self._size, self.sigma_clip) / self._scale_factor
+            imag = self.rejection_sample(self._size, self.sigma_clip) / self._scale_factor
         # print('after ', len(real), len(imag))
         # Compute Random Process
-        W = np.sqrt(0.5) * (real + 1j * imag)
-        Xv = 1 / np.sqrt(self.frequency_spacing) * self.Lsvd @ W
+        W = np.sqrt(0.5) * (real + 1j * imag)  # pylint: disable=invalid-name
+        Xv = 1 / np.sqrt(self.frequency_spacing) * self.Lsvd @ W  # pylint: disable=invalid-name
         # Ensure that the signal is real by setting the nyquist and DC component to 0
         Xv[[0, -1], :, :] = 0
         # Compute the IFFT, using the real version makes it so you don't need negative frequencies
@@ -658,9 +710,7 @@ class CPSDSignalGenerator(SignalGenerator):
         )
         # ifft_start = time()
         xv = (
-            np.fft.irfft(
-                np.concatenate((Xv, zero_padding), axis=0) / np.sqrt(2), axis=0
-            )
+            np.fft.irfft(np.concatenate((Xv, zero_padding), axis=0) / np.sqrt(2), axis=0)
             * self.output_oversample
             * self.sample_rate
         )
@@ -670,7 +720,6 @@ class CPSDSignalGenerator(SignalGenerator):
         # Band limit it
         # Roll the queue
         self.cola_queue = np.roll(self.cola_queue, -1, axis=0)
-        # self.cola_queue[-1,...] = signal[np.abs(signal) <= (self._rms * self.sigma_clip)][..., :self.num_samples]
         self.cola_queue[-1, ...] = signal
         output_signal = cola(
             self.samples_per_output * self.output_oversample,
@@ -684,15 +733,15 @@ class CPSDSignalGenerator(SignalGenerator):
         if self.sigma_clip is not None:
             mask = np.abs(output_signal) >= (self._rms * self.sigma_clip)
             if len(mask) > 0:
-                twosigma = (
-                    np.sign(output_signal).real * self._rms.real * self.sigma_clip * 2
-                )
+                twosigma = np.sign(output_signal).real * self._rms.real * self.sigma_clip * 2
                 output_signal[mask] *= -1
                 output_signal[mask] += twosigma[mask]
         return output_signal, False
 
 
 class ContinuousTransientSignalGenerator(SignalGenerator):
+    """Signal generator that constantly receives data to later generate"""
+
     def __init__(self, num_samples_per_frame, num_signals, signal, last_signal):
         self.num_samples = num_samples_per_frame
         self.num_signals = num_signals
@@ -701,13 +750,24 @@ class ContinuousTransientSignalGenerator(SignalGenerator):
 
     @property
     def ready_for_next_output(self):
+        """Ready to output if there is enough data on the signal buffer to create a frame"""
         return self.signal.shape[-1] >= self.num_samples or self.no_more_signal_incoming
 
     def update_parameters(self, signal, last_signal):
+        """Updates the parameters of the transient signal generator
+
+        Parameters
+        ----------
+        signal : np.ndarray
+            New portions of signals to add to the output signal buffer
+        last_signal : bool
+            True if this is the last signal that will be given to the signal generator
+        """
         self.signal = np.concatenate((self.signal, signal), axis=-1)
         self.no_more_signal_incoming = last_signal
 
     def generate_frame(self):
+        """Generates a frame of data and a flag letting the caller know the signal is done"""
         output_signal = self.signal[..., : self.num_samples]
         self.signal = self.signal[..., self.num_samples :]
         if DEBUG:
@@ -715,27 +775,28 @@ class ContinuousTransientSignalGenerator(SignalGenerator):
             np.savez(
                 FILE_OUTPUT.format(num_files),
                 output_signal=output_signal,
-                last_signal=(
-                    self.no_more_signal_incoming and self.signal.shape[-1] == 0
-                ),
+                last_signal=(self.no_more_signal_incoming and self.signal.shape[-1] == 0),
             )
-        return output_signal, (
-            self.no_more_signal_incoming and self.signal.shape[-1] == 0
-        )
+        return output_signal, (self.no_more_signal_incoming and self.signal.shape[-1] == 0)
 
 
 class TransientSignalGenerator(SignalGenerator):
+    """Signal generator to generate a specified signal"""
+
     def __init__(self, signal, repeat):
         self.signal = signal
         self.repeat = repeat
 
     @property
     def ready_for_next_output(self):
+        """Ready for output if the signal is defined"""
         return self.signal is not None
 
     def update_parameters(self, signal, repeat):
+        """Updates with a new signal and a flag to repeat the signal or not"""
         self.signal = signal
         self.repeat = repeat
 
     def generate_frame(self):
+        """Generates the signal.  The done flag will be set if the signal is not repeating"""
         return self.signal, not self.repeat
