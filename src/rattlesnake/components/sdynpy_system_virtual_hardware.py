@@ -21,14 +21,15 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import multiprocessing as mp
+import time
+from typing import List
+
+import numpy as np
+import scipy.signal as signal
+
 from .abstract_hardware import HardwareAcquisition, HardwareOutput
 from .utilities import Channel, DataAcquisitionParameters, flush_queue
-import numpy as np
-from typing import List
-import multiprocessing as mp
-import scipy.signal as signal
-import time
-import os
 
 _direction_map = {
     "X+": 1,
@@ -110,9 +111,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         None.
 
         """
-        self.sdynpy_system_data = {
-            key: val for key, val in np.load(system_file).items()
-        }
+        self.sdynpy_system_data = {key: val for key, val in np.load(system_file).items()}
         self.system = None
         self.times = None
         self.state = None
@@ -120,8 +119,11 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         self.queue = queue
         self.force_buffer = None
         self.integration_oversample = None
+        self.response_channels: np.ndarray
+        self.output_channels: np.ndarray
         self.response_channels = None
         self.output_channels = None
+        self.acquisition_delay = None
         self.sleep = sleep
         # Create a dictionary of channels for faster lookup
         self.channel_indices = {
@@ -166,6 +168,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
             A list of ``Channel`` objects defining the channels in the test
 
         """
+        # pylint: disable=invalid-name
         #        print('{:} Channels'.format(len(channel_data)))
         self.response_channels = np.array(
             [
@@ -189,9 +192,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
             channel_indices.append(channel_index)
             channel_signs.append(
                 np.sign(direction)
-                * np.sign(
-                    self.sdynpy_system_data["coordinate"][channel_index]["direction"]
-                )
+                * np.sign(self.sdynpy_system_data["coordinate"][channel_index]["direction"])
             )
         channel_indices = np.array(channel_indices)
         channel_signs = np.array(channel_signs)
@@ -298,11 +299,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
                 C_response.append(C_accel[response_index])
                 D_response.append(D_accel[response_index])
             else:
-                print(
-                    "Unknown Channel Type for Channel {:}: {:}".format(
-                        i + 1, channel.channel_type
-                    )
-                )
+                print(f"Unknown Channel Type for Channel {i + 1}: {channel.channel_type}")
                 C_response.append(C_disp[response_index])
                 D_response.append(D_disp[response_index])
             response_index += 1
@@ -336,13 +333,11 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         self.integration_oversample = test_data.output_oversample
         # Need to get one more sample than you would think because lsim doesn't bridge the gap
         # between integrations
-        self.times = np.arange(
-            test_data.samples_per_read * self.integration_oversample + 1
-        ) / (test_data.sample_rate * self.integration_oversample)
-        self.frame_time = test_data.samples_per_read / test_data.sample_rate
-        self.acquisition_delay = (
-            test_data.samples_per_write / test_data.output_oversample
+        self.times = np.arange(test_data.samples_per_read * self.integration_oversample + 1) / (
+            test_data.sample_rate * self.integration_oversample
         )
+        self.frame_time = test_data.samples_per_read / test_data.sample_rate
+        self.acquisition_delay = test_data.samples_per_write / test_data.output_oversample
 
     def start(self):
         """Method to start acquiring data.
@@ -385,9 +380,9 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         while self.force_buffer.shape[0] < self.times.size:
             try:
                 forces = self.queue.get(timeout=self.frame_time)
-            except (
-                mp.queues.Empty
-            ):  # If we don't get an output in time, this likely means output has stopped so just put zeros.
+            except mp.queues.Empty:
+                # If we don't get an output in time, this likely means output has stopped
+                # so just put zeros.
                 print("Warning! SDynPy integrator ran out of samples!")
                 forces = np.zeros((self.force_buffer.shape[-1], self.times.size))
             self.force_buffer = np.concatenate((self.force_buffer, forces.T), axis=0)
@@ -399,9 +394,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         # buffer because it will be the next force sample we use
         self.force_buffer = self.force_buffer[self.times.size - 1 :]
 
-        times_out, sys_out, x_out = signal.lsim(
-            self.system, this_force, self.times, self.state
-        )
+        _, sys_out, x_out = signal.lsim(self.system, this_force, self.times, self.state)
 
         self.state[:] = x_out[-1]
 
@@ -410,9 +403,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
             np.savez(
                 FILE_OUTPUT.format(num_files),
                 force_in=this_force.T,
-                response_out_full_resolution=sys_out.T[
-                    ..., : -1 : self.integration_oversample
-                ],
+                response_out_full_resolution=sys_out.T[..., : -1 : self.integration_oversample],
                 response_out_downsampled=sys_out.T[..., :-1],
             )
 
@@ -446,7 +437,6 @@ class SDynPySystemAcquisition(HardwareAcquisition):
 
     def close(self):
         """Method to close down the hardware"""
-        pass
 
 
 class SDynPySystemOutput(HardwareOutput):
@@ -490,13 +480,11 @@ class SDynPySystemOutput(HardwareOutput):
         None.
 
         """
-        pass
 
     def start(self):
         """Method to start acquiring data
 
         Does nothing for synthetic hardware."""
-        pass
 
     def write(self, data: np.ndarray):
         """Method to write a frame of data
@@ -522,7 +510,6 @@ class SDynPySystemOutput(HardwareOutput):
         """Method to close down the hardware
 
         Does nothing for synthetic hardware."""
-        pass
 
     def ready_for_new_output(self):
         """Signals that the hardware is ready for new output
