@@ -19,17 +19,17 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import copy
 import multiprocessing as mp
+from enum import Enum
+
 import numpy as np
-from abc import ABC, abstractmethod
-from .utilities import flush_queue, GlobalCommands, VerboseMessageQueue, rms_time
+
 from .abstract_message_process import AbstractMessageProcess
 from .signal_generation import SignalGenerator
-from enum import Enum
-import copy
-import scipy.signal as sig
+from .utilities import VerboseMessageQueue, flush_queue, rms_time
 
-test_level_threshold = 1.01
+TEST_LEVEL_THRESHOLD = 1.01
 
 DEBUG = False
 if DEBUG:
@@ -53,6 +53,8 @@ class SignalGenerationCommands(Enum):
 
 
 class SignalGenerationMetadata:
+    """General metadata required to define the signal generation process"""
+
     def __init__(
         self,
         samples_per_write,
@@ -74,10 +76,7 @@ class SignalGenerationMetadata:
     def __eq__(self, other):
         try:
             return np.all(
-                [
-                    np.all(self.__dict__[field] == other.__dict__[field])
-                    for field in self.__dict__
-                ]
+                [np.all(value == other.__dict__[field]) for field, value in self.__dict__.items()]
             )
         except (AttributeError, KeyError):
             return False
@@ -116,22 +115,16 @@ class SignalGenerationProcess(AbstractMessageProcess):
 
         """
         super().__init__(process_name, log_file_queue, command_queue, gui_update_queue)
-        self.map_command(
-            SignalGenerationCommands.INITIALIZE_PARAMETERS, self.initialize_parameters
-        )
+        self.map_command(SignalGenerationCommands.INITIALIZE_PARAMETERS, self.initialize_parameters)
         self.map_command(
             SignalGenerationCommands.INITIALIZE_SIGNAL_GENERATOR,
             self.initialize_signal_generator,
         )
-        self.map_command(
-            SignalGenerationCommands.GENERATE_SIGNALS, self.generate_signals
-        )
+        self.map_command(SignalGenerationCommands.GENERATE_SIGNALS, self.generate_signals)
         self.map_command(SignalGenerationCommands.START_SHUTDOWN, self.start_shutdown)
         self.map_command(SignalGenerationCommands.SHUTDOWN, self.shutdown)
         self.map_command(SignalGenerationCommands.MUTE, self.mute)
-        self.map_command(
-            SignalGenerationCommands.ADJUST_TEST_LEVEL, self.adjust_test_level
-        )
+        self.map_command(SignalGenerationCommands.ADJUST_TEST_LEVEL, self.adjust_test_level)
         self.map_command(SignalGenerationCommands.SET_TEST_LEVEL, self.set_test_level)
         self.environment_name = environment_name
         self.data_in_queue = data_in_queue
@@ -149,6 +142,7 @@ class SignalGenerationProcess(AbstractMessageProcess):
         self.shutdown_flag = False
         self.done_generating = False
         self.signal_generator = None
+        self.disabled_signals = None
 
     def initialize_parameters(self, data: SignalGenerationMetadata):
         """Stores environment signal processing parameters to the process
@@ -171,6 +165,13 @@ class SignalGenerationProcess(AbstractMessageProcess):
         self.disabled_signals = data.disabled_signals
 
     def initialize_signal_generator(self, signal_generator: SignalGenerator):
+        """Stores the signal generator that will generate the signals
+
+        Parameters
+        ----------
+        signal_generator : SignalGenerator
+            A SignalGenerator object used by the process to generate signals
+        """
         self.signal_generator = signal_generator
         self.signal_remainder = None
 
@@ -202,10 +203,9 @@ class SignalGenerationProcess(AbstractMessageProcess):
                         (
                             "error",
                             (
-                                "{:} Error".format(self.process_name),
-                                "{:} timed out while waiting for first set of parameters".format(
-                                    self.process_name
-                                ),
+                                f"{self.process_name} Error",
+                                f"{self.process_name} timed out while waiting for first "
+                                "set of parameters",
                             ),
                         )
                     )
@@ -229,19 +229,13 @@ class SignalGenerationProcess(AbstractMessageProcess):
         ):
             self.log("Generating Frame of Data")
             new_signal, self.done_generating = self.signal_generator.generate_frame()
-            self.log(
-                "Generated Signal with RMS \n  {:}".format(
-                    rms_time(new_signal, axis=-1)
-                )
-            )
+            self.log(f"Generated Signal with RMS \n  {rms_time(new_signal, axis=-1)}")
             # During the first run through, signal_remainder will be None
             if self.signal_remainder is None:
                 self.signal_remainder = new_signal
             else:
                 # Otherwise we just concatenate the new data at the end
-                self.signal_remainder = np.concatenate(
-                    (self.signal_remainder, new_signal), axis=-1
-                )
+                self.signal_remainder = np.concatenate((self.signal_remainder, new_signal), axis=-1)
         # Now check if we need to send it to the output task
         if (
             self.data_out_queue.empty()
@@ -264,9 +258,7 @@ class SignalGenerationProcess(AbstractMessageProcess):
                 self.log("Received Last Run, Shutting Down")
                 self.shutdown()
                 return
-        self.command_queue.put(
-            self.process_name, (SignalGenerationCommands.GENERATE_SIGNALS, None)
-        )
+        self.command_queue.put(self.process_name, (SignalGenerationCommands.GENERATE_SIGNALS, None))
 
     def output(self, write_data, last_signal=False):
         """Puts data to the data_out_queue and handles test level changes
@@ -287,27 +279,29 @@ class SignalGenerationProcess(AbstractMessageProcess):
             signals from this environment until it is restarted. (Default value
             = False)
         """
-        #        np.savez('test_data/signal_generation_initial_output_data_check.npz',write_data = write_data)
+        # np.savez('test_data/signal_generation_initial_output_data_check.npz',
+        #          write_data = write_data)
         # Perform the output transformation if necessary
         if len(self.disabled_signals) > 0:
             write_data = write_data.copy()
             write_data[self.disabled_signals] = 0
-        if not self.output_transformation_matrix is None:
+        if self.output_transformation_matrix is not None:
             self.log("Applying Transformation")
             write_data = self.output_transformation_matrix @ write_data
         # Compute the test_level scaling for this dataset
         if self.test_level_change == 0.0:
             test_level = self.current_test_level
-            self.log("Test Level at {:}".format(test_level))
+            self.log(f"Test Level at {test_level}")
         else:
             test_level = (
                 self.current_test_level
                 + (np.arange(write_data.shape[-1]) + 1) * self.test_level_change
             )
-            # Compute distance in steps from the target test_level and find where it is near the target
+            # Compute distance in steps from the target
+            # test_level and find where it is near the target
             full_level_index = np.nonzero(
                 abs(test_level - self.test_level_target) / abs(self.test_level_change)
-                < test_level_threshold
+                < TEST_LEVEL_THRESHOLD
             )[0]
             # Check if any are
             if len(full_level_index) > 0:
@@ -319,17 +313,13 @@ class SignalGenerationProcess(AbstractMessageProcess):
             else:
                 # Otherwise, our current test_level is the last entry in the test_level scaling
                 self.current_test_level = test_level[-1]
-            self.log("Test level from {:} to {:}".format(test_level[0], test_level[-1]))
+            self.log(f"Test level from {test_level[0]} to {test_level[-1]}")
         # Write the test level-scaled data to the task
         self.log("Sending data to data_out queue")
-        # # TODO: Delete This Later
         # self.write_index += 1
-        # np.savez('signal_generation_output_data_check_{:}.npz'.format(self.write_index),write_data = write_data,test_level = test_level)
-        self.log(
-            "Sending Output with RMS \n  {:}".format(
-                rms_time(write_data * test_level, axis=-1)
-            )
-        )
+        # np.savez('signal_generation_output_data_check_{:}.npz'.format(self.write_index),
+        #          write_data = write_data,test_level = test_level)
+        self.log(f"Sending Output with RMS \n  {rms_time(write_data * test_level, axis=-1)}")
         if DEBUG:
             num_files = len(glob(FILE_OUTPUT.format("*")))
             np.savez(
@@ -339,7 +329,7 @@ class SignalGenerationProcess(AbstractMessageProcess):
             )
         self.data_out_queue.put((copy.deepcopy(write_data * test_level), last_signal))
 
-    def mute(self, data):
+    def mute(self, data):  # pylint: disable=unused-argument
         """Immediately mute the signal generation task
 
         This function should primarily only be called at the beginning of an
@@ -392,14 +382,11 @@ class SignalGenerationProcess(AbstractMessageProcess):
         ) / self.ramp_samples
         if self.test_level_change != 0.0:
             self.log(
-                "Changed test level from {:} to {:}, {:} change per sample".format(
-                    self.current_test_level,
-                    self.test_level_target,
-                    self.test_level_change,
-                )
+                f"Changed test level from {self.current_test_level} to {self.test_level_target}, "
+                f"{self.test_level_change} change per sample"
             )
 
-    def start_shutdown(self, data):
+    def start_shutdown(self, data):  # pylint: disable=unused-argument
         """Starts the shutdown process for the signal generation process
 
         This will set the shutdown flag to true and adjust the test level to
@@ -415,9 +402,8 @@ class SignalGenerationProcess(AbstractMessageProcess):
             accepting any data passed along with the instruction.
 
         """
-        if (
-            self.shutdown_flag == True or self.startup == True
-        ):  # This means we weren't supposed to shutdown, it was an extra signal.
+        if self.shutdown_flag or self.startup:
+            # This means we weren't supposed to shutdown, it was an extra signal.
             return
         self.shutdown_flag = True
         self.adjust_test_level(0.0)
@@ -473,11 +459,7 @@ def signal_generation_process(
     """
 
     signal_generation_instance = SignalGenerationProcess(
-        (
-            environment_name + " Signal Generation"
-            if process_name is None
-            else process_name
-        ),
+        (environment_name + " Signal Generation" if process_name is None else process_name),
         command_queue,
         data_in_queue,
         data_out_queue,
