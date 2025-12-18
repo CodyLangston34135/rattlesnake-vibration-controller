@@ -21,6 +21,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import multiprocessing as mp
+import time
+from typing import List
+
+import numpy as np
+
 from .abstract_hardware import HardwareAcquisition, HardwareOutput
 from .utilities import (
     Channel,
@@ -28,15 +34,11 @@ from .utilities import (
     flush_queue,
     reduce_array_by_coordinate,
 )
-import numpy as np
-from typing import List
-import multiprocessing as mp
-import time
-import os
 
 try:
-    import cupy as cp
-    from cupyx.scipy.signal import oaconvolve
+    # cupy may not exist if correct modules aren't installed
+    import cupy as cp  # type: ignore
+    from cupyx.scipy.signal import oaconvolve  # type: ignore
 
     xp = cp
     CUDA = True
@@ -132,8 +134,12 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
         self.output_signal_time = None
         self.sys_out = None
         self.integration_oversample = None
+        self.response_channels: np.ndarray
+        self.output_channels: np.ndarray
         self.response_channels = None
         self.output_channels = None
+        self.irf = None
+        self.acquisition_delay = None
 
     def set_up_data_acquisition_parameters_and_channels(
         self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
@@ -215,35 +221,36 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
             # compute irf and transpose so that shape becomes (nref, nresp, nsamples)
             self.irf = np.fft.irfft(array, axis=0).T
             num_samples = self.irf.shape[-1]
-            dt = 1 / (
-                self.sdynpy_data["abscissa"].max()
-                * num_samples
-                / np.floor(num_samples / 2)
-            )
+            dt = 1 / (self.sdynpy_data["abscissa"].max() * num_samples / np.floor(num_samples / 2))
         elif self.function_type == 29:
             self.irf = array.T
             dt = mean_spacing
+        else:
+            raise ValueError(
+                "SDynPy FRFs should have type TransferFunctionArray or ImpulseResponseFunctionArray"
+            )
         if CUDA:
             self.irf = cp.asarray(self.irf)
 
         # Checking to see if the transfer function sampling rate matches the acquisition rate
         if not np.isclose(self.sample_rate, 1 / dt):
             raise ValueError(
-                "The transfer function sampling rate {:} does not match the hardware sampling rate {:}.".format(
-                    1 / dt, self.sample_rate
-                )
+                f"The transfer function sampling rate {1 / dt} "
+                f"does not match the hardware sampling rate {self.sample_rate}."
             )
 
         # check that all channels from channel table will have a corresponding irf
         _, number_responses, model_order = self.irf.shape
         if number_responses != np.sum(self.response_channels):
-            # TODO: should extra channels in channel table be filled with zeros?
             raise ValueError(
-                f"Number of responses in FRF ({number_responses}) does not match channel table ({np.sum(self.response_channels)})"
+                f"Number of responses in FRF ({number_responses}) does not "
+                f"match channel table ({np.sum(self.response_channels)})"
             )
-        # each frame of the convolution must include M - 1 samples of previous data to maintain causality (where M is length of impulse response)
+        # each frame of the convolution must include M - 1 samples of
+        # previous data to maintain causality (where M is length of impulse response)
         self.convolution_samples = self.samples_per_read + model_order - 1
-        # initialize convolution and output arrays (read function will overwrite rather than re-allocate)
+        # initialize convolution and output arrays (read function will overwrite rather than
+        # re-allocate)
         self.output_signal_time = xp.zeros(
             (number_responses, self.convolution_samples), dtype=xp.float64
         )
@@ -274,7 +281,6 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
         """Method to start acquiring data.
 
         For the synthetic case, doesn't need to do anything"""
-        pass
 
     def get_acquisition_delay(self) -> int:
         """
@@ -318,9 +324,9 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
         while self.force_buffer.shape[0] < self.convolution_samples:
             try:
                 forces = self.queue.get(timeout=self.frame_time)
-            except (
-                mp.queues.Empty
-            ):  # If we don't get an output in time, this likely means output has stopped so just put zeros.
+            except mp.queues.Empty:
+                # If we don't get an output in time, this likely means output has stopped
+                # so just put zeros.
                 forces = np.zeros((self.force_buffer.shape[-1], self.times.size))
             self.force_buffer = np.concatenate((self.force_buffer, forces.T), axis=0)
 
@@ -334,27 +340,25 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
                 this_force = cp.asarray(this_force)
             # reset the output signal array to zero
             self.output_signal_time[:] = 0
-            # Setting up and doing the convolution (using GPU if possible) (see sdynpy.data.TimeHistoryArray.mimo_forward)
+            # Setting up and doing the convolution (using GPU if possible)
+            # (see sdynpy.data.TimeHistoryArray.mimo_forward)
             for reference_irfs, inputs in zip(self.irf, this_force):
-                self.output_signal_time += oaconvolve(
-                    reference_irfs, inputs[np.newaxis, :]
-                )[:, : self.convolution_samples]
+                self.output_signal_time += oaconvolve(reference_irfs, inputs[np.newaxis, :])[
+                    :, : self.convolution_samples
+                ]
 
-            # assign latest frame of data to correct channels (transfer from GPU to CPU if necessary)
+            # assign latest frame of data to correct channels
+            # (transfer from GPU to CPU if necessary)
             if CUDA:
                 self.sys_out[self.response_channels, :] = self.output_signal_time[
                     :, -self.times.size :
                 ].get()
-                self.sys_out[self.output_channels, :] = this_force[
-                    :, -self.times.size :
-                ].get()
+                self.sys_out[self.output_channels, :] = this_force[:, -self.times.size :].get()
             else:
                 self.sys_out[self.response_channels, :] = self.output_signal_time[
                     :, -self.times.size :
                 ]
-                self.sys_out[self.output_channels, :] = this_force[
-                    :, -self.times.size :
-                ]
+                self.sys_out[self.output_channels, :] = this_force[:, -self.times.size :]
         else:
             self.sys_out[:] = 0
 
@@ -380,11 +384,9 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
 
     def stop(self):
         """Method to stop the acquisition."""
-        pass
 
     def close(self):
         """Method to close down the hardware"""
-        pass
 
 
 class SDynPyFRFOutput(HardwareOutput):
@@ -428,13 +430,11 @@ class SDynPyFRFOutput(HardwareOutput):
         None.
 
         """
-        pass
 
     def start(self):
         """Method to start acquiring data
 
         Does nothing for synthetic hardware."""
-        pass
 
     def write(self, data: np.ndarray):
         """Method to write a frame of data
@@ -460,7 +460,6 @@ class SDynPyFRFOutput(HardwareOutput):
         """Method to close down the hardware
 
         Does nothing for synthetic hardware."""
-        pass
 
     def ready_for_new_output(self):
         """Signals that the hardware is ready for new output
