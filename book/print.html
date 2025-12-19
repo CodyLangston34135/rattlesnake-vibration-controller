@@ -3223,61 +3223,39 @@ The tabs at the top of the <code>Signal Generator</code> section determine the t
 <p><img src="./figures/example_cdaq_initialize_data_acquisition.png" alt="example_cdaq_initialize_data_acquisition" /></p>
 <p><strong>Figure B-10. Click the <code>Initialize Data Acquisition</code> button to proceed.</strong></p>
 <h4 id="environment-setup"><a class="header" href="#environment-setup">Environment Setup <!--Section B.1.2--></a></h4>
+<!--\subsection{Environment Setup}-->
+<p>At this point, we now need to set up our modal testing environment on the Environment Definition tab. As this is a simple beam, it will likely take a while to decay, so we will set up a 2 second measurement frame by setting the \inlineCode{Samples per Frame} to \inlineCode{10240}.</p>
+<p>We will lower the \inlineCode{Number of Averages} to \inlineCode{5}.</p>
+<p>For \inlineCode{Triggering}, we will set the \inlineCode{Triggering Type} to \inlineCode{Every Frame}, and set the \inlineCode{Acceptance} to \inlineCode{Manual}. We set the \inlineCode{Trigger Channel} to the Force channel with a \inlineCode{2%} \inlineCode{Pretrigger}. The \inlineCode{Trigger Level} we will set to \inlineCode{1%} and the \inlineCode{Hysteresis Level} to half of that value. Finally, we will set the \inlineCode{Hysteresis Frame %} to \inlineCode{50%}.</p>
+<p>In the \inlineCode{Channel Selections} table, we will check the \inlineCode{Reference} column for the Force channel.</p>
+<p>When all of these parameters are adjusted, we can click the \inlineCode{Initialize Environments} button to proceed.  Figure B-11<!--Figure \ref{fig:examplecdaqmodalimpactsettings}--> shows the window with all settings set.</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_modal_impact_settings}
+        \caption{Modal Test parameters for the impact test.}
+        \label{fig:examplecdaqmodalimpactsettings}
+    \end{figure}
+-->
+<p><img src="./figures/example_cdaq_modal_impact_settings.png" alt="example_cdaq_modal_impact_settings" /></p>
+<p><strong>Figure B-11. Modal Test parameters for the impact test.</strong></p>
 <h4 id="test-profile"><a class="header" href="#test-profile">Test Profile <!--Section B.1.3--></a></h4>
+<!--\subsection{Test Profile}-->
+<p>We will leave the \inlineCode{Test Profile} tab empty. Simply click the \inlineCode{Initialize Profile} button to proceed on this tab.</p>
 <h4 id="run-test"><a class="header" href="#run-test">Run Test <!--Section B.1.4--></a></h4>
-<h4 id="analyzing-modal-data"><a class="header" href="#analyzing-modal-data">Analyzing Modal Data <!--Section B.1.5--></a></h4>
-<h4 id="modal-testing-with-a-modal-shaker"><a class="header" href="#modal-testing-with-a-modal-shaker">Modal Testing with a Modal Shaker <!--Section B.1.6--></a></h4>
-<h3 id="modal-testing-with-a-modal-shaker-1"><a class="header" href="#modal-testing-with-a-modal-shaker-1">Modal Testing with a Modal Shaker <!Section B.2--></a></h3>
-<h4 id="data-acquisition-settings"><a class="header" href="#data-acquisition-settings">Data Acquisition Settings <!--Section B.2.1--></a></h4>
-<h4 id="environment-definition-for-pseudorandom-excitation"><a class="header" href="#environment-definition-for-pseudorandom-excitation">Environment Definition for Pseudorandom Excitation <!--B.2.2--></a></h4>
-<h4 id="test-profile-1"><a class="header" href="#test-profile-1">Test Profile <!--B.2.3--></a></h4>
-<h4 id="run-test-1"><a class="header" href="#run-test-1">Run Test <!--B.2.4--></a></h4>
-<h4 id="other-shaker-excitation-types"><a class="header" href="#other-shaker-excitation-types">Other Shaker Excitation Types <!--B.2.5--></a></h4>
-<h4 id="analyzing-modal-shaker-data"><a class="header" href="#analyzing-modal-shaker-data">Analyzing Modal Shaker Data <!--B.2.6--></a></h4>
-<h3 id="running-a-vibration-test-with-rattlesnake"><a class="header" href="#running-a-vibration-test-with-rattlesnake">Running a Vibration Test with Rattlesnake <!--B.3--></a></h3>
-<h4 id="constructing-vibration-specifications"><a class="header" href="#constructing-vibration-specifications">Constructing Vibration Specifications <!--B.3.1--></a></h4>
-<h4 id="setting-up-the-shakers-and-channel-table"><a class="header" href="#setting-up-the-shakers-and-channel-table">Setting up the Shakers and Channel Table <!--B.3.2--></a></h4>
-<h4 id="setting-up-the-random-vibration-test"><a class="header" href="#setting-up-the-random-vibration-test">Setting up the Random Vibration Test <!--B.3.3--></a></h4>
-<h4 id="running-a-random-vibration-test"><a class="header" href="#running-a-random-vibration-test">Running a Random Vibration Test <!--B.3.4--></a></h4>
-<h4 id="setting-up-the-transient-vibration-test"><a class="header" href="#setting-up-the-transient-vibration-test">Setting up the Transient Vibration Test <!--B.3.5--></a></h4>
-<h4 id="running-a-transient-test"><a class="header" href="#running-a-transient-test">Running a Transient Test <!--B.3.6--></a></h4>
-<h3 id="summary"><a class="header" href="#summary">Summary <!--B.4--></a></h3>
-<pre><code>\subsection{Environment Setup}
-
-At this point, we now need to set up our modal testing environment on the Environment Definition tab. As this is a simple beam, it will likely take a while to decay, so we will set up a 2 second measurement frame by setting the \inlineCode{Samples per Frame} to \inlineCode{10240}.
-
-We will lower the \inlineCode{Number of Averages} to \inlineCode{5}.
-
-For \inlineCode{Triggering}, we will set the \inlineCode{Triggering Type} to \inlineCode{Every Frame}, and set the \inlineCode{Acceptance} to \inlineCode{Manual}. We set the \inlineCode{Trigger Channel} to the Force channel with a \inlineCode{2%} \inlineCode{Pretrigger}. The \inlineCode{Trigger Level} we will set to \inlineCode{1%} and the \inlineCode{Hysteresis Level} to half of that value. Finally, we will set the \inlineCode{Hysteresis Frame %} to \inlineCode{50%}.
-
-In the \inlineCode{Channel Selections} table, we will check the \inlineCode{Reference} column for the Force channel.
-
-When all of these parameters are adjusted, we can click the \inlineCode{Initialize Environments} button to proceed.  Figure \ref{fig:examplecdaqmodalimpactsettings} shows the window with all settings set.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_modal_impact_settings}
-    \caption{Modal Test parameters for the impact test.}
-    \label{fig:examplecdaqmodalimpactsettings}
-\end{figure}
-
-\subsection{Test Profile}
-We will leave the \inlineCode{Test Profile} tab empty. Simply click the \inlineCode{Initialize Profile} button to proceed on this tab.
-
-\subsection{Run Test}
-
-We will save the standard modal data file from this test, so we won't worry about setting up streaming.
-
-To enable the Modal Environment, first click the \inlineCode{Arm Data Acquisition} button. At this point, the modal environment buttons will become enabled, as shown in \ref{fig:examplecdaqmodaltestingready}
-
-\begin{figure}[H]
+<!--\subsection{Run Test}-->
+<p>We will save the standard modal data file from this test, so we won't worry about setting up streaming.</p>
+<p>To enable the Modal Environment, first click the \inlineCode{Arm Data Acquisition} button. At this point, the modal environment buttons will become enabled, as shown in Figure B-12<!--\ref{fig:examplecdaqmodaltestingready}-->.</p>
+<pre><code>\begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/example_cdaq_modal_testing_ready}
     \caption{Run Test tab with data acquisition armed}
     \label{fig:examplecdaqmodaltestingready}
 \end{figure}
-
-To start, we will use the \inlineCode{Degree of Freedom Override} section to choose our actual excitation location.  This allows us to more quickly adjust the impact location than returning to the \inlineCode{Data Acquisition Setup} page and reinitializing everything in the channel table. Click the \inlineCode{Add Override} button, and in the row that appears, change the \inlineCode{Channel} column to the force channel. In the \inlineCode{New Node} column, put \inlineCode{23}, which will be the position we excite at. For the \inlineCode{New Direction}, put \inlineCode{Y-}.  This is shown in Figure \ref{fig:examplecdaqchanneloverride}.
+</code></pre>
+<p><img src="./figures/example_cdaq_modal_testing_ready.png" alt="example_cdaq_modal_testing_ready" /></p>
+<p><strong>Figure B-12. Run Test tab with data acquisition armed</strong></p>
+<pre><code>To start, we will use the \inlineCode{Degree of Freedom Override} section to choose our actual excitation location.  This allows us to more quickly adjust the impact location than returning to the \inlineCode{Data Acquisition Setup} page and reinitializing everything in the channel table. Click the \inlineCode{Add Override} button, and in the row that appears, change the \inlineCode{Channel} column to the force channel. In the \inlineCode{New Node} column, put \inlineCode{23}, which will be the position we excite at. For the \inlineCode{New Direction}, put \inlineCode{Y-}.  This is shown in Figure \ref{fig:examplecdaqchanneloverride}.
 
 \begin{figure}[H]
     \centering
@@ -3352,8 +3330,25 @@ Now we will acquire the next measurement at node 18. We will update the \inlineC
 We can simply press the \inlineCode{Start Acquisition} button, and a new file will be created. After that measurment has been obtained, we will then repeat again, updating the \inlineCode{Degree of Freedom Override} table to node \inlineCode{12} and start a measurement exciting at that location.
 
 When these measurements are complete, we can click \inlineCode{Disarm Data Acquisition} to stop the measurement, and close the Rattlesnake software.
-
-\FloatBarrier
+</code></pre>
+<h4 id="analyzing-modal-data"><a class="header" href="#analyzing-modal-data">Analyzing Modal Data <!--Section B.1.5--></a></h4>
+<h4 id="modal-testing-with-a-modal-shaker"><a class="header" href="#modal-testing-with-a-modal-shaker">Modal Testing with a Modal Shaker <!--Section B.1.6--></a></h4>
+<h3 id="modal-testing-with-a-modal-shaker-1"><a class="header" href="#modal-testing-with-a-modal-shaker-1">Modal Testing with a Modal Shaker <!Section B.2--></a></h3>
+<h4 id="data-acquisition-settings"><a class="header" href="#data-acquisition-settings">Data Acquisition Settings <!--Section B.2.1--></a></h4>
+<h4 id="environment-definition-for-pseudorandom-excitation"><a class="header" href="#environment-definition-for-pseudorandom-excitation">Environment Definition for Pseudorandom Excitation <!--B.2.2--></a></h4>
+<h4 id="test-profile-1"><a class="header" href="#test-profile-1">Test Profile <!--B.2.3--></a></h4>
+<h4 id="run-test-1"><a class="header" href="#run-test-1">Run Test <!--B.2.4--></a></h4>
+<h4 id="other-shaker-excitation-types"><a class="header" href="#other-shaker-excitation-types">Other Shaker Excitation Types <!--B.2.5--></a></h4>
+<h4 id="analyzing-modal-shaker-data"><a class="header" href="#analyzing-modal-shaker-data">Analyzing Modal Shaker Data <!--B.2.6--></a></h4>
+<h3 id="running-a-vibration-test-with-rattlesnake"><a class="header" href="#running-a-vibration-test-with-rattlesnake">Running a Vibration Test with Rattlesnake <!--B.3--></a></h3>
+<h4 id="constructing-vibration-specifications"><a class="header" href="#constructing-vibration-specifications">Constructing Vibration Specifications <!--B.3.1--></a></h4>
+<h4 id="setting-up-the-shakers-and-channel-table"><a class="header" href="#setting-up-the-shakers-and-channel-table">Setting up the Shakers and Channel Table <!--B.3.2--></a></h4>
+<h4 id="setting-up-the-random-vibration-test"><a class="header" href="#setting-up-the-random-vibration-test">Setting up the Random Vibration Test <!--B.3.3--></a></h4>
+<h4 id="running-a-random-vibration-test"><a class="header" href="#running-a-random-vibration-test">Running a Random Vibration Test <!--B.3.4--></a></h4>
+<h4 id="setting-up-the-transient-vibration-test"><a class="header" href="#setting-up-the-transient-vibration-test">Setting up the Transient Vibration Test <!--B.3.5--></a></h4>
+<h4 id="running-a-transient-test"><a class="header" href="#running-a-transient-test">Running a Transient Test <!--B.3.6--></a></h4>
+<h3 id="summary"><a class="header" href="#summary">Summary <!--B.4--></a></h3>
+<pre><code>\FloatBarrier
 \subsection{Analyzing Modal Data}
 
 To analyze these data, we will use SDynPy\footnote{SDynPy can be installed via pip using \inlineCode{pip install sdynpy}, or otherwise downloaded from the Github repository here: \url{https://github.com/sandialabs/sdynpy}}, which is an open-source Python-based structural dynamics toolset. SDynPy is well-integrated with Rattlesnake, making it trivial to load in data from a Rattlesnake test.
