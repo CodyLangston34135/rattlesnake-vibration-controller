@@ -22,21 +22,15 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from .utilities import (
-    QueueContainer,
-    GlobalCommands,
-    flush_queue,
-    VerboseMessageQueue,
-    rms_time,
-)
-from .abstract_message_process import AbstractMessageProcess
-import numpy as np
 import multiprocessing as mp
+import multiprocessing.sharedctypes  # pylint: disable=unused-import
 
+import numpy as np
 
-task_name = "Output"
+from .abstract_message_process import AbstractMessageProcess
+from .utilities import GlobalCommands, QueueContainer, flush_queue, rms_time
 
-volume_threshold = 1.01
+TASK_NAME = "Output"
 
 DEBUG = False
 if DEBUG:
@@ -60,7 +54,7 @@ class OutputProcess(AbstractMessageProcess):
         process_name: str,
         queue_container: QueueContainer,
         environments: list,
-        output_active: mp.Value,
+        output_active: mp.sharedctypes.Synchronized,
     ):
         """
         Constructor for the OutputProcess Class
@@ -115,9 +109,7 @@ class OutputProcess(AbstractMessageProcess):
             environment: False for environment in self.environment_list
         }
         self.environment_data_out_remainders = None
-        self.environment_first_data = {
-            environment: False for environment in self.environment_list
-        }
+        self.environment_first_data = {environment: False for environment in self.environment_list}
         # Hardware data
         self.hardware = None
         # Shared memory to record activity
@@ -126,6 +118,7 @@ class OutputProcess(AbstractMessageProcess):
 
     @property
     def output_active(self):
+        """Returns True if the output is currently active"""
         return bool(self._output_active.value)
 
     @output_active.setter
@@ -157,31 +150,25 @@ class OutputProcess(AbstractMessageProcess):
         self.write_size = data_acquisition_parameters.samples_per_write
         self.output_oversample = data_acquisition_parameters.output_oversample
         # Check which type of hardware we have
-        if not self.hardware is None:
+        if self.hardware is not None:
             self.hardware.close()
         if data_acquisition_parameters.hardware == 0:
             from .nidaqmx_hardware_multitask import NIDAQmxOutput
 
             self.hardware = NIDAQmxOutput(
                 data_acquisition_parameters.extra_parameters["task_trigger"],
-                data_acquisition_parameters.extra_parameters[
-                    "task_trigger_output_channel"
-                ],
+                data_acquisition_parameters.extra_parameters["task_trigger_output_channel"],
             )
         elif data_acquisition_parameters.hardware == 1:
             from .lanxi_hardware_multiprocessing import LanXIOutput
 
             self.hardware = LanXIOutput(
-                data_acquisition_parameters.extra_parameters[
-                    "maximum_acquisition_processes"
-                ]
+                data_acquisition_parameters.extra_parameters["maximum_acquisition_processes"]
             )
         elif data_acquisition_parameters.hardware == 2:
             from .data_physics_hardware import DataPhysicsOutput
 
-            self.hardware = DataPhysicsOutput(
-                self.queue_container.single_process_hardware_queue
-            )
+            self.hardware = DataPhysicsOutput(self.queue_container.single_process_hardware_queue)
         elif data_acquisition_parameters.hardware == 3:
             from .data_physics_dp900_hardware import DataPhysicsDP900Output
 
@@ -192,27 +179,19 @@ class OutputProcess(AbstractMessageProcess):
         elif data_acquisition_parameters.hardware == 4:
             from .exodus_modal_solution_hardware import ExodusOutput
 
-            self.hardware = ExodusOutput(
-                self.queue_container.single_process_hardware_queue
-            )
+            self.hardware = ExodusOutput(self.queue_container.single_process_hardware_queue)
         elif data_acquisition_parameters.hardware == 5:
             from .state_space_virtual_hardware import StateSpaceOutput
 
-            self.hardware = StateSpaceOutput(
-                self.queue_container.single_process_hardware_queue
-            )
+            self.hardware = StateSpaceOutput(self.queue_container.single_process_hardware_queue)
         elif data_acquisition_parameters.hardware == 6:
             from .sdynpy_system_virtual_hardware import SDynPySystemOutput
 
-            self.hardware = SDynPySystemOutput(
-                self.queue_container.single_process_hardware_queue
-            )
+            self.hardware = SDynPySystemOutput(self.queue_container.single_process_hardware_queue)
         elif data_acquisition_parameters.hardware == 7:
             from .sdynpy_frf_virtual_hardware import SDynPyFRFOutput
 
-            self.hardware = SDynPyFRFOutput(
-                self.queue_container.single_process_hardware_queue
-            )
+            self.hardware = SDynPyFRFOutput(self.queue_container.single_process_hardware_queue)
         else:
             raise ValueError("Invalid Hardware or Hardware Not Implemented!")
         # Initialize hardware and create channels
@@ -223,22 +202,19 @@ class OutputProcess(AbstractMessageProcess):
         output_indices = [
             index
             for index, channel in enumerate(data_acquisition_parameters.channel_list)
-            if not (channel.feedback_device is None)
-            and not (channel.feedback_device.strip() == "")
+            if not (channel.feedback_device is None) and not (channel.feedback_device.strip() == "")
         ]
         self.num_outputs = len(output_indices)
         self.environment_output_channels = {}
         self.environment_data_out_remainders = {}
         for environment, active_indices in environment_channels.items():
-            common_indices, out_inds, env_inds = np.intersect1d(
+            common_indices, out_inds, _ = np.intersect1d(
                 output_indices, active_indices, return_indices=True
             )
             self.environment_output_channels[environment] = out_inds
-            self.environment_data_out_remainders[environment] = np.zeros(
-                (len(common_indices), 0)
-            )
+            self.environment_data_out_remainders[environment] = np.zeros((len(common_indices), 0))
 
-    def output_signal(self, data):
+    def output_signal(self, data):  # pylint: disable=unused-argument
         """The main output loop of the controller.
 
         If it is the first time through the loop, ``self.startup`` will be set
@@ -271,39 +247,32 @@ class OutputProcess(AbstractMessageProcess):
         # Start with ready to write and set to false if any environments are not
         ready_to_write = True
         for environment in self.environment_list:
-            # If the task isn't active or currently shutting down, we don't need more data, so just skip it.
+            # If the task isn't active or currently shutting down, we don't need more data,
+            # so just skip it.
             if (
                 not self.environment_active_flags[environment]
                 and not self.environment_starting_up_flags[environment]
             ) or self.environment_shutting_down_flags[environment]:
                 continue
             # Check if we need more data from that environment
-            if (
-                self.environment_data_out_remainders[environment].shape[-1]
-                < self.write_size
-            ):
+            if self.environment_data_out_remainders[environment].shape[-1] < self.write_size:
                 if not self.environment_starting_up_flags[environment]:
                     ready_to_write = False
                 try:
                     # Try to grab data from the queue and add it to the remainders.
-                    environment_data, last_run = (
-                        self.queue_container.environment_data_out_queues[
-                            environment
-                        ].get_nowait()
-                    )
+                    environment_data, last_run = self.queue_container.environment_data_out_queues[
+                        environment
+                    ].get_nowait()
                 except mp.queues.Empty:
-                    # If data is not ready yet, simply continue to the next environment and we'll try on the next time around.
+                    # If data is not ready yet, simply continue to the next environment and we'll
+                    # try on the next time around.
                     continue
                 self.log(
-                    "Got {:} data from {:} Environment".format(
-                        " x ".join(
-                            ["{:}".format(shape) for shape in environment_data.shape]
-                        ),
-                        environment,
-                    )
+                    f"Got {' x '.join([f'{shape}' for shape in environment_data.shape])} "
+                    f"data from {environment} Environment"
                 )
                 if last_run:
-                    self.log("Deactivating {:} Environment".format(environment))
+                    self.log(f"Deactivating {environment} Environment")
                     self.environment_shutting_down_flags[environment] = True
                     if self.environment_starting_up_flags[environment]:
                         self.environment_starting_up_flags[environment] = False
@@ -320,11 +289,7 @@ class OutputProcess(AbstractMessageProcess):
                 if self.environment_starting_up_flags[environment]:
                     self.environment_starting_up_flags[environment] = False
                     self.environment_active_flags[environment] = True
-                    self.log(
-                        "Received First Complete Data Write for {:} Environment".format(
-                            environment
-                        )
-                    )
+                    self.log(f"Received First Complete Data Write for {environment} Environment")
                     self.environment_first_data[environment] = True
 
         # If we got through that previous loop still ready to write, we can
@@ -332,18 +297,16 @@ class OutputProcess(AbstractMessageProcess):
         if ready_to_write and (
             self.startup or skip_hardware or self.hardware.ready_for_new_output()
         ):
-            self.log(
-                "Ready to Write: Environment Remainders {:}".format(
-                    [
-                        (environment, remainder.shape[-1])
-                        for environment, remainder in self.environment_data_out_remainders.items()
-                        if self.environment_active_flags[environment]
-                    ]
-                )
-            )
+            remainder_log = [
+                (environment, remainder.shape[-1])
+                for environment, remainder in self.environment_data_out_remainders.items()
+                if self.environment_active_flags[environment]
+            ]
+            self.log(f"Ready to Write: Environment Remainders {remainder_log}")
             write_data = np.zeros((self.num_outputs, self.write_size))
             for environment in self.environment_list:
-                # If the task is shutting down and all the data has been drained from it, make it inactive and just skip it.
+                # If the task is shutting down and all the data has been drained from it,
+                # make it inactive and just skip it.
                 if (
                     self.environment_shutting_down_flags[environment]
                     and self.environment_data_out_remainders[environment].shape[-1] == 0
@@ -369,33 +332,24 @@ class OutputProcess(AbstractMessageProcess):
                 # Write one portion of the environment output to write_data
                 write_data[
                     output_indices, :output_timesteps
-                ] += self.environment_data_out_remainders[environment][
-                    :, :output_timesteps
-                ]
+                ] += self.environment_data_out_remainders[environment][:, :output_timesteps]
                 self.environment_data_out_remainders[environment] = (
-                    self.environment_data_out_remainders[environment][
-                        :, output_timesteps:
-                    ]
+                    self.environment_data_out_remainders[environment][:, output_timesteps:]
                 )
             # Now that we have each environment accounted for in the output we
             # can write to the hardware
             self.log(
-                "Writing {:} data to hardware".format(
-                    " x ".join("{:}".format(shape) for shape in write_data.shape)
-                )
+                f"Writing {' x '.join(f'{shape}' for shape in write_data.shape)} data to hardware"
             )
             if not skip_hardware:
                 self.log(
-                    "Output Writing Data to Hardware RMS: \n  {:}".format(
-                        (rms_time(write_data, axis=-1))
-                    )
+                    f"Output Writing Data to Hardware RMS: \n  {rms_time(write_data, axis=-1)}"
                 )
                 for environment in self.environment_first_data:
                     if self.environment_first_data[environment]:
                         self.log(
-                            "Sending first data for environment {:} to Acquisition for syncing".format(
-                                environment
-                            )
+                            f"Sending first data for environment {environment} to Acquisition "
+                            "for syncing"
                         )
                         self.queue_container.input_output_sync_queue.put(
                             (
@@ -405,9 +359,7 @@ class OutputProcess(AbstractMessageProcess):
                         )
                         self.environment_first_data[environment] = False
                         if DEBUG:
-                            np.savez(
-                                ENV_OUTPUT.format(environment), write_data=write_data
-                            )
+                            np.savez(ENV_OUTPUT.format(environment), write_data=write_data)
                 if DEBUG:
                     num_files = len(glob(FILE_OUTPUT.format("*")))
                     np.savez(FILE_OUTPUT.format(num_files), write_data=write_data)
@@ -433,16 +385,10 @@ class OutputProcess(AbstractMessageProcess):
         if (
             self.shutdown_flag  # Time to shut down
             and all(
-                [
-                    not flag
-                    for environment, flag in self.environment_active_flags.items()
-                ]
+                [not flag for environment, flag in self.environment_active_flags.items()]
             )  # Check that all environments are not active
             and all(
-                [
-                    not flag
-                    for environment, flag in self.environment_starting_up_flags.items()
-                ]
+                [not flag for environment, flag in self.environment_starting_up_flags.items()]
             )  # Check that all environments are not starting up
             and all(
                 [
@@ -464,7 +410,7 @@ class OutputProcess(AbstractMessageProcess):
                 self.process_name, (GlobalCommands.RUN_HARDWARE, None)
             )
 
-    def stop_output(self, data):
+    def stop_output(self, data):  # pylint: disable=unused-argument
         """Sets a flag telling the output that it should start shutting down
 
         Parameters
@@ -487,12 +433,12 @@ class OutputProcess(AbstractMessageProcess):
             The environment name that should be activated.
 
         """
-        self.log("Started Environment {:}".format(data))
+        self.log(f"Started Environment {data}")
         self.environment_starting_up_flags[data] = True
         self.environment_shutting_down_flags[data] = False
         self.environment_active_flags[data] = False
 
-    def quit(self, data):
+    def quit(self, data):  # pylint: disable=unused-argument
         """Stops the process and shuts down the hardware if necessary.
 
         Parameters
@@ -504,27 +450,20 @@ class OutputProcess(AbstractMessageProcess):
         """
         # Pull any data off the queues that have been put to
         queue_flush_sum = 0
-        # for name in dir(self.queue_container):
-        #     queue_data = getattr(self.queue_container,name)
-        #     if isinstance(queue_data,VerboseMessageQueue) or isinstance(queue_data,mp.queues.Queue):
-        #         queue_flush_sum += len(flush_queue(queue))
-        #     elif isinstance(queue_data,)
-        for queue in [
-            q for name, q in self.queue_container.environment_data_out_queues.items()
-        ] + [
+        for queue in [q for _, q in self.queue_container.environment_data_out_queues.items()] + [
             self.queue_container.output_command_queue,
             self.queue_container.input_output_sync_queue,
             self.queue_container.single_process_hardware_queue,
         ]:
             queue_flush_sum += len(flush_queue(queue))
-        self.log("Flushed {:} items out of queues".format(queue_flush_sum))
-        if not self.hardware is None:
+        self.log(f"Flushed {queue_flush_sum} items out of queues")
+        if self.hardware is not None:
             self.hardware.close()
         return True
 
 
 def output_process(
-    queue_container: QueueContainer, environments: list, output_active: mp.Value
+    queue_container: QueueContainer, environments: list, output_active: mp.sharedctypes.Synchronized
 ):
     """Function passed to multiprocessing as the output process
 
@@ -542,8 +481,6 @@ def output_process(
 
     """
 
-    output_instance = OutputProcess(
-        "Output", queue_container, environments, output_active
-    )
+    output_instance = OutputProcess(TASK_NAME, queue_container, environments, output_active)
 
     output_instance.run()
