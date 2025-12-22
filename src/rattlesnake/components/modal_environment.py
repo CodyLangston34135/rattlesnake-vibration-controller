@@ -22,59 +22,55 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import inspect
+import multiprocessing as mp
+import multiprocessing.sharedctypes  # pylint: disable=unused-import
+import os
+import time
+from enum import Enum
+from glob import glob
+from multiprocessing.queues import Queue
+
+import netCDF4 as nc4
+import numpy as np
+import openpyxl
+import scipy.signal as sig
 from qtpy import QtWidgets, uic
 from qtpy.QtCore import Qt
-from .abstract_environment import AbstractEnvironment, AbstractUI, AbstractMetadata
-from .utilities import (
-    Channel,
-    VerboseMessageQueue,
-    GlobalCommands,
-    DataAcquisitionParameters,
-    error_message_qt,
-    load_python_module,
-    flush_queue,
-)
-from .ui_utilities import multiline_plotter, ModalMDISubWindow
+
+from .abstract_environment import AbstractEnvironment, AbstractMetadata, AbstractUI
 from .environments import (
     ControlTypes,
     environment_definition_ui_paths,
-    environment_prediction_ui_paths,
     environment_run_ui_paths,
-    system_identification_ui_path,
-    modal_mdi_ui_path,
 )
 from .signal_generation import (
-    RandomSignalGenerator,
     BurstRandomSignalGenerator,
-    PseudorandomSignalGenerator,
     ChirpSignalGenerator,
-    SquareSignalGenerator,
+    PseudorandomSignalGenerator,
+    RandomSignalGenerator,
     SineSignalGenerator,
+    SquareSignalGenerator,
 )
-from typing import List
-from multiprocessing.queues import Queue
-from datetime import datetime
-import traceback
-import os
-import netCDF4 as nc4
-import openpyxl
-from enum import Enum
-import multiprocessing as mp
-import inspect
-import numpy as np
-import time
-import pyqtgraph as pg
-import scipy.signal as sig
-import netCDF4 as nc4
-from glob import glob
+from .ui_utilities import ModalMDISubWindow, multiline_plotter
+from .utilities import (
+    DataAcquisitionParameters,
+    GlobalCommands,
+    VerboseMessageQueue,
+    error_message_qt,
+    flush_queue,
+    load_python_module,
+)
 
-control_type = ControlTypes.MODAL
-maximum_name_length = 50
+CONTROL_TYPE = ControlTypes.MODAL
+MAXIMUM_NAME_LENGTH = 50
 
 WAIT_TIME = 0.02
 
 
 class ModalCommands(Enum):
+    """Valid commands for the modal environment"""
+
     START_CONTROL = 0
     STOP_CONTROL = 1
     ACCEPT_FRAME = 2
@@ -200,14 +196,13 @@ class ModalMetadata(AbstractMetadata):
         self.reference_channel_indices = reference_channel_indices
         self.response_channel_indices = response_channel_indices
         self.output_channel_indices = output_channel_indices
-        self.exponential_window_value_at_frame_end = (
-            exponential_window_value_at_frame_end
-        )
+        self.exponential_window_value_at_frame_end = exponential_window_value_at_frame_end
         # Set up signal generator
         self.output_oversample = data_acquisition_parameters.output_oversample
         self.signal_generator = self.get_signal_generator()
 
     def get_signal_generator(self):
+        """Gets a signal generator object that the modal environment will use to generate signals"""
         if self.signal_generator_type == "none":
             signal_generator = PseudorandomSignalGenerator(
                 rms=0.0,
@@ -285,9 +280,7 @@ class ModalMetadata(AbstractMetadata):
                 output_oversample=self.output_oversample,
             )
         else:
-            raise ValueError(
-                "Invalid Signal Type {:}".format(self.signal_generator_type)
-            )
+            raise ValueError(f"Invalid Signal Type {self.signal_generator_type}")
         return signal_generator
 
     @property
@@ -312,6 +305,7 @@ class ModalMetadata(AbstractMetadata):
 
     @property
     def skip_frames(self):
+        """Property returning the number of frames to skip while waiting for steady state"""
         return int(
             np.ceil(
                 self.wait_for_steady_state
@@ -325,12 +319,27 @@ class ModalMetadata(AbstractMetadata):
         """Property returning frequency line spacing given the sampling parameters"""
         return self.sample_rate / self.samples_per_frame
 
-    @property
-    def overlapped_output_samples(self):
-        """Property returning the number of output samples that are overlapped."""
-        return self.samples_per_frame - self.samples_per_output
-
     def get_trigger_levels(self, channels):
+        """Gets the trigger levels for a channel based on the channel table information
+
+        Parameters
+        ----------
+        channels : list of Channel
+            A list of channels in the environment
+
+        Returns
+        -------
+        trigger_level_v
+            The trigger level in volts
+        trigger_level_eu
+            The trigger level in engineering units defined in the channel table
+        hysterisis_level_v
+            The level that the signal must return below before another trigger can be accepted,
+            in volts
+        hysterisis_level_eu
+            The level that the signal must return below before another trigger can be accepted,
+            in engineering units defined in the channel table
+        """
         channel = channels[self.trigger_channel]
         try:
             volt_range = float(channel.maximum_value)
@@ -358,20 +367,24 @@ class ModalMetadata(AbstractMetadata):
 
     @property
     def disabled_signals(self):
+        """Returns a list of indices corresponding to output signals that have been disabled"""
         return [
             i
             for i, index in enumerate(self.output_channel_indices)
             if not (
-                index in self.response_channel_indices
-                or index in self.reference_channel_indices
+                index in self.response_channel_indices or index in self.reference_channel_indices
             )
         ]
 
     @property
     def hysteresis_samples(self):
+        """Property returning the number of samples that a signal must be below the hysterisis
+        level"""
         return int(self.hysteresis_length * self.samples_per_frame)
 
-    def store_to_netcdf(self, netcdf_group_handle: nc4._netCDF4.Group):
+    def store_to_netcdf(
+        self, netcdf_group_handle: nc4._netCDF4.Group  # pylint: disable=c-extension-no-member
+    ):
         """Store parameters to a group in a netCDF streaming file.
 
         This function stores parameters from the environment into the netCDF
@@ -403,29 +416,21 @@ class ModalMetadata(AbstractMetadata):
         netcdf_group_handle.wait_for_steady_state = self.wait_for_steady_state
         netcdf_group_handle.trigger_channel = self.trigger_channel
         netcdf_group_handle.pretrigger = self.pretrigger
-        netcdf_group_handle.trigger_slope_positive = (
-            1 if self.trigger_slope_positive else 0
-        )
+        netcdf_group_handle.trigger_slope_positive = 1 if self.trigger_slope_positive else 0
         netcdf_group_handle.trigger_level = self.trigger_level
         netcdf_group_handle.hysteresis_level = self.hysteresis_level
         netcdf_group_handle.hysteresis_length = self.hysteresis_length
         netcdf_group_handle.signal_generator_type = self.signal_generator_type
         netcdf_group_handle.signal_generator_level = self.signal_generator_level
-        netcdf_group_handle.signal_generator_min_frequency = (
-            self.signal_generator_min_frequency
-        )
-        netcdf_group_handle.signal_generator_max_frequency = (
-            self.signal_generator_max_frequency
-        )
-        netcdf_group_handle.signal_generator_on_fraction = (
-            self.signal_generator_on_fraction
-        )
+        netcdf_group_handle.signal_generator_min_frequency = self.signal_generator_min_frequency
+        netcdf_group_handle.signal_generator_max_frequency = self.signal_generator_max_frequency
+        netcdf_group_handle.signal_generator_on_fraction = self.signal_generator_on_fraction
         netcdf_group_handle.exponential_window_value_at_frame_end = (
             self.exponential_window_value_at_frame_end
         )
         netcdf_group_handle.acceptance_function = (
             self.acceptance_function[0] + ":" + self.acceptance_function[1]
-            if not self.acceptance_function is None
+            if self.acceptance_function is not None
             else "None"
         )
         # Reference channels
@@ -437,9 +442,7 @@ class ModalMetadata(AbstractMetadata):
         )
         var[...] = self.reference_channel_indices
         # Response channels
-        netcdf_group_handle.createDimension(
-            "response_channels", len(self.response_channel_indices)
-        )
+        netcdf_group_handle.createDimension("response_channels", len(self.response_channel_indices))
         var = netcdf_group_handle.createVariable(
             "response_channel_indices", "i4", ("response_channels")
         )
@@ -467,9 +470,7 @@ class ModalMetadata(AbstractMetadata):
         signal_generator_on_percent = 0
         if ui.definition_widget.signal_generator_selector.currentIndex() == 0:  # None
             signal_generator_type = "none"
-        elif (
-            ui.definition_widget.signal_generator_selector.currentIndex() == 1
-        ):  # Random
+        elif ui.definition_widget.signal_generator_selector.currentIndex() == 1:  # Random
             signal_generator_type = "random"
             signal_generator_level = ui.definition_widget.random_rms_selector.value()
             signal_generator_min_frequency = (
@@ -478,9 +479,7 @@ class ModalMetadata(AbstractMetadata):
             signal_generator_max_frequency = (
                 ui.definition_widget.random_max_frequency_selector.value()
             )
-        elif (
-            ui.definition_widget.signal_generator_selector.currentIndex() == 2
-        ):  # Burst Random
+        elif ui.definition_widget.signal_generator_selector.currentIndex() == 2:  # Burst Random
             signal_generator_type = "burst"
             signal_generator_level = ui.definition_widget.burst_rms_selector.value()
             signal_generator_min_frequency = (
@@ -489,25 +488,17 @@ class ModalMetadata(AbstractMetadata):
             signal_generator_max_frequency = (
                 ui.definition_widget.burst_max_frequency_selector.value()
             )
-            signal_generator_on_percent = (
-                ui.definition_widget.burst_on_percentage_selector.value()
-            )
-        elif (
-            ui.definition_widget.signal_generator_selector.currentIndex() == 3
-        ):  # Pseudorandom
+            signal_generator_on_percent = ui.definition_widget.burst_on_percentage_selector.value()
+        elif ui.definition_widget.signal_generator_selector.currentIndex() == 3:  # Pseudorandom
             signal_generator_type = "pseudorandom"
-            signal_generator_level = (
-                ui.definition_widget.pseudorandom_rms_selector.value()
-            )
+            signal_generator_level = ui.definition_widget.pseudorandom_rms_selector.value()
             signal_generator_min_frequency = (
                 ui.definition_widget.pseudorandom_min_frequency_selector.value()
             )
             signal_generator_max_frequency = (
                 ui.definition_widget.pseudorandom_max_frequency_selector.value()
             )
-        elif (
-            ui.definition_widget.signal_generator_selector.currentIndex() == 4
-        ):  # Chirp
+        elif ui.definition_widget.signal_generator_selector.currentIndex() == 4:  # Chirp
             signal_generator_type = "chirp"
             signal_generator_level = ui.definition_widget.chirp_level_selector.value()
             signal_generator_min_frequency = (
@@ -516,23 +507,18 @@ class ModalMetadata(AbstractMetadata):
             signal_generator_max_frequency = (
                 ui.definition_widget.chirp_max_frequency_selector.value()
             )
-        elif (
-            ui.definition_widget.signal_generator_selector.currentIndex() == 5
-        ):  # Square
+        elif ui.definition_widget.signal_generator_selector.currentIndex() == 5:  # Square
             signal_generator_type = "square"
             signal_generator_level = ui.definition_widget.square_level_selector.value()
-            signal_generator_min_frequency = (
-                ui.definition_widget.square_frequency_selector.value()
-            )
-            signal_generator_on_percent = (
-                ui.definition_widget.square_percent_on_selector.value()
-            )
+            signal_generator_min_frequency = ui.definition_widget.square_frequency_selector.value()
+            signal_generator_on_percent = ui.definition_widget.square_percent_on_selector.value()
         elif ui.definition_widget.signal_generator_selector.currentIndex() == 6:  # Sine
             signal_generator_type = "sine"
             signal_generator_level = ui.definition_widget.sine_level_selector.value()
-            signal_generator_min_frequency = (
-                ui.definition_widget.sine_frequency_selector.value()
-            )
+            signal_generator_min_frequency = ui.definition_widget.sine_frequency_selector.value()
+        else:
+            index = ui.definition_widget.signal_generator_selector.currentIndex()
+            raise ValueError(f"Invalid Signal Generator {index} (How did you get here?)")
         return cls(
             ui.definition_widget.sample_rate_display.value(),
             ui.definition_widget.samples_per_frame_selector.value(),
@@ -575,6 +561,7 @@ class ModalMetadata(AbstractMetadata):
         )
 
     def generate_signal(self):
+        """Generates a single frame of data"""
         if self.signal_generator is None:
             return np.zeros(
                 (
@@ -586,26 +573,26 @@ class ModalMetadata(AbstractMetadata):
             return self.signal_generator.generate_frame()[0]
 
 
-from .spectral_processing import (
-    spectral_processing_process,
-    SpectralProcessingCommands,
-    SpectralProcessingMetadata,
-    AveragingTypes,
-    Estimator,
-)
-from .signal_generation_process import (
-    signal_generation_process,
-    SignalGenerationCommands,
-    SignalGenerationMetadata,
-)
-from .data_collector import (
-    data_collector_process,
-    DataCollectorCommands,
-    CollectorMetadata,
-    AcquisitionType,
+from .data_collector import (  # noqa # pylint: disable=wrong-import-position
     Acceptance,
+    AcquisitionType,
+    CollectorMetadata,
+    DataCollectorCommands,
     TriggerSlope,
     Window,
+    data_collector_process,
+)
+from .signal_generation_process import (  # noqa # pylint: disable=wrong-import-position
+    SignalGenerationCommands,
+    SignalGenerationMetadata,
+    signal_generation_process,
+)
+from .spectral_processing import (  # noqa # pylint: disable=wrong-import-position
+    AveragingTypes,
+    Estimator,
+    SpectralProcessingCommands,
+    SpectralProcessingMetadata,
+    spectral_processing_process,
 )
 
 
@@ -619,8 +606,8 @@ class ModalUI(AbstractUI):
         self,
         environment_name: str,
         definition_tabwidget: QtWidgets.QTabWidget,
-        system_id_tabwidget: QtWidgets.QTabWidget,
-        test_predictions_tabwidget: QtWidgets.QTabWidget,
+        system_id_tabwidget: QtWidgets.QTabWidget,  # pylint: disable=unused-argument
+        test_predictions_tabwidget: QtWidgets.QTabWidget,  # pylint: disable=unused-argument
         run_tabwidget: QtWidgets.QTabWidget,
         environment_command_queue: VerboseMessageQueue,
         controller_communication_queue: VerboseMessageQueue,
@@ -663,13 +650,11 @@ class ModalUI(AbstractUI):
         )
         # Add the page to the control definition tabwidget
         self.definition_widget = QtWidgets.QWidget()
-        uic.loadUi(
-            environment_definition_ui_paths[control_type], self.definition_widget
-        )
+        uic.loadUi(environment_definition_ui_paths[CONTROL_TYPE], self.definition_widget)
         definition_tabwidget.addTab(self.definition_widget, self.environment_name)
         # Add the page to the run tabwidget
         self.run_widget = QtWidgets.QWidget()
-        uic.loadUi(environment_run_ui_paths[control_type], self.run_widget)
+        uic.loadUi(environment_run_ui_paths[CONTROL_TYPE], self.run_widget)
         run_tabwidget.addTab(self.run_widget, self.environment_name)
 
         self.trigger_widgets = [
@@ -756,82 +741,70 @@ class ModalUI(AbstractUI):
 
     @property
     def reference_indices(self):
+        """Returns indices corresponding to the reference channels"""
         return [
             i
-            for i in range(
-                self.definition_widget.reference_channels_selector.rowCount()
-            )
-            if self.definition_widget.reference_channels_selector.cellWidget(
-                i, 0
-            ).isChecked()
-            and self.definition_widget.reference_channels_selector.cellWidget(
-                i, 1
-            ).isChecked()
+            for i in range(self.definition_widget.reference_channels_selector.rowCount())
+            if self.definition_widget.reference_channels_selector.cellWidget(i, 0).isChecked()
+            and self.definition_widget.reference_channels_selector.cellWidget(i, 1).isChecked()
         ]
 
     @property
     def response_indices(self):
+        """Returns indices corresponding to the response channels in a test"""
         return [
             i
-            for i in range(
-                self.definition_widget.reference_channels_selector.rowCount()
-            )
-            if self.definition_widget.reference_channels_selector.cellWidget(
-                i, 0
-            ).isChecked()
-            and not self.definition_widget.reference_channels_selector.cellWidget(
-                i, 1
-            ).isChecked()
+            for i in range(self.definition_widget.reference_channels_selector.rowCount())
+            if self.definition_widget.reference_channels_selector.cellWidget(i, 0).isChecked()
+            and not self.definition_widget.reference_channels_selector.cellWidget(i, 1).isChecked()
         ]
 
     @property
     def output_channel_indices(self):
+        """Returns indices corresponding to the output channels in a test"""
         return [
             i
             for i in self.all_output_channel_indices
-            if self.definition_widget.reference_channels_selector.cellWidget(
-                i, 0
-            ).isChecked()
+            if self.definition_widget.reference_channels_selector.cellWidget(i, 0).isChecked()
         ]
 
     @property
     def initialized_response_names(self):
+        """Returns channel names corresponding to the initialized response channels"""
         return [
             self.channel_names[i]
             for i in range(len(self.channel_names))
-            if i not in self.environment_parameters.reference_channel_indices
+            if i not in self.environment_parameters.response_channel_indices
         ]
 
     @property
     def initialized_reference_names(self):
+        """Returns channel names corresponding to the initialized reference channels"""
         return [
-            self.channel_names[i]
-            for i in self.environment_parameters.reference_channel_indices
+            self.channel_names[i] for i in self.environment_parameters.reference_channel_indices
         ]
 
     def complete_ui(self):
-        self.definition_widget.system_id_averaging_coefficient_selector.setEnabled(
-            False
-        )
+        """Applies some finishing touches to the UI"""
+        self.definition_widget.system_id_averaging_coefficient_selector.setEnabled(False)
         for widget in self.trigger_widgets:
             widget.setEnabled(False)
 
         # Set common look and feel for plots
-        plotWidgets = [self.definition_widget.output_signal_plot]
-        for plotWidget in plotWidgets:
-            plot_item = plotWidget.getPlotItem()
+        plot_widgets = [self.definition_widget.output_signal_plot]
+        for plot_widget in plot_widgets:
+            plot_item = plot_widget.getPlotItem()
             plot_item.showGrid(True, True, 0.25)
             plot_item.enableAutoRange()
             plot_item.getViewBox().enableAutoRange(enable=True)
 
         # Disable the currently inactive portions of the definition layout
-        self.definition_widget.system_id_averaging_coefficient_selector.setEnabled(
-            False
-        )
+        self.definition_widget.system_id_averaging_coefficient_selector.setEnabled(False)
         for widget in self.window_parameter_widgets:
             widget.hide()
 
     def connect_callbacks(self):
+        """Connects callback functions to the user interface widgets"""
         # Definition Callbacks
         self.definition_widget.samples_per_frame_selector.valueChanged.connect(
             self.update_parameters
@@ -851,15 +824,9 @@ class ModalUI(AbstractUI):
         self.definition_widget.trigger_level_selector.valueChanged.connect(
             self.update_trigger_levels
         )
-        self.definition_widget.hysteresis_selector.valueChanged.connect(
-            self.update_trigger_levels
-        )
-        self.definition_widget.regenerate_signal_button.clicked.connect(
-            self.generate_signal
-        )
-        self.definition_widget.signal_generator_selector.currentChanged.connect(
-            self.update_signal
-        )
+        self.definition_widget.hysteresis_selector.valueChanged.connect(self.update_trigger_levels)
+        self.definition_widget.regenerate_signal_button.clicked.connect(self.generate_signal)
+        self.definition_widget.signal_generator_selector.currentChanged.connect(self.update_signal)
         for widget in self.signal_generator_widgets:
             widget.valueChanged.connect(self.update_signal)
         self.definition_widget.check_selected_button.clicked.connect(
@@ -868,9 +835,7 @@ class ModalUI(AbstractUI):
         self.definition_widget.uncheck_selected_button.clicked.connect(
             self.uncheck_selected_reference_channels
         )
-        self.definition_widget.enable_selected_button.clicked.connect(
-            self.enable_selected_channels
-        )
+        self.definition_widget.enable_selected_button.clicked.connect(self.enable_selected_channels)
         self.definition_widget.disable_selected_button.clicked.connect(
             self.disable_selected_channels
         )
@@ -898,22 +863,15 @@ class ModalUI(AbstractUI):
             self.run_widget.channel_display_area.tileSubWindows
         )
         self.run_widget.close_all_button.clicked.connect(self.close_windows)
-        self.run_widget.decrement_channels_button.clicked.connect(
-            self.decrement_channels
-        )
-        self.run_widget.increment_channels_button.clicked.connect(
-            self.increment_channels
-        )
-        self.run_widget.dof_override_table.itemChanged.connect(
-            self.update_override_table
-        )
+        self.run_widget.decrement_channels_button.clicked.connect(self.decrement_channels)
+        self.run_widget.increment_channels_button.clicked.connect(self.increment_channels)
+        self.run_widget.dof_override_table.itemChanged.connect(self.update_override_table)
         self.run_widget.add_override_button.clicked.connect(self.add_override_channel)
-        self.run_widget.remove_override_button.clicked.connect(
-            self.remove_override_channel
-        )
+        self.run_widget.remove_override_button.clicked.connect(self.remove_override_channel)
 
     # Definition Callbacks
     def update_parameters(self):
+        """Updates widget values when fundamental signal processing parameters change"""
         if self.definition_widget.samples_per_frame_selector.value() % 2 == 1:
             self.definition_widget.samples_per_frame_selector.blockSignals(True)
             self.definition_widget.samples_per_frame_selector.setValue(
@@ -921,70 +879,60 @@ class ModalUI(AbstractUI):
             )
             self.definition_widget.samples_per_frame_selector.blockSignals(False)
         data = self.collect_environment_definition_parameters()
-        self.definition_widget.samples_per_acquire_display.setValue(
-            data.samples_per_acquire
-        )
+        self.definition_widget.samples_per_acquire_display.setValue(data.samples_per_acquire)
         self.definition_widget.frame_time_display.setValue(data.frame_time)
-        self.definition_widget.nyquist_frequency_display.setValue(
-            data.nyquist_frequency
-        )
+        self.definition_widget.nyquist_frequency_display.setValue(data.nyquist_frequency)
         self.definition_widget.fft_lines_display.setValue(data.fft_lines)
-        self.definition_widget.frequency_spacing_display.setValue(
-            data.frequency_spacing
-        )
+        self.definition_widget.frequency_spacing_display.setValue(data.frequency_spacing)
         if self.definition_widget.regenerate_signal_auto_checkbox.isChecked():
             self.generate_signal()
 
     def update_reference_channels(self):
-        self.definition_widget.response_channels_display.setValue(
-            len(self.response_indices)
-        )
-        self.definition_widget.reference_channels_display.setValue(
-            len(self.reference_indices)
-        )
-        self.definition_widget.output_channels_display.setValue(
-            len(self.output_channel_indices)
-        )
+        """Updates widgets based on changes in the selected reference channels"""
+        self.definition_widget.response_channels_display.setValue(len(self.response_indices))
+        self.definition_widget.reference_channels_display.setValue(len(self.reference_indices))
+        self.definition_widget.output_channels_display.setValue(len(self.output_channel_indices))
         if self.definition_widget.regenerate_signal_auto_checkbox.isChecked():
             self.generate_signal()
 
     def check_selected_reference_channels(self):
+        """Checks reference channels that are selected in the list widget"""
         select = self.definition_widget.reference_channels_selector.selectionModel()
         rows = select.selectedRows()
         for row in rows:
             index = row.row()
-            self.definition_widget.reference_channels_selector.cellWidget(
-                index, 1
-            ).setChecked(True)
+            self.definition_widget.reference_channels_selector.cellWidget(index, 1).setChecked(True)
 
     def uncheck_selected_reference_channels(self):
+        """Unchecks reference channels that are selected in the list widget"""
         select = self.definition_widget.reference_channels_selector.selectionModel()
         rows = select.selectedRows()
         for row in rows:
             index = row.row()
-            self.definition_widget.reference_channels_selector.cellWidget(
-                index, 1
-            ).setChecked(False)
+            self.definition_widget.reference_channels_selector.cellWidget(index, 1).setChecked(
+                False
+            )
 
     def enable_selected_channels(self):
+        """Enables channels that are selected in the list widget"""
         select = self.definition_widget.reference_channels_selector.selectionModel()
         rows = select.selectedRows()
         for row in rows:
             index = row.row()
-            self.definition_widget.reference_channels_selector.cellWidget(
-                index, 0
-            ).setChecked(True)
+            self.definition_widget.reference_channels_selector.cellWidget(index, 0).setChecked(True)
 
     def disable_selected_channels(self):
+        """Disables channels that are selected in the list widget"""
         select = self.definition_widget.reference_channels_selector.selectionModel()
         rows = select.selectedRows()
         for row in rows:
             index = row.row()
-            self.definition_widget.reference_channels_selector.cellWidget(
-                index, 0
-            ).setChecked(False)
+            self.definition_widget.reference_channels_selector.cellWidget(index, 0).setChecked(
+                False
+            )
 
     def activate_trigger_options(self):
+        """Enables widgets corresponding to the trigger selection"""
         if self.definition_widget.triggering_type_selector.currentIndex() == 0:
             for widget in self.trigger_widgets:
                 widget.setEnabled(False)
@@ -993,9 +941,10 @@ class ModalUI(AbstractUI):
                 widget.setEnabled(True)
 
     def select_acceptance(self):
+        """Selects the acceptance type and opens up a file dialog if necessary"""
         if self.definition_widget.acceptance_selector.currentIndex() == 2:
             # Open up a file dialog
-            filename, file_filter = QtWidgets.QFileDialog.getOpenFileName(
+            filename, _ = QtWidgets.QFileDialog.getOpenFileName(
                 self.definition_widget,
                 "Select Python Module",
                 filter="Python Modules (*.py)",
@@ -1009,7 +958,7 @@ class ModalUI(AbstractUI):
                 for function in inspect.getmembers(module)
                 if inspect.isfunction(function[1])
             ]
-            item, okPressed = QtWidgets.QInputDialog.getItem(
+            item, ok_pressed = QtWidgets.QInputDialog.getItem(
                 self.definition_widget,
                 "Select Acceptance Function",
                 "Function Name:",
@@ -1017,7 +966,7 @@ class ModalUI(AbstractUI):
                 0,
                 False,
             )
-            if okPressed:
+            if ok_pressed:
                 self.acceptance_function = [filename, item]
             else:
                 self.definition_widget.acceptance_selector.setCurrentIndex(0)
@@ -1026,6 +975,7 @@ class ModalUI(AbstractUI):
             self.acceptance_function = None
 
     def update_trigger_levels(self):
+        """Updates trigger levels based on selected widget values"""
         data = self.collect_environment_definition_parameters()
         t_v, t_eu, h_v, h_eu = data.get_trigger_levels(
             self.data_acquisition_parameters.channel_list
@@ -1034,30 +984,29 @@ class ModalUI(AbstractUI):
         self.definition_widget.trigger_level_eu_display.setValue(t_eu)
         self.definition_widget.hysteresis_voltage_display.setValue(h_v)
         self.definition_widget.hysteresis_eu_display.setValue(h_eu)
-        eu_suffix = self.data_acquisition_parameters.channel_list[
-            data.trigger_channel
-        ].unit
+        eu_suffix = self.data_acquisition_parameters.channel_list[data.trigger_channel].unit
         self.definition_widget.hysteresis_eu_display.setSuffix(
-            (" " + eu_suffix) if not (eu_suffix == "" or eu_suffix == None) else ""
+            (" " + eu_suffix) if not (eu_suffix == "" or eu_suffix is None) else ""
         )
         self.definition_widget.trigger_level_eu_display.setSuffix(
-            (" " + eu_suffix) if not (eu_suffix == "" or eu_suffix == None) else ""
+            (" " + eu_suffix) if not (eu_suffix == "" or eu_suffix is None) else ""
         )
 
     def update_hysteresis_length(self):
+        """Updates hysterisis length based on the selected trigger parameters"""
         data = self.collect_environment_definition_parameters()
-        self.definition_widget.hysteresis_samples_display.setValue(
-            data.hysteresis_samples
-        )
+        self.definition_widget.hysteresis_samples_display.setValue(data.hysteresis_samples)
         self.definition_widget.hysteresis_time_display.setValue(
             data.hysteresis_samples / data.sample_rate
         )
 
     def update_signal(self):
+        """Updates the generated signal based on widget value changes"""
         if self.definition_widget.regenerate_signal_auto_checkbox.isChecked():
             self.generate_signal()
 
     def generate_signal(self):
+        """Generates an example signal to show in the definition widget"""
         if self.data_acquisition_parameters is None:
             return
         output_oversample = self.data_acquisition_parameters.output_oversample
@@ -1075,19 +1024,14 @@ class ModalUI(AbstractUI):
             plot.setData(times, s)
 
     def update_averaging_type(self):
-        if (
-            self.definition_widget.system_id_averaging_scheme_selector.currentIndex()
-            == 0
-        ):
-            self.definition_widget.system_id_averaging_coefficient_selector.setEnabled(
-                False
-            )
+        """Enables exponential averaging coefficient widgets if exponential averaging is chosen"""
+        if self.definition_widget.system_id_averaging_scheme_selector.currentIndex() == 0:
+            self.definition_widget.system_id_averaging_coefficient_selector.setEnabled(False)
         else:
-            self.definition_widget.system_id_averaging_coefficient_selector.setEnabled(
-                True
-            )
+            self.definition_widget.system_id_averaging_coefficient_selector.setEnabled(True)
 
     def update_window(self):
+        """Shows additional window function options based on the selected window"""
         if (
             self.definition_widget.system_id_transfer_function_computation_window_selector.currentIndex()
             == 2
@@ -1100,6 +1044,7 @@ class ModalUI(AbstractUI):
 
     # Run Callbacks
     def preview_acquisition(self):
+        """Tells the environment process to start in preview mode"""
         self.run_widget.stop_test_button.setEnabled(True)
         self.run_widget.preview_test_button.setEnabled(False)
         self.run_widget.start_test_button.setEnabled(False)
@@ -1107,37 +1052,34 @@ class ModalUI(AbstractUI):
         self.controller_communication_queue.put(
             self.log_name, (GlobalCommands.START_ENVIRONMENT, self.environment_name)
         )
-        self.environment_command_queue.put(
-            self.log_name, (ModalCommands.START_CONTROL, None)
-        )
+        self.environment_command_queue.put(self.log_name, (ModalCommands.START_CONTROL, None))
         self.run_widget.dof_override_table.setEnabled(False)
         self.run_widget.add_override_button.setEnabled(False)
         self.run_widget.remove_override_button.setEnabled(False)
 
     def start_control(self):
+        """Tells the environment process to start in acquisition mode"""
         self.acquiring = True
         # Create the output file
         filename = self.run_widget.data_file_selector.text()
         if filename == "":
-            error_message_qt(
-                "Invalid File", "Please select a file in which to store modal data"
-            )
+            error_message_qt("Invalid File", "Please select a file in which to store modal data")
             return
         if self.run_widget.autoincrement_checkbox.isChecked():
             # Add the file increment
             path, ext = os.path.splitext(filename)
             index = len(glob(path + "*" + ext))
-            filename = path + "_{:04d}".format(index) + ext
+            filename = path + f"_{index:04d}" + ext
         self.create_netcdf_file(filename)
         self.preview_acquisition()
 
     def stop_control(self):
-        self.environment_command_queue.put(
-            self.log_name, (ModalCommands.STOP_CONTROL, None)
-        )
+        """Tells the environment process to stop the current measurement"""
+        self.environment_command_queue.put(self.log_name, (ModalCommands.STOP_CONTROL, None))
 
     def select_file(self):
-        filename, file_filter = QtWidgets.QFileDialog.getSaveFileName(
+        """Brings up a file dialog box to select the save file location"""
+        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
             self.run_widget,
             "Select NetCDF File to Save Modal Data",
             filter="NetCDF File (*.nc4)",
@@ -1147,20 +1089,19 @@ class ModalUI(AbstractUI):
         self.run_widget.data_file_selector.setText(filename)
 
     def accept_frame(self):
-        self.environment_command_queue.put(
-            self.log_name, (ModalCommands.ACCEPT_FRAME, True)
-        )
+        """Sends a signal to the environment process to accept the current measurement frame"""
+        self.environment_command_queue.put(self.log_name, (ModalCommands.ACCEPT_FRAME, True))
         self.run_widget.accept_average_button.setEnabled(False)
         self.run_widget.reject_average_button.setEnabled(False)
 
     def reject_frame(self):
-        self.environment_command_queue.put(
-            self.log_name, (ModalCommands.ACCEPT_FRAME, False)
-        )
+        """Sends a signal to the environment process to reject the current measurement frame"""
+        self.environment_command_queue.put(self.log_name, (ModalCommands.ACCEPT_FRAME, False))
         self.run_widget.accept_average_button.setEnabled(False)
         self.run_widget.reject_average_button.setEnabled(False)
 
     def new_window(self):
+        """Creates a new window to display modal data"""
         widget = ModalMDISubWindow(self.run_widget.channel_display_area)
         self.run_widget.channel_display_area.addSubWindow(widget)
         widget.show()
@@ -1168,6 +1109,7 @@ class ModalUI(AbstractUI):
         # print('Windows: {:}'.format(self.run_widget.channel_display_area.subWindowList()))
 
     def new_window_from_template(self):
+        """Creates a new window from the template functions"""
         if self.run_widget.new_from_template_combobox.currentIndex() == 0:
             return
         elif self.run_widget.new_from_template_combobox.currentIndex() == 6:
@@ -1228,20 +1170,24 @@ class ModalUI(AbstractUI):
         self.run_widget.new_from_template_combobox.setCurrentIndex(0)
 
     def close_windows(self):
+        """Closes all existing windows"""
         for window in self.run_widget.channel_display_area.subWindowList():
             window.close()
 
     def decrement_channels(self):
+        """Decrements the unlocked window response channels by the specified number of channels"""
         number = -self.run_widget.increment_channels_number.value()
         for window in self.run_widget.channel_display_area.subWindowList():
             window.widget().increment_channel(number)
 
     def increment_channels(self):
+        """Increments the unlocked window response channels by the specified number of channels"""
         number = self.run_widget.increment_channels_number.value()
         for window in self.run_widget.channel_display_area.subWindowList():
             window.widget().increment_channel(number)
 
     def add_override_channel(self):
+        """Adds a row to the channel override table"""
         selected_row = self.run_widget.dof_override_table.blockSignals(True)
         selected_row = self.run_widget.dof_override_table.rowCount()
         self.run_widget.dof_override_table.insertRow(selected_row)
@@ -1249,9 +1195,7 @@ class ModalUI(AbstractUI):
         for channel_name in self.channel_names:
             channel_combobox.addItem(channel_name)
         channel_combobox.currentIndexChanged.connect(self.update_override_table)
-        self.run_widget.dof_override_table.setCellWidget(
-            selected_row, 0, channel_combobox
-        )
+        self.run_widget.dof_override_table.setCellWidget(selected_row, 0, channel_combobox)
         data_item = QtWidgets.QTableWidgetItem()
         data_item.setText("1")
         self.run_widget.dof_override_table.setItem(selected_row, 1, data_item)
@@ -1262,12 +1206,14 @@ class ModalUI(AbstractUI):
         self.update_override_table()
 
     def remove_override_channel(self):
+        """Removes a row from the channel override table"""
         selected_row = self.run_widget.dof_override_table.currentRow()
         if selected_row >= 0:
             self.run_widget.dof_override_table.removeRow(selected_row)
         self.update_override_table()
 
     def update_override_table(self):
+        """Updates channel information in the test based on the override table values"""
         self.override_table = {}
         for row in range(self.run_widget.dof_override_table.rowCount()):
             index = self.run_widget.dof_override_table.cellWidget(row, 0).currentIndex()
@@ -1293,25 +1239,18 @@ class ModalUI(AbstractUI):
                 self.channel_names[i]
                 for i in self.run_widget.channel_display_area.response_channel_indices
             ]
-            widget.reciprocal_responses = (
-                self.run_widget.channel_display_area.reciprocal_responses
-            )
+            widget.reciprocal_responses = self.run_widget.channel_display_area.reciprocal_responses
             widget.update_ui()
             widget.response_coordinate_selector.setCurrentIndex(current_response)
             widget.reference_coordinate_selector.setCurrentIndex(current_reference)
             widget.data_type_selector.setCurrentIndex(current_data_type)
 
     def get_reciprocal_measurements(self):
+        """Finds all reciprocal measurements in the test"""
         node_numbers = np.array(
             [
-                (
-                    channel.node_number
-                    if not i in self.override_table
-                    else self.override_table[i][0]
-                )
-                for i, channel in enumerate(
-                    self.data_acquisition_parameters.channel_list
-                )
+                (channel.node_number if i not in self.override_table else self.override_table[i][0])
+                for i, channel in enumerate(self.data_acquisition_parameters.channel_list)
             ]
         )
         node_directions = np.array(
@@ -1324,27 +1263,21 @@ class ModalUI(AbstractUI):
                             char
                             for char in (
                                 channel.node_direction
-                                if not i in self.override_table
+                                if i not in self.override_table
                                 else self.override_table[i][1]
                             )
-                            if not char in "+-"
+                            if char not in "+-"
                         ]
                     )
                 )
-                for i, channel in enumerate(
-                    self.data_acquisition_parameters.channel_list
-                )
+                for i, channel in enumerate(self.data_acquisition_parameters.channel_list)
             ]
         )
-        reference_node_numbers = node_numbers[
-            self.environment_parameters.reference_channel_indices
-        ]
+        reference_node_numbers = node_numbers[self.environment_parameters.reference_channel_indices]
         reference_node_directions = node_directions[
             self.environment_parameters.reference_channel_indices
         ]
-        response_node_numbers = node_numbers[
-            self.environment_parameters.response_channel_indices
-        ]
+        response_node_numbers = node_numbers[self.environment_parameters.response_channel_indices]
         response_node_directions = node_directions[
             self.environment_parameters.response_channel_indices
         ]
@@ -1360,32 +1293,32 @@ class ModalUI(AbstractUI):
             # print('Direction Match:')
             # print(response_node_directions == direction)
             index = np.where(
-                (response_node_numbers == node)
-                & (response_node_directions == direction)
+                (response_node_numbers == node) & (response_node_directions == direction)
             )[0]
             # print('Index:')
             # print(index)
             if len(index) == 0:
                 corresponding_drive_responses.append(None)
-                print(
-                    "Warning: No Drive Point Found for Reference {:}{:}".format(
-                        node, direction
-                    )
-                )
+                print(f"Warning: No Drive Point Found for Reference {node}{direction}")
             elif len(index) > 1:
                 corresponding_drive_responses.append(None)
-                print(
-                    "Warning: Multiple Drive Points Found for Reference {:}{:}".format(
-                        node, direction
-                    )
-                )
+                print(f"Warning: Multiple Drive Points Found for Reference {node}{direction}")
             else:
                 corresponding_drive_responses.append(index[0])
         # print(corresponding_drive_responses)
         return corresponding_drive_responses
 
     def create_netcdf_file(self, filename):
-        self.netcdf_handle = nc4.Dataset(filename, "w", format="NETCDF4", clobber=True)
+        """Creates an output NetCDF4 file to save modal data to
+
+        Parameters
+        ----------
+        filename : str
+            The file name to which the netCDF4 file will be stored
+        """
+        self.netcdf_handle = nc4.Dataset(  # pylint: disable=no-member
+            filename, "w", format="NETCDF4", clobber=True
+        )
         # Create dimensions
         self.netcdf_handle.createDimension(
             "response_channels", len(self.data_acquisition_parameters.channel_list)
@@ -1396,7 +1329,7 @@ class ModalUI(AbstractUI):
                 [
                     channel
                     for channel in self.data_acquisition_parameters.channel_list
-                    if not channel.feedback_device is None
+                    if channel.feedback_device is not None
                 ]
             ),
         )
@@ -1420,18 +1353,12 @@ class ModalUI(AbstractUI):
             if self.data_acquisition_parameters.hardware_file is None
             else self.data_acquisition_parameters.hardware_file
         )
-        self.netcdf_handle.output_oversample = (
-            self.data_acquisition_parameters.output_oversample
-        )
+        self.netcdf_handle.output_oversample = self.data_acquisition_parameters.output_oversample
         for name, value in self.data_acquisition_parameters.extra_parameters.items():
             setattr(self.netcdf_handle, name, value)
         # Create Variables
-        self.netcdf_handle.createVariable(
-            "time_data", "f8", ("response_channels", "time_samples")
-        )
-        var = self.netcdf_handle.createVariable(
-            "environment_names", str, ("num_environments",)
-        )
+        self.netcdf_handle.createVariable("time_data", "f8", ("response_channels", "time_samples"))
+        var = self.netcdf_handle.createVariable("environment_names", str, ("num_environments",))
         this_environment_index = None
         for i, name in enumerate(self.data_acquisition_parameters.environment_names):
             var[i] = name
@@ -1442,12 +1369,8 @@ class ModalUI(AbstractUI):
             "i1",
             ("response_channels", "num_environments"),
         )
-        var[...] = self.data_acquisition_parameters.environment_active_channels.astype(
-            "int8"
-        )[
-            self.data_acquisition_parameters.environment_active_channels[
-                :, this_environment_index
-            ],
+        var[...] = self.data_acquisition_parameters.environment_active_channels.astype("int8")[
+            self.data_acquisition_parameters.environment_active_channels[:, this_environment_index],
             :,
         ]
         # Create channel table variables
@@ -1480,8 +1403,7 @@ class ModalUI(AbstractUI):
                 "/channels/" + label, netcdf_datatype, ("response_channels",)
             )
             channel_data = [
-                getattr(channel, label)
-                for channel in self.data_acquisition_parameters.channel_list
+                getattr(channel, label) for channel in self.data_acquisition_parameters.channel_list
             ]
             if netcdf_datatype == "i1":
                 channel_data = np.array([1 if val else 0 for val in channel_data])
@@ -1507,9 +1429,7 @@ class ModalUI(AbstractUI):
             "f8",
             ("fft_lines", "response_channels", "reference_channels"),
         )
-        group_handle.createVariable(
-            "coherence", "f8", ("fft_lines", "response_channels")
-        )
+        group_handle.createVariable("coherence", "f8", ("fft_lines", "response_channels"))
 
     def collect_environment_definition_parameters(self) -> AbstractMetadata:
         """
@@ -1525,28 +1445,24 @@ class ModalUI(AbstractUI):
         return ModalMetadata.from_ui(self)
 
     def update_channel_names(self):
+        """Updates channel names based on the override channel table"""
         self.channel_names = []
         for i, channel in enumerate(self.data_acquisition_parameters.channel_list):
+            channel_type_str = "" if channel.channel_type is None else channel.channel_type
+            node_num_str = (
+                channel.node_number if i not in self.override_table else self.override_table[i][0]
+            )
+            node_dir_str = (
+                channel.node_direction
+                if i not in self.override_table
+                else self.override_table[i][1]
+            )
             self.channel_names.append(
-                "{:} {:} {:}".format(
-                    "" if channel.channel_type is None else channel.channel_type,
-                    (
-                        channel.node_number
-                        if not i in self.override_table
-                        else self.override_table[i][0]
-                    ),
-                    (
-                        channel.node_direction
-                        if not i in self.override_table
-                        else self.override_table[i][1]
-                    ),
-                )[:maximum_name_length]
+                f"{channel_type_str} {node_num_str} {node_dir_str}"[:MAXIMUM_NAME_LENGTH]
             )
         self.run_widget.channel_display_area.channel_names = self.channel_names
 
-    def initialize_data_acquisition(
-        self, data_acquisition_parameters: DataAcquisitionParameters
-    ):
+    def initialize_data_acquisition(self, data_acquisition_parameters: DataAcquisitionParameters):
         """Update the user interface with data acquisition parameters
 
         This function is called when the Data Acquisition parameters are
@@ -1561,15 +1477,11 @@ class ModalUI(AbstractUI):
 
         """
         self.data_acquisition_parameters = data_acquisition_parameters
-        self.definition_widget.sample_rate_display.setValue(
-            data_acquisition_parameters.sample_rate
-        )
+        self.definition_widget.sample_rate_display.setValue(data_acquisition_parameters.sample_rate)
         self.all_output_channel_indices = [
             index
-            for index, channel in enumerate(
-                self.data_acquisition_parameters.channel_list
-            )
-            if not channel.feedback_device is None
+            for index, channel in enumerate(self.data_acquisition_parameters.channel_list)
+            if channel.feedback_device is not None
         ]
         self.update_channel_names()
         self.definition_widget.reference_channels_selector.setRowCount(0)
@@ -1584,21 +1496,15 @@ class ModalUI(AbstractUI):
             self.definition_widget.reference_channels_selector.setItem(i, 2, item)
             ref_checkbox = QtWidgets.QCheckBox()
             ref_checkbox.stateChanged.connect(self.update_reference_channels)
-            self.definition_widget.reference_channels_selector.setCellWidget(
-                i, 1, ref_checkbox
-            )
+            self.definition_widget.reference_channels_selector.setCellWidget(i, 1, ref_checkbox)
             enabled_checkbox = QtWidgets.QCheckBox()
             enabled_checkbox.setChecked(True)
             enabled_checkbox.stateChanged.connect(self.update_reference_channels)
-            self.definition_widget.reference_channels_selector.setCellWidget(
-                i, 0, enabled_checkbox
-            )
+            self.definition_widget.reference_channels_selector.setCellWidget(i, 0, enabled_checkbox)
         self.definition_widget.trigger_channel_selector.blockSignals(False)
         self.update_trigger_levels()
 
-        checked_state = (
-            self.definition_widget.regenerate_signal_auto_checkbox.isChecked()
-        )
+        checked_state = self.definition_widget.regenerate_signal_auto_checkbox.isChecked()
         self.definition_widget.regenerate_signal_auto_checkbox.setChecked(False)
         self.definition_widget.signal_generator_selector.setCurrentIndex(0)
         self.definition_widget.samples_per_frame_selector.setValue(
@@ -1621,19 +1527,13 @@ class ModalUI(AbstractUI):
         )
         self.definition_widget.pseudorandom_min_frequency_selector.setValue(0)
 
-        self.definition_widget.response_channels_display.setValue(
-            len(self.channel_names)
-        )
+        self.definition_widget.response_channels_display.setValue(len(self.channel_names))
         self.definition_widget.reference_channels_display.setValue(0)
         num_outputs = len(self.output_channel_indices)
         self.definition_widget.output_channels_display.setValue(num_outputs)
         if num_outputs == 0:
-            for i in range(
-                self.definition_widget.signal_generator_selector.count() - 1
-            ):
-                self.definition_widget.signal_generator_selector.setTabEnabled(
-                    i + 1, False
-                )
+            for i in range(self.definition_widget.signal_generator_selector.count() - 1):
+                self.definition_widget.signal_generator_selector.setTabEnabled(i + 1, False)
 
         self.definition_widget.output_signal_plot.getPlotItem().clear()
         self.plot_data_items["signal_representation"] = multiline_plotter(
@@ -1641,10 +1541,7 @@ class ModalUI(AbstractUI):
             np.zeros((len(self.all_output_channel_indices), 2)),
             widget=self.definition_widget.output_signal_plot,
             other_pen_options={"width": 1},
-            names=[
-                "Output {:}".format(i + 1)
-                for i in range(len(self.all_output_channel_indices))
-            ],
+            names=[f"Output {i + 1}" for i in range(len(self.all_output_channel_indices))],
         )
         self.definition_widget.regenerate_signal_auto_checkbox.setChecked(checked_state)
         if checked_state:
@@ -1680,12 +1577,8 @@ class ModalUI(AbstractUI):
 
         """
         self.environment_parameters = self.collect_environment_definition_parameters()
-        self.reference_channel_indices = (
-            self.environment_parameters.reference_channel_indices
-        )
-        self.response_channel_indices = (
-            self.environment_parameters.response_channel_indices
-        )
+        self.reference_channel_indices = self.environment_parameters.reference_channel_indices
+        self.response_channel_indices = self.environment_parameters.response_channel_indices
         self.run_widget.channel_display_area.reference_channel_indices = (
             self.reference_channel_indices
         )
@@ -1713,9 +1606,7 @@ class ModalUI(AbstractUI):
             widget.response_coordinate_selector.setCurrentIndex(current_response)
             widget.reference_coordinate_selector.setCurrentIndex(current_reference)
             widget.data_type_selector.setCurrentIndex(current_data_type)
-        self.run_widget.total_averages_display.setValue(
-            self.environment_parameters.num_averages
-        )
+        self.run_widget.total_averages_display.setValue(self.environment_parameters.num_averages)
         self.run_widget.channel_display_area.time_abscissa = (
             np.arange(self.environment_parameters.samples_per_frame)
             / self.environment_parameters.sample_rate
@@ -1727,9 +1618,7 @@ class ModalUI(AbstractUI):
         if self.environment_parameters.frf_window == "rectangle":
             window = 1
         elif self.environment_parameters.frf_window == "exponential":
-            window_parameter = -(
-                self.environment_parameters.samples_per_frame
-            ) / np.log(
+            window_parameter = -(self.environment_parameters.samples_per_frame) / np.log(
                 self.environment_parameters.exponential_window_value_at_frame_end
             )
             window = sig.get_window(
@@ -1750,7 +1639,9 @@ class ModalUI(AbstractUI):
 
         return self.environment_parameters
 
-    def retrieve_metadata(self, netcdf_handle: nc4._netCDF4.Dataset):
+    def retrieve_metadata(
+        self, netcdf_handle: nc4._netCDF4.Dataset  # pylint: disable=c-extension-no-member
+    ):
         """Collects environment parameters from a netCDF dataset.
 
         This function retrieves parameters from a netCDF dataset that was written
@@ -1815,9 +1706,7 @@ class ModalUI(AbstractUI):
         )
         self.definition_widget.acceptance_selector.blockSignals(False)
         if acceptance == "Autoreject...":
-            self.acceptance_function = netcdf_group_handle.acceptance_function.split(
-                ":"
-            )
+            self.acceptance_function = netcdf_group_handle.acceptance_function.split(":")
         else:
             self.acceptance_function = None
         self.definition_widget.wait_for_steady_selector.setValue(
@@ -1826,9 +1715,7 @@ class ModalUI(AbstractUI):
         self.definition_widget.trigger_channel_selector.setCurrentIndex(
             netcdf_group_handle.trigger_channel
         )
-        self.definition_widget.pretrigger_selector.setValue(
-            netcdf_group_handle.pretrigger * 100
-        )
+        self.definition_widget.pretrigger_selector.setValue(netcdf_group_handle.pretrigger * 100)
         self.definition_widget.trigger_slope_selector.setCurrentIndex(
             0 if netcdf_group_handle.trigger_slope_positive == 1 else 1
         )
@@ -1913,31 +1800,19 @@ class ModalUI(AbstractUI):
         reference_inds = netcdf_group_handle.variables["reference_channel_indices"][...]
         for row in range(self.definition_widget.reference_channels_selector.rowCount()):
             if row in reference_inds:
-                widget = self.definition_widget.reference_channels_selector.cellWidget(
-                    row, 1
-                )
+                widget = self.definition_widget.reference_channels_selector.cellWidget(row, 1)
                 widget.setChecked(True)
-                widget = self.definition_widget.reference_channels_selector.cellWidget(
-                    row, 0
-                )
+                widget = self.definition_widget.reference_channels_selector.cellWidget(row, 0)
                 widget.setChecked(True)
             elif row in response_inds:
-                widget = self.definition_widget.reference_channels_selector.cellWidget(
-                    row, 0
-                )
+                widget = self.definition_widget.reference_channels_selector.cellWidget(row, 0)
                 widget.setChecked(True)
-                widget = self.definition_widget.reference_channels_selector.cellWidget(
-                    row, 1
-                )
+                widget = self.definition_widget.reference_channels_selector.cellWidget(row, 1)
                 widget.setChecked(False)
             else:
-                widget = self.definition_widget.reference_channels_selector.cellWidget(
-                    row, 0
-                )
+                widget = self.definition_widget.reference_channels_selector.cellWidget(row, 0)
                 widget.setChecked(False)
-                widget = self.definition_widget.reference_channels_selector.cellWidget(
-                    row, 1
-                )
+                widget = self.definition_widget.reference_channels_selector.cellWidget(row, 1)
                 widget.setChecked(False)
 
     def update_gui(self, queue_data: tuple):
@@ -1961,8 +1836,8 @@ class ModalUI(AbstractUI):
         if message == "spectral_update":
             (
                 frames,
-                total_frames,
-                frequencies,
+                _,
+                _,
                 self.last_frf,
                 self.last_coherence,
                 last_response_cpsd,
@@ -1986,15 +1861,11 @@ class ModalUI(AbstractUI):
                     self.last_response_cpsd.shape[0],
                 )
             )
-            for i, index in enumerate(
-                self.environment_parameters.reference_channel_indices
-            ):
+            for i, index in enumerate(self.environment_parameters.reference_channel_indices):
                 self.run_widget.channel_display_area.last_autospectrum[index, :] = (
                     self.last_reference_cpsd[:, i].real
                 )
-            for i, index in enumerate(
-                self.environment_parameters.response_channel_indices
-            ):
+            for i, index in enumerate(self.environment_parameters.response_channel_indices):
                 self.run_widget.channel_display_area.last_autospectrum[index, :] = (
                     self.last_response_cpsd[:, i].real
                 )
@@ -2003,7 +1874,7 @@ class ModalUI(AbstractUI):
                 widget = window.widget()
                 if widget.signal_selector.currentIndex() in [3, 4, 5, 6, 7]:
                     widget.update_data()
-            if self.acquiring and not self.netcdf_handle is None:
+            if self.acquiring and self.netcdf_handle is not None:
                 group = self.netcdf_handle.groups[self.environment_name]
                 group.variables["frf_data_real"][:] = np.real(self.last_frf)
                 group.variables["frf_data_imag"][:] = np.imag(self.last_frf)
@@ -2017,9 +1888,7 @@ class ModalUI(AbstractUI):
         elif message == "time_frame":
             frame, accepted = data
             self.run_widget.channel_display_area.last_frame = frame
-            self.run_widget.channel_display_area.last_spectrum = np.abs(
-                np.fft.rfft(frame, axis=-1)
-            )
+            self.run_widget.channel_display_area.last_spectrum = np.abs(np.fft.rfft(frame, axis=-1))
             for window in self.run_widget.channel_display_area.subWindowList():
                 widget = window.widget()
                 if widget.signal_selector.currentIndex() not in [3, 4, 5, 6, 7]:
@@ -2027,9 +1896,7 @@ class ModalUI(AbstractUI):
             if self.netcdf_handle is not None and accepted:
                 # Get current timestep
                 num_timesteps = self.netcdf_handle.dimensions["time_samples"].size
-                current_frame = (
-                    num_timesteps // self.environment_parameters.samples_per_frame
-                )
+                current_frame = num_timesteps // self.environment_parameters.samples_per_frame
                 if current_frame < self.environment_parameters.num_averages:
                     timesteps = slice(num_timesteps, None, None)
                     self.netcdf_handle.variables["time_data"][:, timesteps] = frame
@@ -2045,7 +1912,7 @@ class ModalUI(AbstractUI):
             self.run_widget.dof_override_table.setEnabled(True)
             self.run_widget.add_override_button.setEnabled(True)
             self.run_widget.remove_override_button.setEnabled(True)
-            if not self.netcdf_handle is None:
+            if self.netcdf_handle is not None:
                 self.netcdf_handle.close()
                 self.netcdf_handle = None
 
@@ -2053,8 +1920,6 @@ class ModalUI(AbstractUI):
             widget = None
             for parent in [
                 self.definition_widget,
-                self.system_id_widget,
-                self.prediction_widget,
                 self.run_widget,
             ]:
                 try:
@@ -2063,16 +1928,12 @@ class ModalUI(AbstractUI):
                 except AttributeError:
                     continue
             if widget is None:
-                raise ValueError(
-                    "Cannot Enable Widget {:}: not found in UI".format(data)
-                )
+                raise ValueError(f"Cannot Enable Widget {data}: not found in UI")
             widget.setEnabled(True)
         elif message == "disable":
             widget = None
             for parent in [
                 self.definition_widget,
-                self.system_id_widget,
-                self.prediction_widget,
                 self.run_widget,
             ]:
                 try:
@@ -2081,9 +1942,7 @@ class ModalUI(AbstractUI):
                 except AttributeError:
                     continue
             if widget is None:
-                raise ValueError(
-                    "Cannot Disable Widget {:}: not found in UI".format(data)
-                )
+                raise ValueError(f"Cannot Disable Widget {data}: not found in UI")
             widget.setEnabled(False)
         else:
             widget = None
@@ -2094,18 +1953,16 @@ class ModalUI(AbstractUI):
                 except AttributeError:
                     continue
             if widget is None:
-                raise ValueError(
-                    "Cannot Update Widget {:}: not found in UI".format(message)
-                )
-            if type(widget) is QtWidgets.QDoubleSpinBox:
+                raise ValueError(f"Cannot Update Widget {message}: not found in UI")
+            if isinstance(widget, QtWidgets.QDoubleSpinBox):
                 widget.setValue(data)
-            elif type(widget) is QtWidgets.QSpinBox:
+            elif isinstance(widget, QtWidgets.QSpinBox):
                 widget.setValue(data)
-            elif type(widget) is QtWidgets.QLineEdit:
+            elif isinstance(widget, QtWidgets.QLineEdit):
                 widget.setText(data)
-            elif type(widget) is QtWidgets.QListWidget:
+            elif isinstance(widget, QtWidgets.QListWidget):
                 widget.clear()
-                widget.addItems(["{:.3f}".format(d) for d in data])
+                widget.addItems([f"{d:.3f}" for d in data])
 
     @staticmethod
     def create_environment_template(
@@ -2161,46 +2018,49 @@ class ModalUI(AbstractUI):
         worksheet.cell(12, 1, "Trigger Channel")
         worksheet.cell(12, 2, "# Channel number (1-based) to use for triggering")
         worksheet.cell(13, 1, "Pretrigger")
-        worksheet.cell(
-            13, 2, "# Amount of frame to use as pretrigger (0.5 or 50%, not 50)"
-        )
+        worksheet.cell(13, 2, "# Amount of frame to use as pretrigger (0.5 or 50%, not 50)")
         worksheet.cell(14, 1, "Trigger Slope")
         worksheet.cell(14, 2, '# One of "Positive" or "Negative"')
         worksheet.cell(15, 1, "Trigger Level")
         worksheet.cell(
             15,
             2,
-            "# Level to use to trigger the test as a fraction of the total range of the channel (0.5 or 50%, not 50)",
+            "# Level to use to trigger the test as a fraction of the total range of the channel "
+            "(0.5 or 50%, not 50)",
         )
         worksheet.cell(16, 1, "Hysteresis Level")
         worksheet.cell(
             16,
             2,
-            "# Level that a channel must fall below before another trigger can be considered (0.5 or 50%, not 50)",
+            "# Level that a channel must fall below before another trigger can be considered "
+            "(0.5 or 50%, not 50)",
         )
         worksheet.cell(17, 1, "Hysteresis Frame Fraction")
         worksheet.cell(
             17,
             2,
-            "# Fraction of the frame that a channel maintain hysteresis condition before another trigger can be considered (0.5 or 50%, not 50)",
+            "# Fraction of the frame that a channel maintain hysteresis condition before another "
+            "trigger can be considered (0.5 or 50%, not 50)",
         )
         worksheet.cell(18, 1, "Signal Generator Type")
         worksheet.cell(
             18,
             2,
-            '# One of "None", "Random", "Burst Random", "Pseudorandom", "Chirp", "Square", or "Sine"',
+            '# One of "None", "Random", "Burst Random", "Pseudorandom", "Chirp", "Square", or '
+            '"Sine"',
         )
         worksheet.cell(19, 1, "Signal Generator Level")
         worksheet.cell(
             19,
             2,
-            "# RMS voltage level for random signals, Peak voltage level for chirp, sine, and square pulse",
+            "# RMS voltage level for random signals, Peak voltage level for chirp, sine, and "
+            "square pulse",
         )
         worksheet.cell(20, 1, "Signal Generator Frequency 1")
         worksheet.cell(
             20,
             2,
-            "# Minimum frequency for broadband signals or frequency for sine and square  pulse",
+            "# Minimum frequency for broadband signals or frequency for sine and square pulse",
         )
         worksheet.cell(21, 1, "Signal Generator Frequency 2")
         worksheet.cell(
@@ -2223,17 +2083,13 @@ class ModalUI(AbstractUI):
         worksheet.cell(24, 1, "Autoaccept Script")
         worksheet.cell(24, 2, "# File in which an autoacceptance function is defined")
         worksheet.cell(25, 1, "Autoaccept Function")
-        worksheet.cell(
-            25, 2, "# Function name in which the autoacceptance function is defined"
-        )
+        worksheet.cell(25, 2, "# Function name in which the autoacceptance function is defined")
         worksheet.cell(26, 1, "Reference Channels")
         worksheet.cell(26, 2, "# List of channels, one per cell on this row")
         worksheet.cell(27, 1, "Disabled Channels")
         worksheet.cell(27, 2, "# List of channels, one per cell on this row")
 
-    def set_parameters_from_template(
-        self, worksheet: openpyxl.worksheet.worksheet.Worksheet
-    ):
+    def set_parameters_from_template(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
         """
         Collects parameters for the user interface from the Excel template file
 
@@ -2255,9 +2111,7 @@ class ModalUI(AbstractUI):
             user interface.
 
         """
-        self.definition_widget.samples_per_frame_selector.setValue(
-            worksheet.cell(2, 2).value
-        )
+        self.definition_widget.samples_per_frame_selector.setValue(worksheet.cell(2, 2).value)
         self.definition_widget.system_id_averaging_scheme_selector.setCurrentIndex(
             self.definition_widget.system_id_averaging_scheme_selector.findText(
                 worksheet.cell(3, 2).value
@@ -2279,16 +2133,12 @@ class ModalUI(AbstractUI):
                 worksheet.cell(7, 2).value
             )
         )
-        self.definition_widget.window_value_selector.setValue(
-            worksheet.cell(8, 2).value * 100
-        )
+        self.definition_widget.window_value_selector.setValue(worksheet.cell(8, 2).value * 100)
         self.definition_widget.system_id_overlap_percentage_selector.setValue(
             worksheet.cell(9, 2).value * 100
         )
         self.definition_widget.triggering_type_selector.setCurrentIndex(
-            self.definition_widget.triggering_type_selector.findText(
-                worksheet.cell(10, 2).value
-            )
+            self.definition_widget.triggering_type_selector.findText(worksheet.cell(10, 2).value)
         )
         acceptance = worksheet.cell(11, 2).value
         self.definition_widget.acceptance_selector.blockSignals(True)
@@ -2307,20 +2157,12 @@ class ModalUI(AbstractUI):
         self.definition_widget.trigger_channel_selector.setCurrentIndex(
             worksheet.cell(12, 2).value - 1
         )
-        self.definition_widget.pretrigger_selector.setValue(
-            worksheet.cell(13, 2).value * 100
-        )
+        self.definition_widget.pretrigger_selector.setValue(worksheet.cell(13, 2).value * 100)
         self.definition_widget.trigger_slope_selector.setCurrentIndex(
-            self.definition_widget.trigger_slope_selector.findText(
-                worksheet.cell(14, 2).value
-            )
+            self.definition_widget.trigger_slope_selector.findText(worksheet.cell(14, 2).value)
         )
-        self.definition_widget.trigger_level_selector.setValue(
-            worksheet.cell(15, 2).value * 100
-        )
-        self.definition_widget.hysteresis_selector.setValue(
-            worksheet.cell(16, 2).value * 100
-        )
+        self.definition_widget.trigger_level_selector.setValue(worksheet.cell(15, 2).value * 100)
+        self.definition_widget.hysteresis_selector.setValue(worksheet.cell(16, 2).value * 100)
         self.definition_widget.hysteresis_length_selector.setValue(
             worksheet.cell(17, 2).value * 100
         )
@@ -2368,9 +2210,7 @@ class ModalUI(AbstractUI):
             self.definition_widget.square_percent_on_selector,
         ]:
             widget.setValue(sig_on)
-        self.definition_widget.wait_for_steady_selector.setValue(
-            worksheet.cell(23, 2).value
-        )
+        self.definition_widget.wait_for_steady_selector.setValue(worksheet.cell(23, 2).value)
         column_index = 2
         while True:
             value = worksheet.cell(26, column_index).value
@@ -2382,9 +2222,7 @@ class ModalUI(AbstractUI):
             widget.setChecked(True)
             column_index += 1
         for i in range(self.definition_widget.reference_channels_selector.rowCount()):
-            widget = self.definition_widget.reference_channels_selector.cellWidget(
-                int(i), 0
-            )
+            widget = self.definition_widget.reference_channels_selector.cellWidget(int(i), 0)
             widget.setChecked(True)
         column_index = 2
         while True:
@@ -2405,8 +2243,8 @@ class ModalEnvironment(AbstractEnvironment):
         self,
         environment_name: str,
         queues: ModalQueues,
-        acquisition_active: mp.Value,
-        output_active: mp.Value,
+        acquisition_active: mp.sharedctypes.Synchronized,
+        output_active: mp.sharedctypes.Synchronized,
     ):
         super().__init__(
             environment_name,
@@ -2432,9 +2270,7 @@ class ModalEnvironment(AbstractEnvironment):
         self.map_command(ModalCommands.START_CONTROL, self.start_environment)
         self.map_command(ModalCommands.RUN_CONTROL, self.run_control)
         self.map_command(ModalCommands.STOP_CONTROL, self.stop_environment)
-        self.map_command(
-            ModalCommands.CHECK_FOR_COMPLETE_SHUTDOWN, self.check_for_shutdown
-        )
+        self.map_command(ModalCommands.CHECK_FOR_COMPLETE_SHUTDOWN, self.check_for_shutdown)
         self.map_command(
             SignalGenerationCommands.SHUTDOWN_ACHIEVED, self.siggen_shutdown_achieved_fn
         )
@@ -2462,9 +2298,7 @@ class ModalEnvironment(AbstractEnvironment):
         """
         self.data_acquisition_parameters = data_acquisition_parameters
 
-    def initialize_environment_test_parameters(
-        self, environment_parameters: ModalMetadata
-    ):
+    def initialize_environment_test_parameters(self, environment_parameters: ModalMetadata):
         """
         Initialize the environment parameters specific to this environment
 
@@ -2505,10 +2339,9 @@ class ModalEnvironment(AbstractEnvironment):
         )
 
     def get_data_collector_metadata(self) -> CollectorMetadata:
+        """Collects metadata used to define the data collector"""
         num_channels = len(self.data_acquisition_parameters.channel_list)
-        reference_channel_indices = (
-            self.environment_parameters.reference_channel_indices
-        )
+        reference_channel_indices = self.environment_parameters.reference_channel_indices
         response_channel_indices = self.environment_parameters.response_channel_indices
         if self.environment_parameters.trigger_type == "Free Run":
             acquisition_type = AcquisitionType.FREE_RUN
@@ -2518,9 +2351,7 @@ class ModalEnvironment(AbstractEnvironment):
             acquisition_type = AcquisitionType.TRIGGER_EVERY_FRAME
         else:
             raise ValueError(
-                "Invalid Acquisition Type: {:}".format(
-                    self.environment_parameters.trigger_type
-                )
+                f"Invalid Acquisition Type: {self.environment_parameters.trigger_type}"
             )
         if self.environment_parameters.accept_type == "Accept All":
             acceptance = Acceptance.AUTOMATIC
@@ -2532,11 +2363,7 @@ class ModalEnvironment(AbstractEnvironment):
             acceptance = Acceptance.AUTOMATIC
             acceptance_function = self.environment_parameters.acceptance_function
         else:
-            raise ValueError(
-                "Invalid Acceptance Type: {:}".format(
-                    self.environment_parameters.accept_type
-                )
-            )
+            raise ValueError(f"Invalid Acceptance Type: {self.environment_parameters.accept_type}")
         overlap_fraction = self.environment_parameters.overlap
         trigger_channel_index = self.environment_parameters.trigger_channel
         trigger_slope = (
@@ -2544,10 +2371,8 @@ class ModalEnvironment(AbstractEnvironment):
             if self.environment_parameters.trigger_slope_positive
             else TriggerSlope.NEGATIVE
         )
-        (trigger_level_v, trigger_level, hysterisis_level_v, trigger_hysteresis) = (
-            self.environment_parameters.get_trigger_levels(
-                self.data_acquisition_parameters.channel_list
-            )
+        (_, trigger_level, _, trigger_hysteresis) = self.environment_parameters.get_trigger_levels(
+            self.data_acquisition_parameters.channel_list
         )
         trigger_hysteresis_samples = self.environment_parameters.hysteresis_samples
         pretrigger_fraction = self.environment_parameters.pretrigger
@@ -2559,11 +2384,7 @@ class ModalEnvironment(AbstractEnvironment):
         elif self.environment_parameters.frf_window == "exponential":
             window = Window.EXPONENTIAL
         else:
-            raise ValueError(
-                "Invalid Window Type: {:}".format(
-                    self.environment_parameters.frf_window
-                )
-            )
+            raise ValueError(f"Invalid Window Type: {self.environment_parameters.frf_window}")
         window_parameter = -(frame_size) / np.log(
             self.environment_parameters.exponential_window_value_at_frame_end
         )
@@ -2589,15 +2410,14 @@ class ModalEnvironment(AbstractEnvironment):
         )
 
     def get_spectral_processing_metadata(self) -> SpectralProcessingMetadata:
+        """Collects metadata to define the spectral processing"""
         averaging_type = (
             AveragingTypes.LINEAR
             if self.environment_parameters.averaging_type == "Linear"
             else AveragingTypes.EXPONENTIAL
         )
         averages = self.environment_parameters.num_averages
-        exponential_averaging_coefficient = (
-            self.environment_parameters.averaging_coefficient
-        )
+        exponential_averaging_coefficient = self.environment_parameters.averaging_coefficient
         if self.environment_parameters.frf_technique == "H1":
             frf_estimator = Estimator.H1
         elif self.environment_parameters.frf_technique == "H2":
@@ -2606,12 +2426,13 @@ class ModalEnvironment(AbstractEnvironment):
             frf_estimator = Estimator.H3
         elif self.environment_parameters.frf_technique == "Hv":
             frf_estimator = Estimator.HV
-        num_response_channels = len(
-            self.environment_parameters.response_channel_indices
-        )
-        num_reference_channels = len(
-            self.environment_parameters.reference_channel_indices
-        )
+        else:
+            raise ValueError(
+                f"Invalid FRF Estimator {self.environment_parameters.frf_technique}. "
+                "How did you get here?"
+            )
+        num_response_channels = len(self.environment_parameters.response_channel_indices)
+        num_reference_channels = len(self.environment_parameters.reference_channel_indices)
         frequency_spacing = self.environment_parameters.frequency_spacing
         sample_rate = self.environment_parameters.sample_rate
         num_frequency_lines = self.environment_parameters.fft_lines
@@ -2630,6 +2451,7 @@ class ModalEnvironment(AbstractEnvironment):
         )
 
     def get_signal_generation_metadata(self) -> SignalGenerationMetadata:
+        """Collects metadata to define the signal generator"""
         return SignalGenerationMetadata(
             samples_per_write=self.data_acquisition_parameters.samples_per_write,
             level_ramp_samples=1,
@@ -2638,9 +2460,18 @@ class ModalEnvironment(AbstractEnvironment):
         )
 
     def get_signal_generator(self):
+        """Gets the signal generator object used to generate signals for the environment"""
         return self.environment_parameters.get_signal_generator()
 
-    def start_environment(self, data):
+    def start_environment(self, data):  # pylint: disable=unused-argument
+        """Starts the environment
+
+        Parameters
+        ----------
+        data : NoneType
+            Requred by the message/data data-passing strategy in Rattlesnake, but not needed by
+            this method
+        """
         self.log("Starting Modal")
         self.siggen_shutdown_achieved = False
         self.collector_shutdown_achieved = False
@@ -2723,7 +2554,15 @@ class ModalEnvironment(AbstractEnvironment):
             self.environment_name, (ModalCommands.RUN_CONTROL, None)
         )
 
-    def run_control(self, data):
+    def run_control(self, data):  # pylint: disable=unused-argument
+        """Runs the environment
+
+        Parameters
+        ----------
+        data : NoneType
+            Requred by the message/data data-passing strategy in Rattlesnake, but not needed by
+            this method
+        """
         # Pull data off the spectral queue
         spectral_data = flush_queue(
             self.queue_container.updated_spectral_quantities_queue, timeout=WAIT_TIME
@@ -2763,16 +2602,48 @@ class ModalEnvironment(AbstractEnvironment):
             self.environment_name, (ModalCommands.RUN_CONTROL, None)
         )
 
-    def siggen_shutdown_achieved_fn(self, data):
+    def siggen_shutdown_achieved_fn(self, data):  # pylint: disable=unused-argument
+        """Sets the signal generation shutdown flag to True
+
+        Parameters
+        ----------
+        data : NoneType
+            Requred by the message/data data-passing strategy in Rattlesnake, but not needed by
+            this method
+        """
         self.siggen_shutdown_achieved = True
 
-    def collector_shutdown_achieved_fn(self, data):
+    def collector_shutdown_achieved_fn(self, data):  # pylint: disable=unused-argument
+        """Sets the collector shutdown flag to True
+
+        Parameters
+        ----------
+        data : NoneType
+            Requred by the message/data data-passing strategy in Rattlesnake, but not needed by
+            this method
+        """
         self.collector_shutdown_achieved = True
 
-    def spectral_shutdown_achieved_fn(self, data):
+    def spectral_shutdown_achieved_fn(self, data):  # pylint: disable=unused-argument
+        """Sets the spectral processing shutdown flag to True
+
+        Parameters
+        ----------
+        data : NoneType
+            Requred by the message/data data-passing strategy in Rattlesnake, but not needed by
+            this method
+        """
         self.spectral_shutdown_achieved = True
 
-    def check_for_shutdown(self, data):
+    def check_for_shutdown(self, data):  # pylint: disable=unused-argument
+        """Checks if all environment subprocesses have shut down successfully.
+
+        Parameters
+        ----------
+        data : NoneType
+            Requred by the message/data data-passing strategy in Rattlesnake, but not needed by
+            this method
+        """
         if (
             self.siggen_shutdown_achieved
             and self.collector_shutdown_achieved
@@ -2781,9 +2652,6 @@ class ModalEnvironment(AbstractEnvironment):
             self.log("Shutdown Achieved")
             self.gui_update_queue.put((self.environment_name, ("finished", None)))
         else:
-            # print('self.siggen_shutdown_achieved: {:}'.format(self.siggen_shutdown_achieved))
-            # print('self.collector_shutdown_achieved: {:}'.format(self.collector_shutdown_achieved))
-            # print('self.spectral_shutdown_achieved: {:}'.format(self.spectral_shutdown_achieved))
             # Recheck some time later
             time.sleep(1)
             self.environment_command_queue.put(
@@ -2791,6 +2659,7 @@ class ModalEnvironment(AbstractEnvironment):
             )
 
     def accept_frame(self, data):
+        """Accepts or rejects the previous measurement frame"""
         self.queue_container.collector_command_queue.put(
             self.environment_name, (DataCollectorCommands.ACCEPT, data)
         )
@@ -2860,8 +2729,8 @@ def modal_process(
     log_file_queue: Queue,
     data_in_queue: Queue,
     data_out_queue: Queue,
-    acquisition_active: mp.Value,
-    output_active: mp.Value,
+    acquisition_active: mp.sharedctypes.Synchronized,
+    output_active: mp.sharedctypes.Synchronized,
 ):
     """Modal environment process function called by multiprocessing
 
