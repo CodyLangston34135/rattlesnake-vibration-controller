@@ -22,15 +22,17 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from .abstract_hardware import HardwareAcquisition, HardwareOutput
+import time
+from typing import List
+
 import nidaqmx as ni
+import nidaqmx.constants as nic
 import nidaqmx.stream_readers as ni_read
 import nidaqmx.stream_writers as ni_write
-import nidaqmx.constants as nic
-from .utilities import Channel, DataAcquisitionParameters
 import numpy as np
-from typing import List
-import time
+
+from .abstract_hardware import HardwareAcquisition, HardwareOutput
+from .utilities import Channel, DataAcquisitionParameters
 
 BUFFER_SIZE_FACTOR = 3
 
@@ -98,9 +100,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             A list of ``Channel`` objects defining the channels in the test
 
         """
-        physical_devices = list(
-            set(channel.physical_device for channel in channel_data)
-        )
+        physical_devices = list(set(channel.physical_device for channel in channel_data))
         device_tasks = {}
         extra_task_index = 1
         task_names = set([])
@@ -110,19 +110,17 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             else:
                 d = ni.system.device.Device(device)
                 try:
-                    chassis_number = "P{:}".format(d.pxi_chassis_num)
+                    chassis_number = f"P{d.pxi_chassis_num}"
                 except ni.DaqError:
                     try:
-                        chassis_number = "C{:}".format(
-                            d.compact_daq_chassis_device.name
-                        )
+                        chassis_number = f"C{d.compact_daq_chassis_device.name}"
                     except ni.DaqError:
-                        chassis_number = "E{:}".format(extra_task_index)
+                        chassis_number = f"E{extra_task_index}"
                         extra_task_index += 1
             device_tasks[device] = chassis_number
             task_names.add(chassis_number)
         task_names = list(task_names)
-        print("Input Tasks: {:}".format(task_names))
+        print(f"Input Tasks: {task_names}")
         print("  P: PXI, C: CDAQ, E: Other,  All: All devices on one task")
         self.tasks = [ni.Task() for name in task_names]
         self.read_triggers = [None for name in task_names]
@@ -139,13 +137,9 @@ class NIDAQmxAcquisition(HardwareAcquisition):
                             channel.physical_device
                         ).compact_daq_chassis_device
                         pfi_terminals = [
-                            trigger
-                            for trigger in chassis_device.terminals
-                            if "/PFI0" in trigger
+                            trigger for trigger in chassis_device.terminals if "/PFI0" in trigger
                         ]
-                        print(
-                            "PFI Terminals on CDAQ Device:\n{:}".format(pfi_terminals)
-                        )
+                        print(f"PFI Terminals on CDAQ Device:\n{pfi_terminals}")
                         self.read_triggers[task_index] = pfi_terminals[0]
                     except ni.DaqError:
                         self.read_triggers[task_index] = (
@@ -153,7 +147,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
                         )
             index += 1
             self._create_channel(channel, task_index)
-        print("Input Mapping: {:}".format(self.channel_task_map))
+        print(f"Input Mapping: {self.channel_task_map}")
 
     def set_parameters(self, test_data: DataAcquisitionParameters):
         """Method to set up sampling rate and other test parameters
@@ -170,9 +164,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
         self.readers = []
         self.read_datas = []
         self.acquisition_delay = BUFFER_SIZE_FACTOR * test_data.samples_per_write
-        self.read_data = np.zeros(
-            (len(test_data.channel_list), test_data.samples_per_read)
-        )
+        self.read_data = np.zeros((len(test_data.channel_list), test_data.samples_per_read))
         for i, (task, trigger) in enumerate(zip(self.tasks, self.read_triggers)):
             task.timing.cfg_samp_clk_timing(
                 test_data.sample_rate,
@@ -183,20 +175,12 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             if trigger is not None:
                 task.triggers.start_trigger.dig_edge_src = trigger
                 task.triggers.start_trigger.dig_edge_edge = ni.constants.Edge.RISING
-                task.triggers.start_trigger.trig_type = (
-                    ni.constants.TriggerType.DIGITAL_EDGE
-                )
-                print("Acquisition Task {:} Trigger {:}".format(i, trigger))
+                task.triggers.start_trigger.trig_type = ni.constants.TriggerType.DIGITAL_EDGE
+                print(f"Acquisition Task {i} Trigger {trigger}")
             self.readers.append(ni_read.AnalogMultiChannelReader(task.in_stream))
-            self.read_datas.append(
-                np.zeros((len(task.ai_channels), test_data.samples_per_read))
-            )
+            self.read_datas.append(np.zeros((len(task.ai_channels), test_data.samples_per_read)))
 
-            print(
-                "Acquisition Task {:} Actual Sample Rate: {:}".format(
-                    i, task.timing.samp_clk_rate
-                )
-            )
+            print(f"Acquisition Task {i} Actual Sample Rate: {task.timing.samp_clk_rate}")
 
     def start(self):
         """Start acquiring data"""
@@ -217,9 +201,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
                 sample_mode=nic.AcquisitionType.CONTINUOUS,
                 samps_per_chan=self.test_data.samples_per_write,
             )
-            self.trigger_output_task.out_stream.regen_mode = (
-                nic.RegenerationMode.ALLOW_REGENERATION
-            )
+            self.trigger_output_task.out_stream.regen_mode = nic.RegenerationMode.ALLOW_REGENERATION
             writer = ni_write.AnalogMultiChannelWriter(
                 self.trigger_output_task.out_stream, auto_start=False
             )
@@ -278,12 +260,8 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             ``n_samples``
         """
         remaining_data = []
-        for task, reader, channel_mapping in zip(
-            self.tasks, self.readers, self.channel_task_map
-        ):
-            read_data = np.zeros(
-                (len(task.ai_channels), task.in_stream.avail_samp_per_chan)
-            )
+        for task, reader, channel_mapping in zip(self.tasks, self.readers, self.channel_task_map):
+            read_data = np.zeros((len(task.ai_channels), task.in_stream.avail_samp_per_chan))
             reader.read_many_sample(
                 read_data,
                 number_of_samples_per_channel=read_data.shape[-1],
@@ -314,7 +292,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
     def close(self):
         """Method to close down the hardware"""
         print("Closing Input Tasks")
-        if not self.tasks is None:
+        if self.tasks is not None:
             for task in self.tasks:
                 task.close()
         print("Input Tasks Closed")
@@ -334,31 +312,23 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             channel :
                 A reference to the NIDAQmx channel created by the function
         """
-        physical_channel = (
-            channel_data.physical_device + "/" + channel_data.physical_channel
-        )
+        physical_channel = channel_data.physical_device + "/" + channel_data.physical_channel
         # Parse the channel structure to make sure datatypes are correct
         # Sensitivity
         try:
             sensitivity = float(channel_data.sensitivity)
-        except (TypeError, ValueError):
-            raise ValueError(
-                "{:} not a valid sensitivity".format(channel_data.sensitivity)
-            )
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"{channel_data.sensitivity} not a valid sensitivity") from e
         # Minimum Value
         try:
             minimum_value = float(channel_data.minimum_value)
-        except (TypeError, ValueError):
-            raise ValueError(
-                "{:} not a valid minimum value".format(channel_data.minimum_value)
-            )
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"{channel_data.minimum_value} not a valid minimum value") from e
         # Maximum Value
         try:
             maximum_value = float(channel_data.maximum_value)
-        except (TypeError, ValueError):
-            raise ValueError(
-                "{:} not a valid maximum value".format(channel_data.maximum_value)
-            )
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"{channel_data.maximum_value} not a valid maximum value") from e
         # Channel Type and Units
         if channel_data.channel_type.lower() in [
             "accelerometer",
@@ -369,11 +339,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             if channel_data.unit.lower() in ["g", "gs"]:
                 unit = nic.AccelUnits.G
             else:
-                raise ValueError(
-                    "Accelerometer units must be in G, not {:}".format(
-                        channel_data.unit
-                    )
-                )
+                raise ValueError(f"Accelerometer units must be in G, not {channel_data.unit}")
         elif channel_data.channel_type.lower() == "force":
             channel_type = nic.UsageTypeAI.FORCE_IEPE_SENSOR
             if channel_data.unit.lower() in [
@@ -388,35 +354,29 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             elif channel_data.unit.lower() in ["n", "newton", "newtons", "ns"]:
                 unit = nic.ForceUnits.NEWTONS
             else:
-                raise ValueError(
-                    "Unrecognized Force Unit {:}".format(channel_data.unit)
-                )
+                raise ValueError(f"Unrecognized Force Unit {channel_data.unit}")
         elif channel_data.channel_type.lower() in ["voltage", "volt"]:
             channel_type = nic.UsageTypeAI.VOLTAGE
             unit = None
         else:
             raise ValueError(
-                '{:} not a valid channel type.  Must be one of ["acceleration","accelerometer","accel","force","voltage","volt"]'.format(
-                    channel_type
-                )
+                f"{channel_type} not a valid channel type.  "
+                'Must be one of ["acceleration","accelerometer","accel","force","voltage","volt"]'
             )
         # Excitation Source
         if channel_data.excitation_source.lower() == "internal":
             excitation_source = nic.ExcitationSource.INTERNAL
             try:
                 excitation = float(channel_data.excitation)
-            except (TypeError, ValueError):
-                raise ValueError(
-                    "{:} not a valid excitation".format(channel_data.excitation)
-                )
+            except (TypeError, ValueError) as e:
+                raise ValueError(f"{channel_data.excitation} not a valid excitation") from e
         elif channel_data.excitation_source.lower() == "none":
             excitation_source = nic.ExcitationSource.NONE
             excitation = 0
         else:
             raise ValueError(
-                '{:} not a valid excitation source.  Must be one of ["internal","none"]'.format(
-                    channel_data.excitation_source
-                )
+                f"{channel_data.excitation_source} not a valid excitation source.  "
+                'Must be one of ["internal","none"]'
             )
         # Now go and create the channel
         if channel_type != nic.UsageTypeAI.VOLTAGE:
@@ -486,6 +446,8 @@ class NIDAQmxAcquisition(HardwareAcquisition):
                 max_val=max_val,
                 units=nic.VoltageUnits.VOLTS,
             )
+        else:
+            raise ValueError(f"Channel Type Not Implemented: {channel_type}")
         return channel
 
 
@@ -558,19 +520,17 @@ class NIDAQmxOutput(HardwareOutput):
                 device_name = channel.feedback_device
                 device = ni.system.device.Device(device_name)
                 try:
-                    chassis_number = "P{:}".format(device.pxi_chassis_num)
+                    chassis_number = f"P{device.pxi_chassis_num}"
                 except ni.DaqError:
                     try:
-                        chassis_number = "C{:}".format(
-                            device.compact_daq_chassis_device.name
-                        )
+                        chassis_number = f"C{device.compact_daq_chassis_device.name}"
                     except ni.DaqError:
-                        chassis_number = "E{:}".format(extra_task_index)
+                        chassis_number = f"E{extra_task_index}"
                         extra_task_index += 1
                 product_name = device.product_type
                 task_names.add((chassis_number, product_name))
         task_names = list(task_names)
-        print("Output Tasks: {:}".format(task_names))
+        print(f"Output Tasks: {task_names}")
         print("  P: PXI, C: CDAQ, E: Other,  All: All devices on one task")
         # Check if it's a CDAQ device
 
@@ -586,14 +546,12 @@ class NIDAQmxOutput(HardwareOutput):
                 device_name = channel.feedback_device
                 device = ni.system.device.Device(device_name)
                 try:
-                    chassis_number = "P{:}".format(device.pxi_chassis_num)
+                    chassis_number = f"P{device.pxi_chassis_num}"
                 except ni.DaqError:
                     try:
-                        chassis_number = "C{:}".format(
-                            device.compact_daq_chassis_device.name
-                        )
+                        chassis_number = f"C{device.compact_daq_chassis_device.name}"
                     except ni.DaqError:
-                        chassis_number = "E{:}".format(extra_task_index)
+                        chassis_number = f"E{extra_task_index}"
                         extra_task_index += 1
                 product_name = device.product_type
                 task_index = task_names.index((chassis_number, product_name))
@@ -612,9 +570,7 @@ class NIDAQmxOutput(HardwareOutput):
                             ][0]
                         except ni.DaqError:
                             self.write_triggers[task_index] = (
-                                "/"
-                                + channel_data[0].physical_device.strip()
-                                + "/ai/StartTrigger"
+                                "/" + channel_data[0].physical_device.strip() + "/ai/StartTrigger"
                             )
                     else:
                         try:
@@ -622,16 +578,14 @@ class NIDAQmxOutput(HardwareOutput):
                                 channel.feedback_device
                             ).compact_daq_chassis_device
                             self.write_triggers[task_index] = [
-                                trigger
-                                for trigger in chassis_device.terminals
-                                if "PFI0" in trigger
+                                trigger for trigger in chassis_device.terminals if "PFI0" in trigger
                             ][0]
                         except ni.DaqError:
                             self.write_triggers[task_index] = (
                                 "/" + channel.feedback_device.strip() + "/PFI0"
                             )
                 self._create_channel(channel, task_index)
-        print("Output Mapping: {:}".format(self.channel_task_map))
+        print(f"Output Mapping: {self.channel_task_map}")
 
     def set_parameters(self, test_data: DataAcquisitionParameters):
         """Method to set up sampling rate and other test parameters
@@ -657,21 +611,13 @@ class NIDAQmxOutput(HardwareOutput):
             # task.out_stream.relative_to = nic.WriteRelativeTo.CURRENT_WRITE_POSITION
             task.triggers.start_trigger.dig_edge_src = trigger
             task.triggers.start_trigger.dig_edge_edge = ni.constants.Edge.RISING
-            task.triggers.start_trigger.trig_type = (
-                ni.constants.TriggerType.DIGITAL_EDGE
-            )
-            print("Output Task {:} Trigger {:}".format(i, trigger))
-            task.out_stream.output_buf_size = (
-                self.buffer_size_factor * test_data.samples_per_write
-            )
+            task.triggers.start_trigger.trig_type = ni.constants.TriggerType.DIGITAL_EDGE
+            print(f"Output Task {i} Trigger {trigger}")
+            task.out_stream.output_buf_size = self.buffer_size_factor * test_data.samples_per_write
             self.writers.append(
                 ni_write.AnalogMultiChannelWriter(task.out_stream, auto_start=False)
             )
-            print(
-                "Output Task {:} Actual Sample Rate: {:}".format(
-                    i, task.timing.samp_clk_rate
-                )
-            )
+            print(f"Output Task {i} Actual Sample Rate: {task.timing.samp_clk_rate}")
 
     def start(self):
         """Method to start acquiring data"""
@@ -691,9 +637,7 @@ class NIDAQmxOutput(HardwareOutput):
 
         """
         for i, writer in enumerate(self.writers):
-            writer.write_many_sample(
-                data[self.channel_task_map[i]], timeout=nic.WAIT_INFINITELY
-            )
+            writer.write_many_sample(data[self.channel_task_map[i]], timeout=nic.WAIT_INFINITELY)
         if not self.has_printed_write_statement:
             print("Output Wrote Data")
             self.has_printed_write_statement = True
@@ -724,7 +668,7 @@ class NIDAQmxOutput(HardwareOutput):
     def close(self):
         """Method to close down the hardware"""
         print("CLosing Output Tasks")
-        if not self.tasks is None:
+        if self.tasks is not None:
             for task in self.tasks:
                 task.close()
         print("Output Tasks Closed")
@@ -759,20 +703,14 @@ class NIDAQmxOutput(HardwareOutput):
         # Minimum Value
         try:
             minimum_value = float(channel_data.minimum_value)
-        except (TypeError, ValueError):
-            raise ValueError(
-                "{:} not a valid minimum value".format(channel_data.minimum_value)
-            )
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"{channel_data.minimum_value} not a valid minimum value") from e
         # Maximum Value
         try:
             maximum_value = float(channel_data.maximum_value)
-        except (TypeError, ValueError):
-            raise ValueError(
-                "{:} not a valid maximum value".format(channel_data.maximum_value)
-            )
-        physical_channel = (
-            channel_data.feedback_device + "/" + channel_data.feedback_channel
-        )
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"{channel_data.maximum_value} not a valid maximum value") from e
+        physical_channel = channel_data.feedback_device + "/" + channel_data.feedback_channel
         channel = self.tasks[device_index].ao_channels.add_ao_voltage_chan(
             physical_channel, min_val=minimum_value, max_val=maximum_value
         )
