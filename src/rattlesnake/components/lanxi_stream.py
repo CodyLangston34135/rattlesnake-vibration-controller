@@ -1,4 +1,5 @@
 # This is a generated file! Please edit source .ksy file and use kaitai-struct-compiler to rebuild
+# flake8: noqa # pylint: skip-file
 
 from packaging.version import Version
 import kaitaistruct
@@ -60,15 +61,11 @@ class OpenapiMessage(KaitaiStruct):
         elif _on == OpenapiMessage.Header.EMessageType.e_data_quality:
             self._raw_message = self._io.read_bytes(self.header.message_length)
             _io__raw_message = KaitaiStream(BytesIO(self._raw_message))
-            self.message = OpenapiMessage.DataQuality(
-                _io__raw_message, self, self._root
-            )
+            self.message = OpenapiMessage.DataQuality(_io__raw_message, self, self._root)
         elif _on == OpenapiMessage.Header.EMessageType.e_interpretation:
             self._raw_message = self._io.read_bytes(self.header.message_length)
             _io__raw_message = KaitaiStream(BytesIO(self._raw_message))
-            self.message = OpenapiMessage.Interpretations(
-                _io__raw_message, self, self._root
-            )
+            self.message = OpenapiMessage.Interpretations(_io__raw_message, self, self._root)
         else:
             self.message = self._io.read_bytes(self.header.message_length)
 
@@ -99,9 +96,7 @@ class OpenapiMessage(KaitaiStruct):
             self.number_of_signals = self._io.read_u2le()
             self.qualities = [None] * (self.number_of_signals)
             for i in range(self.number_of_signals):
-                self.qualities[i] = OpenapiMessage.DataQualityBlock(
-                    self._io, self, self._root
-                )
+                self.qualities[i] = OpenapiMessage.DataQualityBlock(self._io, self, self._root)
 
     class DataQualityBlock(KaitaiStruct):
         def __init__(self, _io, _parent=None, _root=None):
@@ -112,9 +107,7 @@ class OpenapiMessage(KaitaiStruct):
 
         def _read(self):
             self.signal_id = self._io.read_u2le()
-            self.validity_flags = OpenapiMessage.ValidityFlags(
-                self._io, self, self._root
-            )
+            self.validity_flags = OpenapiMessage.ValidityFlags(self._io, self, self._root)
             self.reserved = self._io.read_u2le()
 
     class Interpretation(KaitaiStruct):
@@ -303,7 +296,5 @@ class OpenapiMessage(KaitaiStruct):
             if hasattr(self, "_m_calc_value"):
                 return self._m_calc_value if hasattr(self, "_m_calc_value") else None
 
-            self._m_calc_value = (self.value1 + (self.value2 << 8)) + (
-                self.value3 << 16
-            )
+            self._m_calc_value = (self.value1 + (self.value2 << 8)) + (self.value3 << 16)
             return self._m_calc_value if hasattr(self, "_m_calc_value") else None
