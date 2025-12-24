@@ -22,12 +22,13 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from abc import ABC
-from .utilities import VerboseMessageQueue, GlobalCommands
-from datetime import datetime
-import traceback
 import os
+import traceback
+from abc import ABC
+from datetime import datetime
 from multiprocessing.queues import Queue
+
+from .utilities import GlobalCommands, VerboseMessageQueue
 
 
 class AbstractMessageProcess(ABC):
@@ -85,9 +86,7 @@ class AbstractMessageProcess(ABC):
             A message that will be written to the log file.
 
         """
-        self.log_file_queue.put(
-            "{:}: {:} -- {:}\n".format(datetime.now(), self.process_name, message)
-        )
+        self.log_file_queue.put(f"{datetime.now()}: {self.process_name} -- {message}\n")
 
     @property
     def process_name(self) -> str:
@@ -148,7 +147,7 @@ class AbstractMessageProcess(ABC):
 
 
         """
-        self.log("Starting Process with PID {:}".format(os.getpid()))
+        self.log(f"Starting Process with PID {os.getpid()}")
         while True:
             # Get the message from the queue
             message, data = self.command_queue.get(self.process_name)
@@ -157,22 +156,20 @@ class AbstractMessageProcess(ABC):
                 function = self.command_map[message]
             except KeyError:
                 self.log(
-                    "Undefined Message {:}, acceptable messages are {:}".format(
-                        message, [key for key in self.command_map]
-                    )
+                    f"Undefined Message {message}, acceptable messages are {list(self.command_map)}"
                 )
                 continue
             try:
                 halt_flag = function(data)
-            except Exception:
+            except Exception:  # pylint: disable=broad-exception-caught
                 tb = traceback.format_exc()
-                self.log("ERROR\n\n {:}".format(tb))
+                self.log(f"ERROR\n\n {tb}")
                 self.gui_update_queue.put(
                     (
                         "error",
                         (
-                            "{:} Error".format(self.process_name),
-                            "!!!UNKNOWN ERROR!!!\n\n{:}".format(tb),
+                            f"{self.process_name} Error",
+                            f"!!!UNKNOWN ERROR!!!\n\n{tb}",
                         ),
                     )
                 )
@@ -182,7 +179,7 @@ class AbstractMessageProcess(ABC):
                 self.log("Stopping Process")
                 break
 
-    def quit(self, data):
+    def quit(self, data):  # pylint: disable=unused-argument
         """Returns True to stop the ``run`` while loop and exit the process
 
         Parameters
