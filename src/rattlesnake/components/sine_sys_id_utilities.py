@@ -1108,7 +1108,7 @@ class DefaultSineControlLaw:
         self.sysid_reference_noise = None
         self.sysid_response_cpsd = None
         self.sysid_reference_cpsd = None
-        self.coherence = None
+        self.sysid_coherence = None
         self.frames = None
         self.frf_pinv = None
         self.interpolated_frf_pinv = None
@@ -1245,7 +1245,7 @@ class DefaultSineControlLaw:
         self.sysid_reference_noise = sysid_reference_noise
         self.sysid_response_cpsd = sysid_response_cpsd
         self.sysid_reference_cpsd = sysid_reference_cpsd
-        self.coherence = sysid_coherence
+        self.sysid_coherence = sysid_coherence
         self.frames = sysid_frames
 
         # Go through and compute the response amplitudes and phases from each of the sine tones

@@ -253,7 +253,7 @@ class AbstractSysIDAnalysisProcess(AbstractMessageProcess):
                             self.parameters.sysid_averages,
                             self.frequencies,
                             self.sysid_frf,
-                            self.coherence,
+                            self.sysid_coherence,
                             self.sysid_response_cpsd,
                             self.sysid_reference_cpsd,
                             self.sysid_condition,

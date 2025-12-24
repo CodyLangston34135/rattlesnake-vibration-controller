@@ -1802,7 +1802,7 @@ class TransientEnvironment(AbstractSysIdEnvironment):
         self.frames = None
         self.frequencies = None
         self.frf = None
-        self.coherence = None
+        self.sysid_coherence = None
         self.sysid_response_cpsd = None
         self.sysid_reference_cpsd = None
         self.sysid_condition = None
@@ -1834,7 +1834,7 @@ class TransientEnvironment(AbstractSysIdEnvironment):
             self.frames = None
             self.frequencies = None
             self.frf = None
-            self.coherence = None
+            self.sysid_coherence = None
             self.sysid_response_cpsd = None
             self.sysid_reference_cpsd = None
             self.sysid_condition = None
@@ -1878,7 +1878,7 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                 self.sysid_reference_noise,  # from the system identification
                 self.sysid_response_cpsd,  # Response levels and correlation
                 self.sysid_reference_cpsd,  # from the system identification
-                self.coherence,  # Coherence from the system identification
+                self.sysid_coherence,  # Coherence from the system identification
                 self.frames,  # Number of frames in the CPSD and FRF matrices
                 self.environment_parameters.sysid_averages,  # Total frames that
                 # could be in the CPSD and FRF matrices
@@ -1900,7 +1900,7 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                 self.sysid_reference_noise,  # from the system identification
                 self.sysid_response_cpsd,  # Response levels and correlation
                 self.sysid_reference_cpsd,  # from the system identification
-                self.coherence,  # Coherence from the system identification
+                self.sysid_coherence,  # Coherence from the system identification
                 self.frames,  # Number of frames in the CPSD and FRF matrices
                 self.environment_parameters.sysid_averages,  # Total frames tha
                 # could be in the CPSD and FRF matrices
@@ -1943,7 +1943,7 @@ class TransientEnvironment(AbstractSysIdEnvironment):
             _,  # avg,
             self.frequencies,
             self.frf,
-            self.coherence,
+            self.sysid_coherence,
             self.sysid_response_cpsd,
             self.sysid_reference_cpsd,
             self.sysid_condition,
@@ -1977,7 +1977,7 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                     self.sysid_reference_noise,  # from the system identification
                     self.sysid_response_cpsd,  # Response levels and correlation
                     self.sysid_reference_cpsd,  # from the system identification
-                    self.coherence,  # Coherence from the system identification
+                    self.sysid_coherence,  # Coherence from the system identification
                     self.frames,  # Number of frames in the CPSD and FRF matrices
                     self.environment_parameters.sysid_averages,  # Total frames that could be in
                     #  the CPSD and FRF matrices
@@ -2000,7 +2000,7 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                         self.sysid_reference_noise,  # from the system identification
                         self.sysid_response_cpsd,  # Response levels and correlation
                         self.sysid_reference_cpsd,  # from the system identification
-                        self.coherence,  # Coherence from the system identification
+                        self.sysid_coherence,  # Coherence from the system identification
                         self.frames,  # Number of frames in the CPSD and FRF matrices
                         self.environment_parameters.sysid_averages,  # Total frames that
                         # could be in the CPSD and FRF matrices
@@ -2018,7 +2018,7 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                                     self.sysid_reference_noise,
                                     self.sysid_response_cpsd,
                                     self.sysid_reference_cpsd,
-                                    self.coherence,
+                                    self.sysid_coherence,
                                 ),
                             ),
                         )
@@ -2045,7 +2045,7 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                 self.sysid_reference_noise,  # from the system identification
                 self.sysid_response_cpsd,  # Response levels and correlation
                 self.sysid_reference_cpsd,  # from the system identification
-                self.coherence,  # Coherence from the system identification
+                self.sysid_coherence,  # Coherence from the system identification
                 self.frames,  # Number of frames in the CPSD and FRF matrices
                 self.environment_parameters.sysid_averages,  # Total frames that could
                 # be in the CPSD and FRF matrices
