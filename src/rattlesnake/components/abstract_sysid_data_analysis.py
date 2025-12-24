@@ -23,13 +23,17 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from enum import Enum
-from .abstract_message_process import AbstractMessageProcess
-from .utilities import flush_queue, GlobalCommands, VerboseMessageQueue
 import multiprocessing as mp
+from enum import Enum
+
+from .abstract_message_process import AbstractMessageProcess
+from .abstract_sysid_environment import AbstractSysIdMetadata
+from .utilities import VerboseMessageQueue, flush_queue
 
 
 class SysIDDataAnalysisCommands(Enum):
+    """Valid commands to send to the data analysis process of an environment using system id"""
+
     INITIALIZE_PARAMETERS = 0
     RUN_NOISE = 1
     RUN_TRANSFER_FUNCTION = 2
@@ -42,10 +46,9 @@ class SysIDDataAnalysisCommands(Enum):
     LOAD_NOISE = 9
 
 
-from .abstract_sysid_environment import AbstractSysIdMetadata
-
-
 class AbstractSysIDAnalysisProcess(AbstractMessageProcess):
+    """Process to perform data analysis and control calculations in an environment
+    using system id"""
 
     def __init__(
         self,
@@ -58,6 +61,27 @@ class AbstractSysIDAnalysisProcess(AbstractMessageProcess):
         gui_update_queue: mp.queues.Queue,
         environment_name: str,
     ):
+        """Initialize the environment process
+
+        Parameters
+        ----------
+        process_name : str
+            The name of the process
+        command_queue : VerboseMessageQueue
+            A queue used to send commands to this process
+        data_in_queue : mp.queues.Queue
+            A queue receiving frames of data from the data collector
+        data_out_queue : mp.queues.Queue
+            A queue to put the next output or analysis results for the environment to use
+        environment_command_queue : VerboseMessageQueue
+            A queue used to send commands to the main environment process
+        log_file_queue : mp.queues.Queue
+            A queue used to send log file strings
+        gui_update_queue : mp.queues.Queue
+            A queue used to send updates back to the graphical user interface
+        environment_name : str
+            The name of the environment owning this process
+        """
         super().__init__(process_name, log_file_queue, command_queue, gui_update_queue)
         self.map_command(
             SysIDDataAnalysisCommands.INITIALIZE_PARAMETERS,
@@ -91,27 +115,52 @@ class AbstractSysIDAnalysisProcess(AbstractMessageProcess):
         self.startup = True
 
     def initialize_sysid_parameters(self, data: AbstractSysIdMetadata):
+        """Stores parameters describing the system identification into the object
+
+        Parameters
+        ----------
+        data : AbstractSysIdMetadata
+            A metadata object containing the parameters to define the system identification
+        """
         self.parameters = data
 
     def load_sysid_noise(self, spectral_data):
+        """Loads noise data from a previous system identification
+
+        Parameters
+        ----------
+        spectral_data : tuple
+            A tuple containing frames, frequencies, system id FRFs, coherence, response cpsd,
+            reference_cpsd and condition number
+        """
         self.log("Obtained Spectral Data")
         (
             self.frames,
             self.frequencies,
-            frf,
-            coherence,
+            _,
+            _,
             self.sysid_response_noise,
             self.sysid_reference_noise,
-            condition,
+            _,
         ) = spectral_data
 
     def load_sysid_transfer_function(self, spectral_data, skip_sysid=True):
+        """Loads system ID data from a previous system identification
+
+        Parameters
+        ----------
+        spectral_data : tuple
+            A tuple containing frames, frequencies, system id FRFs, coherence, response cpsd,
+            reference_cpsd and condition number
+        skip_sysid : bool, optional
+            If True, send the system identification complete flag to the controller. By default True
+        """
         self.log("Obtained Spectral Data")
         (
             self.frames,
             self.frequencies,
             self.sysid_frf,
-            self.coherence,
+            self.sysid_coherence,
             self.sysid_response_cpsd,
             self.sysid_reference_cpsd,
             self.sysid_condition,
@@ -126,7 +175,7 @@ class AbstractSysIDAnalysisProcess(AbstractMessageProcess):
                         0,
                         self.frequencies,
                         self.sysid_frf,
-                        self.coherence,
+                        self.sysid_coherence,
                         self.sysid_response_cpsd,
                         self.sysid_reference_cpsd,
                         self.sysid_condition,
@@ -137,6 +186,15 @@ class AbstractSysIDAnalysisProcess(AbstractMessageProcess):
             )
 
     def run_sysid_noise(self, auto_shutdown):
+        """Starts and runs the system identification noise phase.
+
+        Parameters
+        ----------
+        auto_shutdown : bool
+            If True, the environment will automatically shut down when the requested number of
+            frames is reached.  If False, the noise characterization will run until manually
+            stopped.
+        """
         if self.startup:
             self.startup = False
             self.frames = 0
@@ -170,6 +228,15 @@ class AbstractSysIDAnalysisProcess(AbstractMessageProcess):
             )
 
     def run_sysid_transfer_function(self, auto_shutdown):
+        """Starts and runs the system identification
+
+        Parameters
+        ----------
+        auto_shutdown : bool
+            If True, the system identification will stop automatically upon reaching the requested
+            number of measurement frames.  If False, it will run indefinitely until manually
+            stopped.
+        """
         if self.startup:
             self.startup = False
             self.frames = 0
@@ -209,7 +276,7 @@ class AbstractSysIDAnalysisProcess(AbstractMessageProcess):
                         self.parameters.sysid_averages,
                         self.frequencies,
                         self.sysid_frf,
-                        self.coherence,
+                        self.sysid_coherence,
                         self.sysid_response_cpsd,
                         self.sysid_reference_cpsd,
                         self.sysid_condition,
@@ -224,7 +291,15 @@ class AbstractSysIDAnalysisProcess(AbstractMessageProcess):
                 (SysIDDataAnalysisCommands.RUN_TRANSFER_FUNCTION, auto_shutdown),
             )
 
-    def stop_sysid(self, data):
+    def stop_sysid(self, data):  # pylint: disable=unused-argument
+        """Stops the currently running system identification phase
+
+        Parameters
+        ----------
+        data : ignored
+            This argument is not used, but is required by the calling signature of functions
+            that get called via the command map.
+        """
         # Remove any run_transfer_function or run_control from the queue
         instructions = self.command_queue.flush(self.process_name)
         for instruction in instructions:
@@ -250,6 +325,32 @@ def sysid_data_analysis_process(
     log_file_queue: mp.queues.Queue,
     process_name=None,
 ):
+    """An function called by multiprocessing to start up the system identification analysis
+    process.
+
+    Some environments may override the AbstractSysIDAnalysisProcess class and therefore should
+    redefine this function to call that class.
+
+    Parameters
+    ----------
+    environment_name : str
+        The name of the environment
+    command_queue : VerboseMessageQueue
+        A queue used to send commands to this process
+    data_in_queue : mp.queues.Queue
+        A queue used to send frames of data and spectral quantities to the data analysis process
+    data_out_queue : mp.queues.Queue
+        A queue used to send control and analysis results back to the environment
+    environment_command_queue : VerboseMessageQueue
+        A queue used to send commands to the environment
+    gui_update_queue : mp.queues.Queue
+        A queue used to send updates to the graphical user interface
+    log_file_queue : mp.queues.Queue
+        A queue used to send log file messages
+    process_name : _type_, optional
+        A name for the process.  If not specified, it will be the environment name appended with
+        Data Analysis.
+    """
     data_analysis_instance = AbstractSysIDAnalysisProcess(
         environment_name + " Data Analysis" if process_name is None else process_name,
         command_queue,
