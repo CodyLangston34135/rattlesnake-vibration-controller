@@ -74,21 +74,46 @@ from .utilities import GlobalCommands
 
 
 class AbstractControlLawUI(ABC):
+    """A user interface to allow users to create interactive control laws"""
 
     @abstractmethod
     def __init__(self, process_name, send_parameters_queue, window, parent_ui_class):
+        """Initializes an interactive control law
+
+        Parameters
+        ----------
+        process_name : str
+            The process name associated with this user interface
+        send_parameters_queue : np.Queue
+            A Multiprocessing queue into which parameters defined by the UI will be put to be
+            used by the environment process
+        window : QDialog
+            The dialog window that the user interface will be placed in
+        parent_ui_class : RandomVibrationUI
+            The user interface object for the environment that spawned this control law.
+        """
         self.send_parameters_queue = send_parameters_queue
         self.process_name = process_name
         self.window = window
         self.parent_ui_class = parent_ui_class
+        self.data_acquisition_parameters = None
+        self.environment_parameters = None
 
-    def initialize_parameters(
-        self, data_acquisition_parameters, environment_parameters
-    ):
+    def initialize_parameters(self, data_acquisition_parameters, environment_parameters):
+        """Stores the data acquisition and environment parameters to the UI
+
+        Parameters
+        ----------
+        data_acquisition_parameters : DataAcquisitionParameters
+            The global data acquisition parameters like sample rate and channel table.
+        environment_parameters : RandomVibrationMetadata
+            Parameters defining the environment
+        """
         self.data_acquisition_parameters = data_acquisition_parameters
         self.environment_parameters = environment_parameters
 
-    def send_parameters(self, *args, **kwargs):
+    def send_parameters(self):
+        """Sends parameters from the UI to the environment process"""
         self.send_parameters_queue.put(
             self.process_name,
             (
@@ -98,6 +123,7 @@ class AbstractControlLawUI(ABC):
         )
 
     def run_callback(self, command, *args):
+        """Tells the environment process to run a specific command"""
         self.send_parameters_queue.put(
             self.process_name,
             (GlobalCommands.SEND_INTERACTIVE_COMMAND, (command, args)),
@@ -105,11 +131,17 @@ class AbstractControlLawUI(ABC):
 
     @abstractmethod
     def collect_parameters(self) -> dict:
-        pass
+        """Collects parameters from the UI to send to the environment process"""
 
     @abstractmethod
     def update_ui_control(self, results: dict):
-        pass
+        """Updates the UI with results from the control law
+
+        Parameters
+        ----------
+        results : dict
+            A dictionary containing information the UI might need to update itself
+        """
 
     @abstractmethod
     def update_ui_sysid(
@@ -121,21 +153,50 @@ class AbstractControlLawUI(ABC):
         sysid_reference_cpsd,  # from the system identification
         sysid_coherence,  # Coherence from the system identification
     ):
-        pass
+        """Updates the UI with information from the system identification
+
+        Parameters
+        ----------
+        sysid_frf : np.ndarray
+            The system transfer functions
+        sysid_response_noise : np.ndarray
+            The noise CPSD matrix at the control channels from the system identification
+        sysid_reference_noise : np.ndarray
+            The noise CPSD matrix at the drive channels from the system identification
+        sysid_response_cpsd : np.ndarray
+            The Buzz CPSD at the control channels from the system identification
+        sysid_reference_cpsd : np.ndarray
+            The Buzz CPSD at the drive channels from the system identification
+        sysid_coherence : np.ndarray
+            The multiple coherence for each of the control channels from the system identification
+        """
 
     def close(self):
+        """Closes the UI window"""
         self.window.close()
 
 
 class AbstractControlLawComputation(ABC):
+    """Computation process for the interactive control law that runs on the environment
+    data analysis process"""
 
     @abstractmethod
     def __init__(self, environment_name, gui_update_queue):
+        """Initializes the control process
+
+        Parameters
+        ----------
+        environment_name : str
+            The name of the environment that the control law is running in
+        gui_update_queue : mp.Queue
+            The queue into which GUI updates will be put
+        """
         self.environment_name = environment_name
         self.gui_update_queue = gui_update_queue
         self._command_map = {}
 
     def send_results(self):
+        """Sends results of the control calculation to the UI to update itself"""
         self.gui_update_queue.put(
             (
                 self.environment_name,
@@ -145,28 +206,41 @@ class AbstractControlLawComputation(ABC):
 
     @abstractmethod
     def update_parameters(self, parameters: dict):
-        pass
+        """Updates the control computation based on parameters sent from the UI
+
+        Parameters
+        ----------
+        parameters : dict
+            A dictionary containing relevant parameters from the user interface
+        """
 
     @abstractmethod
     def collect_results(self) -> dict:
-        pass
+        """Collects results from the computation to send to the user interface for updates
+
+        Returns
+        -------
+        dict
+            A dictionary containing relevant results to display on the user interface
+        """
 
     @abstractmethod
     def control(self):
-        pass
+        """Executes the control calculation"""
 
     @abstractmethod
     def system_id_update(self):
-        pass
+        """Updates the control law based on parameters received from the system identification"""
 
     @staticmethod
     @abstractmethod
-    def get_UI_class():
-        pass
+    def get_ui_class():
+        """Returns the User Interface class corresponding to this calculation class"""
 
     @property
     def command_map(self) -> dict:
-        """A dictionary that maps commands received by the ``command_queue`` to functions in the class"""
+        """A dictionary that maps commands received by the ``command_queue``
+        to functions in the class"""
         return self._command_map
 
     def map_command(self, key, function):
@@ -187,7 +261,8 @@ class AbstractControlLawComputation(ABC):
     def send_command(self, command: tuple):
         """A function used by the environment process to execute commands sent from the UI
         The UI object uses the `send_parameters_queue` (which is also the environment_command_queue)
-        to send custom instructions (set up using the map_command function) to this computation object.
+        to send custom instructions (set up using the map_command function) to this computation
+        object.
 
         Parameters
         ----------
