@@ -22,12 +22,14 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from .abstract_hardware import HardwareAcquisition, HardwareOutput
-from .utilities import Channel, DataAcquisitionParameters, flush_queue
-import numpy as np
-from typing import List
 import multiprocessing as mp
 import time
+from typing import List
+
+import numpy as np
+
+from .abstract_hardware import HardwareAcquisition, HardwareOutput
+from .utilities import Channel, DataAcquisitionParameters, flush_queue
 
 BUFFER_SIZE_FACTOR = 3
 SLEEP_FACTOR = 10
@@ -245,9 +247,7 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
             output_sensitivities = np.array(output_sensitivities)[self.output_sorting]
 
             # Now send the data to the dp900 device
-            self.dp900.setup_output_parameters(
-                output_sensitivities, output_ranges, output_channels
-            )
+            self.dp900.setup_output_parameters(output_sensitivities, output_ranges, output_channels)
 
             # Since the outputs are at the end, we want to adjust the sorting to
             # put the outputs at the end
@@ -278,9 +278,7 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
             # Pause for a bit to allow more samples to accumulate
             time.sleep(self.time_per_read / SLEEP_FACTOR)
         # Read the data now that we have enough samples
-        read_data = self.dp900.read_input_data(
-            self.data_acquisition_parameters.samples_per_read
-        )
+        read_data = self.dp900.read_input_data(self.data_acquisition_parameters.samples_per_read)
         # Now we need to sort the data correctly to give it back to the channel table
         read_data[self.channel_sorting] = read_data.copy()
         return read_data
@@ -386,14 +384,12 @@ class DataPhysicsDP900Output(HardwareOutput):
     process, and must define how to get write data to the hardware from the
     control system"""
 
-    def __init__(self, dll_path: str, queue: mp.queues.Queue):
+    def __init__(self, queue: mp.queues.Queue):
         """
         Initializes the hardware by simply storing the data passing queue
 
         Parameters
         ----------
-        dll_path : str
-            Path to the Dp900Matlab.dll file that defines
         queue : mp.queues.Queue
             Queue used to pass data from output to acquisition
 
