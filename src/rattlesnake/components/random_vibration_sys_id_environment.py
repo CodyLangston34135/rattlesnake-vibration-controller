@@ -1389,7 +1389,7 @@ class RandomVibrationUI(AbstractSysIdUI):
                 ),
             )
             self.log(f"Building Interactive UI for class {control_class.__name__}")
-            ui_class = control_class.get_UI_class()
+            ui_class = control_class.get_ui_class()
             if ui_class == self.interactive_control_law_widget.__class__:
                 print("initializing data acquisition and environment parameters")
                 self.interactive_control_law_widget.initialize_parameters(
@@ -2992,7 +2992,10 @@ def random_vibration_process(
         Queue from which data will be read by the environment
     data_out_queue : Queue :
         Queue to which data will be written that will be output by the hardware.
-
+    acquisition_active : mp.sharedctypes.Synchronized
+        A synchronized value that indicates when the acquisition is active
+    output_active : mp.sharedctypes.Synchronized
+        A synchronized value that indicates when the output is active
     """
     # Create vibration queues
     queue_container = RandomVibrationQueues(
