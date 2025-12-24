@@ -66,9 +66,12 @@ class DummySignalGenerator(SignalGenerator):
 
     def update_parameters(self, *args, **kwargs):
         return super().update_parameters(*args, **kwargs)
-    
+
     @property
     def ready_for_next_output(self):
+        pass
+
+    def generate_frame(self, *args, **kwargs):
         pass
 
 
@@ -77,7 +80,7 @@ def test_signal_types(signal_idx):
     signal_type = SignalTypes(signal_idx)
 
     assert isinstance(signal_type,SignalTypes)
-    
+
 
 def test_signal_generator_init():
     signal_generator = DummySignalGenerator()

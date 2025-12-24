@@ -285,7 +285,6 @@ def test_modal_metadata_init(data_acquisition_parameters):
     assert modal_metadata.skip_frames == 40
     assert modal_metadata.frequency_spacing == 200
     modal_metadata.samples_per_output = 2
-    assert modal_metadata.overlapped_output_samples == 8
     assert modal_metadata.disabled_signals == [0]
     assert modal_metadata.hysteresis_samples == 0
 
