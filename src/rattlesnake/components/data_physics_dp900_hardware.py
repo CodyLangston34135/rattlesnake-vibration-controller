@@ -141,13 +141,11 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
         # Set up channel parameters
         for ct_index, channel in enumerate(channel_data):
             system = channel.physical_device
-            if not system in system_list:
+            if system not in system_list:
                 raise ValueError(
-                    "System {:} is not a valid system.  Must be one of {:}".format(
-                        system, system_list
-                    )
+                    f"System {system} is not a valid system.  Must be one of {system_list}"
                 )
-            if not system in systems:
+            if system not in systems:
                 systems.append(system)
                 if len(systems) > 1:
                     raise ValueError(
@@ -165,15 +163,14 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
                 bnc_index = np.flatnonzero(output_bncs == int(channel.physical_channel))
                 if len(bnc_index) > 1:
                     raise ValueError(
-                        "More than one matching channel for BNC {:} (how did this happen?)".format(
-                            channel.physical_channel
-                        )
+                        f"More than one matching channel for BNC {channel.physical_channel} "
+                        "(how did this happen?)"
                     )
                 if len(bnc_index) < 1:
                     raise ValueError(
-                        "BNC {:} was not found in the list of output BNCs {:}.  Please run DP900Config to correctly set input and output channels.".format(
-                            channel.physical_channel, output_bncs
-                        )
+                        f"BNC {channel.physical_channel} was not found in the list of output "
+                        f"BNCs {output_bncs}.  Please run DP900Config to correctly set input "
+                        f"and output channels."
                     )
                 bnc_index = bnc_index[0]
                 self.output_bnc_indices.append(bnc_index)
@@ -185,15 +182,14 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
                 bnc_index = np.flatnonzero(input_bncs == int(channel.physical_channel))
                 if len(bnc_index) > 1:
                     raise ValueError(
-                        "More than one matching channel for BNC {:} (how did this happen?)".format(
-                            channel.physical_channel
-                        )
+                        f"More than one matching channel for BNC {channel.physical_channel} "
+                        f"(how did this happen?)"
                     )
                 if len(bnc_index) < 1:
                     raise ValueError(
-                        "BNC {:} was not found in the list of input BNCs {:}.  Please run DP900Config to correctly set input and output channels.".format(
-                            channel.physical_channel, input_bncs
-                        )
+                        f"BNC {channel.physical_channel} was not found in the list of input "
+                        f"BNCs {input_bncs}.  Please run DP900Config to correctly set input "
+                        f"and output channels."
                     )
                 bnc_index = bnc_index[0]
                 self.input_bnc_indices.append(bnc_index)
@@ -348,7 +344,8 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
         """
         samples_on_buffer = self.dp900.get_total_output_samples_on_buffer()
         write_threshold = 3 * self.data_acquisition_parameters.samples_per_write
-        # print('{:} Samples on Output Buffer, (<{:} to output more)'.format(samples_on_buffer,write_threshold))
+        # print('{:} Samples on Output Buffer, (<{:} to output more)'.format(
+        #     samples_on_buffer,write_threshold))
         # TODO: Uncomment this
         if not block and samples_on_buffer >= write_threshold:
             # print('Too much data on buffer, not putting new data')
@@ -356,12 +353,13 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
         try:
             data = self.output_data_queue.get(block, timeout=10)
             # print('Got New Data from queue')
-        except mp.queues.Empty:
+        except mp.queues.Empty as e:
             # print('Did not get new data from queue')
             if block:
                 raise RuntimeError(
-                    "Did not receive output in a reasonable amount of time, check output process and output hardware for issues"
-                )
+                    "Did not receive output in a reasonable amount of time, check output "
+                    "process and output hardware for issues"
+                ) from e
             # Otherwise just return because there's no data available
             return
         # If we did get output, we need to put it into a numpy array that we can
@@ -422,13 +420,11 @@ class DataPhysicsDP900Output(HardwareOutput):
         None.
 
         """
-        pass
 
     def start(self):
         """Method to start outputting data to the hardware"""
         # TODO: Remove this
         # self.last_check_time = time.time()
-        pass
 
     def write(self, data):
         """Method to write a np.ndarray with a frame of data to the hardware"""
