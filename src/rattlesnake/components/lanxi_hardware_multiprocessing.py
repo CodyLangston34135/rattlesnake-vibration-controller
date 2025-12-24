@@ -21,20 +21,18 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import requests
-import socket
-from typing import List, Tuple
-import time
-import numpy as np
 import multiprocessing as mp
-import os
 import re
-from math import ceil
+import socket
+import time
+from typing import List
+
+import numpy as np
+import requests
 
 from .abstract_hardware import HardwareAcquisition, HardwareOutput
+from .lanxi_stream import OpenapiHeader, OpenapiMessage
 from .utilities import Channel, DataAcquisitionParameters
-
-from .lanxi_stream import OpenapiMessage, OpenapiHeader
 
 OUTPUT_RATE = 131072
 LANXI_STATE_TIMEOUT = 255.0
@@ -51,16 +49,16 @@ LANXI_STATE_SHUTDOWN = {
     "Idle": None,
 }
 
-ipv4_pattern = r"^((25[0-5]|(2[0-4]|1[0-9]|[1-9]|)[0-9])(\.(?!$)|$)){4}$"
-ipv6_pattern = r"\[\s*([0-9a-fA-F]{1,4}:){0,7}(:[0-9a-fA-F]{1,4})*%?\d*\s*\]"
+IPV4_PATTERN = r"^((25[0-5]|(2[0-4]|1[0-9]|[1-9]|)[0-9])(\.(?!$)|$)){4}$"
+IPV6_PATTERN = r"\[\s*([0-9a-fA-F]{1,4}:){0,7}(:[0-9a-fA-F]{1,4})*%?\d*\s*\]"
 
-# TODO List
+# TO DO List
 # TODO Get responses each time a get or put is done so we know if it was successful
 # TODO Shut down the data acquisition more quickly
 
 
 class LanXIError(Exception):
-    pass
+    """Exception to signify an error using LAN-XI"""
 
 
 def read_lanxi(socket_handle: socket.socket):
@@ -95,12 +93,9 @@ def read_lanxi(socket_handle: socket.socket):
     try:
         package = OpenapiMessage.from_bytes(data)
     except EOFError as e:
-        print("Data Invalid {:}".format(data))
+        print(f"Data Invalid {data}")
         raise e
-    if (
-        package.header.message_type
-        == OpenapiMessage.Header.EMessageType.e_interpretation
-    ):
+    if package.header.message_type == OpenapiMessage.Header.EMessageType.e_interpretation:
         interpretation_dict = {}
         for interpretation in package.message.interpretations:
             interpretation_dict[interpretation.descriptor_type] = interpretation.value
@@ -113,29 +108,18 @@ def read_lanxi(socket_handle: socket.socket):
             array.append(np.array([x.calc_value for x in signal.values]) / 2**23)
         return package.header.message_type, np.concatenate(array, axis=-1)
     # If 'quality data' message, then record information on data quality issues
-    elif (
-        package.header.message_type == OpenapiMessage.Header.EMessageType.e_data_quality
-    ):
+    elif package.header.message_type == OpenapiMessage.Header.EMessageType.e_data_quality:
+        ip, port = socket_handle.getpeername()
         for q in package.message.qualities:
             if q.validity_flags.overload:
-                print(
-                    "Overload Detected on {:}:{:}".format(*socket_handle.getpeername())
-                )
+                print(f"Overload Detected on {ip}:{port}")
             if q.validity_flags.invalid:
-                print(
-                    "Invalid Data Detected on {:}:{:}".format(
-                        *socket_handle.getpeername()
-                    )
-                )
+                print(f"Invalid Data Detected on {ip}:{port}")
             if q.validity_flags.overrun:
-                print(
-                    "Overrun Detected on {:}:{:}".format(*socket_handle.getpeername())
-                )
+                print(f"Overrun Detected on {ip}:{port}")
         return None, None
     else:
-        raise LanXIError(
-            "Unknown Message Type: {:}".format(package.header.message_type)
-        )
+        raise LanXIError(f"Unknown Message Type: {package.header.message_type}")
 
 
 def lanxi_multisocket_reader(
@@ -161,10 +145,7 @@ def lanxi_multisocket_reader(
     print(
         "Starting to record from:\n  {:}".format(
             "\n  ".join(
-                [
-                    "{:}:{:}".format(*socket_handle.getpeername())
-                    for socket_handle in socket_handles
-                ]
+                ["{:}:{:}".format(*socket_handle.getpeername()) for socket_handle in socket_handles]
             )
         )
     )
@@ -177,52 +158,62 @@ def lanxi_multisocket_reader(
                 socket_data_types = []
                 while len(socket_data) < active_channels:
                     message_type, data = read_lanxi(socket_handle)
-                    # print('Reading {:}:{:} Data Type {:}'.format(*socket_handle.getpeername(),message_type))
-                    if not message_type is None:
+                    # print('Reading {:}:{:} Data Type {:}'.format(
+                    #       *socket_handle.getpeername(),message_type))
+                    if message_type is not None:
                         socket_data.append(data)
                         socket_data_types.append(message_type)
                 # Make sure they are all the same type
-                assert all(
-                    [
-                        data_type == socket_data_types[0]
-                        for data_type in socket_data_types
-                    ]
-                )
-                if (
-                    socket_data_types[0]
-                    == OpenapiMessage.Header.EMessageType.e_interpretation
-                ):
-                    # print('{:}:{:} Putting Interpretation to Queue'.format(*socket_handle.getpeername()))
+                assert all([data_type == socket_data_types[0] for data_type in socket_data_types])
+                if socket_data_types[0] == OpenapiMessage.Header.EMessageType.e_interpretation:
+                    # print('{:}:{:} Putting Interpretation to Queue'.format(
+                    #       *socket_handle.getpeername()))
                     data_queue.put(("Interpretation", socket_data))
-                elif (
-                    socket_data_types[0]
-                    == OpenapiMessage.Header.EMessageType.e_signal_data
-                ):
-                    # print('{:}:{:} Putting Signal to Queue'.format(*socket_handle.getpeername()))
+                elif socket_data_types[0] == OpenapiMessage.Header.EMessageType.e_signal_data:
+                    # print('{:}:{:} Putting Signal to Queue'.format(
+                    #        *socket_handle.getpeername()))
                     data_queue.put(("Signal", socket_data))
                 else:
                     raise ValueError(
-                        "Unknown Signal Type {:} in {:}:{:}".format(
+                        "Unknown Signal Type {:} in {:}:{:}".format(  # pylint: disable=consider-using-f-string
                             socket_data_types[0], *socket_handle.getpeername()
                         )
                     )
     except LanXIError:
         for socket_handle, data_queue in zip(socket_handles, data_queues):
             # The socket has closed, so gracefully close down
-            print("Closing Socket {:}:{:}".format(*socket_handle.getpeername()))
+            ip, port = socket_handle.getpeername()
+            print(f"Closing Socket {ip}:{port}")
             while True:
                 try:
-                    print("Emptying Queue {:}:{:}".format(*socket_handle.getpeername()))
+                    print(f"Emptying Queue {ip}:{port}")
                     data_queue.get(False)
                 except mp.queues.Empty:
-                    print("Returning {:}:{:}".format(*socket_handle.getpeername()))
+                    print(f"Returning {ip}:{port}")
                     break
         return
 
 
 def create_harware_maps(acquisition_map, output_map, channel_list):
+    """Creates mapping between the LAN-XI channels and the rattlesnake channel list
+
+    Parameters
+    ----------
+    acquisition_map : dict
+        A dictionary that will be populated with the acquisition map information.  The dictionary
+        will be nested, with the first key being the physical device and the second key being the
+        physical channel.  The value will be a tuple containing the channel index and the Channel
+        itself.
+    output_map : dict
+        A dictionary that will be populated with the acquisition map information.  The dictionary
+        will be nested, with the first key being the feedback device and the second key being the
+        feedback channel.  The value will be a tuple containing the channel index and the Channel
+        itself.
+    channel_list : list of Channel objects
+        A list of channels in the rattlesnake test
+    """
     for i, channel in enumerate(channel_list):
-        if not channel.physical_device in acquisition_map:
+        if channel.physical_device not in acquisition_map:
             acquisition_map[channel.physical_device] = {}
         acquisition_map[channel.physical_device][int(channel.physical_channel)] = (
             i,
@@ -231,7 +222,7 @@ def create_harware_maps(acquisition_map, output_map, channel_list):
     for i, channel in enumerate(
         [channel for channel in channel_list if channel.feedback_device is not None]
     ):
-        if not channel.feedback_device in output_map:
+        if channel.feedback_device not in output_map:
             output_map[channel.feedback_device] = {}
         output_map[channel.feedback_device][int(channel.feedback_channel)] = i, channel
 
@@ -256,7 +247,7 @@ def wait_for_ptp_state(host: str, state: str):
     current_state = ""
     iteration = 0
     while True:
-        response = requests.get("http://" + host + "/rest/rec/onchange")
+        response = requests.get("http://" + host + "/rest/rec/onchange", timeout=60)
         state_data = response.json()
         current_state = state_data["ptpStatus"]
         if current_state == state:
@@ -268,16 +259,11 @@ def wait_for_ptp_state(host: str, state: str):
         time.sleep(1)
         iteration += 1
         if iteration % LANXI_STATE_REPORT == 0:
-            print(
-                "Host {:} at {:} state, waiting for {:}".format(
-                    host, current_state, state
-                )
-            )
+            print(f"Host {host} at {current_state} state, waiting for {state}")
     if not result:
         raise LanXIError(
-            "Wait for PTP State {:} timed out on host {:}.  Last retrieved state: {:}".format(
-                state, host, current_state
-            )
+            f"Wait for PTP State {state} timed out on host {host}.  Last retrieved "
+            f"state: {current_state}"
         )
     return result
 
@@ -302,7 +288,7 @@ def wait_for_recorder_state(host: str, state: str):
     current_state = ""
     iteration = 0
     while True:
-        response = requests.get("http://" + host + "/rest/rec/onchange")
+        response = requests.get("http://" + host + "/rest/rec/onchange", timeout=60)
         state_data = response.json()
         current_state = state_data["moduleState"]
         if current_state == state:
@@ -317,16 +303,11 @@ def wait_for_recorder_state(host: str, state: str):
         time.sleep(1)
         iteration += 1
         if iteration % LANXI_STATE_REPORT == 0:
-            print(
-                "Host {:} at {:} state, waiting for {:}".format(
-                    host, current_state, state
-                )
-            )
+            print(f"Host {host} at {current_state} state, waiting for {state}")
     if not result:
         raise LanXIError(
-            "Wait for Recorder State {:} timed out on host {:}.  Last retrieved state: {:}".format(
-                state, host, current_state
-            )
+            f"Wait for Recorder State {state} timed out on host {host}.  Last retrieved "
+            f"state: {current_state}"
         )
     return result
 
@@ -351,7 +332,7 @@ def wait_for_input_state(host: str, state: str):
     current_state = ""
     iteration = 0
     while True:
-        response = requests.get("http://" + host + "/rest/rec/onchange")
+        response = requests.get("http://" + host + "/rest/rec/onchange", timeout=60)
         state_data = response.json()
         current_state = state_data["inputStatus"]
         if current_state == state:
@@ -363,51 +344,47 @@ def wait_for_input_state(host: str, state: str):
         time.sleep(1)
         iteration += 1
         if iteration % LANXI_STATE_REPORT == 0:
-            print(
-                "Host {:} at {:} state, waiting for {:}".format(
-                    host, current_state, state
-                )
-            )
+            print(f"Host {host} at {current_state} state, waiting for {state}")
     if not result:
         raise LanXIError(
-            "Wait for Input State {:} timed out on host {:}.  Last retrieved state: {:}".format(
-                state, host, current_state
-            )
+            f"Wait for Input State {state} timed out on host {host}.  Last retrieved state: "
+            f"{current_state}"
         )
     return result
 
 
 def close_recorder(host):
-    response = requests.get("http://" + host + "/rest/rec/onchange")
+    """Closes the host based on its current state"""
+    response = requests.get("http://" + host + "/rest/rec/onchange", timeout=60)
     state_data = response.json()
     current_state = state_data["moduleState"]
     if current_state == "RecorderRecording":
-        print("Stopping Measurement on {:}".format(host))
-        requests.put("http://" + host + "/rest/rec/measurements/stop")
+        print(f"Stopping Measurement on {host}")
+        requests.put("http://" + host + "/rest/rec/measurements/stop", timeout=60)
         wait_for_recorder_state(host, "RecorderStreaming")
         close_recorder(host)
     elif current_state == "RecorderConfiguring":
-        response = requests.get("http://" + host + "/rest/rec/channels/input/default")
+        response = requests.get("http://" + host + "/rest/rec/channels/input/default", timeout=60)
         channel_settings = response.json()
         response = requests.put(
-            "http://" + host + "/rest/rec/channels/input", json=channel_settings
+            "http://" + host + "/rest/rec/channels/input", json=channel_settings, timeout=60
         )
         wait_for_recorder_state(host, "RecorderStreaming")
         close_recorder(host)
     elif current_state == "RecorderStreaming":
-        print("Finishing Streaming on {:}".format(host))
-        requests.put("http://" + host + "/rest/rec/finish")
+        print(f"Finishing Streaming on {host}")
+        requests.put("http://" + host + "/rest/rec/finish", timeout=60)
         wait_for_recorder_state(host, "RecorderOpened")
         close_recorder(host)
     elif current_state == "RecorderOpened":
-        print("Closing Recorder on {:}".format(host))
-        requests.put("http://" + host + "/rest/rec/close")
+        print(f"Closing Recorder on {host}")
+        requests.put("http://" + host + "/rest/rec/close", timeout=60)
         wait_for_recorder_state(host, "Idle")
         close_recorder(host)
     elif current_state == "Idle":
-        print("Recorder {:} Idle".format(host))
+        print(f"Recorder {host} Idle")
     else:
-        raise LanXIError("Unknown State {:} on {:}".format(current_state, host))
+        raise LanXIError(f"Unknown State {current_state} on {host}")
     return
 
 
@@ -474,28 +451,20 @@ class LanXIAcquisition(HardwareAcquisition):
         ]
         self.master_address = host_addresses[0]
         self.slave_addresses = set(
-            [
-                address
-                for address in host_addresses
-                if not address == self.master_address
-            ]
+            [address for address in host_addresses if not address == self.master_address]
         )
         self.samples_per_read = test_data.samples_per_read
         modules_per_process_floor = len(self.acquisition_map) // self.maximum_processes
-        modules_per_process_remainder = (
-            len(self.acquisition_map) % self.maximum_processes
-        )
+        modules_per_process_remainder = len(self.acquisition_map) % self.maximum_processes
         if modules_per_process_remainder == 0:
             self.modules_per_process = modules_per_process_floor
         else:
             self.modules_per_process = modules_per_process_floor + 1
-        self.total_processes = (
-            len(self.acquisition_map) // self.modules_per_process
-        ) + (0 if len(self.acquisition_map) % self.modules_per_process == 0 else 1)
+        self.total_processes = (len(self.acquisition_map) // self.modules_per_process) + (
+            0 if len(self.acquisition_map) % self.modules_per_process == 0 else 1
+        )
         self.acquisition_delay = (
-            (BUFFER_SIZE + 2)
-            * test_data.samples_per_write
-            / test_data.output_oversample
+            (BUFFER_SIZE + 2) * test_data.samples_per_write / test_data.output_oversample
         )
 
     def start(self):
@@ -505,16 +474,16 @@ class LanXIAcquisition(HardwareAcquisition):
         self.process_data_queues = {}
         # Apply the trigger for multi-frame acquisition
         if len(set(self.acquisition_map) | set(self.output_map)) > 1:
-            requests.put("http://" + self.master_address + "/rest/rec/apply")
+            requests.put("http://" + self.master_address + "/rest/rec/apply", timeout=60)
         # Collect the sockets
         for acquisition_device in self.acquisition_map:
             response = requests.get(
-                "http://" + acquisition_device + "/rest/rec/destination/socket"
+                "http://" + acquisition_device + "/rest/rec/destination/socket", timeout=60
             )
             port = response.json()["tcpPort"]
             # Connect to the socket
-            is_ipv4 = re.search(ipv4_pattern, acquisition_device) is not None
-            is_ipv6 = re.search(ipv6_pattern, acquisition_device) is not None
+            is_ipv4 = re.search(IPV4_PATTERN, acquisition_device) is not None
+            is_ipv6 = re.search(IPV6_PATTERN, acquisition_device) is not None
             if is_ipv4:
                 self.sockets[acquisition_device] = socket.socket(
                     socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP
@@ -530,9 +499,9 @@ class LanXIAcquisition(HardwareAcquisition):
             self.sockets[acquisition_device].connect((acquisition_device, port))
         for slave_address in self.slave_addresses:
             if slave_address in self.acquisition_map:
-                requests.post("http://" + slave_address + "/rest/rec/measurements")
+                requests.post("http://" + slave_address + "/rest/rec/measurements", timeout=60)
         if self.master_address in self.acquisition_map:
-            requests.post("http://" + self.master_address + "/rest/rec/measurements")
+            requests.post("http://" + self.master_address + "/rest/rec/measurements", timeout=60)
         print("Started Measurements")
         # Wait for the module state to be recorder streaming
         for slave_address in self.slave_addresses:
@@ -597,28 +566,26 @@ class LanXIAcquisition(HardwareAcquisition):
         while samples < self.samples_per_read:
             read_data = []
             acquisition_indices = []
-            for acquisition_device, queue_dict in self.process_data_queues.items():
-                while (
-                    True
-                ):  # We are going to loop until we get a signal which should be every time except the first, which will pass the interpretation.
+            for acquisition_device, _ in self.process_data_queues.items():
+                # We are going to loop until we get a signal which should be every time except the
+                # first, which will pass the interpretation.
+                while True:
                     # Get the data from the queues
                     # print('Reading from queue')
                     data_type, data = self.process_data_queues[acquisition_device].get()
                     if data_type == "Interpretation":
                         if self.interpretations is None:
                             self.interpretations = {}
-                        self.interpretations[acquisition_device] = (
-                            data  # Store the interpretation
-                        )
+                        self.interpretations[acquisition_device] = data  # Store the interpretation
                     elif data_type == "Signal":
                         for signal, channel_number, interpretation in zip(
                             data,
                             sorted(self.acquisition_map[acquisition_device]),
                             self.interpretations[acquisition_device],
                         ):
-                            acquisition_index, channel_data = self.acquisition_map[
-                                acquisition_device
-                            ][channel_number]
+                            acquisition_index, _ = self.acquisition_map[acquisition_device][
+                                channel_number
+                            ]
                             array = (
                                 signal
                                 * interpretation[
@@ -639,12 +606,9 @@ class LanXIAcquisition(HardwareAcquisition):
             samples += read_data.shape[-1]
         full_read_data = np.concatenate(full_read_data, axis=-1)
         current_time = time.time()
-        if not self.last_acquisition_time is None:
-            print(
-                "Took {:0.4f}s to read {:} samples".format(
-                    current_time - self.last_acquisition_time, full_read_data.shape[-1]
-                )
-            )
+        if self.last_acquisition_time is not None:
+            dtime = current_time - self.last_acquisition_time
+            print(f"Took {dtime:0.4f}s to read {full_read_data.shape[-1]} samples")
         self.last_acquisition_time = current_time
         return full_read_data
 
@@ -667,11 +631,11 @@ class LanXIAcquisition(HardwareAcquisition):
         """Method to stop the acquisition"""
         if self.master_address in self.acquisition_map:
             requests.put(
-                "http://" + self.master_address + "/rest/rec/measurements/stop"
+                "http://" + self.master_address + "/rest/rec/measurements/stop", timeout=60
             )
         for slave_address in self.slave_addresses:
             if slave_address in self.acquisition_map:
-                requests.put("http://" + slave_address + "/rest/rec/measurements/stop")
+                requests.put("http://" + slave_address + "/rest/rec/measurements/stop", timeout=60)
         # Wait for the module state to be recorder streaming
         for slave_address in self.slave_addresses:
             if slave_address in self.acquisition_map:
@@ -680,12 +644,12 @@ class LanXIAcquisition(HardwareAcquisition):
             wait_for_recorder_state(self.master_address, "RecorderStreaming")
         # Join the processes
         for acquisition_device, process in self.processes.items():
-            print("Recovering process {:}".format(acquisition_device))
+            print(f"Recovering process {acquisition_device}")
             process.join(timeout=5)
             if process.is_alive():
                 process.terminate()
                 process.join()
-            print("Process {:} recovered".format(acquisition_device))
+            print(f"Process {acquisition_device} recovered")
         print("All processes recovered, ready for next acquire.")
         self.processes = {}
         self.process_data_queues = {}
@@ -699,20 +663,16 @@ class LanXIAcquisition(HardwareAcquisition):
 
     def _get_states(self):
         for host in list(self.slave_addresses) + [self.master_address]:
-            response = requests.get("http://" + host + "/rest/rec/onchange")
+            response = requests.get("http://" + host + "/rest/rec/onchange", timeout=60)
             state_data = response.json()
             print(
-                "Host {:}: Recorder State {:}, Input State {:}, PTP State {:}, Recording Mode".format(
-                    host,
-                    state_data["moduleState"],
-                    state_data["inputStatus"],
-                    state_data["ptpStatus"],
-                )
+                f"Host {host}: Recorder State {state_data['moduleState']}, Input State "
+                f"{state_data['inputStatus']}, PTP State {state_data['ptpStatus']}, Recording Mode"
             )
 
     def _reboot_all(self):
         for host in list(self.slave_addresses) + [self.master_address]:
-            requests.put("http://" + host + "/rest/rec/reboot")
+            requests.put("http://" + host + "/rest/rec/reboot", timeout=60)
 
 
 class LanXIOutput(HardwareOutput):
@@ -734,6 +694,7 @@ class LanXIOutput(HardwareOutput):
         self.output_rate = None
         self.bandwidth_string = None
         self.transfer_size = 4096 * 4
+        self.sample_rate = None
         self.write_size = None
         self.empty_time = 0.0
         self.generator_sample_rate = None
@@ -761,23 +722,17 @@ class LanXIOutput(HardwareOutput):
         ]
         self.master_address = host_addresses[0]
         self.slave_addresses = set(
-            [
-                address
-                for address in host_addresses
-                if not address == self.master_address
-            ]
+            [address for address in host_addresses if not address == self.master_address]
         )
         print("\nInitial States:")
         self._get_states()
 
-        # TODO REMOVE THIS
         # time.sleep(10)
 
         # Close all devices to start from scratch
         print("Resetting Data Acquisition System")
         self.close(reboot=False)
 
-        # TODO REMOVE THIS
         # time.sleep(10)
 
         # If there are any slave addresses, need to perform PTP sync
@@ -791,7 +746,7 @@ class LanXIOutput(HardwareOutput):
                 }
             }
             requests.put(
-                "http://" + self.master_address + "/rest/rec/syncmode", json=master_json
+                "http://" + self.master_address + "/rest/rec/syncmode", json=master_json, timeout=60
             )
             slave_json = {
                 "synchronization": {
@@ -802,7 +757,7 @@ class LanXIOutput(HardwareOutput):
             }
             for slave_address in self.slave_addresses:
                 requests.put(
-                    "http://" + slave_address + "/rest/rec/syncmode", json=slave_json
+                    "http://" + slave_address + "/rest/rec/syncmode", json=slave_json, timeout=60
                 )
             print("Waiting for PTP Sync...")
             # Wait until PTP locks
@@ -815,7 +770,7 @@ class LanXIOutput(HardwareOutput):
             print("Single Module Mode")
             master_json = {"synchronization": {"mode": "stand-alone"}}
             requests.put(
-                "http://" + self.master_address + "/rest/rec/syncmode", json=master_json
+                "http://" + self.master_address + "/rest/rec/syncmode", json=master_json, timeout=60
             )
             single_module = True
         print("\nStates after synchronization")
@@ -823,43 +778,37 @@ class LanXIOutput(HardwareOutput):
 
         # Now we open the recorders
         open_json = {
-            "performTransducerDetection": False,  # May need to investigate this further, but for now we won't use TEDS
+            # May need to investigate this further, but for now we won't use TEDS
+            "performTransducerDetection": False,
             "singleModule": single_module,
         }
         for slave_address in self.slave_addresses:
-            requests.put("http://" + slave_address + "/rest/rec/open", json=open_json)
-        requests.put("http://" + self.master_address + "/rest/rec/open", json=open_json)
+            requests.put("http://" + slave_address + "/rest/rec/open", json=open_json, timeout=60)
+        requests.put("http://" + self.master_address + "/rest/rec/open", json=open_json, timeout=60)
         print("\nStates after Open")
         self._get_states()
 
         # Now get the sample rate
         for i, address in enumerate(self.acquisition_map):
-            response = requests.get("http://" + address + "/rest/rec/module/info")
+            response = requests.get("http://" + address + "/rest/rec/module/info", timeout=60)
             module_info = response.json()
             if i == 0:
                 supported_sample_rates = module_info["supportedSampleRates"]
             else:
                 supported_sample_rates = [
-                    v
-                    for v in supported_sample_rates
-                    if v in module_info["supportedSampleRates"]
+                    v for v in supported_sample_rates if v in module_info["supportedSampleRates"]
                 ]
-        print("Supported Sample Rates {:}".format(supported_sample_rates))
+        print(f"Supported Sample Rates {supported_sample_rates}")
         bandwidth = test_data.sample_rate / 2.56
         if bandwidth > 1000:
-            self.bandwidth_string = "{:0.1f} kHz".format(bandwidth / 1000)
+            self.bandwidth_string = f"{bandwidth / 1000:0.1f} kHz"
         else:
             self.bandwidth_string = str(round(bandwidth)) + " Hz"
-        print(
-            "Sample Rate: {:} Hz (Bandwidth {:})".format(
-                test_data.sample_rate, self.bandwidth_string
-            )
-        )
-        if not test_data.sample_rate in supported_sample_rates:
+        print(f"Sample Rate: {test_data.sample_rate} Hz (Bandwidth {self.bandwidth_string})")
+        if test_data.sample_rate not in supported_sample_rates:
             raise LanXIError(
-                "Invalid Sample Rate {:}, must be one of {:}".format(
-                    test_data.sample_rate, supported_sample_rates
-                )
+                f"Invalid Sample Rate {test_data.sample_rate}, must be one of "
+                f"{supported_sample_rates}"
             )
 
         # Get the Generator Sample Rate
@@ -875,20 +824,17 @@ class LanXIOutput(HardwareOutput):
         # Now we need to set up the recording configuration
         for slave_address in self.slave_addresses:
             if slave_address in self.acquisition_map:
-                requests.put("http://" + slave_address + "/rest/rec/create")
+                requests.put("http://" + slave_address + "/rest/rec/create", timeout=60)
             else:
                 print(
-                    "Skipping Creating Slave Address Recorder {:}, not in acquisition".format(
-                        slave_address
-                    )
+                    f"Skipping Creating Slave Address Recorder {slave_address}, not in acquisition"
                 )
         if self.master_address in self.acquisition_map:
-            requests.put("http://" + self.master_address + "/rest/rec/create")
+            requests.put("http://" + self.master_address + "/rest/rec/create", timeout=60)
         else:
             print(
-                "Skipping Creating Master Address Recorder {:}, not in acquisition".format(
-                    self.master_address
-                )
+                f"Skipping Creating Master Address Recorder "
+                f"{self.master_address}, not in acquisition"
             )
         for slave_address in self.slave_addresses:
             if slave_address in self.acquisition_map:
@@ -903,54 +849,38 @@ class LanXIOutput(HardwareOutput):
         # Now we have to go through and create the channels
         for acquisition_device, device_dictionary in self.acquisition_map.items():
             response = requests.get(
-                "http://" + acquisition_device + "/rest/rec/channels/input/default"
+                "http://" + acquisition_device + "/rest/rec/channels/input/default", timeout=60
             )
             channel_settings = response.json()
             # Go through and disable all channels
             for channel_json in channel_settings["channels"]:
                 channel_json["enabled"] = False
-            for channel_number, (channel_index, channel) in device_dictionary.items():
-                index, channel_json = [
+            for channel_number, (_, channel) in device_dictionary.items():
+                _, channel_json = [
                     (i, channel_json)
                     for i, channel_json in enumerate(channel_settings["channels"])
                     if channel_json["channel"] == channel_number
                 ][0]
                 channel_json["bandwidth"] = self.bandwidth_string
-                channel_json["ccld"] = (
-                    False if channel.excitation_source is None else True
-                )
+                channel_json["ccld"] = False if channel.excitation_source is None else True
                 channel_json["transducer"]["requiresCcld"] = channel_json["ccld"]
                 if channel_json["ccld"]:
-                    print(
-                        "Device {:} channel {:} has CCLD enabled".format(
-                            acquisition_device, channel_number
-                        )
-                    )
+                    print(f"Device {acquisition_device} channel {channel_number} has CCLD enabled")
                 channel_json["destinations"] = ["socket"]
                 channel_json["enabled"] = True
-                channel_coupling = (
-                    "DC" if channel.coupling is None else channel.coupling
-                )
-                if not channel_coupling in VALID_FILTERS:
-                    raise LanXIError(
-                        "For LAN-XI, Coupling must be sent to one of {:}".format(
-                            VALID_FILTERS
-                        )
-                    )
+                channel_coupling = "DC" if channel.coupling is None else channel.coupling
+                if channel_coupling not in VALID_FILTERS:
+                    raise LanXIError(f"For LAN-XI, Coupling must be sent to one of {VALID_FILTERS}")
                 channel_json["filter"] = channel_coupling
-                if not channel.maximum_value in VALID_RANGES:
-                    raise LanXIError(
-                        "For LAN-XI, Maximum Value must be one of {:}".format(
-                            VALID_RANGES
-                        )
-                    )
+                if channel.maximum_value not in VALID_RANGES:
+                    raise LanXIError(f"For LAN-XI, Maximum Value must be one of {VALID_RANGES}")
                 channel_json["range"] = channel.maximum_value + " Vpeak"
-                channel_json["transducer"]["sensitivity"] = (
-                    float(channel.sensitivity) / 1000
-                )
-                channel_json["transducer"][
-                    "serialNumber"
-                ] = 9999  # ('' if channel.serial_number is None else channel.serial_number)+('' if channel.triax_dof is None else channel.triax_dof)]
+                channel_json["transducer"]["sensitivity"] = float(channel.sensitivity) / 1000
+                # The metadata doesn't really matter here, so we just use an arbitrary number
+                # Otherwise it shold be something like this:
+                # ('' if channel.serial_number is None else channel.serial_number)
+                # +('' if channel.triax_dof is None else channel.triax_dof)
+                channel_json["transducer"]["serialNumber"] = 9999
                 channel_json["transducer"]["type"]["model"] = (
                     "" if channel.make is None else channel.make
                 ) + ("" if channel.model is None else " " + channel.model)
@@ -958,11 +888,11 @@ class LanXIOutput(HardwareOutput):
             response = requests.put(
                 "http://" + acquisition_device + "/rest/rec/channels/input",
                 json=channel_settings,
+                timeout=60,
             )
             print(
-                "Setting inputs to {:} Channels, {:} {:}".format(
-                    acquisition_device, response.status_code, response.text
-                )
+                f"Setting inputs to {acquisition_device} Channels, {response.status_code} "
+                f"{response.text}"
             )
         print("\nStates after Channel Input")
         self._get_states()
@@ -978,9 +908,9 @@ class LanXIOutput(HardwareOutput):
 
             for slave_address in self.slave_addresses:
                 if slave_address in self.acquisition_map:
-                    requests.put("http://" + slave_address + "/rest/rec/synchronize")
+                    requests.put("http://" + slave_address + "/rest/rec/synchronize", timeout=60)
             if self.master_address in self.acquisition_map:
-                requests.put("http://" + self.master_address + "/rest/rec/synchronize")
+                requests.put("http://" + self.master_address + "/rest/rec/synchronize", timeout=60)
             for slave_address in self.slave_addresses:
                 if slave_address in self.acquisition_map:
                     wait_for_input_state(slave_address, "Synchronized")
@@ -990,10 +920,10 @@ class LanXIOutput(HardwareOutput):
 
             for slave_address in self.slave_addresses:
                 if slave_address in self.acquisition_map:
-                    requests.put("http://" + slave_address + "/rest/rec/startstreaming")
+                    requests.put("http://" + slave_address + "/rest/rec/startstreaming", timeout=60)
             if self.master_address in self.acquisition_map:
                 requests.put(
-                    "http://" + self.master_address + "/rest/rec/startstreaming"
+                    "http://" + self.master_address + "/rest/rec/startstreaming", timeout=60
                 )
 
         # Wait for the module state to be recorder streaming
@@ -1014,21 +944,21 @@ class LanXIOutput(HardwareOutput):
         master_json = None
         for generator_device, generator_channel_dict in self.output_map.items():
             json = {
-                "outputs": [
-                    {"number": channel_number}
-                    for channel_number in generator_channel_dict
-                ]
+                "outputs": [{"number": channel_number} for channel_number in generator_channel_dict]
             }
             if generator_device == self.master_address:
-                master_json = json  # Pull this out because the master should be assigned last I think.
+                master_json = (
+                    json  # Pull this out because the master should be assigned last I think.
+                )
                 continue
             requests.put(
-                "http://" + generator_device + "/rest/rec/generator/start", json=json
+                "http://" + generator_device + "/rest/rec/generator/start", json=json, timeout=60
             )
-        if not master_json is None:
+        if master_json is not None:
             requests.put(
                 "http://" + self.master_address + "/rest/rec/generator/start",
                 json=master_json,
+                timeout=60,
             )
         print("States after Generator Started")
         self._get_states()
@@ -1037,12 +967,8 @@ class LanXIOutput(HardwareOutput):
         """Method to write a frame of data to the hardware"""
         for output_device, socket_dict in self.sockets.items():
             for channel_number, socket_handle in socket_dict.items():
-                output_index, channel_data = self.output_map[output_device][
-                    channel_number
-                ]
-                this_data = (
-                    (data[output_index] / 10 * 8372224).astype("int32").tobytes()
-                )
+                output_index, _ = self.output_map[output_device][channel_number]
+                this_data = (data[output_index] / 10 * 8372224).astype("int32").tobytes()
                 while len(this_data) > 0:
                     sent_bytes = socket_handle.send(this_data[: self.transfer_size])
                     this_data = this_data[sent_bytes:]
@@ -1053,46 +979,47 @@ class LanXIOutput(HardwareOutput):
         master_json = None
         for generator_device, generator_channel_dict in self.output_map.items():
             json = {
-                "outputs": [
-                    {"number": channel_number}
-                    for channel_number in generator_channel_dict
-                ]
+                "outputs": [{"number": channel_number} for channel_number in generator_channel_dict]
             }
             if generator_device == self.master_address:
-                master_json = json  # Pull this out because the master should be assigned last I think.
+                master_json = (
+                    json  # Pull this out because the master should be assigned last I think.
+                )
                 continue
             requests.put(
-                "http://" + generator_device + "/rest/rec/generator/stop", json=json
+                "http://" + generator_device + "/rest/rec/generator/stop", json=json, timeout=60
             )
         if master_json is not None:
             requests.put(
                 "http://" + self.master_address + "/rest/rec/generator/stop",
                 json=master_json,
+                timeout=60,
             )
         self.empty_time = 0.0
         self.set_generators()
 
     def set_generators(self):
+        """Sets the generator states"""
         if len(self.output_map) == 0:
             return
         master_json = None
         for generator_device, generator_channel_dict in self.output_map.items():
             json = {
-                "outputs": [
-                    {"number": channel_number}
-                    for channel_number in generator_channel_dict
-                ]
+                "outputs": [{"number": channel_number} for channel_number in generator_channel_dict]
             }
             if generator_device == self.master_address:
-                master_json = json  # Pull this out because the master should be assigned last I think.
+                master_json = (
+                    json  # Pull this out because the master should be assigned last I think.
+                )
                 continue
             requests.put(
-                "http://" + generator_device + "/rest/rec/generator/prepare", json=json
+                "http://" + generator_device + "/rest/rec/generator/prepare", json=json, timeout=60
             )
-        if not master_json is None:
+        if master_json is not None:
             requests.put(
                 "http://" + self.master_address + "/rest/rec/generator/prepare",
                 json=master_json,
+                timeout=60,
             )
         print("\nStates after Generator Prepare")
         self._get_states()
@@ -1101,8 +1028,7 @@ class LanXIOutput(HardwareOutput):
         master_json = None
         for generator_device, generator_channel_dict in self.output_map.items():
             json = {
-                "bufferSize": self.buffer_size
-                * self.write_size,  # TODO: Re-evaluate this number
+                "bufferSize": self.buffer_size * self.write_size,  # TODO: Re-evaluate this number
                 "outputs": [
                     {
                         "number": channel_number,
@@ -1123,15 +1049,17 @@ class LanXIOutput(HardwareOutput):
                 ],
             }
             if generator_device == self.master_address:
-                master_json = json  # Pull this out because the master should be assigned last I think.
+                # Pull this out because the master should be assigned last I think.
+                master_json = json
                 continue
             requests.put(
-                "http://" + generator_device + "/rest/rec/generator/output", json=json
+                "http://" + generator_device + "/rest/rec/generator/output", json=json, timeout=60
             )
-        if not master_json is None:
+        if master_json is not None:
             requests.put(
                 "http://" + self.master_address + "/rest/rec/generator/output",
                 json=master_json,
+                timeout=60,
             )
         print("\nStates after Generator Output")
         self._get_states()
@@ -1139,20 +1067,18 @@ class LanXIOutput(HardwareOutput):
         # Now pull the socket information for the outputs
         for generator_device, generator_dict in self.output_map.items():
             response = requests.get(
-                "http://" + generator_device + "/rest/rec/generator/output"
+                "http://" + generator_device + "/rest/rec/generator/output", timeout=60
             )
             output_data = response.json()
             for channel_number in generator_dict:
-                output = [
-                    out
-                    for out in output_data["outputs"]
-                    if out["number"] == channel_number
-                ][0]
-                if not generator_device in self.sockets:
+                output = [out for out in output_data["outputs"] if out["number"] == channel_number][
+                    0
+                ]
+                if generator_device not in self.sockets:
                     self.sockets[generator_device] = {}
 
-                is_ipv4 = re.search(ipv4_pattern, generator_device) is not None
-                is_ipv6 = re.search(ipv6_pattern, generator_device) is not None
+                is_ipv4 = re.search(IPV4_PATTERN, generator_device) is not None
+                is_ipv6 = re.search(IPV6_PATTERN, generator_device) is not None
                 if is_ipv4:
                     self.sockets[generator_device][output["number"]] = socket.socket(
                         socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP
@@ -1169,21 +1095,18 @@ class LanXIOutput(HardwareOutput):
                     (generator_device, output["inputs"][0]["port"])
                 )
                 print(
-                    "Output Connected to Device {:} Channel {:} on Port {:}".format(
-                        generator_device, output["number"], output["inputs"][0]["port"]
-                    )
+                    f"Output Connected to Device {generator_device} Channel {output["number"]} "
+                    f"on Port {output["inputs"][0]["port"]}"
                 )
                 self.oversample_factor = round(
-                    OUTPUT_RATE
-                    / (2 ** output["inputs"][0]["samplingRate"])
-                    / self.sample_rate
+                    OUTPUT_RATE / (2 ** output["inputs"][0]["samplingRate"]) / self.sample_rate
                 )
-            print("Output overampling factor: {:}x".format(self.oversample_factor))
+            print(f"Output overampling factor: {self.oversample_factor}x")
 
     def close(self, reboot=False):
         """Method to close down the hardware"""
-        for device, socket_dict in self.sockets.items():
-            for channel_number, socket_handle in socket_dict.items():
+        for _, socket_dict in self.sockets.items():
+            for _, socket_handle in socket_dict.items():
                 socket_handle.close()
         if reboot:
             self._reboot_all()
@@ -1198,7 +1121,8 @@ class LanXIOutput(HardwareOutput):
 
     def ready_for_new_output(self):
         """Method that returns true if the hardware should accept a new signal"""
-        # print('Time until output buffer empty {:}, time per write {:}'.format(self.empty_time - time.time(),self.write_size / self.output_rate))
+        # print('Time until output buffer empty {:}, time per write {:}'.format(
+        #       self.empty_time - time.time(),self.write_size / self.output_rate))
         if (self.empty_time - time.time()) < (
             self.write_size / self.output_rate
         ) * self.ready_signal_factor:  # TODO: Might need to increase buffer
@@ -1241,17 +1165,13 @@ class LanXIOutput(HardwareOutput):
 
     def _get_states(self):
         for host in list(self.slave_addresses) + [self.master_address]:
-            response = requests.get("http://" + host + "/rest/rec/onchange")
+            response = requests.get("http://" + host + "/rest/rec/onchange", timeout=60)
             state_data = response.json()
             print(
-                "Host {:}: Recorder State {:}, Input State {:}, PTP State {:}, Recording Mode".format(
-                    host,
-                    state_data["moduleState"],
-                    state_data["inputStatus"],
-                    state_data["ptpStatus"],
-                )
+                f"Host {host}: Recorder State {state_data["moduleState"]}, Input State "
+                f"{state_data["inputStatus"]}, PTP State {state_data["ptpStatus"]}, Recording Mode"
             )
 
     def _reboot_all(self):
         for host in list(self.slave_addresses) + [self.master_address]:
-            requests.put("http://" + host + "/rest/rec/reboot")
+            requests.put("http://" + host + "/rest/rec/reboot", timeout=60)
