@@ -28,7 +28,7 @@ import os
 
 this_path = os.path.split(__file__)[0]
 
-### Here is where the code needs to be modified to create a new environment.
+# Here is where the code needs to be modified to create a new environment.
 
 
 class ControlTypes(Enum):
@@ -69,7 +69,7 @@ environment_prediction_ui_paths = {}
 environment_run_ui_paths = {}
 # This is true if running from an executable and the UI is embedded in the executable
 if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-    directory = sys._MEIPASS
+    directory = sys._MEIPASS  # pylint: disable=protected-access
 else:
     directory = this_path
 
@@ -84,15 +84,11 @@ environment_definition_ui_paths[ControlTypes.RANDOM] = os.path.join(
 environment_prediction_ui_paths[ControlTypes.RANDOM] = os.path.join(
     directory, "random_vibration_prediction.ui"
 )
-environment_run_ui_paths[ControlTypes.RANDOM] = os.path.join(
-    directory, "random_vibration_run.ui"
-)
+environment_run_ui_paths[ControlTypes.RANDOM] = os.path.join(directory, "random_vibration_run.ui")
 system_identification_ui_path = os.path.join(directory, "system_identification.ui")
 transformation_matrices_ui_path = os.path.join(directory, "transformation_matrices.ui")
 # Time Environment
-environment_definition_ui_paths[ControlTypes.TIME] = os.path.join(
-    directory, "time_definition.ui"
-)
+environment_definition_ui_paths[ControlTypes.TIME] = os.path.join(directory, "time_definition.ui")
 environment_run_ui_paths[ControlTypes.TIME] = os.path.join(directory, "time_run.ui")
 # Transient Environment
 environment_definition_ui_paths[ControlTypes.TRANSIENT] = os.path.join(
@@ -101,23 +97,15 @@ environment_definition_ui_paths[ControlTypes.TRANSIENT] = os.path.join(
 environment_prediction_ui_paths[ControlTypes.TRANSIENT] = os.path.join(
     directory, "transient_prediction.ui"
 )
-environment_run_ui_paths[ControlTypes.TRANSIENT] = os.path.join(
-    directory, "transient_run.ui"
-)
+environment_run_ui_paths[ControlTypes.TRANSIENT] = os.path.join(directory, "transient_run.ui")
 # Sine Environment
-environment_definition_ui_paths[ControlTypes.SINE] = os.path.join(
-    directory, "sine_definition.ui"
-)
-environment_prediction_ui_paths[ControlTypes.SINE] = os.path.join(
-    directory, "sine_prediction.ui"
-)
+environment_definition_ui_paths[ControlTypes.SINE] = os.path.join(directory, "sine_definition.ui")
+environment_prediction_ui_paths[ControlTypes.SINE] = os.path.join(directory, "sine_prediction.ui")
 environment_run_ui_paths[ControlTypes.SINE] = os.path.join(directory, "sine_run.ui")
 sine_sweep_table_ui_path = os.path.join(directory, "sine_sweep_table.ui")
 filter_explorer_ui_path = os.path.join(directory, "sine_filter_explorer.ui")
 # Modal Environments
-environment_definition_ui_paths[ControlTypes.MODAL] = os.path.join(
-    directory, "modal_definition.ui"
-)
+environment_definition_ui_paths[ControlTypes.MODAL] = os.path.join(directory, "modal_definition.ui")
 environment_run_ui_paths[ControlTypes.MODAL] = os.path.join(directory, "modal_run.ui")
 modal_mdi_ui_path = os.path.join(directory, "modal_acquisition_window.ui")
 
@@ -126,7 +114,7 @@ modal_mdi_ui_path = os.path.join(directory, "modal_acquisition_window.ui")
 environment_processes = {}
 environment_UIs = {}
 # Random Vibration
-from .random_vibration_sys_id_environment import (
+from .random_vibration_sys_id_environment import (  # noqa # pylint: disable=wrong-import-position
     random_vibration_process,
     RandomVibrationUI,
 )
@@ -134,24 +122,33 @@ from .random_vibration_sys_id_environment import (
 environment_processes[ControlTypes.RANDOM] = random_vibration_process
 environment_UIs[ControlTypes.RANDOM] = RandomVibrationUI
 # Time Signal Generation
-from .time_environment import time_process, TimeUI
+from .time_environment import time_process, TimeUI  # noqa # pylint: disable=wrong-import-position
 
 environment_processes[ControlTypes.TIME] = time_process
 environment_UIs[ControlTypes.TIME] = TimeUI
 # Transient
-from .transient_sys_id_environment import transient_process, TransientUI
+from .transient_sys_id_environment import (  # noqa # pylint: disable=wrong-import-position
+    transient_process,
+    TransientUI,
+)
 
 environment_processes[ControlTypes.TRANSIENT] = transient_process
 environment_UIs[ControlTypes.TRANSIENT] = TransientUI
 # Sine
-from .sine_sys_id_environment import sine_process, SineUI
+from .sine_sys_id_environment import (  # noqa # pylint: disable=wrong-import-position
+    sine_process,
+    SineUI,
+)
 
 environment_processes[ControlTypes.SINE] = sine_process
 environment_UIs[ControlTypes.SINE] = SineUI
 # Modal
-from .modal_environment import modal_process, ModalUI
+from .modal_environment import (  # noqa # pylint: disable=wrong-import-position
+    modal_process,
+    ModalUI,
+)
 
 environment_processes[ControlTypes.MODAL] = modal_process
 environment_UIs[ControlTypes.MODAL] = ModalUI
 
-### End of code needed to be modified to create a new environment
+# End of code needed to be modified to create a new environment
