@@ -173,7 +173,6 @@ class OutputProcess(AbstractMessageProcess):
             from .data_physics_dp900_hardware import DataPhysicsDP900Output
 
             self.hardware = DataPhysicsDP900Output(
-                data_acquisition_parameters.hardware_file,
                 self.queue_container.single_process_hardware_queue,
             )
         elif data_acquisition_parameters.hardware == 4:
