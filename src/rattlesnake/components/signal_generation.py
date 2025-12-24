@@ -171,19 +171,16 @@ class SignalGenerator(ABC):
     @abstractmethod
     def generate_frame(self):
         """This method generates and returns a frame of data from the signal generator"""
-        pass
 
     # TODO: update the parameters passing approach to take one argument (like a dictionary)
     # so calling signature is maintained in child classes.
     def update_parameters(self):
         """This method accepts various arguments to update the parameters of the signal generator"""
-        pass
 
     @property
     @abstractmethod
     def ready_for_next_output(self):
         """This method returns True if the signal generator can currently produce a frame of data"""
-        pass
 
 
 class RandomSignalGenerator(SignalGenerator):
