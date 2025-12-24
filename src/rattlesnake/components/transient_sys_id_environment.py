@@ -938,7 +938,7 @@ class TransientUI(AbstractSysIdUI):
                 ),
             )
             self.log(f"Building Interactive UI for class {control_class.__name__}")
-            ui_class = control_class.get_UI_class()
+            ui_class = control_class.get_ui_class()
             if ui_class == self.interactive_control_law_widget.__class__:
                 print("initializing data acquisition and environment parameters")
                 self.interactive_control_law_widget.initialize_parameters(
@@ -2325,6 +2325,34 @@ def transient_process(
     acquisition_active: mp.sharedctypes.Synchronized,
     output_active: mp.sharedctypes.Synchronized,
 ):
+    """
+    Transient vibration environment process function called by multiprocessing
+
+    This function defines the Transient Vibration Environment process that
+    gets run by the multiprocessing module when it creates a new process.  It
+    creates a TransientEnvironment object and runs it.
+
+    Parameters
+    ----------
+    environment_name : str :
+        Name of the environment
+    input_queue : VerboseMessageQueue :
+        Queue containing instructions for the environment
+    gui_update_queue : Queue :
+        Queue where GUI updates are put
+    controller_communication_queue : Queue :
+        Queue for global communications with the controller
+    log_file_queue : Queue :
+        Queue for writing log file messages
+    data_in_queue : Queue :
+        Queue from which data will be read by the environment
+    data_out_queue : Queue :
+        Queue to which data will be written that will be output by the hardware.
+    acquisition_active : mp.sharedctypes.Synchronized
+        A synchronized value that indicates when the acquisition is active
+    output_active : mp.sharedctypes.Synchronized
+        A synchronized value that indicates when the output is active
+    """
     try:
         # Create vibration queues
         queue_container = TransientQueues(
