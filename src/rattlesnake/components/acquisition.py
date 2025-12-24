@@ -22,18 +22,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 import multiprocessing as mp
-from .utilities import (
-    QueueContainer,
-    GlobalCommands,
-    flush_queue,
-    align_signals,
-    correlation_norm_signal_spec_ratio,
-    correlation_norm_spec_ratio,
-)
-from .abstract_message_process import AbstractMessageProcess
-from time import time, sleep
+import multiprocessing.sharedctypes  # pylint: disable=unused-import
+from time import sleep, time
 
 import numpy as np
+
+from .abstract_message_process import AbstractMessageProcess
+from .utilities import (
+    GlobalCommands,
+    QueueContainer,
+    align_signals,
+    correlation_norm_signal_spec_ratio,
+    flush_queue,
+)
 
 DEBUG = False
 if DEBUG:
@@ -56,7 +57,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         process_name: str,
         queue_container: QueueContainer,
         environments: list,
-        acquisition_active: mp.Value,
+        acquisition_active: mp.sharedctypes.Synchronized,
     ):
         """
         Constructor for the AcquisitionProcess class
@@ -105,15 +106,11 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.environment_active_flags = {
             environment: False for environment in self.environment_list
         }
-        self.environment_last_data = {
-            environment: False for environment in self.environment_list
-        }
+        self.environment_last_data = {environment: False for environment in self.environment_list}
         self.environment_samples_remaining_to_read = {
             environment: 0 for environment in self.environment_list
         }
-        self.environment_first_data = {
-            environment: None for environment in self.environment_list
-        }
+        self.environment_first_data = {environment: None for environment in self.environment_list}
         # Hardware data
         self.hardware = None
         # Streaming Information
@@ -130,6 +127,7 @@ class AcquisitionProcess(AbstractMessageProcess):
 
     @property
     def acquisition_active(self):
+        """Returns True if the acquisition is currently running"""
         return bool(self._acquisition_active.value)
 
     @acquisition_active.setter
@@ -159,24 +157,20 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.sample_rate = data_acquisition_parameters.sample_rate
         self.read_size = data_acquisition_parameters.samples_per_read
         # Check which type of hardware we have
-        if not self.hardware is None:
+        if self.hardware is not None:
             self.hardware.close()
         if data_acquisition_parameters.hardware == 0:
             from .nidaqmx_hardware_multitask import NIDAQmxAcquisition
 
             self.hardware = NIDAQmxAcquisition(
                 data_acquisition_parameters.extra_parameters["task_trigger"],
-                data_acquisition_parameters.extra_parameters[
-                    "task_trigger_output_channel"
-                ],
+                data_acquisition_parameters.extra_parameters["task_trigger_output_channel"],
             )
         elif data_acquisition_parameters.hardware == 1:
             from .lanxi_hardware_multiprocessing import LanXIAcquisition
 
             self.hardware = LanXIAcquisition(
-                data_acquisition_parameters.extra_parameters[
-                    "maximum_acquisition_processes"
-                ]
+                data_acquisition_parameters.extra_parameters["maximum_acquisition_processes"]
             )
         elif data_acquisition_parameters.hardware == 2:
             from .data_physics_hardware import DataPhysicsAcquisition
@@ -237,9 +231,7 @@ class AcquisitionProcess(AbstractMessageProcess):
             try:
                 abort_limit = float(channel.abort_level)
             except (ValueError, TypeError):
-                abort_limit = float(
-                    "inf"
-                )  # Never abort on this channel if not specified
+                abort_limit = float("inf")  # Never abort on this channel if not specified
             self.warning_limits.append(warning_limit)
             self.abort_limits.append(abort_limit)
         self.abort_limits = np.array(self.abort_limits)
@@ -247,8 +239,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.output_indices = [
             index
             for index, channel in enumerate(data_acquisition_parameters.channel_list)
-            if not (channel.feedback_device is None)
-            and not (channel.feedback_device.strip() == "")
+            if not (channel.feedback_device is None) and not (channel.feedback_device.strip() == "")
         ]
         self.read_data = np.zeros(
             (
@@ -273,14 +264,12 @@ class AcquisitionProcess(AbstractMessageProcess):
             The environment name that should be deactivated
 
         """
-        self.log("Deactivating Environment {:}".format(data))
+        self.log(f"Deactivating Environment {data}")
         self.environment_active_flags[data] = False
         self.environment_last_data[data] = True
-        self.environment_samples_remaining_to_read[data] = (
-            self.hardware.get_acquisition_delay()
-        )
+        self.environment_samples_remaining_to_read[data] = self.hardware.get_acquisition_delay()
 
-    def start_streaming(self, data):
+    def start_streaming(self, data):  # pylint: disable=unused-argument
         """Sets the flag to tell the acquisition to write data to disk
 
         Parameters
@@ -299,7 +288,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         else:
             self.has_streamed = True
 
-    def stop_streaming(self, data):
+    def stop_streaming(self, data):  # pylint: disable=unused-argument
         """Sets the flag to tell the acquisition to not write data to disk
 
         Parameters
@@ -340,9 +329,7 @@ class AcquisitionProcess(AbstractMessageProcess):
             while True:
                 # Try to get data from the measurement if we can
                 try:
-                    environment, data = (
-                        self.queue_container.input_output_sync_queue.get_nowait()
-                    )
+                    environment, data = self.queue_container.input_output_sync_queue.get_nowait()
                 except mp.queues.Empty:
                     if time() - start_wait_time > 30:
                         self.queue_container.gui_update_queue.put(
@@ -350,7 +337,8 @@ class AcquisitionProcess(AbstractMessageProcess):
                                 "error",
                                 (
                                     "Acquisition Error",
-                                    "Acquisition timed out waiting for output to start.  Check output task for errors!",
+                                    "Acquisition timed out waiting for output to start.  "
+                                    "Check output task for errors!",
                                 ),
                             )
                         )
@@ -361,11 +349,7 @@ class AcquisitionProcess(AbstractMessageProcess):
                     self.log("Detected Output Started")
                     break
                 else:
-                    self.log(
-                        "Listening for first data for environment {:}".format(
-                            environment
-                        )
-                    )
+                    self.log(f"Listening for first data for environment {environment}")
                     self.environment_first_data[environment] = data
                     self.any_environments_started = True
             self.log("Starting Hardware Acquisition")
@@ -377,16 +361,10 @@ class AcquisitionProcess(AbstractMessageProcess):
         if (
             self.shutdown_flag  # We're shutting down
             and all(
-                [
-                    not flag
-                    for environment, flag in self.environment_active_flags.items()
-                ]
+                [not flag for environment, flag in self.environment_active_flags.items()]
             )  # All the environments are inactive
             and all(
-                [
-                    flag is None
-                    for environment, flag in self.environment_first_data.items()
-                ]
+                [flag is None for environment, flag in self.environment_first_data.items()]
             )  # All the environments are not starting
             and all(
                 [not flag for environment, flag in self.environment_last_data.items()]
@@ -400,44 +378,14 @@ class AcquisitionProcess(AbstractMessageProcess):
                 self.gui_update_queue.put(("monitor", max_vals))
                 warn_channels = max_vals > self.warning_limits
                 if np.any(warn_channels):
-                    print(
-                        "Channels {:} Reached Warning Limit".format(
-                            [
-                                i + 1
-                                for i in range(len(warn_channels))
-                                if warn_channels[i]
-                            ]
-                        )
-                    )
-                    self.log(
-                        "Channels {:} Reached Warning Limit".format(
-                            [
-                                i + 1
-                                for i in range(len(warn_channels))
-                                if warn_channels[i]
-                            ]
-                        )
-                    )
+                    warning_numbers = [i + 1 for i in range(len(warn_channels)) if warn_channels[i]]
+                    print(f"Channels {warning_numbers} Reached Warning Limit")
+                    self.log(f"Channels {warning_numbers} Reached Warning Limit")
                 abort_channels = max_vals > self.abort_limits
                 if np.any(abort_channels):
-                    print(
-                        "Channels {:} Reached Abort Limit".format(
-                            [
-                                i + 1
-                                for i in range(len(abort_channels))
-                                if abort_channels[i]
-                            ]
-                        )
-                    )
-                    self.log(
-                        "Channels {:} Reached Abort Limit".format(
-                            [
-                                i + 1
-                                for i in range(len(abort_channels))
-                                if abort_channels[i]
-                            ]
-                        )
-                    )
+                    abort_numbers = [i + 1 for i in range(len(abort_channels)) if abort_channels[i]]
+                    print(f"Channels {abort_numbers} Reached Abort Limit")
+                    self.log(f"Channels {abort_numbers} Reached Abort Limit")
                     # Don't stop because we're already shutting down.
             self.hardware.stop()
             self.shutdown_flag = False
@@ -456,15 +404,10 @@ class AcquisitionProcess(AbstractMessageProcess):
             self.acquisition_active = False
             self.log("Acquisition Shut Down")
         else:
-            self.log(
-                "Acquiring Data for {:} environments".format(
-                    [
-                        name
-                        for name, flag in self.environment_active_flags.items()
-                        if flag
-                    ]
-                )
-            )
+            aquiring_environments = [
+                name for name, flag in self.environment_active_flags.items() if flag
+            ]
+            self.log(f"Acquiring Data for {aquiring_environments} environments")
             read_data = self.hardware.read()
             self.add_data_to_buffer(read_data)
             if read_data.shape[-1] != 0:
@@ -472,44 +415,14 @@ class AcquisitionProcess(AbstractMessageProcess):
                 self.gui_update_queue.put(("monitor", max_vals))
                 warn_channels = max_vals > self.warning_limits
                 if np.any(warn_channels):
-                    print(
-                        "Channels {:} Reached Warning Limit".format(
-                            [
-                                i + 1
-                                for i in range(len(warn_channels))
-                                if warn_channels[i]
-                            ]
-                        )
-                    )
-                    self.log(
-                        "Channels {:} Reached Warning Limit".format(
-                            [
-                                i + 1
-                                for i in range(len(warn_channels))
-                                if warn_channels[i]
-                            ]
-                        )
-                    )
+                    warning_numbers = [i + 1 for i in range(len(warn_channels)) if warn_channels[i]]
+                    print(f"Channels {warning_numbers} Reached Warning Limit")
+                    self.log(f"Channels {warning_numbers} Reached Warning Limit")
                 abort_channels = max_vals > self.abort_limits
                 if np.any(abort_channels):
-                    print(
-                        "Channels {:} Reached Abort Limit".format(
-                            [
-                                i + 1
-                                for i in range(len(abort_channels))
-                                if abort_channels[i]
-                            ]
-                        )
-                    )
-                    self.log(
-                        "Channels {:} Reached Abort Limit".format(
-                            [
-                                i + 1
-                                for i in range(len(abort_channels))
-                                if abort_channels[i]
-                            ]
-                        )
-                    )
+                    abort_numbers = [i + 1 for i in range(len(abort_channels)) if abort_channels[i]]
+                    print(f"Channels {abort_numbers} Reached Abort Limit")
+                    self.log(f"Channels {abort_numbers} Reached Abort Limit")
                     self.gui_update_queue.put(("stop", None))
 
             # Send the data to the different channels
@@ -529,7 +442,7 @@ class AcquisitionProcess(AbstractMessageProcess):
                                 output_indices=self.output_indices,
                                 first_data=self.environment_first_data[environment],
                             )
-                        _, delay, _, alignment_correlation = align_signals(
+                        _, delay, _, _ = align_signals(
                             self.read_data[self.output_indices],
                             self.environment_first_data[environment],
                             perform_subsample=False,
@@ -537,11 +450,10 @@ class AcquisitionProcess(AbstractMessageProcess):
                             correlation_metric=correlation_norm_signal_spec_ratio,
                         )
                         correlation_end_time = time()
+                        corr_time = correlation_end_time - correlation_start_time
                         self.log(
-                            "Correlation check for environment {:} took {:0.2f} seconds".format(
-                                environment,
-                                correlation_end_time - correlation_start_time,
-                            )
+                            f"Correlation check for environment {environment} took "
+                            f"{corr_time:0.2f} seconds"
                         )
                         # Adding a criteria that the delay must be in the first half
                         # of the buffer, otherwise we could still be increasing
@@ -550,15 +462,13 @@ class AcquisitionProcess(AbstractMessageProcess):
                         # data and the best match did not improve
                         if delay is None or delay > self.read_data.shape[-1] // 2:
                             continue
-                    self.log("Found First Data for Environment {:}".format(environment))
+                    self.log(f"Found First Data for Environment {environment}")
                     environment_data = self.read_data[
                         self.environment_acquisition_channels[environment], delay:
                     ]
                     if DEBUG:
                         np.savez(
-                            "debug_data/environment_first_data_{:}.npz".format(
-                                environment
-                            ),
+                            f"debug_data/environment_first_data_{environment}.npz",
                             found_data=environment_data,
                             expected_data=self.environment_first_data[environment],
                         )
@@ -567,9 +477,8 @@ class AcquisitionProcess(AbstractMessageProcess):
                         self.environment_active_flags[environment] = True
                     else:
                         self.log(
-                            "Already received environment {:} shutdown signal, not starting".format(
-                                environment
-                            )
+                            f"Already received environment {environment} "
+                            "shutdown signal, not starting"
                         )
                 # Check to see if the environment is active
                 elif (
@@ -583,32 +492,27 @@ class AcquisitionProcess(AbstractMessageProcess):
                 else:
                     continue
                 if self.environment_last_data[environment]:
-                    self.environment_samples_remaining_to_read[
-                        environment
-                    ] -= self.read_size
+                    self.environment_samples_remaining_to_read[environment] -= self.read_size
                     self.log(
-                        "Reading last data for {:}, {:} samples remaining".format(
-                            environment,
-                            self.environment_samples_remaining_to_read[environment],
-                        )
+                        f"Reading last data for {environment}, "
+                        f"{self.environment_samples_remaining_to_read[environment]} samples "
+                        f"remaining"
                     )
                 environment_finished = (
                     self.environment_last_data[environment]
                     and self.environment_samples_remaining_to_read[environment] <= 0
                 )
-                self.log(
-                    "Sending {:} data to {:} environment".format(
-                        environment_data.shape, environment
-                    )
-                )
+                self.log(f"Sending {environment_data.shape} data to {environment} environment")
                 self.queue_container.environment_data_in_queues[environment].put(
                     (environment_data, environment_finished)
                 )
                 if environment_finished:
                     self.environment_last_data[environment] = False
-                    self.log("Delivered last data to {:}".format(environment))
-
-            #                    np.savez('test_data/acquisition_data_check.npz',read_data = self.read_data,environment_data = environment_data,environment_channels = self.environment_acquisition_channels[environment])
+                    self.log(f"Delivered last data to {environment}")
+            #  np.savez('test_data/acquisition_data_check.npz',
+            #           read_data = self.read_data,
+            #           environment_data = environment_data,
+            #           environment_channels = self.environment_acquisition_channels[environment])
             self.queue_container.acquisition_command_queue.put(
                 self.process_name, (GlobalCommands.RUN_HARDWARE, None)
             )
@@ -619,6 +523,13 @@ class AcquisitionProcess(AbstractMessageProcess):
                 )
 
     def add_data_to_buffer(self, data):
+        """Adds data to the end of the buffer and shifts existing in the buffer forward
+
+        Parameters
+        ----------
+        data : np.ndarray
+            A 2D array with shape num_channels x num_samples
+        """
         # Roll the buffer with new data
         read_size = data.shape[-1]
         if read_size != 0:
@@ -626,13 +537,14 @@ class AcquisitionProcess(AbstractMessageProcess):
             self.read_data[..., -read_size:] = data
 
     def get_first_output_data(self):
+        """Searches through the sync queue for first data packages from the output process"""
         first_output_data = flush_queue(self.queue_container.input_output_sync_queue)
         for environment, data in first_output_data:
-            self.log("Listening for first data for environment {:}".format(environment))
+            self.log(f"Listening for first data for environment {environment}")
             self.environment_first_data[environment] = data
             self.any_environments_started = True
 
-    def stop_acquisition(self, data):
+    def stop_acquisition(self, data):  # pylint: disable=unused-argument
         """Sets a flag telling the acquisition that it should start shutting down
 
         Parameters
@@ -657,18 +569,20 @@ class AcquisitionProcess(AbstractMessageProcess):
         """
         # Pull any data off the queues that have been put to
         queue_flush_sum = 0
-        for queue in [
-            q for name, q in self.queue_container.environment_data_in_queues.items()
-        ] + [self.queue_container.acquisition_command_queue]:
+        for queue in [q for name, q in self.queue_container.environment_data_in_queues.items()] + [
+            self.queue_container.acquisition_command_queue
+        ]:
             queue_flush_sum += len(flush_queue(queue))
-        self.log("Flushed {:} items out of queues".format(queue_flush_sum))
-        if not self.hardware is None:
+        self.log(f"Flushed {queue_flush_sum} items out of queues")
+        if self.hardware is not None:
             self.hardware.close()
         return True
 
 
 def acquisition_process(
-    queue_container: QueueContainer, environments: list, acquisition_active: mp.Value
+    queue_container: QueueContainer,
+    environments: list,
+    acquisition_active: mp.sharedctypes.Synchronized,
 ):
     """Function passed to multiprocessing as the acquisition process
 
