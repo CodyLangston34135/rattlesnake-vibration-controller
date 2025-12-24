@@ -22,13 +22,15 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from .abstract_hardware import HardwareAcquisition, HardwareOutput
-from .utilities import Channel, DataAcquisitionParameters, flush_queue
-import numpy as np
-from typing import List
 import multiprocessing as mp
-from .data_physics_interface import DPQuattro, QuattroCoupling, QuattroStatus
 import time
+from typing import List
+
+import numpy as np
+
+from .abstract_hardware import HardwareAcquisition, HardwareOutput
+from .data_physics_interface import DPQuattro, QuattroCoupling, QuattroStatus
+from .utilities import Channel, DataAcquisitionParameters
 
 BUFFER_SIZE_FACTOR = 3
 SLEEP_FACTOR = 10
@@ -124,7 +126,8 @@ class DataPhysicsAcquisition(HardwareAcquisition):
         self.quattro.set_sample_rate(test_data.sample_rate)
 
         # Set the buffer size ensuring that it is more that 4096
-        # self.buffer_size = (BUFFER_SIZE_FACTOR+1)*max(test_data.samples_per_write,test_data.samples_per_read)
+        # self.buffer_size = (BUFFER_SIZE_FACTOR+1)*max(
+        #     test_data.samples_per_write,test_data.samples_per_read)
         # if self.buffer_size < 8192:
         #     self.buffer_size = 8192
         self.quattro.set_buffer_size(self.buffer_size)
@@ -165,9 +168,7 @@ class DataPhysicsAcquisition(HardwareAcquisition):
             self.input_sensitivities[channel_index] = (
                 1.0 if is_output else float(channel.sensitivity) / 1000
             )
-            self.input_ranges[channel_index] = (
-                10.0 if is_output else float(channel.maximum_value)
-            )
+            self.input_ranges[channel_index] = 10.0 if is_output else float(channel.maximum_value)
 
             # Set up the output
             if is_output:
@@ -179,9 +180,7 @@ class DataPhysicsAcquisition(HardwareAcquisition):
         self.quattro.setup_input_parameters(
             self.input_couplings, self.input_sensitivities, self.input_ranges
         )
-        self.quattro.setup_output_parameters(
-            self.output_sensitivities, self.output_ranges
-        )
+        self.quattro.setup_output_parameters(self.output_sensitivities, self.output_ranges)
 
     def start(self):
         """Method to start acquiring data from the hardware"""
@@ -206,9 +205,7 @@ class DataPhysicsAcquisition(HardwareAcquisition):
             # channel table using self.input_channel_order
             if samples_available > 0:
                 self.read_data.append(
-                    self.quattro.read_input_data(samples_available)[
-                        self.input_channel_order
-                    ]
+                    self.quattro.read_input_data(samples_available)[self.input_channel_order]
                 )
             # Pause for a bit to allow more samples to accumulate
             time.sleep(self.time_per_read / SLEEP_FACTOR)
@@ -216,9 +213,7 @@ class DataPhysicsAcquisition(HardwareAcquisition):
         # read data into the number of samples requested, and put the remainder
         # as the start of the next self.read_data list.
         read_data = np.concatenate(self.read_data, axis=-1)
-        self.read_data = [
-            read_data[:, self.data_acquisition_parameters.samples_per_read :]
-        ]
+        self.read_data = [read_data[:, self.data_acquisition_parameters.samples_per_read :]]
         return read_data[:, : self.data_acquisition_parameters.samples_per_read]
 
     def read_remaining(self) -> np.ndarray:
@@ -243,9 +238,7 @@ class DataPhysicsAcquisition(HardwareAcquisition):
         # read data into the number of samples requested, and put the remainder
         # as the start of the next self.read_data list.
         read_data = np.concatenate(self.read_data, axis=-1)
-        self.read_data = [
-            read_data[:, self.data_acquisition_parameters.samples_per_read :]
-        ]
+        self.read_data = [read_data[:, self.data_acquisition_parameters.samples_per_read :]]
         read_data = np.concatenate(self.read_data, axis=-1)
         return read_data
 
@@ -291,22 +284,23 @@ class DataPhysicsAcquisition(HardwareAcquisition):
 
         """
         samples_on_buffer = self.quattro.get_total_output_samples_on_buffer()
-        # print('{:} Samples on Output Buffer, (<{:} to output more)'.format(samples_on_buffer,self.data_acquisition_parameters.samples_per_write))
-        if (
-            not block
-            and samples_on_buffer >= self.data_acquisition_parameters.samples_per_write
-        ):
+        # print(
+        #     f"{samples_on_buffer} Samples on Output Buffer, "
+        #     f"(<{self.data_acquisition_parameters.samples_per_write} to output more)"
+        # )
+        if not block and samples_on_buffer >= self.data_acquisition_parameters.samples_per_write:
             # print('Too much data on buffer, not putting new data')
             return
         try:
             data = self.output_data_queue.get(block, timeout=10)
             # print('Got New Data from queue')
-        except mp.queues.Empty:
+        except mp.queues.Empty as e:
             # print('Did not get new data from queue')
             if block:
                 raise RuntimeError(
-                    "Did not receive output in a reasonable amount of time, check output process and output hardware for issues"
-                )
+                    "Did not receive output in a reasonable amount of time, check "
+                    "output process and output hardware for issues"
+                ) from e
             # Otherwise just return because there's no data available
             return
         # If we did get output, we need to put it into a numpy array that we can
@@ -364,11 +358,9 @@ class DataPhysicsOutput(HardwareOutput):
         None.
 
         """
-        pass
 
     def start(self):
         """Method to start outputting data to the hardware"""
-        pass
 
     def write(self, data):
         """Method to write a np.ndarray with a frame of data to the hardware"""
@@ -376,11 +368,9 @@ class DataPhysicsOutput(HardwareOutput):
 
     def stop(self):
         """Method to stop the output"""
-        pass
 
     def close(self):
         """Method to close down the hardware"""
-        pass
 
     def ready_for_new_output(self) -> bool:
         """Method that returns true if the hardware should accept a new signal
