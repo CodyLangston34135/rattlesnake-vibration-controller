@@ -22,14 +22,16 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+import multiprocessing as mp
+import time
+from typing import List
+
+import netCDF4
+import numpy as np
+import scipy.signal as signal
+
 from .abstract_hardware import HardwareAcquisition, HardwareOutput
 from .utilities import Channel, DataAcquisitionParameters, flush_queue
-import numpy as np
-from typing import List
-import netCDF4
-import multiprocessing as mp
-import scipy.signal as signal
-import time
 
 DEBUG = False
 
@@ -39,11 +41,11 @@ if DEBUG:
     import glob
     import os
 
-    test_files_output_names = r"debug\output_data_{:}.npz"
-    test_files_acquisition_names = r"debug\acquire_data_{:}.npz"
-    test_files_system_name = r"debug\system.npz"
+    TEST_FILES_OUTPUT_NAMES = r"debug\output_data_{:}.npz"
+    TEST_FILES_ACQUISITION_NAMES = r"debug\acquire_data_{:}.npz"
+    TEST_FILES_SYSTEM_NAME = r"debug\system.npz"
     # Delete existing test files
-    for str_format in [test_files_acquisition_names, test_files_output_names]:
+    for str_format in [TEST_FILES_ACQUISITION_NAMES, TEST_FILES_OUTPUT_NAMES]:
         files = glob.glob(str_format.format("*"))
         for file in files:
             try:
@@ -63,13 +65,13 @@ class ExodusAcquisition(HardwareAcquisition):
     controller."""
 
     def __init__(self, exodus_file: str, queue: mp.queues.Queue):
-        """Loads in the exodus file and sets initial parameters to null values
+        """Loads in the Exodus file and sets initial parameters to null values
 
 
         Parameters
         ----------
         exodus_file : str :
-            Path to the exodus file.
+            Path to the Exodus file.
         queue : mp.queues.Queue
             A queue that passes input data from the ExodusOutput class to the
             Exodus input class.  Normally, this data transfer would occur through
@@ -79,9 +81,10 @@ class ExodusAcquisition(HardwareAcquisition):
             pass the output data to the acquisition which does the integration.
 
         """
-        self.exo = exodus(exodus_file)
+        self.exo = Exodus(exodus_file)
         self.phi = None
         self.phi_full = None
+        self.response_channels: np.ndarray
         self.response_channels = None
         self.system = None
         self.times = None
@@ -91,6 +94,7 @@ class ExodusAcquisition(HardwareAcquisition):
         self.force_buffer = None
         self.integration_oversample = None
         self.acquisition_delay = None
+        self.damping = None
 
     def set_up_data_acquisition_parameters_and_channels(
         self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
@@ -134,8 +138,8 @@ class ExodusAcquisition(HardwareAcquisition):
         node_numbers = self.exo.get_node_num_map()
         try:
             self.damping = float(channel_data[0].comment)
-            print("{:} Damping".format(self.damping))
-        except Exception:
+            print(f"{self.damping} Damping")
+        except ValueError:
             self.damping = 0.01
         self.response_channels = np.array(
             [
@@ -145,10 +149,7 @@ class ExodusAcquisition(HardwareAcquisition):
             dtype="bool",
         )
         self.phi_full = np.array(
-            [
-                self._create_channel(channel, displacements, node_numbers)
-                for channel in channel_data
-            ]
+            [self._create_channel(channel, displacements, node_numbers) for channel in channel_data]
         )
         # Need to add a signal buffer in case the write size is not equal to
         # the read size
@@ -176,23 +177,21 @@ class ExodusAcquisition(HardwareAcquisition):
         self.phi = self.phi_full[..., keep_modes]
         nmodes = self.phi.shape[-1]
         frequencies = frequencies[keep_modes]
-        M = np.eye(nmodes)
-        K = np.diag((frequencies * 2 * np.pi) ** 2)
-        C = np.diag((2 * 2 * np.pi * frequencies * self.damping))
-        A, B, C, D = MCK_to_StateSpace(M, C, K)
-        self.system = signal.StateSpace(A, B, C, D)
+        m = np.eye(nmodes)
+        k = np.diag((frequencies * 2 * np.pi) ** 2)
+        c = np.diag((2 * 2 * np.pi * frequencies * self.damping))
+        a, b, c, d = mck_to_state_space(m, c, k)
+        self.system = signal.StateSpace(a, b, c, d)
         # Need to get one more sample than you would think because lsim doesn't bridge the gap
         # between integrations
-        self.times = np.arange(
-            test_data.samples_per_read * self.integration_oversample + 1
-        ) / (test_data.sample_rate * self.integration_oversample)
+        self.times = np.arange(test_data.samples_per_read * self.integration_oversample + 1) / (
+            test_data.sample_rate * self.integration_oversample
+        )
         self.frame_time = test_data.samples_per_read / test_data.sample_rate
         self.state = np.zeros(nmodes * 2)
-        self.acquisition_delay = (
-            test_data.samples_per_write / test_data.output_oversample
-        )
+        self.acquisition_delay = test_data.samples_per_write / test_data.output_oversample
         if DEBUG:
-            np.savez(test_files_system_name, A=A, B=B, C=C, D=D, times=self.times)
+            np.savez(TEST_FILES_SYSTEM_NAME, a=a, b=b, c=c, d=d, times=self.times)
 
     def start(self):
         """Method to start acquiring data.
@@ -235,9 +234,9 @@ class ExodusAcquisition(HardwareAcquisition):
         while self.force_buffer.shape[0] < self.times.size:
             try:
                 forces = self.queue.get(timeout=self.frame_time)
-            except (
-                mp.queues.Empty
-            ):  # If we don't get an output in time, this likely means output has stopped so just put zeros.
+            except mp.queues.Empty:
+                # If we don't get an output in time, this likely means output has stopped so
+                # just put zeros.
                 forces = np.zeros((self.force_buffer.shape[-1], self.times.size))
             self.force_buffer = np.concatenate((self.force_buffer, forces.T), axis=0)
 
@@ -251,9 +250,7 @@ class ExodusAcquisition(HardwareAcquisition):
         # print('Got Force')
         # print('this_force shape: {:}'.format(this_force.shape))
 
-        modal_forces = np.einsum(
-            "ij,ki->kj", self.phi[~self.response_channels], this_force
-        )
+        modal_forces = np.einsum("ij,ki->kj", self.phi[~self.response_channels], this_force)
         # print('modal_forces shape: {:}'.format(modal_forces.shape))
 
         # print('Integrating...')
@@ -262,9 +259,7 @@ class ExodusAcquisition(HardwareAcquisition):
         # print('times: {:}\n{:}'.format(self.times.shape,self.times))
         # print('state: {:}\n{:}'.format(self.state.shape,self.state))
 
-        times_out, sys_out, x_out = signal.lsim(
-            self.system, modal_forces, self.times, self.state
-        )
+        times_out, sys_out, _ = signal.lsim(self.system, modal_forces, self.times, self.state)
         # print('output: {:}\n{:}'.format(sys_out.shape,sys_out))
 
         sys_accels = sys_out[:, 2 * self.phi.shape[-1] : 3 * self.phi.shape[-1]]
@@ -274,9 +269,7 @@ class ExodusAcquisition(HardwareAcquisition):
         self.state[:] = sys_out[-1, 0 : 2 * self.phi.shape[-1]]
 
         # Now we need to combine accelerations with forces in the same way
-        output = np.zeros(
-            (len(self.response_channels), len(self.times))
-        )  # n channels x n times
+        output = np.zeros((len(self.response_channels), len(self.times)))  # n channels x n times
         output[self.response_channels] = accelerations
         output[~self.response_channels] = this_force.T
 
@@ -289,9 +282,9 @@ class ExodusAcquisition(HardwareAcquisition):
 
         if DEBUG:
             # Find current files
-            num_files = len(glob.glob(test_files_acquisition_names.format("*")))
+            num_files = len(glob.glob(TEST_FILES_ACQUISITION_NAMES.format("*")))
             np.savez(
-                test_files_acquisition_names.format(num_files),
+                TEST_FILES_ACQUISITION_NAMES.format(num_files),
                 full_output=output,
                 integration_oversample=self.integration_oversample,
                 modal_forces=modal_forces,
@@ -303,9 +296,7 @@ class ExodusAcquisition(HardwareAcquisition):
             )
         # We don't want to return the last sample because it
         # will be the initial state for the next sample
-        return output[
-            ..., : -1 : self.integration_oversample
-        ] + NOISE_LEVEL * np.random.randn(
+        return output[..., : -1 : self.integration_oversample] + NOISE_LEVEL * np.random.randn(
             *output[..., : -1 : self.integration_oversample].shape
         )
 
@@ -331,11 +322,11 @@ class ExodusAcquisition(HardwareAcquisition):
     def close(self):
         """Method to close down the hardware
 
-        This simply closes the exodus file."""
+        This simply closes the Exodus file."""
         self.exo.close()
 
     def _create_channel(self, channel: Channel, displacement, node_numbers):
-        """Helper function to create a channel from the exodus file.
+        """Helper function to create a channel from the Exodus file.
 
         This function parses the channel information and then extracts the
         mode shape row corresponding to that channel.
@@ -374,9 +365,7 @@ class ExodusAcquisition(HardwareAcquisition):
         elif channel.node_direction.lower().replace(" ", "") in ["z-", "-z"]:
             direction = np.array([0, 0, -1])
         else:
-            direction = np.array(
-                [float(val) for val in channel.node_direction.split(",")]
-            )
+            direction = np.array([float(val) for val in channel.node_direction.split(",")])
             direction /= np.linalg.norm(direction)
         phi_row = np.einsum("i,ij", direction, displacement[..., node_index])
         return phi_row
@@ -423,13 +412,11 @@ class ExodusOutput(HardwareOutput):
         None.
 
         """
-        pass
 
     def start(self):
         """Method to start acquiring data
 
         Does nothing for synthetic hardware."""
-        pass
 
     def write(self, data: np.ndarray):
         """Method to write a frame of data
@@ -445,8 +432,8 @@ class ExodusOutput(HardwareOutput):
         """
         if DEBUG:
             # Find current files
-            num_files = len(glob.glob(test_files_output_names.format("*")))
-            np.savez(test_files_output_names.format(num_files), forces=data)
+            num_files = len(glob.glob(TEST_FILES_OUTPUT_NAMES.format("*")))
+            np.savez(TEST_FILES_OUTPUT_NAMES.format(num_files), forces=data)
         self.queue.put(data)
 
     def stop(self):
@@ -459,7 +446,6 @@ class ExodusOutput(HardwareOutput):
         """Method to close down the hardware
 
         Does nothing for synthetic hardware."""
-        pass
 
     def ready_for_new_output(self):
         """Signals that the hardware is ready for new output
@@ -472,42 +458,40 @@ class ExodusOutput(HardwareOutput):
 class ExodusError(Exception):
     """An exception to specify an error has occured in the Exodus reader"""
 
-    pass
 
-
-class exodus:
-    """A class with limited exodus file read capabilities"""
+class Exodus:
+    """A class with limited Exodus file read capabilities"""
 
     def __init__(self, filename):
         """
-        Read in an exodus file given by ``filename``
+        Read in an Exodus file given by ``filename``
 
         Parameters
         ----------
         filename : str
-            Path to the exodus file to read.
+            Path to the Exodus file to read.
 
         """
         self.filename = filename
-        self._ncdf_handle = netCDF4.Dataset(filename, "r")
+        self._ncdf_handle = netCDF4.Dataset(filename, "r")  # pylint: disable=no-member
 
     @property
     def num_dimensions(self):
-        """Property to get the number of dimensions in an exodus file"""
+        """Property to get the number of dimensions in an Exodus file"""
         return self._ncdf_handle.dimensions["num_dim"].size
 
     @property
     def num_nodes(self):
-        """Property to get the number of nodes in an exodus file"""
+        """Property to get the number of nodes in an Exodus file"""
         return self._ncdf_handle.dimensions["num_nodes"].size
 
     @property
     def num_times(self):
-        """Property to get the number of time steps in an exodus file"""
+        """Property to get the number of time steps in an Exodus file"""
         return self._ncdf_handle.dimensions["time_step"].size
 
     def get_node_num_map(self):
-        """Retrieve the list of local node IDs from the exodus file.
+        """Retrieve the list of local node IDs from the Exodus file.
 
         Returns
         -------
@@ -517,7 +501,7 @@ class exodus:
 
         Notes
         -----
-        If there is no node_num_map in the exodus file, this function simply
+        If there is no node_num_map in the Exodus file, this function simply
         returns an array from 1 to self.num_nodes
         """
         if "node_num_map" in self._ncdf_handle.variables:
@@ -546,15 +530,14 @@ class exodus:
         return np.array(
             [
                 self.get_node_variable_values(
-                    displacement_name
-                    + (val.upper() if capital_coordinates else val.lower())
+                    displacement_name + (val.upper() if capital_coordinates else val.lower())
                 )
                 for val in "xyz"[: self.num_dimensions]
             ]
         )
 
     def get_coords(self):
-        """Retrieve the coordinates of the nodes in the exodus file.
+        """Retrieve the coordinates of the nodes in the Exodus file.
 
         Returns
         -------
@@ -569,7 +552,7 @@ class exodus:
         return coords
 
     def get_node_variable_names(self):
-        """Gets a tuple of nodal variable names from the exodus file
+        """Gets a tuple of nodal variable names from the Exodus file
 
         Returns
         -------
@@ -578,13 +561,11 @@ class exodus:
             model."""
         try:
             raw_records = self._ncdf_handle.variables["name_nod_var"]
-        except KeyError:
-            raise ExodusError("Node Variable Names are not defined!")
+        except KeyError as e:
+            raise ExodusError("Node Variable Names are not defined!") from e
         node_var_names = tuple(
             "".join(
-                value.decode()
-                for value in line
-                if not isinstance(value, np.ma.core.MaskedConstant)
+                value.decode() for value in line if not isinstance(value, np.ma.core.MaskedConstant)
             )
             for line in raw_records
         )
@@ -614,118 +595,118 @@ class exodus:
         elif isinstance(name_or_index, (str, np.character)):
             try:
                 index = self.get_node_variable_names().index(name_or_index)
-            except ValueError:
+            except ValueError as e:
                 raise ExodusError(
-                    "Name {} not found in self.get_node_variable_names().  Options are {}".format(
-                        name_or_index, self.get_node_variable_names()
-                    )
-                )
-        vals_nod_var_name = "vals_nod_var{:d}".format(index + 1)
+                    f"Name {name_or_index} not found in self.get_node_variable_names().  "
+                    f"Options are {self.get_node_variable_names()}"
+                ) from e
+        else:
+            raise ValueError("name_or_index must be integer or string")
+        vals_nod_var_name = f"vals_nod_var{index + 1:d}"
         if step is not None:
             if step >= self.num_times:
                 raise ExodusError("Invalid Time Step")
             return self._ncdf_handle.variables[vals_nod_var_name][step, :]
-        else:
-            return self._ncdf_handle.variables[vals_nod_var_name][:]
+        return self._ncdf_handle.variables[vals_nod_var_name][:]
 
     def get_times(self):
-        """Gets the time values from the exodus file
+        """Gets the time values from the Exodus file
 
         Returns
         -------
         times : np.ndarray
-            A vector of time values in the exodus file.  These may be
-            frequencies if the exodus file contains a modal or frequency-based
+            A vector of time values in the Exodus file.  These may be
+            frequencies if the Exodus file contains a modal or frequency-based
             solution.
         """
         return self._ncdf_handle.variables["time_whole"][:]
 
     def close(self):
-        """Closes the exodus file"""
+        """Closes the Exodus file"""
         self._ncdf_handle.close()
 
 
-def MCK_to_StateSpace(M, C, K):
+def mck_to_state_space(m, c, k):
     """Creates a state-space representation from a mass, stiffness, and damping matrix.
 
     Parameters
     ----------
-    M : np.ndarray
+    m : np.ndarray
         A square array defining the system mass matrix.
-    C : np.ndarray
+    c : np.ndarray
         A square array defining the system damping matrix
-    K : np.ndarray
+    k : np.ndarray
         A square array defining the system stiffness matrix
 
     Returns
     -------
-    A : np.ndarray
+    a : np.ndarray
         The state space A matrix
-    B : np.ndarray
+    b : np.ndarray
         The state space B matrix
-    C : np.ndarray
+    c : np.ndarray
         The state space C matrix
-    D : np.ndarray
+    d : np.ndarray
         The state space D matrix
     """
 
-    ndofs = M.shape[0]
+    ndofs = m.shape[0]
 
-    # A = [[      0,      I],
-    #      [-M^-1*K,-M^-1*C]]
+    # a = [[      0,      I],
+    #      [-m^-1*k,-m^-1*c]]
 
-    A_state = np.block(
+    a_state = np.block(
         [
             [np.zeros((ndofs, ndofs)), np.eye(ndofs)],
-            [-np.linalg.solve(M, K), -np.linalg.solve(M, C)],
+            [-np.linalg.solve(m, k), -np.linalg.solve(m, c)],
         ]
     )
 
-    # B = [[     0,  M^-1]]
+    # b = [[     0,  m^-1]]
 
-    B_state = np.block([[np.zeros((ndofs, ndofs))], [np.linalg.inv(M)]])
+    b_state = np.block([[np.zeros((ndofs, ndofs))], [np.linalg.inv(m)]])
 
-    # C = [[      I,      0],   # Displacements
+    # c = [[      I,      0],   # Displacements
     #      [      0,      I],   # Velocities
-    #      [-M^-1*K,-M^-1*C],   # Accelerations
+    #      [-m^-1*k,-m^-1*c],   # Accelerations
     #      [      0,      0]]   # Forces
 
-    C_state = np.block(
+    c_state = np.block(
         [
             [np.eye(ndofs), np.zeros((ndofs, ndofs))],
             [np.zeros((ndofs, ndofs)), np.eye(ndofs)],
-            [-np.linalg.solve(M, K), -np.linalg.solve(M, C)],
+            [-np.linalg.solve(m, k), -np.linalg.solve(m, c)],
             [np.zeros((ndofs, ndofs)), np.zeros((ndofs, ndofs))],
         ]
     )
 
-    # D = [[     0],   # Displacements
+    # d = [[     0],   # Displacements
     #      [     0],   # Velocities
-    #      [  M^-1],   # Accelerations
+    #      [  m^-1],   # Accelerations
     #      [     I]]   # Forces
 
-    D_state = np.block(
+    d_state = np.block(
         [
             [np.zeros((ndofs, ndofs))],
             [np.zeros((ndofs, ndofs))],
-            [np.linalg.inv(M)],
+            [np.linalg.inv(m)],
             [np.eye(ndofs)],
         ]
     )
 
-    return A_state, B_state, C_state, D_state
+    return a_state, b_state, c_state, d_state
 
 
-# def integrate_MCK(M,C,K,times,forces,x0=None):
+# def integrate_MCK(m,c,k,times,forces,x0=None):
 #     """Integrates a system defined by a Mass, Stiffness, and Damping Matrix
 
 #     Parameters
 #     ----------
-#     M : np.ndarray
+#     m : np.ndarray
 #         A square array defining the system mass matrix.
-#     C : np.ndarray
+#     c : np.ndarray
 #         A square array defining the system damping matrix
-#     K : np.ndarray
+#     k : np.ndarray
 #         A square array defining the system stiffness matrix
 #     times :
 #         A vector of times that will be passed to the ``scipy.signal.lsim``
@@ -741,15 +722,15 @@ def MCK_to_StateSpace(M, C, K):
 #     -------
 
 #     """
-#     A,B,C,D = MCK_to_StateSpace(M,C,K)
-#     linear_system = signal.StateSpace(A,B,C,D)
+#     a,b,c,d = mck_to_state_space(m,c,k)
+#     linear_system = signal.StateSpace(a,b,c,d)
 
 #     times_out,sys_out,x_out = signal.lsim(linear_system,forces,times,x0)
 
-#     sys_disps = sys_out[:,0*M.shape[0]:1*M.shape[0]]
-#     sys_vels = sys_out[:,1*M.shape[0]:2*M.shape[0]]
-#     sys_accels = sys_out[:,2*M.shape[0]:3*M.shape[0]]
-#     sys_forces = sys_out[:,3*M.shape[0]:4*M.shape[0]]
+#     sys_disps = sys_out[:,0*m.shape[0]:1*m.shape[0]]
+#     sys_vels = sys_out[:,1*m.shape[0]:2*m.shape[0]]
+#     sys_accels = sys_out[:,2*m.shape[0]:3*m.shape[0]]
+#     sys_forces = sys_out[:,3*m.shape[0]:4*m.shape[0]]
 
 #     return sys_disps,sys_vels,sys_accels,sys_forces
 
@@ -777,8 +758,8 @@ def MCK_to_StateSpace(M, C, K):
 
 #     """
 #     nmodes = natural_frequencies.size
-#     M = np.eye(nmodes)
-#     K = np.diag((natural_frequencies*2*np.pi)**2)
-#     C = np.diag((2*2*np.pi*natural_frequencies*damping_ratios))
-#     q = integrate_MCK(M,C,K,times,modal_forces,np.concatenate((q0,qd0)))[:2]
+#     m = np.eye(nmodes)
+#     k = np.diag((natural_frequencies*2*np.pi)**2)
+#     c = np.diag((2*2*np.pi*natural_frequencies*damping_ratios))
+#     q = integrate_MCK(m,c,k,times,modal_forces,np.concatenate((q0,qd0)))[:2]
 #     return q
