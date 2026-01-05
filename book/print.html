@@ -3246,91 +3246,105 @@ The tabs at the top of the <code>Signal Generator</code> section determine the t
 <!--\subsection{Run Test}-->
 <p>We will save the standard modal data file from this test, so we won't worry about setting up streaming.</p>
 <p>To enable the Modal Environment, first click the \inlineCode{Arm Data Acquisition} button. At this point, the modal environment buttons will become enabled, as shown in Figure B-12<!--\ref{fig:examplecdaqmodaltestingready}-->.</p>
-<pre><code>\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_modal_testing_ready}
-    \caption{Run Test tab with data acquisition armed}
-    \label{fig:examplecdaqmodaltestingready}
-\end{figure}
-</code></pre>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_modal_testing_ready}
+        \caption{Run Test tab with data acquisition armed}
+        \label{fig:examplecdaqmodaltestingready}
+    \end{figure}
+-->
 <p><img src="./figures/example_cdaq_modal_testing_ready.png" alt="example_cdaq_modal_testing_ready" /></p>
 <p><strong>Figure B-12. Run Test tab with data acquisition armed</strong></p>
-<pre><code>To start, we will use the \inlineCode{Degree of Freedom Override} section to choose our actual excitation location.  This allows us to more quickly adjust the impact location than returning to the \inlineCode{Data Acquisition Setup} page and reinitializing everything in the channel table. Click the \inlineCode{Add Override} button, and in the row that appears, change the \inlineCode{Channel} column to the force channel. In the \inlineCode{New Node} column, put \inlineCode{23}, which will be the position we excite at. For the \inlineCode{New Direction}, put \inlineCode{Y-}.  This is shown in Figure \ref{fig:examplecdaqchanneloverride}.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.5\linewidth]{figures/example_cdaq_channel_override}
-    \caption{Using the Degree of Freedom Override to adjust the impact location metadata.}
-    \label{fig:examplecdaqchanneloverride}
-\end{figure}
-
-Now with our channels correct, we can set up data display windows. We will use the \inlineCode{New from Template...} dropdown menu to create \inlineCode{Drive Point (Imaginary)}, \inlineCode{Drive Point Coherence}, and \inlineCode{Reference Autospectrum} channels. We will also manually create 5 windows by clicking the \inlineCode{New} button, and set them to visualize the time histories for each channel; these will help us determine if we need to change the trigger settings, frame length, or add a window. Clicking the \inlineCode{Tile} button will expand the windows to fill up the available space.  Figure \ref{fig:examplecdaqmodalimpactemptywindows} shows the result of these operations.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_modal_impact_empty_windows}
-    \caption{Run Test tab with modal windows created.}
-    \label{fig:examplecdaqmodalimpactemptywindows}
-\end{figure}
-
-We will first preview the measurement to ensure that all of the parameters we have selected are adequate. Click the \inlineCode{Preview Acquisition} button and impact the structure behind the 23Y- accelerometer. If the data acquisition triggers, data should appear in the windows as shown in Figure \ref{fig:examplecdaqtrigger}.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_trigger}
-    \caption{Data acquisition triggered, waiting for acceptance or rejection of the measurement.}
-    \label{fig:examplecdaqtrigger}
-\end{figure}
-
-After the data appears, the \inlineCode{Accept} and \inlineCode{Reject} buttons should become active. If the signal decays within the window and the force looks reasonable, we can click \inlineCode{Accept} which will then proceed to the next measurement. After a measurement is accepted, averaged quantities such as coherence, frequency response functions, and autopower spectra will also be computed as shown in Figure \ref{fig:examplecdaqfirstaccept}. Only Spectra (FFTs) and time histories can be visualized prior to accepting a measurement.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_first_accept}
-    \caption{Spectral quantities appear after acceptance.}
-    \label{fig:examplecdaqfirstaccept}
-\end{figure}
-
-After a handful of measurements are taken, we should be able to see the coherence and frequency response functions stabilize. We can evaluate the measurement by investigating the drive point FRF, coherence, reference autospectra, or any other quantities of interest.  Figure \ref{fig:examplecdaqallaccept} shows these results.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_all_accept}
-    \caption{Quantities of interest after 5 averages.}
-    \label{fig:examplecdaqallaccept}
-\end{figure}
-
-If this looks satisfactory, we can proceed with the measurement. Clicking the \inlineCode{Stop Acquisition} button will stop the preview, and allow us to start a real measurement. We must assign a \inlineCode{Data File} to save to by clicking the \inlineCode{Select File...} button. We will call our file \inlineCode{beam_hammer_impact.nc4}. To ensure we do not overwrite our data as we rove the hammer, we will click the \inlineCode{Auto-Increment} checkbox to automatically increment the filename.  This is shown in Figure \ref{fig:examplecdaqfilename}.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.5\linewidth]{figures/example_cdaq_filename}
-    \caption{Setting a file name for the modal data.}
-    \label{fig:examplecdaqfilename}
-\end{figure}
-
-With the data file selected, we can click the \inlineCode{Start Acquisition} button. We perform the measurement identically to the preview case. When the specified number of averages have been acquired, the measurement will stop automatically as shown in Figure \ref{fig:examplecdaqmodalimpactsacquired}.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_modal_impacts_acquired}
-    \caption{Acquisition stops automatically after the desired number of impacts.}
-    \label{fig:examplecdaqmodalimpactsacquired}
-\end{figure}
-
-Now we will acquire the next measurement at node 18. We will update the \inlineCode{New Node} column of the \inlineCode{Degree of Freedom Override} table to be \inlineCode{18}. Note that this will also change the labels on the data windows. We will need to update the response channels on those windows to make sure we are still visualizing the drive point data, as shown in Figure \ref{fig:examplecdaqupdatewindows}.
-
-\begin{figure}[H]
+<p>To start, we will use the \inlineCode{Degree of Freedom Override} section to choose our actual excitation location.  This allows us to more quickly adjust the impact location than returning to the \inlineCode{Data Acquisition Setup} page and reinitializing everything in the channel table. Click the \inlineCode{Add Override} button, and in the row that appears, change the \inlineCode{Channel} column to the force channel. In the \inlineCode{New Node} column, put \inlineCode{23}, which will be the position we excite at. For the \inlineCode{New Direction}, put \inlineCode{Y-}.  This is shown in Figure B-13<!--\ref{fig:examplecdaqchanneloverride}-->.</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.5\linewidth]{figures/example_cdaq_channel_override}
+        \caption{Using the Degree of Freedom Override to adjust the impact location metadata.}
+        \label{fig:examplecdaqchanneloverride}
+    \end{figure}
+-->
+<p><img src="./figures/example_cdaq_channel_override.png" alt="example_cdaq_channel_override" /></p>
+<p><strong>Figure B-13. Using the Degree of Freedom Override to adjust the impact location metadata.</strong></p>
+<p>Now with our channels correct, we can set up data display windows. We will use the \inlineCode{New from Template...} dropdown menu to create \inlineCode{Drive Point (Imaginary)}, \inlineCode{Drive Point Coherence}, and \inlineCode{Reference Autospectrum} channels. We will also manually create 5 windows by clicking the \inlineCode{New} button, and set them to visualize the time histories for each channel; these will help us determine if we need to change the trigger settings, frame length, or add a window. Clicking the \inlineCode{Tile} button will expand the windows to fill up the available space.  Figure B-14 <!--\ref{fig:examplecdaqmodalimpactemptywindows}--> shows the result of these operations.</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_modal_impact_empty_windows}
+        \caption{Run Test tab with modal windows created.}
+        \label{fig:examplecdaqmodalimpactemptywindows}
+    \end{figure}
+-->
+<p><img src="figures/example_cdaq_modal_impact_empty_windows.png" alt="example_cdaq_modal_impact_empty_windows" /></p>
+<p><strong>Figure B-14. Run Test tab with modal windows created.</strong></p>
+<p>We will first preview the measurement to ensure that all of the parameters we have selected are adequate. Click the \inlineCode{Preview Acquisition} button and impact the structure behind the 23Y- accelerometer. If the data acquisition triggers, data should appear in the windows as shown in Figure B-15<!--\ref{fig:examplecdaqtrigger}-->.</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_trigger}
+        \caption{Data acquisition triggered, waiting for acceptance or rejection of the measurement.}
+        \label{fig:examplecdaqtrigger}
+    \end{figure}
+-->
+<p><img src="./figures/example_cdaq_trigger.png" alt="example_cdaq_trigger" /></p>
+<p><strong>Figure B-15. Data acquisition triggered, waiting for acceptance or rejection of the measurement.</strong></p>
+<p>After the data appears, the \inlineCode{Accept} and \inlineCode{Reject} buttons should become active. If the signal decays within the window and the force looks reasonable, we can click \inlineCode{Accept} which will then proceed to the next measurement. After a measurement is accepted, averaged quantities such as coherence, frequency response functions, and autopower spectra will also be computed as shown in Figure B-16<!--\ref{fig:examplecdaqfirstaccept}-->. Only Spectra (FFTs) and time histories can be visualized prior to accepting a measurement.</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_first_accept}
+        \caption{Spectral quantities appear after acceptance.}
+        \label{fig:examplecdaqfirstaccept}
+    \end{figure}
+-->
+<p><img src="./figures/example_cdaq_first_accept.png" alt="example_cdaq_first_accept" /></p>
+<p><strong>Figure B-16. Spectral quantities appear after acceptance.</strong></p>
+<p>After a handful of measurements are taken, we should be able to see the coherence and frequency response functions stabilize. We can evaluate the measurement by investigating the drive point FRF, coherence, reference autospectra, or any other quantities of interest.  Figure B-17<!--\ref{fig:examplecdaqallaccept}--> shows these results.</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_all_accept}
+        \caption{Quantities of interest after 5 averages.}
+        \label{fig:examplecdaqallaccept}
+    \end{figure}
+-->
+<p><img src="./figures/example_cdaq_all_accept.png" alt="example_cdaq_all_accept" /></p>
+<p><strong>Figure B-17. Quantities of interest after 5 averages.</strong></p>
+<p>If this looks satisfactory, we can proceed with the measurement. Clicking the \inlineCode{Stop Acquisition} button will stop the preview, and allow us to start a real measurement. We must assign a \inlineCode{Data File} to save to by clicking the \inlineCode{Select File...} button. We will call our file \inlineCode{beam_hammer_impact.nc4}. To ensure we do not overwrite our data as we rove the hammer, we will click the \inlineCode{Auto-Increment} checkbox to automatically increment the filename.  This is shown in Figure B-18<!--\ref{fig:examplecdaqfilename}-->.</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.5\linewidth]{figures/example_cdaq_filename}
+        \caption{Setting a file name for the modal data.}
+        \label{fig:examplecdaqfilename}
+    \end{figure}
+-->
+<p><img src="./figures/example_cdaq_filename.png" alt="example_cdaq_filename" /></p>
+<p><strong>Figure B-18. Setting a file name for the modal data.</strong></p>
+<p>With the data file selected, we can click the \inlineCode{Start Acquisition} button. We perform the measurement identically to the preview case. When the specified number of averages have been acquired, the measurement will stop automatically as shown in Figure B-19<!--\ref{fig:examplecdaqmodalimpactsacquired}--></p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_modal_impacts_acquired}
+        \caption{Acquisition stops automatically after the desired number of impacts.}
+        \label{fig:examplecdaqmodalimpactsacquired}
+    \end{figure}
+-->
+<p><img src="./figures/example_cdaq_modal_impacts_acquired.png" alt="example_cdaq_modal_impacts_acquired" /></p>
+<p><strong>Figure B-19. Acquisition stops automatically after the desired number of impacts.</strong></p>
+<p>Now we will acquire the next measurement at node 18. We will update the \inlineCode{New Node} column of the \inlineCode{Degree of Freedom Override} table to be \inlineCode{18}. Note that this will also change the labels on the data windows. We will need to update the response channels on those windows to make sure we are still visualizing the drive point data, as shown in Figure B-20<!--\ref{fig:examplecdaqupdatewindows}-->.</p>
+<pre><code>\begin{figure}[H]
     \centering
     \includegraphics[width=0.5\linewidth]{figures/example_cdaq_update_windows}
     \caption{Updating the signal being visualized in the data visualization window.}
     \label{fig:examplecdaqupdatewindows}
 \end{figure}
-
-We can simply press the \inlineCode{Start Acquisition} button, and a new file will be created. After that measurment has been obtained, we will then repeat again, updating the \inlineCode{Degree of Freedom Override} table to node \inlineCode{12} and start a measurement exciting at that location.
-
-When these measurements are complete, we can click \inlineCode{Disarm Data Acquisition} to stop the measurement, and close the Rattlesnake software.
 </code></pre>
+<p><img src="./figures/example_cdaq_update_windows.png" alt="example_cdaq_update_windows" /></p>
+<p><strong>Figure B-20. Updating the signal being visualized in the data visualization window.</strong></p>
+<p>We can simply press the \inlineCode{Start Acquisition} button, and a new file will be created. After that measurment has been obtained, we will then repeat again, updating the \inlineCode{Degree of Freedom Override} table to node \inlineCode{12} and start a measurement exciting at that location.</p>
+<p>When these measurements are complete, we can click \inlineCode{Disarm Data Acquisition} to stop the measurement, and close the Rattlesnake software.</p>
 <h4 id="analyzing-modal-data"><a class="header" href="#analyzing-modal-data">Analyzing Modal Data <!--Section B.1.5--></a></h4>
 <h4 id="modal-testing-with-a-modal-shaker"><a class="header" href="#modal-testing-with-a-modal-shaker">Modal Testing with a Modal Shaker <!--Section B.1.6--></a></h4>
 <h3 id="modal-testing-with-a-modal-shaker-1"><a class="header" href="#modal-testing-with-a-modal-shaker-1">Modal Testing with a Modal Shaker <!Section B.2--></a></h3>
