@@ -59,3 +59,21 @@ h4 {
 
 }
 
+/* --- WARNING CALLOUT --- */
+.warning-box {
+    /* background-color: #fff3cd; */
+    background-color: var(--theme-hover); /* Uses the theme's 'hover' color for the box */
+    /* color: #856404; */
+    /* Removed hard-coded color to inherit from body */
+    padding: 15px;
+    /* border: 1px solid #ffeeba; */
+    border: 1pt solid var(--fg);         /* Uses the theme's main 'foreground' text color */
+    border-radius: 5px;
+    margin: 1em 0; /* Adds spacing above and below the box */
+}
+
+.warning-box strong {
+    /* color: #856404 !important; */ /* Overrides your red list-item style if used inside a box */
+    /* Removed hard-coded color to inherit from body */
+    margin-right: 0.5em;
+}
