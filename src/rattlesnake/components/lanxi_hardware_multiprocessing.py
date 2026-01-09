@@ -1095,8 +1095,8 @@ class LanXIOutput(HardwareOutput):
                     (generator_device, output["inputs"][0]["port"])
                 )
                 print(
-                    f"Output Connected to Device {generator_device} Channel {output["number"]} "
-                    f"on Port {output["inputs"][0]["port"]}"
+                    f"Output Connected to Device {generator_device} Channel {output['number']} "
+                    f"on Port {output['inputs'][0]['port']}"
                 )
                 self.oversample_factor = round(
                     OUTPUT_RATE / (2 ** output["inputs"][0]["samplingRate"]) / self.sample_rate
