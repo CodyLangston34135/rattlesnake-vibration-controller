@@ -68,7 +68,17 @@ Create a `.bib` file (e.g., `bibliography.bib`) in the root of the `documentatio
 3. Configure `book.toml`
 
 Tell mdBook to use the `mdbook-bib` preprocessor and specify the path to the
-bibliography file in the `book.toml` configuration file.  Add the following section
+bibliography file in the `book.toml` configuration file.  
+
+Make sure any GitHub workflows also install `mdbook-bib`, e.g.,
+
+```bash
+      - name: Install mdBook and preprocessors
+        run: |
+          cargo install mdbook mdbook-katex mdbook-bib
+```
+
+Add the following section
 to the `book.toml`:
 
 ```sh

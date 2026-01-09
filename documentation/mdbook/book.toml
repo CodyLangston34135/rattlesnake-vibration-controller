@@ -14,11 +14,15 @@ after = ["links"] # By setting after = ["links"], you ensure that link processin
 [output.html]
 additional-css = ["theme/custom.css"]
 
+# [preprocessor.bib]
+# # The name of your .bib file, relative to the src directory
+# # Ensure it runs after links but before katex
+# after = ["links"]
+# before = ["katex"]
+# bibliography = "bibliography.bib"
+
 [preprocessor.bib]
-# The name of your .bib file, relative to the src directory
-# Ensure it runs after links but before katex
-after = ["links"]
-before = ["katex"]
+# Remove 'after' and 'before' for a moment to see if it's a sorting issue
 bibliography = "bibliography.bib"
 
 # Optional: Set the title for the automatically generated bibliography chapter

@@ -25,16 +25,16 @@ jobs:
         with:
           path: /usr/local/cargo/bin
           # Updated key to 0.4.52 to ensure we cache the correct stable version
-          key: ${{ runner.os }}-mdbook-0.4.52-${{ hashFiles('**/book.toml') }}
+          key: ${{ runner.os }}-mdbook-0.4.52-v2-${{ hashFiles('**/book.toml') }}
           restore-keys: |
-            ${{ runner.os }}-mdbook-0.4.52-
+            ${{ runner.os }}-mdbook-0.4.52-v2
 
       - name: Install mdBook and preprocessors
         run: |
           # Pin mdbook to 0.4.52 for compatibility with older preprocessors
           command -v mdbook >/dev/null 2>&1 || cargo install mdbook --version 0.4.52
-          command -v mdbook-katex >/dev/null 2>&1 || cargo install mdbook-katex
-          command -v mdbook-bib >/dev/null 2>&1 || cargo install mdbook-bib
+          command -v mdbook-katex >/dev/null 2>&1 || cargo install mdbook-katex --version 0.3.0
+          command -v mdbook-bib >/dev/null 2>&1 || cargo install mdbook-bib --version 0.0.3
 
       - name: Build mdBook
         run: mdbook build documentation/mdbook
