@@ -1168,8 +1168,8 @@ class LanXIOutput(HardwareOutput):
             response = requests.get("http://" + host + "/rest/rec/onchange", timeout=60)
             state_data = response.json()
             print(
-                f"Host {host}: Recorder State {state_data["moduleState"]}, Input State "
-                f"{state_data["inputStatus"]}, PTP State {state_data["ptpStatus"]}, Recording Mode"
+                f"Host {host}: Recorder State {state_data['moduleState']}, Input State "
+                f"{state_data['inputStatus']}, PTP State {state_data['ptpStatus']}, Recording Mode"
             )
 
     def _reboot_all(self):
