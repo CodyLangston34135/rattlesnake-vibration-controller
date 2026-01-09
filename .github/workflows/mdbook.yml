@@ -1,6 +1,8 @@
 # name: Deploy mdBook
 # name: # keep this field blank to automatically show the filename that triggers it in the CD/CD web UI
 name: mdbook.yml
+# Keep the 'name' field above to show the filename in the GitHub UI.
+
 on:
   push:
     branches:
@@ -21,15 +23,14 @@ jobs:
         uses: actions/cache@v3
         with:
           path: /usr/local/cargo/bin
-          # This key creates a unique cache for your specific tools
+          # Updated key to 0.4.52 to ensure we cache the correct stable version
           key: ${{ runner.os }}-mdbook-0.4.52-${{ hashFiles('**/book.toml') }}
           restore-keys: |
             ${{ runner.os }}-mdbook-0.4.52-
 
       - name: Install mdBook and preprocessors
         run: |
-          # Only installs if the binaries don't already exist in the cached path
-          # Pin mdbook to 0.4.52 because new mdbook versions break cmdrun and mdbook-bib
+          # Pin mdbook to 0.4.52 for compatibility with older preprocessors
           command -v mdbook >/dev/null 2>&1 || cargo install mdbook --version 0.4.52
           command -v mdbook-katex >/dev/null 2>&1 || cargo install mdbook-katex
           command -v mdbook-bib >/dev/null 2>&1 || cargo install mdbook-bib
