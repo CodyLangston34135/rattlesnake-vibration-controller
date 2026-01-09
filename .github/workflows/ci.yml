@@ -1,5 +1,6 @@
 # name: CI
-name: # keep this field blank to automatically show the filename that triggers it in the CD/CD web UI
+# name: # keep this field blank to automatically show the filename that triggers it in the CD/CD web UI
+name: ci.yml
 
 on:
   push:
