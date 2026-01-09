@@ -2,7 +2,7 @@
 authors = ["Daniel P. Rohe", "Ryan Schultz", "Norman Hunter"]
 description = "Rattlesnake is a combined-environments, multiple input/multiple output control system for dynamic excitation of structures under test."
 language = "en"
-multilingual = false
+# multilingual = false #  multilingual key removed in mdBook 0.5.0, released late 2024
 src = "src"
 title = "Rattlesnake Vibration Controller"
 
