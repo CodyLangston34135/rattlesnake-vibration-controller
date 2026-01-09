@@ -1,4 +1,5 @@
-name: CI
+# name: CI
+name: # keep this field blank to automatically show the filename that triggers it in the CD/CD web UI
 
 on:
   push:
