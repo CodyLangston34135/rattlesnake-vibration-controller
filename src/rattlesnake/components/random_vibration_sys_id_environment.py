@@ -300,7 +300,8 @@ class RandomVibrationMetadata(AbstractSysIdMetadata):
         )
 
     def store_to_netcdf(
-        self, netcdf_group_handle: nc4._netCDF4.Group  # pylint: disable=c-extension-no-member
+        self,
+        netcdf_group_handle: nc4._netCDF4.Group,  # pylint: disable=c-extension-no-member
     ):
         """Store parameters to a group in a netCDF streaming file.
 
@@ -311,7 +312,7 @@ class RandomVibrationMetadata(AbstractSysIdMetadata):
         attributes, dimensions, or variables.
 
         This function is the "write" counterpart to the retrieve_metadata
-        function in the AbstractUI class, which will read parameters from
+        function in the RandomVibrationUI class, which will read parameters from
         the netCDF file to populate the parameters in the user interface.
 
         Parameters
@@ -2277,7 +2278,7 @@ class RandomVibrationUI(AbstractSysIdUI):
         environment.
 
         This function is the "write" counterpart to the
-        ``set_parameters_from_template`` function in the ``AbstractUI`` class,
+        ``set_parameters_from_template`` function in the ``RandomVibrationUI`` class,
         which reads the values from the template file to populate the user
         interface.
 
