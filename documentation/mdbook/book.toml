@@ -1,6 +1,6 @@
 [book]
 authors = ["Daniel P. Rohe", "Ryan Schultz", "Norman Hunter"]
-descrption = "Rattlesnake is a combined-environments, multiple input/multiple output control system for dynamic excitation of structures under test."
+description = "Rattlesnake is a combined-environments, multiple input/multiple output control system for dynamic excitation of structures under test."
 language = "en"
 multilingual = false
 src = "src"
@@ -8,7 +8,7 @@ title = "Rattlesnake Vibration Controller"
 
 # did work for local LaTeX, uses KaTeX, which is faster than MathJax
 [preprocessor.katex]
-after = ["links"]
+after = ["links"] # By setting after = ["links"], you ensure that link processing happens before math rendering, which is the recommended practice to prevent conflicts with special characters.
 
 # reference font modifications made in the theme/custom.css file
 [output.html]
