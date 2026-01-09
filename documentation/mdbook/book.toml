@@ -16,6 +16,9 @@ additional-css = ["theme/custom.css"]
 
 [preprocessor.bib]
 # The name of your .bib file, relative to the src directory
+# Ensure it runs after links but before katex
+after = ["links"]
+before = ["katex"]
 bibliography = "bibliography.bib"
 
 # Optional: Set the title for the automatically generated bibliography chapter
