@@ -114,6 +114,10 @@ rattlesnake = "rattlesnake.rattlesnake:main"
 #max-line-length = 160
 #statistics = true
 
-[tool.isort]
-profile = "black"
-line_length = 88
+#[tool.isort]
+#profile = "black"
+# line_length = 88
+#line_length = 100
+
+[tool.black]
+line-length = 100  # Update from 88 to 100
