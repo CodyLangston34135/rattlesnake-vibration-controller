@@ -26,24 +26,26 @@ dependencies = [
     "nidaqmx",
     "numpy",
     "openpyxl",
+    "packaging",
     "PyQt5; sys_platform!='darwin'",
     "PyQt6; sys_platform=='darwin'",
     "pyqtgraph",
     "qtpy",
     "requests",
     "scipy",
-]
-requires-python = '>=3.8'
-version = '3.0.2'
-#classifiers = [
-#    'Natural Language :: English',
-#    'Operating System :: Microsoft :: Windows :: Windows 10',
-#    'Operating System :: MacOS :: MacOS X',
-#    'Operating System :: POSIX :: Linux',
-#    'Programming Language :: Python :: 3.8',
-#    'Framework :: Pytest',
-#    'License :: Other/Proprietary License'
-#    ]
+    ]
+requires-python = '>=3.10'
+version = '3.1.0'
+
+classifiers = [
+    'Natural Language :: English',
+    'Operating System :: Microsoft :: Windows :: Windows 10',
+    'Operating System :: MacOS :: MacOS X',
+    'Operating System :: POSIX :: Linux',
+    'Programming Language :: Python :: 3.8',
+    'Framework :: Pytest',
+    'License :: OSI Approved :: GNU General Public License v3 (GPLv3)'
+    ]
 
 [project.optional-dependencies]
 dev = [
@@ -75,9 +77,12 @@ dev = [
 #                'sphinx', 'sphinx-rtd-theme', 'sphinxcontrib-bibtex'
 #]
 
-#[project.urls]
-#Documentation = 'http://structmechtools.cee-gitlab.lan/structural-dynamics-python-libraries/'
-#Repository = 'https://cee-gitlab.sandia.gov/structMechTools/structural-dynamics-python-libraries'
+[project.urls]
+Documentation = 'https://sandialabs.github.io/rattlesnake-vibration-controller'
+Repository = 'https://github.com/sandialabs/rattlesnake-vibration-controller'
+
+[project.scripts]
+rattlesnake = "rattlesnake.rattlesnake:main"
 
 #[tool.pytest.ini_options]
 #junit_family = 'xunit2'
@@ -109,6 +114,10 @@ dev = [
 #max-line-length = 160
 #statistics = true
 
-[tool.isort]
-profile = "black"
-line_length = 88
+#[tool.isort]
+#profile = "black"
+# line_length = 88
+#line_length = 100
+
+[tool.black]
+line-length = 100  # Update from 88 to 100

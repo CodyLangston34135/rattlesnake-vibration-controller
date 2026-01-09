@@ -23,10 +23,9 @@ import datetime
 import multiprocessing as mp
 import sys
 
-# import numpy as np  # unused import
 from qtpy import QtWidgets
 
-from components import (
+from .components import (
     ControlSelect,
     ControlTypes,
     EnvironmentSelect,
@@ -35,35 +34,14 @@ from components import (
     VerboseMessageQueue,
     acquisition_process,
     all_environment_processes,
+    log_file_task,
     output_process,
     streaming_process,
 )
 
 
-def log_file_task(queue: mp.queues.Queue):
-    """A multiprocessing function that collects logging data and writes to file
-
-    Parameters
-    ----------
-    queue : mp.queues.Queue
-        The multiprocessing queue to collect logging messages from
-
-
-    """
-    with open("Rattlesnake.log", "w") as f:
-        while True:
-            output = queue.get()
-            if output == "quit":
-                f.write("Program quitting, logging terminated.")
-                break
-            num_newlines = output.count("\n")
-            if num_newlines > 1:
-                output = output.replace("\n", "////", num_newlines - 1)
-            f.write(output)
-            f.flush()
-
-
-if __name__ == "__main__":
+def main():
+    """Main Rattlesnake Application Entry Point"""
     mp.freeze_support()  # Required to compile into an executable
     print("Loading Rattlesnake...")
     # Create the user interface application
@@ -75,11 +53,11 @@ if __name__ == "__main__":
     for ct in ControlTypes:
         if ct.name in upper_args:
             control_type = ct
-            print("Using Control Type {:} from command line".format(ct.name))
+            print(f"Using Control Type {ct.name} from command line")
             break
     if control_type is None:
         control_type, close_flag = ControlSelect.select_control()
-        if close_flag == False:
+        if not close_flag:
             sys.exit()
 
     loaded_profile = None
@@ -100,13 +78,9 @@ if __name__ == "__main__":
     log_file_process.start()
 
     # Set up the other command queues
-    acquisition_command_queue = VerboseMessageQueue(
-        log_file_queue, "Acquisition Command Queue"
-    )
+    acquisition_command_queue = VerboseMessageQueue(log_file_queue, "Acquisition Command Queue")
     output_command_queue = VerboseMessageQueue(log_file_queue, "Output Command Queue")
-    streaming_command_queue = VerboseMessageQueue(
-        log_file_queue, "Streaming Command Queue"
-    )
+    streaming_command_queue = VerboseMessageQueue(log_file_queue, "Streaming Command Queue")
 
     # Set up synchronization queues
     input_output_sync_queue = mp.Queue()
@@ -187,31 +161,43 @@ if __name__ == "__main__":
     streaming_proc = mp.Process(target=streaming_process, args=(queue_container,))
     streaming_proc.start()
 
-    window = Ui(environments, queue_container, loaded_profile)
+    _ = Ui(environments, queue_container, loaded_profile)
 
     # Run the program
     app.exec_()
 
     # Rejoin all proceseses
-    log_file_queue.put(
-        "{:}: Joining Acquisition Process\n".format(datetime.datetime.now())
-    )
-    acquisition_proc.join()
-    log_file_queue.put("{:}: Joining Output Process\n".format(datetime.datetime.now()))
-    output_proc.join()
-    log_file_queue.put(
-        "{:}: Joining Streaming Process\n".format(datetime.datetime.now())
-    )
-    streaming_proc.join()
+    log_file_queue.put(f"{datetime.datetime.now()}: Joining Acquisition Process\n")
+    acquisition_proc.join(timeout=5)
+    if acquisition_proc.is_alive():
+        log_file_queue.put(f"{datetime.datetime.now()}: Force Closing Acquisition Process\n")
+        acquisition_proc.terminate()
+        acquisition_proc.join()
+    log_file_queue.put(f"{datetime.datetime.now()}: Joining Output Process\n")
+    output_proc.join(timeout=5)
+    if output_proc.is_alive():
+        log_file_queue.put(f"{datetime.datetime.now()}: Force Closing Output Process\n")
+        output_proc.terminate()
+        output_proc.join()
+    log_file_queue.put(f"{datetime.datetime.now()}: Joining Streaming Process\n")
+    streaming_proc.join(timeout=5)
+    if streaming_proc.is_alive():
+        log_file_queue.put(f"{datetime.datetime.now()}: Force Closing Streaming Process\n")
+        streaming_proc.terminate()
+        streaming_proc.join()
     for environment_name, environment_process in environment_processes.items():
-        log_file_queue.put(
-            "{:}: Joining {:} Process\n".format(
-                datetime.datetime.now(), environment_name
+        log_file_queue.put(f"{datetime.datetime.now()}: Joining {environment_name} Process\n")
+        environment_process.join(timeout=5)
+        if environment_process.is_alive():
+            log_file_queue.put(
+                f"{datetime.datetime.now()}: Force Closing {environment_name} Process\n"
             )
-        )
-        environment_process.join()
-    log_file_queue.put(
-        "{:}: Joining Log File Process\n".format(datetime.datetime.now())
-    )
+            environment_process.terminate()
+            environment_process.join()
+    log_file_queue.put(f"{datetime.datetime.now()}: Joining Log File Process\n")
     log_file_queue.put("quit")
     log_file_process.join()
+
+
+if __name__ == "__main__":
+    main()

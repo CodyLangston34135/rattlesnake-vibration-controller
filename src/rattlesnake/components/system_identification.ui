@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1161</width>
-    <height>825</height>
+    <width>1165</width>
+    <height>914</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -425,6 +425,40 @@
           </property>
          </widget>
         </item>
+        <item row="6" column="0">
+         <widget class="QLabel" name="bandwidthLabel">
+          <property name="text">
+           <string>Bandwidth</string>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="1">
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <item>
+           <widget class="QSpinBox" name="lowFreqCutoffSpinBox">
+            <property name="suffix">
+             <string> Hz</string>
+            </property>
+            <property name="maximum">
+             <number>100000</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="highFreqCutoffSpinBox">
+            <property name="suffix">
+             <string> Hz</string>
+            </property>
+            <property name="maximum">
+             <number>100000</number>
+            </property>
+            <property name="value">
+             <number>100000</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
        </layout>
       </widget>
      </item>
@@ -487,6 +521,15 @@
           </property>
          </widget>
         </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="save_load_spectral_data_groupbox">
+       <property name="title">
+        <string>Save/Load Spectral Data</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_4">
         <item>
          <widget class="QPushButton" name="save_system_id_matrices_button">
           <property name="toolTip">
@@ -494,6 +537,13 @@
           </property>
           <property name="text">
            <string>Save System Identification Data</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="load_system_id_matrices_button">
+          <property name="text">
+           <string>Load System Identification Data</string>
           </property>
          </widget>
         </item>
@@ -679,7 +729,7 @@
        <property name="title">
         <string>Data</string>
        </property>
-       <layout class="QVBoxLayout" name="verticalLayout_8" stretch="0,0,0,0,0">
+       <layout class="QVBoxLayout" name="verticalLayout_8" stretch="0,0,0,0,0,0">
         <item>
          <widget class="QGroupBox" name="time_data_groupbox">
           <property name="title">
@@ -736,6 +786,18 @@
           <layout class="QHBoxLayout" name="horizontalLayout_7">
            <item>
             <widget class="GraphicsLayoutWidget" name="levels_graphicslayout"/>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="kurtosis_groupbox">
+          <property name="title">
+           <string>Kurtosis</string>
+          </property>
+          <layout class="QHBoxLayout" name="horizontalLayout">
+           <item>
+            <widget class="GraphicsLayoutWidget" name="kurtosis_graphicslayout"/>
            </item>
           </layout>
          </widget>
@@ -910,6 +972,13 @@
           </property>
           <property name="text">
            <string>Levels</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="kurtosis_checkbox">
+          <property name="text">
+           <string>Kurtosis</string>
           </property>
          </widget>
         </item>

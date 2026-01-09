@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1568</width>
+    <width>2277</width>
     <height>667</height>
    </rect>
   </property>
@@ -1522,6 +1522,18 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
                  <string>SDynPy System Integration...</string>
                 </property>
                </item>
+               <item>
+                <property name="text">
+                 <string>SDynPy FRF Convolution...</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="ip_lookup_button">
+               <property name="text">
+                <string>IP Address Lookup</string>
+               </property>
               </widget>
              </item>
              <item>
@@ -1690,6 +1702,50 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
                 <number>10</number>
                </property>
               </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="task_trigger_label">
+               <property name="text">
+                <string>Task Trigger</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="task_trigger_selector">
+               <property name="sizeAdjustPolicy">
+                <enum>QComboBox::AdjustToContents</enum>
+               </property>
+               <item>
+                <property name="text">
+                 <string>Internal (ai/StartTrigger)</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>External (PFI0)</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>External (PFI0) with Trigger Task</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>No Trigger</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="task_trigger_output_label">
+               <property name="text">
+                <string>Trigger Output Channel</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="task_trigger_output_selector"/>
              </item>
             </layout>
            </widget>
@@ -2363,6 +2419,27 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
        </widget>
       </item>
       <item>
+       <widget class="QLabel" name="color_theme_label">
+        <property name="text">
+         <string>Theme:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="color_theme_combobox">
+        <item>
+         <property name="text">
+          <string>Light</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Dark</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item>
        <spacer name="global_button_spacer">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -2436,7 +2513,7 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1568</width>
+     <width>2277</width>
      <height>21</height>
     </rect>
    </property>

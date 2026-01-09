@@ -365,6 +365,11 @@
                 <string>Class</string>
                </property>
               </item>
+              <item>
+               <property name="text">
+                <string>Interactive</string>
+               </property>
+              </item>
              </widget>
             </item>
            </layout>
