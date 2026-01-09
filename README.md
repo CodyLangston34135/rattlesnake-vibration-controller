@@ -38,3 +38,4 @@ Rattlesnake has been run with over 50 control channels and 12 shaker drives whil
 
 To facilitate MIMO vibration research and development, users can program their own control laws to load into the controller at runtime.
 See [Control Laws](https://github.com/sandialabs/rattlesnake-vibration-controller/tree/main/control_laws) for examples.
+
