@@ -9,6 +9,7 @@ on:
       - main
       - dev
       - "*doc"
+      - tag-it
 
 jobs:
   deploy-book:
