@@ -208,16 +208,16 @@ jobs:
           }
           EOF
 
-      - name: Commit badges
-        run: |
-          git pull
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add badges/
-          git diff --staged --quiet || git commit -m "Update badges [skip ci]"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#      - name: Commit badges
+#        run: |
+#          git pull
+#          git config --local user.email "action@github.com"
+#          git config --local user.name "GitHub Action"
+#          git add badges/
+#          git diff --staged --quiet || git commit -m "Update badges [skip ci]"
+#          git push
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Assemble pages directory
         run: |
