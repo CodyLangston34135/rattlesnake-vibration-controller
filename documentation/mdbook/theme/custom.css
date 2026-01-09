@@ -8,14 +8,22 @@
 
 body {
     font-family: 'Crimson Pro', Georgia, serif;
-    font-size: 2em;
+    /* font-size: 2em; */
+    font-size: 1.15em;
     /* To make the Crimson Pro font a bit larger by default, add the font-size property
      * to the body selector and set it to a value slightly larger than the browser's default
      * (which is usually 16px or 1em).
      */
 }
 
+/* Ensure the bibliography entries look crisp and professional */
+.bib-entry {
+    margin-bottom: 15px;
+    font-size: 0.95em;
+}
+
 pre, code {
     font-family: Monaco, 'Courier New', monospace;
-    font-size: 0.75em;
+    /* font-size: 0.75em; */
+    font-size: 0.85em;
 }
