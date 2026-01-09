@@ -2,31 +2,23 @@
 authors = ["Daniel P. Rohe", "Ryan Schultz", "Norman Hunter"]
 description = "Rattlesnake is a combined-environments, multiple input/multiple output control system for dynamic excitation of structures under test."
 language = "en"
-# multilingual = false #  multilingual key removed in mdBook 0.5.0, released late 2024
 src = "src"
 title = "Rattlesnake Vibration Controller"
 
-# did work for local LaTeX, uses KaTeX, which is faster than MathJax
+# Configuration for math rendering
 [preprocessor.katex]
-after = ["links"] # By setting after = ["links"], you ensure that link processing happens before math rendering, which is the recommended practice to prevent conflicts with special characters.
+after = ["links"]
 
-# reference font modifications made in the theme/custom.css file
+# Configuration for bibliography
+[preprocessor.bib]
+# Ensure bibliography.bib is in the same folder as this book.toml file
+bibliography = "bibliography.bib"
+title = "Bibliography"
+render-bib = "cited"
+
+# HTML Output settings
 [output.html]
 additional-css = ["theme/custom.css"]
 
-# [preprocessor.bib]
-# # The name of your .bib file, relative to the src directory
-# # Ensure it runs after links but before katex
-# after = ["links"]
-# before = ["katex"]
-# bibliography = "bibliography.bib"
-
-[preprocessor.bib]
-# Remove 'after' and 'before' for a moment to see if it's a sorting issue
-bibliography = "bibliography.bib"
-
-# Optional: Set the title for the automatically generated bibliography chapter
-title = "Bibliography"
-
-# Optional: Render the entire bibliography ("all") or only cited entries ("cited")
-render-bib = "cited"
+# MANDATORY: This block prevents the 'mdbook-katex' 101 panic
+[output.html.katex]
