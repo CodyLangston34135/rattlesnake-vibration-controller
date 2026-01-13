@@ -3941,103 +3941,106 @@ spec.error_summary(figure_kwargs={'figsize':(10,6)},Control=control)
 <p><strong>Figure B-59. Error summary between the test and specification for the random vibration control.</strong></p>
 <p>We can then \inlineCode{Stop Environment}, \inlineCode{Disarm Data Acquisition} and close the software.</p>
 <h4 id="b35-setting-up-the-transient-vibration-test"><a class="header" href="#b35-setting-up-the-transient-vibration-test">B.3.5. Setting up the Transient Vibration Test <!--B.3.5--></a></h4>
-<h4 id="b36-running-a-transient-test"><a class="header" href="#b36-running-a-transient-test">B.3.6. Running a Transient Test <!--B.3.6--></a></h4>
-<h3 id="b4-summary"><a class="header" href="#b4-summary">B.4. Summary <!--B.4--></a></h3>
-<pre><code>\subsection{Setting up the Transient Vibration Test}
-
-The last demonstration will show how we can perform a MIMO Transient environment test. Open Rattlesnake and select the \inlineCode{MIMO Transient} environment as shown in Figure \ref{fig:examplecdaqmimotransientselection}.
-
-\begin{figure}[H]
+<!--\subsection{Setting up the Transient Vibration Test}-->
+<p>The last demonstration will show how we can perform a MIMO Transient environment test. Open Rattlesnake and select the \inlineCode{MIMO Transient} environment as shown in Figure B-60<!--\ref{fig:examplecdaqmimotransientselection}-->.</p>
+<pre><code>\begin{figure}[H]
     \centering
     \includegraphics[width=0.5\linewidth]{figures/example_cdaq_mimo_transient_selection}
     \caption{Selecting the \ac{MIMO} Transient environment}
     \label{fig:examplecdaqmimotransientselection}
 \end{figure}
-
-We will set the \inlineCode{Data Acquisition Setup} tab identical to what was used before, as shown in Figure \ref{fig:examplecdaqvibrationdataacquisitionsetup}. Click the \inlineCode{Initialize Data Acquisition} button to proceed.
-
-On the \inlineCode{Environment Definition tab}, we will again \inlineCode{Load} a control law file. This time we will load the \inlineCode{transient_control_laws.py} file, which contains transient control laws for Rattlesnake. We will select the \inlineCode{pseudoinverse_control} function.
-
-In the \inlineCode{Control Channels} section, we will again select all four accelerometer channels as the control channels.
-
-Finally, we will select the \inlineCode{Load Signal} button to load in our specification file \inlineCode{transient_specification.npz}.  Figure \ref{fig:examplecdaqtransientparameters} shows these parameters set in the Rattlesnake \ac{GUI}.  With these parameters set, we will click the \inlineCode{Initialize Environments} button to proceed.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_transient_parameters}
-    \caption{Parameters set for the Transient environment in the Rattlesnake \ac{GUI}.}
-    \label{fig:examplecdaqtransientparameters}
-\end{figure}
-
-The Transient environment will also need to perform a \inlineCode{System Identification}. Again set the \inlineCode{Level} to \inlineCode{0.1 V RMS} and click \inlineCode{Start} to start the noise floor and system identification. Here it may be useful to look at the \inlineCode{Impulse Response}, as that is useful to understand how transient control will be performed.  This is shown in Figure \ref{fig:examplecdaqtransientsystemid}.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_transient_system_id}
-    \caption{System Identification for the Transient environment with Impulse Response function shown.}
-    \label{fig:examplecdaqtransientsystemid}
-\end{figure}
-
-Once the system identification has been performed, Rattlesnake will again make a prediction as to the results of the test and show it on the \inlineCode{Test Predictions} tab. It will show the peak voltage it aims to output, as well as the response it predicts that it will get compared to the desired response.  Figure \ref{fig:examplecdaqtransientpredictions} shows these predictions.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_transient_predictions}
-    \caption{Test predictions and voltage that will be output for the transient control.}
-    \label{fig:examplecdaqtransientpredictions}
-\end{figure}
-
-We can then proceed to the \inlineCode{Test Profile} tab, click the \inlineCode{Initialize Profile} button, and we are ready to run the test.
-
-\subsection{Running a Transient Test}
-
-We can now click the \inlineCode{Arm Data Acquisition} button to enable the Transient control functionality. We can set the \inlineCode{Signal Level} to \inlineCode{-12} dB to start so we don't break anything when we run. If it runs successfully, then we can step back up to full level.
-
-Rattlesnake will identify the control signal as it comes through the data acquisition and surround it with a box, as shown in Figure \ref{fig:examplecdaqtransientcontrolresults}.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_transient_control_results}
-    \caption{Running the transient control with the control signal identified.}
-    \label{fig:examplecdaqtransientcontrolresults}
-\end{figure}
-
-To visualize individual channels, new windows can be created in the \inlineCode{Data Display} portion of the window.  The four control channels can be seen in Figure \ref{fig:examplecdaqtransientcontrolchannels}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_transient_control_channels}
-    \caption{Control achieved on each control channel in the Transient vibration test.}
-    \label{fig:examplecdaqtransientcontrolchannels}
-\end{figure}
-
-To save out data, we can click the \inlineCode{Save Current Control Data} button. We will save the data to the file \inlineCode{transient_vibration_control_results.nc4}. This can be loaded into SDynPy to do comparisons to the desired signal.  It can be useful to zoom in to the starts of each impulse to see that while the ring down does match quite well, the initial impulse cannot be achieved as well with the modal shakers as it was with the impact hammer.  These results are shown in Figure \ref{fig:examplecdaqtransientzoom}.
-
-\begin{lstlisting}[language=Python]
 </code></pre>
-<p>control, specification, drives = sdpy.rattlesnake.read_transient_control_data(
-'transient_vibration_control_results.nc4')</p>
-<p>ax = specification.plot(
-one_axis=False, plot_kwargs = {'linewidth':0.5},
-subplots_kwargs = {'figsize':(10,6),'sharex':True,'sharey':True})
+<p><img src="figures/example_cdaq_mimo_transient_selection.png" alt="example_cdaq_mimo_transient_selection" /></p>
+<p><strong>Figure B-60. Selecting the \ac{MIMO} Transient environment</strong></p>
+<p>We will set the \inlineCode{Data Acquisition Setup} tab identical to what was used before, as shown in Figure B-50<!--\ref{fig:examplecdaqvibrationdataacquisitionsetup}-->. Click the \inlineCode{Initialize Data Acquisition} button to proceed.</p>
+<p>On the \inlineCode{Environment Definition tab}, we will again \inlineCode{Load} a control law file. This time we will load the \inlineCode{transient_control_laws.py} file, which contains transient control laws for Rattlesnake. We will select the \inlineCode{pseudoinverse_control} function.</p>
+<p>In the \inlineCode{Control Channels} section, we will again select all four accelerometer channels as the control channels.</p>
+<p>Finally, we will select the \inlineCode{Load Signal} button to load in our specification file \inlineCode{transient_specification.npz}.  Figure B-61<!--\ref{fig:examplecdaqtransientparameters}--> shows these parameters set in the Rattlesnake \ac{GUI}.  With these parameters set, we will click the \inlineCode{Initialize Environments} button to proceed.</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_transient_parameters}
+        \caption{Parameters set for the Transient environment in the Rattlesnake \ac{GUI}.}
+        \label{fig:examplecdaqtransientparameters}
+    \end{figure}
+-->
+<p><img src="figures/example_cdaq_transient_parameters.png" alt="example_cdaq_transient_parameters" /></p>
+<p><strong>Figure B-61. Parameters set for the Transient environment in the Rattlesnake \ac{GUI}.</strong></p>
+<p>The Transient environment will also need to perform a \inlineCode{System Identification}. Again set the \inlineCode{Level} to \inlineCode{0.1 V RMS} and click \inlineCode{Start} to start the noise floor and system identification. Here it may be useful to look at the \inlineCode{Impulse Response}, as that is useful to understand how transient control will be performed.  This is shown in Figure B-62<!--\ref{fig:examplecdaqtransientsystemid}-->.</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_transient_system_id}
+        \caption{System Identification for the Transient environment with Impulse Response function shown.}
+        \label{fig:examplecdaqtransientsystemid}
+    \end{figure}
+-->
+<p><img src="figures/example_cdaq_transient_system_id.png" alt="example_cdaq_transient_system_id" /></p>
+<p><strong>Figure B-62. System Identification for the Transient environment with Impulse Response function shown.</strong></p>
+<p>Once the system identification has been performed, Rattlesnake will again make a prediction as to the results of the test and show it on the \inlineCode{Test Predictions} tab. It will show the peak voltage it aims to output, as well as the response it predicts that it will get compared to the desired response.  Figure B-63<!--\ref{fig:examplecdaqtransientpredictions}--> shows these predictions.</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_transient_predictions}
+        \caption{Test predictions and voltage that will be output for the transient control.}
+        \label{fig:examplecdaqtransientpredictions}
+    \end{figure}
+-->
+<p><img src="figures/example_cdaq_transient_predictions.png" alt="example_cdaq_transient_predictions" /></p>
+<p><strong>Figure B-63. Test predictions and voltage that will be output for the transient control.</strong></p>
+<p>We can then proceed to the \inlineCode{Test Profile} tab, click the \inlineCode{Initialize Profile} button, and we are ready to run the test.</p>
+<h4 id="b36-running-a-transient-test"><a class="header" href="#b36-running-a-transient-test">B.3.6. Running a Transient Test <!--B.3.6--></a></h4>
+<!--\subsection{Running a Transient Test}-->
+<p>We can now click the \inlineCode{Arm Data Acquisition} button to enable the Transient control functionality. We can set the \inlineCode{Signal Level} to \inlineCode{-12} dB to start so we don't break anything when we run. If it runs successfully, then we can step back up to full level.</p>
+<p>Rattlesnake will identify the control signal as it comes through the data acquisition and surround it with a box, as shown in Figure B-64<!--\ref{fig:examplecdaqtransientcontrolresults}-->.</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_transient_control_results}
+        \caption{Running the transient control with the control signal identified.}
+        \label{fig:examplecdaqtransientcontrolresults}
+    \end{figure}
+-->
+<p><img src="figures/example_cdaq_transient_control_results.png" alt="example_cdaq_transient_control_results" /></p>
+<p><strong>Figure B-64. Running the transient control with the control signal identified.</strong></p>
+<p>To visualize individual channels, new windows can be created in the \inlineCode{Data Display} portion of the window.  The four control channels can be seen in Figure B-65 <!--\ref{fig:examplecdaqtransientcontrolchannels}--></p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_transient_control_channels}
+        \caption{Control achieved on each control channel in the Transient vibration test.}
+        \label{fig:examplecdaqtransientcontrolchannels}
+    \end{figure}
+-->
+<p><img src="figures/example_cdaq_transient_control_channels.png" alt="example_cdaq_transient_control_channels" /></p>
+<p><strong>Figure B-65. Control achieved on each control channel in the Transient vibration test.</strong></p>
+<p>To save out data, we can click the \inlineCode{Save Current Control Data} button. We will save the data to the file \inlineCode{transient_vibration_control_results.nc4}. This can be loaded into SDynPy to do comparisons to the desired signal.  It can be useful to zoom in to the starts of each impulse to see that while the ring down does match quite well, the initial impulse cannot be achieved as well with the modal shakers as it was with the impact hammer.  These results are shown in Figure B-66<!--\ref{fig:examplecdaqtransientzoom}-->.</p>
+<pre><code class="language-python">control, specification, drives = sdpy.rattlesnake.read_transient_control_data(
+'transient_vibration_control_results.nc4')
+
+ax = specification.plot(
+    one_axis=False, plot_kwargs = {'linewidth':0.5},
+    subplots_kwargs = {'figsize':(10,6),'sharex':True,'sharey':True})
 for a,c in zip(ax.flatten(),control):
-c.plot(a,plot_kwargs = {'linewidth':0.5})</p>
-<h1 id="zoom-in-on-a-specific-portion"><a class="header" href="#zoom-in-on-a-specific-portion">Zoom in on a specific portion</a></h1>
-<p>a.set_xlim(0.45,0.55)\end{lstlisting}</p>
-<pre><code>\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{figures/example_cdaq_transient_zoom}
-    \caption{Zoom into an impact during the transient control showing good results achieved after the impact.}
-    \label{fig:examplecdaqtransientzoom}
-\end{figure}
-
-\section{Summary}
-This appendix has walked through several example tests using real hardware with Rattlesnake.  Users are encouraged to use this appendix as a quick-start guide to using Rattlesnake.  A relatively inexpensive NI cDAQ device was used to perform modal and vibration testing on a simple beam structure with minimal instrumentation.
-
-Modal testing was performed using both hammer impacts and shaker excitation.  Modes were fit to the data using the SDynPy Python package.
-
-Vibration testing was performed using modal shakers.  An impact hammer was used to create an environment that the vibration test would aim to replicate.  Both \ac{MIMO} Random and \ac{MIMO} transient vibration tests were run, where the \ac{MIMO} Random attempted replicate a prescribed \ac{CPSD} matrix, and the \ac{MIMO} Transient attempted to replicate the time history directly.  Both control schemes achieved good results.
+    c.plot(a,plot_kwargs = {'linewidth':0.5})
+# Zoom in on a specific portion
+a.set_xlim(0.45,0.55)
 </code></pre>
+<!---
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.7\linewidth]{figures/example_cdaq_transient_zoom}
+        \caption{Zoom into an impact during the transient control showing good results achieved after the impact.}
+        \label{fig:examplecdaqtransientzoom}
+    \end{figure}
+-->
+<p><img src="figures/example_cdaq_transient_zoom.png" alt="example_cdaq_transient_zoom" /></p>
+<p><strong>Figure B-66. Zoom into an impact during the transient control showing good results achieved after the impact.</strong></p>
+<h3 id="b4-summary"><a class="header" href="#b4-summary">B.4. Summary <!--B.4--></a></h3>
+<!--\section{Summary}-->
+<p>This appendix has walked through several example tests using real hardware with Rattlesnake.  Users are encouraged to use this appendix as a quick-start guide to using Rattlesnake.  A relatively inexpensive NI cDAQ device was used to perform modal and vibration testing on a simple beam structure with minimal instrumentation.</p>
+<p>Modal testing was performed using both hammer impacts and shaker excitation.  Modes were fit to the data using the SDynPy Python package.</p>
+<p>Vibration testing was performed using modal shakers.  An impact hammer was used to create an environment that the vibration test would aim to replicate.  Both \ac{MIMO} Random and \ac{MIMO} transient vibration tests were run, where the \ac{MIMO} Random attempted replicate a prescribed \ac{CPSD} matrix, and the \ac{MIMO} Transient attempted to replicate the time history directly.  Both control schemes achieved good results.</p>
 <div style="break-before: page; page-break-before: always;"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
 <h2 id="appendix-c-synthetic-example-problem-with-a-sdynpy-system"><a class="header" href="#appendix-c-synthetic-example-problem-with-a-sdynpy-system">Appendix C. Synthetic Example Problem with a SDynPy System</a></h2>
 <p>This example problem</p>
