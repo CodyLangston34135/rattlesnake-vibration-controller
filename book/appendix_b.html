@@ -220,7 +220,7 @@
 -->
 <p><img src="./figures/example_cdaq_modal_testing_selection.png" alt="examples_cdaq_modal_testing_selection" /></p>
 <p><strong>Figure B-3. Selecting the Modal Environment in Rattlesnake</strong></p>
-<p>We can then click the \inlineCode{Save Channel Table} button to save out the empty channel table to an Excel spreadsheet (Figure B-4<!--Figure \ref{fig:examplecdaqsavechanneltable}-->).</p>
+<p>We can then click the <code>Save Channel Table</code> button to save out the empty channel table to an Excel spreadsheet (Figure B-4<!--Figure \ref{fig:examplecdaqsavechanneltable}-->).</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -242,7 +242,7 @@
 -->
 <p><img src="./figures/example_cdaq_nimax.png" alt="example_cdaq_nimax" /></p>
 <p><strong>Figure B-5. NI MAX dialog showing the cDAQ devices.</strong></p>
-<p>Our acquisition channels will be plugged into devices \inlineCode{cDAQ9185-217ED78Mod1} and \inlineCode{cDAQ9185-217ED78Mod2} which have acquisition channels \inlineCode{ai0}, \inlineCode{ai1}, and \inlineCode{ai2}, and our output devices are \inlineCode{cDAQ9185-217ED78Mod3} and \inlineCode{cDAQ9185-217ED78Mod4} which have output channels \inlineCode{ao0} and \inlineCode{ao1}.</p>
+<p>Our acquisition channels will be plugged into devices <code>cDAQ9185-217ED78Mod1</code> and <code>cDAQ9185-217ED78Mod2</code> which have acquisition channels <code>ai0</code>, <code>ai1</code>, and <code>ai2</code>, and our output devices are <code>cDAQ9185-217ED78Mod3</code> and <code>cDAQ9185-217ED78Mod4</code> which have output channels <code>ao0</code> and <code>ao1</code>.</p>
 <p>After we add our accelerometers, we will also add a channel for the modal hammer. Note that we will vary the hammer excitation location, so we will simply put in an arbitrary node number that we will override later. We will hit the beam on the surface opposite the side that the accelerometers are mounted on, so the direction of the impact is the identical to the directions of the accelerometers.</p>
 <p>When we finish our channel table it looks like Figure B-6<!--Figure \ref{fig:examplecdaqchanneltableexcel}-->.  Note that there is no output from Rattlesnake, so there are no entries in the Output Feedback in the channel table.</p>
 <!--
@@ -278,7 +278,7 @@
 <p><img src="./figures/example_cdaq_load_channel_table.png" alt="example_cdaq_load_channel_table" /></p>
 <p><strong>Figure B-8. Loading in the channel table for the test.</strong></p>
 <p>We should see that the information from the Excel spreadsheet is populated in the Rattlesnake GUI.</p>
-<p>In the \inlineCode{Data Acquisition Parameter} section we will leave \inlineCode{NI DAQmx} selected. We will set the \inlineCode{Sample Rate} to \inlineCode{5120} Hz, as this is a valid output rate for both the cDAQ device types we are using. We can leave the \inlineCode{Time per Read} and \inlineCode{Time per Write} to their defaults.  Figure B-9<!--Figure \ref{fig:examplecdaqmodaltestimpactdaqsettings}--> shows the loaded channel table and data acquisition settings.</p>
+<p>In the <code>Data Acquisition Parameter</code> section we will leave <code>NI DAQmx</code> selected. We will set the <code>Sample Rate</code> to <code>5120</code> Hz, as this is a valid output rate for both the cDAQ device types we are using. We can leave the <code>Time per Read</code> and <code>Time per Write</code> to their defaults.  Figure B-9<!--Figure \ref{fig:examplecdaqmodaltestimpactdaqsettings}--> shows the loaded channel table and data acquisition settings.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -289,12 +289,12 @@
 -->
 <p><img src="./figures/example_cdaq_modal_test_impact_daq_settings.png" alt="example_cdaq_modal_test_impact_daq_settings" /></p>
 <p><strong>Figure B-9. Data acquisition settings for the Modal Test using an impact hammer.</strong></p>
-<p>At this point, we can click the \inlineCode{Initialize Data Acquisition} button shown in Figure B-10 <!--Figure \ref{fig:examplecdaqinitializedataacquisition}-->to proceed to the next stage of the test.</p>
+<p>At this point, we can click the <code>Initialize Data Acquisition</code> button shown in Figure B-10 <!--Figure \ref{fig:examplecdaqinitializedataacquisition}-->to proceed to the next stage of the test.</p>
 <!--
     \begin{figure}[H]
         \centering
         \includegraphics[width=0.5\linewidth]{figures/example_cdaq_initialize_data_acquisition}
-        \caption{Click the \inlineCode{Initialize Data Acquisition} button to proceed.}
+        \caption{Click the `Initialize Data Acquisition` button to proceed.}
         \label{fig:examplecdaqinitializedataacquisition}
     \end{figure}
 -->
@@ -302,11 +302,11 @@
 <p><strong>Figure B-10. Click the <code>Initialize Data Acquisition</code> button to proceed.</strong></p>
 <h4 id="b12-environment-setup"><a class="header" href="#b12-environment-setup">B.1.2. Environment Setup <!--Section B.1.2--></a></h4>
 <!--\subsection{Environment Setup}-->
-<p>At this point, we now need to set up our modal testing environment on the Environment Definition tab. As this is a simple beam, it will likely take a while to decay, so we will set up a 2 second measurement frame by setting the \inlineCode{Samples per Frame} to \inlineCode{10240}.</p>
-<p>We will lower the \inlineCode{Number of Averages} to \inlineCode{5}.</p>
-<p>For \inlineCode{Triggering}, we will set the \inlineCode{Triggering Type} to \inlineCode{Every Frame}, and set the \inlineCode{Acceptance} to \inlineCode{Manual}. We set the \inlineCode{Trigger Channel} to the Force channel with a \inlineCode{2%} \inlineCode{Pretrigger}. The \inlineCode{Trigger Level} we will set to \inlineCode{1%} and the \inlineCode{Hysteresis Level} to half of that value. Finally, we will set the \inlineCode{Hysteresis Frame %} to \inlineCode{50%}.</p>
-<p>In the \inlineCode{Channel Selections} table, we will check the \inlineCode{Reference} column for the Force channel.</p>
-<p>When all of these parameters are adjusted, we can click the \inlineCode{Initialize Environments} button to proceed.  Figure B-11<!--Figure \ref{fig:examplecdaqmodalimpactsettings}--> shows the window with all settings set.</p>
+<p>At this point, we now need to set up our modal testing environment on the Environment Definition tab. As this is a simple beam, it will likely take a while to decay, so we will set up a 2 second measurement frame by setting the <code>Samples per Frame</code> to <code>10240</code>.</p>
+<p>We will lower the <code>Number of Averages</code> to <code>5</code>.</p>
+<p>For <code>Triggering</code>, we will set the <code>Triggering Type</code> to <code>Every Frame</code>, and set the <code>Acceptance</code> to <code>Manual</code>. We set the <code>Trigger Channel</code> to the Force channel with a <code>2%</code> <code>Pretrigger</code>. The <code>Trigger Level</code> we will set to <code>1%</code> and the <code>Hysteresis Level</code> to half of that value. Finally, we will set the <code>Hysteresis Frame %</code> to <code>50%</code>.</p>
+<p>In the <code>Channel Selections</code> table, we will check the <code>Reference</code> column for the Force channel.</p>
+<p>When all of these parameters are adjusted, we can click the <code>Initialize Environments</code> button to proceed.  Figure B-11<!--Figure \ref{fig:examplecdaqmodalimpactsettings}--> shows the window with all settings set.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -319,11 +319,11 @@
 <p><strong>Figure B-11. Modal Test parameters for the impact test.</strong></p>
 <h4 id="b13-test-profile"><a class="header" href="#b13-test-profile">B.1.3. Test Profile <!--Section B.1.3--></a></h4>
 <!--\subsection{Test Profile}-->
-<p>We will leave the \inlineCode{Test Profile} tab empty. Simply click the \inlineCode{Initialize Profile} button to proceed on this tab.</p>
+<p>We will leave the <code>Test Profile</code> tab empty. Simply click the <code>Initialize Profile</code> button to proceed on this tab.</p>
 <h4 id="b14-run-test"><a class="header" href="#b14-run-test">B.1.4. Run Test <!--Section B.1.4--></a></h4>
 <!--\subsection{Run Test}-->
 <p>We will save the standard modal data file from this test, so we won't worry about setting up streaming.</p>
-<p>To enable the Modal Environment, first click the \inlineCode{Arm Data Acquisition} button. At this point, the modal environment buttons will become enabled, as shown in Figure B-12<!--\ref{fig:examplecdaqmodaltestingready}-->.</p>
+<p>To enable the Modal Environment, first click the <code>Arm Data Acquisition</code> button. At this point, the modal environment buttons will become enabled, as shown in Figure B-12<!--\ref{fig:examplecdaqmodaltestingready}-->.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -334,7 +334,7 @@
 -->
 <p><img src="./figures/example_cdaq_modal_testing_ready.png" alt="example_cdaq_modal_testing_ready" /></p>
 <p><strong>Figure B-12. Run Test tab with data acquisition armed</strong></p>
-<p>To start, we will use the \inlineCode{Degree of Freedom Override} section to choose our actual excitation location.  This allows us to more quickly adjust the impact location than returning to the \inlineCode{Data Acquisition Setup} page and reinitializing everything in the channel table. Click the \inlineCode{Add Override} button, and in the row that appears, change the \inlineCode{Channel} column to the force channel. In the \inlineCode{New Node} column, put \inlineCode{23}, which will be the position we excite at. For the \inlineCode{New Direction}, put \inlineCode{Y-}.  This is shown in Figure B-13<!--\ref{fig:examplecdaqchanneloverride}-->.</p>
+<p>To start, we will use the <code>Degree of Freedom Override</code> section to choose our actual excitation location.  This allows us to more quickly adjust the impact location than returning to the <code>Data Acquisition Setup</code> page and reinitializing everything in the channel table. Click the <code>Add Override</code> button, and in the row that appears, change the <code>Channel</code> column to the force channel. In the <code>New Node</code> column, put <code>23</code>, which will be the position we excite at. For the <code>New Direction</code>, put <code>Y-</code>.  This is shown in Figure B-13<!--\ref{fig:examplecdaqchanneloverride}-->.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -345,7 +345,7 @@
 -->
 <p><img src="./figures/example_cdaq_channel_override.png" alt="example_cdaq_channel_override" /></p>
 <p><strong>Figure B-13. Using the Degree of Freedom Override to adjust the impact location metadata.</strong></p>
-<p>Now with our channels correct, we can set up data display windows. We will use the \inlineCode{New from Template...} dropdown menu to create \inlineCode{Drive Point (Imaginary)}, \inlineCode{Drive Point Coherence}, and \inlineCode{Reference Autospectrum} channels. We will also manually create 5 windows by clicking the \inlineCode{New} button, and set them to visualize the time histories for each channel; these will help us determine if we need to change the trigger settings, frame length, or add a window. Clicking the \inlineCode{Tile} button will expand the windows to fill up the available space.  Figure B-14 <!--\ref{fig:examplecdaqmodalimpactemptywindows}--> shows the result of these operations.</p>
+<p>Now with our channels correct, we can set up data display windows. We will use the <code>New from Template...</code> dropdown menu to create <code>Drive Point (Imaginary)</code>, <code>Drive Point Coherence</code>, and <code>Reference Autospectrum</code> channels. We will also manually create 5 windows by clicking the <code>New</code> button, and set them to visualize the time histories for each channel; these will help us determine if we need to change the trigger settings, frame length, or add a window. Clicking the <code>Tile</code> button will expand the windows to fill up the available space.  Figure B-14 <!--\ref{fig:examplecdaqmodalimpactemptywindows}--> shows the result of these operations.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -356,7 +356,7 @@
 -->
 <p><img src="figures/example_cdaq_modal_impact_empty_windows.png" alt="example_cdaq_modal_impact_empty_windows" /></p>
 <p><strong>Figure B-14. Run Test tab with modal windows created.</strong></p>
-<p>We will first preview the measurement to ensure that all of the parameters we have selected are adequate. Click the \inlineCode{Preview Acquisition} button and impact the structure behind the 23Y- accelerometer. If the data acquisition triggers, data should appear in the windows as shown in Figure B-15<!--\ref{fig:examplecdaqtrigger}-->.</p>
+<p>We will first preview the measurement to ensure that all of the parameters we have selected are adequate. Click the <code>Preview Acquisition</code> button and impact the structure behind the 23Y- accelerometer. If the data acquisition triggers, data should appear in the windows as shown in Figure B-15<!--\ref{fig:examplecdaqtrigger}-->.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -367,7 +367,7 @@
 -->
 <p><img src="./figures/example_cdaq_trigger.png" alt="example_cdaq_trigger" /></p>
 <p><strong>Figure B-15. Data acquisition triggered, waiting for acceptance or rejection of the measurement.</strong></p>
-<p>After the data appears, the \inlineCode{Accept} and \inlineCode{Reject} buttons should become active. If the signal decays within the window and the force looks reasonable, we can click \inlineCode{Accept} which will then proceed to the next measurement. After a measurement is accepted, averaged quantities such as coherence, frequency response functions, and autopower spectra will also be computed as shown in Figure B-16<!--\ref{fig:examplecdaqfirstaccept}-->. Only Spectra (FFTs) and time histories can be visualized prior to accepting a measurement.</p>
+<p>After the data appears, the <code>Accept</code> and <code>Reject</code> buttons should become active. If the signal decays within the window and the force looks reasonable, we can click <code>Accept</code> which will then proceed to the next measurement. After a measurement is accepted, averaged quantities such as coherence, frequency response functions, and autopower spectra will also be computed as shown in Figure B-16<!--\ref{fig:examplecdaqfirstaccept}-->. Only Spectra (FFTs) and time histories can be visualized prior to accepting a measurement.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -389,7 +389,7 @@
 -->
 <p><img src="./figures/example_cdaq_all_accept.png" alt="example_cdaq_all_accept" /></p>
 <p><strong>Figure B-17. Quantities of interest after 5 averages.</strong></p>
-<p>If this looks satisfactory, we can proceed with the measurement. Clicking the \inlineCode{Stop Acquisition} button will stop the preview, and allow us to start a real measurement. We must assign a \inlineCode{Data File} to save to by clicking the \inlineCode{Select File...} button. We will call our file \inlineCode{beam_hammer_impact.nc4}. To ensure we do not overwrite our data as we rove the hammer, we will click the \inlineCode{Auto-Increment} checkbox to automatically increment the filename.  This is shown in Figure B-18<!--\ref{fig:examplecdaqfilename}-->.</p>
+<p>If this looks satisfactory, we can proceed with the measurement. Clicking the <code>Stop Acquisition</code> button will stop the preview, and allow us to start a real measurement. We must assign a <code>Data File</code> to save to by clicking the <code>Select File...</code> button. We will call our file <code>beam_hammer_impact.nc4</code>. To ensure we do not overwrite our data as we rove the hammer, we will click the <code>Auto-Increment</code> checkbox to automatically increment the filename.  This is shown in Figure B-18<!--\ref{fig:examplecdaqfilename}-->.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -400,7 +400,7 @@
 -->
 <p><img src="./figures/example_cdaq_filename.png" alt="example_cdaq_filename" /></p>
 <p><strong>Figure B-18. Setting a file name for the modal data.</strong></p>
-<p>With the data file selected, we can click the \inlineCode{Start Acquisition} button. We perform the measurement identically to the preview case. When the specified number of averages have been acquired, the measurement will stop automatically as shown in Figure B-19<!--\ref{fig:examplecdaqmodalimpactsacquired}--></p>
+<p>With the data file selected, we can click the <code>Start Acquisition</code> button. We perform the measurement identically to the preview case. When the specified number of averages have been acquired, the measurement will stop automatically as shown in Figure B-19<!--\ref{fig:examplecdaqmodalimpactsacquired}--></p>
 <!--
     \begin{figure}[H]
         \centering
@@ -411,7 +411,7 @@
 -->
 <p><img src="./figures/example_cdaq_modal_impacts_acquired.png" alt="example_cdaq_modal_impacts_acquired" /></p>
 <p><strong>Figure B-19. Acquisition stops automatically after the desired number of impacts.</strong></p>
-<p>Now we will acquire the next measurement at node 18. We will update the \inlineCode{New Node} column of the \inlineCode{Degree of Freedom Override} table to be \inlineCode{18}. Note that this will also change the labels on the data windows. We will need to update the response channels on those windows to make sure we are still visualizing the drive point data, as shown in Figure B-20<!--\ref{fig:examplecdaqupdatewindows}-->.</p>
+<p>Now we will acquire the next measurement at node 18. We will update the <code>New Node</code> column of the <code>Degree of Freedom Override</code> table to be <code>18</code>. Note that this will also change the labels on the data windows. We will need to update the response channels on those windows to make sure we are still visualizing the drive point data, as shown in Figure B-20<!--\ref{fig:examplecdaqupdatewindows}-->.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -422,11 +422,11 @@
 -->
 <p><img src="./figures/example_cdaq_update_windows.png" alt="example_cdaq_update_windows" /></p>
 <p><strong>Figure B-20. Updating the signal being visualized in the data visualization window.</strong></p>
-<p>We can simply press the \inlineCode{Start Acquisition} button, and a new file will be created. After that measurment has been obtained, we will then repeat again, updating the \inlineCode{Degree of Freedom Override} table to node \inlineCode{12} and start a measurement exciting at that location.</p>
-<p>When these measurements are complete, we can click \inlineCode{Disarm Data Acquisition} to stop the measurement, and close the Rattlesnake software.</p>
+<p>We can simply press the <code>Start Acquisition</code> button, and a new file will be created. After that measurment has been obtained, we will then repeat again, updating the <code>Degree of Freedom Override</code> table to node <code>12</code> and start a measurement exciting at that location.</p>
+<p>When these measurements are complete, we can click <code>Disarm Data Acquisition</code> to stop the measurement, and close the Rattlesnake software.</p>
 <h4 id="b15-analyzing-modal-data"><a class="header" href="#b15-analyzing-modal-data">B.1.5. Analyzing Modal Data <!--Section B.1.5--></a></h4>
 <!--\subsection{Analyzing Modal Data}-->
-<p>To analyze these data, we will use SDynPy, which is an open-source Python-based structural dynamics toolset.  SDynPy can be installed via pip using \inlineCode{pip install sdynpy}, or otherwise downloaded from the <a href="https://github.com/sandialabs/sdynpy">Github repository</a>.  SDynPy is well-integrated with Rattlesnake, making it trivial to load in data from a Rattlesnake test.</p>
+<p>To analyze these data, we will use SDynPy, which is an open-source Python-based structural dynamics toolset.  SDynPy can be installed via pip using <code>pip install sdynpy</code>, or otherwise downloaded from the <a href="https://github.com/sandialabs/sdynpy">Github repository</a>.  SDynPy is well-integrated with Rattlesnake, making it trivial to load in data from a Rattlesnake test.</p>
 <p>For example, reading in a modal dataset with SDynPy looks like:</p>
 <pre><code class="language-python"># Import SDynPy and Numpy
 import sdynpy as sdpy
@@ -469,7 +469,7 @@ all_frfs.plot(one_axis=False,subplots_kwargs={'layout':'constrained','figsize':(
 -->
 <p><img src="./figures/example_cdaq_all_frfs.png" alt="example_cdaq_all_frfs" /></p>
 <p><strong>Figure B-22. All FRFs from the three impacts</strong></p>
-<p>Ideally we would like to plot mode shapes of this test, so as a first step towards that goal we will construct a test geometry. This contains nodes, coordinate systems, and optionally tracelines or elements.  We can construct nodes with the ID numbers given in the test and coordinates specified by each node's position along the beam.  Here we construct and print a \inlineCode{node_array} in SDynPy</p>
+<p>Ideally we would like to plot mode shapes of this test, so as a first step towards that goal we will construct a test geometry. This contains nodes, coordinate systems, and optionally tracelines or elements.  We can construct nodes with the ID numbers given in the test and coordinates specified by each node's position along the beam.  Here we construct and print a <code>node_array</code> in SDynPy</p>
 <pre><code class="language-pytthon">nodes = sdpy.node_array(id = [1,12,18,23],
                         coordinate = [[1,0,0],
                                       [12,0,0],
@@ -508,11 +508,11 @@ geometry.plot()\end{lstlisting}
 -->
 <p><img src="./figures/example_cdaq_geometry.png" alt="example_cdaq_geometry" /></p>
 <p><strong>Figure B-23. Geometry used to plot mode shapes in the modal test.</strong></p>
-<p>Now that we have a geometry, we can fit modes and plot mode shapes. We will only fit up to approximately 2000 Hz, which is where the antialiasing filter of the cDAQ device is clearly active.  We will use the \inlineCode{PolyPy_GUI} in SDynPy to do the mode fits.  We can add our geometry directly to the fitter by assigning to the \inlineCode{geometry} attribute.</p>
+<p>Now that we have a geometry, we can fit modes and plot mode shapes. We will only fit up to approximately 2000 Hz, which is where the antialiasing filter of the cDAQ device is clearly active.  We will use the <code>PolyPy_GUI</code> in SDynPy to do the mode fits.  We can add our geometry directly to the fitter by assigning to the <code>geometry</code> attribute.</p>
 <pre><code class="language-python">ppgui = sdpy.PolyPy_GUI(all_frfs)
 ppgui.geometry = geometry\end{lstlisting}
 </code></pre>
-<p>We can select frequency ranges and polynomial orders to solve for, then click \inlineCode{Compute Stabilization} to proceed, as shown in Figure B-24<!--\ref{fig:examplecdaqpolypyranges}-->.</p>
+<p>We can select frequency ranges and polynomial orders to solve for, then click <code>Compute Stabilization</code> to proceed, as shown in Figure B-24<!--\ref{fig:examplecdaqpolypyranges}-->.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -574,7 +574,7 @@ ppgui.geometry = geometry\end{lstlisting}
 -->
 <p><img src="./figures/example_cdaq_modal_shaker_setup.jpg" alt="example_cdaq_modal_shaker_setup" /></p>
 <p><strong>Figure B-28. Modal shaker setup for running a modal test.</strong></p>
-<p>As we fill out the channel table, we enter the physical device and channel that the shaker voltage is teed into in the \inlineCode{Channel Definition} section of the channel table, and enter the physical device and channel that the shaker voltage originates from in the \inlineCode{Output Feedback} section. In our case, the shaker signal comes from the \inlineCode{ao0} channel on the third module \inlineCode{cDAQ9185-217ED78Mod3}. The shaker signal is teed into acquisition channel \inlineCode{ai2} on the second module \inlineCode{cDAQ9185-217ED78Mod2}. We also enter the force sensor into the channel table.  note that the direction associated with the force is now in the \inlineCode{Y+} direction, as the push direction of the shaker is opposite the measurement direction of the accelerometer that is covered by the cap.  Figure B-29<!--\ref{fig:examplecdaqmodalshakerchanneltable}--> shows the channel table set up in Excel.</p>
+<p>As we fill out the channel table, we enter the physical device and channel that the shaker voltage is teed into in the <code>Channel Definition</code> section of the channel table, and enter the physical device and channel that the shaker voltage originates from in the <code>Output Feedback</code> section. In our case, the shaker signal comes from the <code>ao0</code> channel on the third module <code>cDAQ9185-217ED78Mod3</code>. The shaker signal is teed into acquisition channel <code>ai2</code> on the second module <code>cDAQ9185-217ED78Mod2</code>. We also enter the force sensor into the channel table.  note that the direction associated with the force is now in the <code>Y+</code> direction, as the push direction of the shaker is opposite the measurement direction of the accelerometer that is covered by the cap.  Figure B-29<!--\ref{fig:examplecdaqmodalshakerchanneltable}--> shows the channel table set up in Excel.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -586,7 +586,7 @@ ppgui.geometry = geometry\end{lstlisting}
 <p><img src="./figures/example_cdaq_modal_shaker_channel_table.png" alt="example_cdaq_modal_shaker_channel_table" /></p>
 <p><strong>Figure B-29. Channel table set up for the modal shaker test.</strong></p>
 <p>Note that when assigning a node and direction to the voltage signal, you do not want to use the same values as for the drive point, otherwise Rattlesnake will not be able to determine which frequency response function is the drive point FRF. The author's practice is to use the same node number as the force sensor, but offset by some value (e.g. 100 in this case). In the case of multiple shakers, it will be clear which voltage corresponds to which shaker if such a convention is followed.</p>
-<p>With the channel table set up, we can now start Rattlesnake and load the channel table. We will again select the Modal Testing environment, click the \inlineCode{Load Channel Table} button and load our file. We will again set the \inlineCode{Sample Rate} to \inlineCode{5120} Hz. With these parameters set, we can click the \inlineCode{Initialize Data Acquisition} button to proceed.  Figure \ref{fig:examplecdaqmodalshakerdaqsettings} shows these settings in the Rattlesnake \ac{GUI}.</p>
+<p>With the channel table set up, we can now start Rattlesnake and load the channel table. We will again select the Modal Testing environment, click the <code>Load Channel Table</code> button and load our file. We will again set the <code>Sample Rate</code> to <code>5120</code> Hz. With these parameters set, we can click the <code>Initialize Data Acquisition</code> button to proceed.  Figure \ref{fig:examplecdaqmodalshakerdaqsettings} shows these settings in the Rattlesnake \ac{GUI}.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -599,11 +599,11 @@ ppgui.geometry = geometry\end{lstlisting}
 <p><strong>Figure B-30. Data acquisition settings for the Modal Shaker Test</strong></p>
 <h4 id="b22-environment-definition-for-pseudorandom-excitation"><a class="header" href="#b22-environment-definition-for-pseudorandom-excitation">B.2.2. Environment Definition for Pseudorandom Excitation <!--B.2.2--></a></h4>
 <!--\subsection{Environment Definition for Pseudorandom Excitation}-->
-<p>Now we set up the Modal Testing environment parameters. Because we only have one shaker, we can use the \inlineCode{Pseudorandom} excitation, so we will plan for that.</p>
-<p>We will leave the \inlineCode{Samples per Frame} at its default value. We will change the \inlineCode{Number of Averages} to 10. We will leave \inlineCode{Triggering Type} set to \inlineCode{Free Run}, but we will add a delay of \inlineCode{5} in the \inlineCode{Wait for Steady State} box, to allow the system to come to steady state, as assumed by the Pseudorandom excitation.</p>
-<p>In the \inlineCode{Channel Selections} box, we select the Force channel as the reference.</p>
-<p>In the \inlineCode{Signal Generator} portion of the window, we select the \inlineCode{Pseudorandom} tab to set up a Pseudorandom signal. We can truncate the \inlineCode{Frequency Range} from \inlineCode{10 -- 2000} to remove the large rigid body motion that can occur at low frequency, as well as the portion of the excitation that is in the antialiasing filters of the system. We will set the \inlineCode{RMS} value to \inlineCode{0.1} V.</p>
-<p>With these parameters set, we can click the \inlineCode{Initialize Environments} button to proceed.  Figure B-31<!--\ref{fig:examplecdaqmodalpseudorandomsettings}--> shows these settings in the Rattlesnake \ac{GUI}.</p>
+<p>Now we set up the Modal Testing environment parameters. Because we only have one shaker, we can use the <code>Pseudorandom</code> excitation, so we will plan for that.</p>
+<p>We will leave the <code>Samples per Frame</code> at its default value. We will change the <code>Number of Averages</code> to 10. We will leave <code>Triggering Type</code> set to <code>Free Run</code>, but we will add a delay of <code>5</code> in the <code>Wait for Steady State</code> box, to allow the system to come to steady state, as assumed by the Pseudorandom excitation.</p>
+<p>In the <code>Channel Selections</code> box, we select the Force channel as the reference.</p>
+<p>In the <code>Signal Generator</code> portion of the window, we select the <code>Pseudorandom</code> tab to set up a Pseudorandom signal. We can truncate the <code>Frequency Range</code> from <code>10 -- 2000</code> to remove the large rigid body motion that can occur at low frequency, as well as the portion of the excitation that is in the antialiasing filters of the system. We will set the <code>RMS</code> value to <code>0.1</code> V.</p>
+<p>With these parameters set, we can click the <code>Initialize Environments</code> button to proceed.  Figure B-31<!--\ref{fig:examplecdaqmodalpseudorandomsettings}--> shows these settings in the Rattlesnake \ac{GUI}.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -616,13 +616,13 @@ ppgui.geometry = geometry\end{lstlisting}
 <p><strong>Figure B-31. Parameters set for the Pseudorandom shaker excitation.</strong></p>
 <h4 id="b23-test-profile"><a class="header" href="#b23-test-profile">B.2.3. Test Profile <!--B.2.3--></a></h4>
 <!--\subsection{Test Profile}-->
-<p>We will leave the \inlineCode{Test Profile} tab empty. Simply click the \inlineCode{Initialize Profile} button to proceed on this tab.</p>
+<p>We will leave the <code>Test Profile</code> tab empty. Simply click the <code>Initialize Profile</code> button to proceed on this tab.</p>
 <h4 id="b24-run-test"><a class="header" href="#b24-run-test">B.2.4. Run Test <!--B.2.4--></a></h4>
 <!--\subsection{Run Test}-->
 <div class="warning-box">
     <strong>⚠️ Warning:</strong> cDAQ devices can output a pulse when plugged in, turned on, or activated for the first time, so make sure the shaker amplifier is off or the gain is set to zero before pressing the <code>Arm Data Acquisition</code> button for the first time. Once we <code>Arm Data Acquisition</code>, then we can unmute the shaker amplifier.
 </div>
-<p>To run the test we can again \inlineCode{Arm Data Acquisition} to enable the modal controls. Because we will not be roving the shaker, we have entered the proper node number into the channel table, and therefore do not need to utilize the \inlineCode{Degree of Freedom Override} table. We will again display the standard diagnostics of drive point FRF and coherence, reference autospectra, and time response from all sensors and the voltage signal.  This is shown in Figure B-32<!--\ref{fig:examplecdaqmodalshakerempty}-->.</p>
+<p>To run the test we can again <code>Arm Data Acquisition</code> to enable the modal controls. Because we will not be roving the shaker, we have entered the proper node number into the channel table, and therefore do not need to utilize the <code>Degree of Freedom Override</code> table. We will again display the standard diagnostics of drive point FRF and coherence, reference autospectra, and time response from all sensors and the voltage signal.  This is shown in Figure B-32<!--\ref{fig:examplecdaqmodalshakerempty}-->.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -633,7 +633,7 @@ ppgui.geometry = geometry\end{lstlisting}
 -->
 <p><img src="figures/example_cdaq_modal_shaker_empty.png" alt="example_cdaq_modal_shaker_empty" /></p>
 <p><strong>Figure B-32.  Shaker testing with data acquisition armed and data visualization windows created.</strong></p>
-<p>We can then \inlineCode{Preview Acquisition} to see how the test parameters look. Data will take a few seconds to appear after the shaker starts due to the \inlineCode{Wait for Steady State} parameter that was set.  Ideally if the pseudorandom excitation has reached steady state, we should see no appreciable difference between the time response of measurement frames, as the exact same signal is being applied and exact same responses are being measured.  This is shown in Figure B-33<!--\ref{fig:examplecdaqspeudorandompreview}-->.</p>
+<p>We can then <code>Preview Acquisition</code> to see how the test parameters look. Data will take a few seconds to appear after the shaker starts due to the <code>Wait for Steady State</code> parameter that was set.  Ideally if the pseudorandom excitation has reached steady state, we should see no appreciable difference between the time response of measurement frames, as the exact same signal is being applied and exact same responses are being measured.  This is shown in Figure B-33<!--\ref{fig:examplecdaqspeudorandompreview}-->.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -644,7 +644,7 @@ ppgui.geometry = geometry\end{lstlisting}
 -->
 <p><img src="figures/example_cdaq_speudorandom_preview.png" alt="example_cdaq_speudorandom_preview" /></p>
 <p><strong>Figure B-33.  Previewing the data acquisition with the pseudorandom excitation.</strong></p>
-<p>If we are happy with the preview, we can move to \inlineCode{Start Acquisition}. We define a file to save the data to called \inlineCode{beam_shaker_pseudorandom.nc4}.  This is shown in Figure B-34<!--\ref{fig:examplecdaqpseudorandomacquire}-->.  The measurement and shakers should stop automatically when the requested number of averages have been acquired.</p>
+<p>If we are happy with the preview, we can move to <code>Start Acquisition</code>. We define a file to save the data to called <code>beam_shaker_pseudorandom.nc4</code>.  This is shown in Figure B-34<!--\ref{fig:examplecdaqpseudorandomacquire}-->.  The measurement and shakers should stop automatically when the requested number of averages have been acquired.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -658,9 +658,9 @@ ppgui.geometry = geometry\end{lstlisting}
 <p>Once the test completes, we can mute our amplifier and Disarm Data Acquisition.</p>
 <h4 id="b25-other-shaker-excitation-types"><a class="header" href="#b25-other-shaker-excitation-types">B.2.5. Other Shaker Excitation Types <!--B.2.5--></a></h4>
 <!--\subsection{Other Shaker Excitation Types}-->
-<p>We will return to the \inlineCode{Environment Definition} tab and set up a \inlineCode{Burst Random} test. We saw that the hammer ring-down took approximately 2 seconds, so we will set the \inlineCode{Samples Per Frame} value to \inlineCode{15360} to achieve a 3 second frame. We will set the \inlineCode{Number of Averages} to \inlineCode{30}. We will set the \inlineCode{Triggering Type} to \inlineCode{First Frame}, remove the \inlineCode{Wait for Steady State} value, and set the \inlineCode{Trigger Channel} to the voltage channel with a \inlineCode{Pretrigger} of \inlineCode{1%}. We will set the \inlineCode{Trigger Level} to \inlineCode{1%}, the \inlineCode{Hysteresis Level} to half that value, and the \inlineCode{Hysteresis Frame %} to \inlineCode{25%}.</p>
-<p>In the \inlineCode{Signal Generator} section, we will select a \inlineCode{Burst Random} signal and set the \inlineCode{On Percentage} to \inlineCode{33%} to provide a 1 second burst and 2 second ring down. We will keep the other parameters the same as our previous Pseudorandom test.</p>
-<p>Figure B-35<!--\ref{fig:examplecdaqburstrandomparameters}--> shows the parameters in the Rattlesnake \ac{GUI}.  Click the \inlineCode{Initialize Environments} button to proceed, and return to the \inlineCode{Run Test} tab.</p>
+<p>We will return to the <code>Environment Definition</code> tab and set up a <code>Burst Random</code> test. We saw that the hammer ring-down took approximately 2 seconds, so we will set the <code>Samples Per Frame</code> value to <code>15360</code> to achieve a 3 second frame. We will set the <code>Number of Averages</code> to <code>30</code>. We will set the <code>Triggering Type</code> to <code>First Frame</code>, remove the <code>Wait for Steady State</code> value, and set the <code>Trigger Channel</code> to the voltage channel with a <code>Pretrigger</code> of <code>1%</code>. We will set the <code>Trigger Level</code> to <code>1%</code>, the <code>Hysteresis Level</code> to half that value, and the <code>Hysteresis Frame %</code> to <code>25%</code>.</p>
+<p>In the <code>Signal Generator</code> section, we will select a <code>Burst Random</code> signal and set the <code>On Percentage</code> to <code>33%</code> to provide a 1 second burst and 2 second ring down. We will keep the other parameters the same as our previous Pseudorandom test.</p>
+<p>Figure B-35<!--\ref{fig:examplecdaqburstrandomparameters}--> shows the parameters in the Rattlesnake \ac{GUI}.  Click the <code>Initialize Environments</code> button to proceed, and return to the <code>Run Test</code> tab.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -671,7 +671,7 @@ ppgui.geometry = geometry\end{lstlisting}
 -->
 <p><img src="figures/example_cdaq_burst_random_parameters.png" alt="example_cdaq_burst_random_parameters" /></p>
 <p><strong>Figure B-35. Test parameters for the Burst Random excitation</strong></p>
-<p>We can preview the signal by clicking the \inlineCode{Preview Acquisition} button to ensure that the triggering has been set up correctly and the signals ring down appropriately.  Figure B-36<!--\ref{fig:examplecdaqburstrandompreview}--> shows the previewed data.</p>
+<p>We can preview the signal by clicking the <code>Preview Acquisition</code> button to ensure that the triggering has been set up correctly and the signals ring down appropriately.  Figure B-36<!--\ref{fig:examplecdaqburstrandompreview}--> shows the previewed data.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -682,8 +682,8 @@ ppgui.geometry = geometry\end{lstlisting}
 -->
 <p><img src="figures/example_cdaq_burst_random_preview.png" alt="example_cdaq_burst_random_preview" /></p>
 <p><strong>Figure B-36. Previewing the measurement with the initial parameter set.</strong></p>
-<p>Apparently the shaker adds enough damping that the structure stops ringing by approximately 1/2 second after the burst finishes. Let's therefore \inlineCode{Stop Acquisition}, \inlineCode{Disarm Data Acquisition}, and return to the \inlineCode{Environment Definition} tab.  We will update the \inlineCode{Samples Per Frame} value to \inlineCode{5120} to achieve a 1 second measurement frame.  We will also change the burst \inlineCode{On Percentage} to \inlineCode{50%}.</p>
-<p>Figure B-37<!--\ref{fig:examplecdaqburstrandomparametersv2}--> shows the updated parameters in the Rattlesnake \ac{GUI}.  Click the \inlineCode{Initialize Environments} button to confirm these settings, and return to the \inlineCode{Run Test} tab.</p>
+<p>Apparently the shaker adds enough damping that the structure stops ringing by approximately 1/2 second after the burst finishes. Let's therefore <code>Stop Acquisition</code>, <code>Disarm Data Acquisition</code>, and return to the <code>Environment Definition</code> tab.  We will update the <code>Samples Per Frame</code> value to <code>5120</code> to achieve a 1 second measurement frame.  We will also change the burst <code>On Percentage</code> to <code>50%</code>.</p>
+<p>Figure B-37<!--\ref{fig:examplecdaqburstrandomparametersv2}--> shows the updated parameters in the Rattlesnake \ac{GUI}.  Click the <code>Initialize Environments</code> button to confirm these settings, and return to the <code>Run Test</code> tab.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -694,7 +694,7 @@ ppgui.geometry = geometry\end{lstlisting}
 -->
 <p><img src="figures/example_cdaq_burst_random_parameters_v2.png" alt="example_cdaq_burst_random_parameters_v2" /></p>
 <p><strong>Figure B-37. Updated burst random parameters after previewing the initial guess at the parameters.</strong></p>
-<p>We can then preview this new configuration by \inlineCode{Arm Data Acquisition} and \inlineCode{Start Preview}.  The results are shown in Figure \ref{fig:examplecdaqburstrandompreviewv2}.  This configuration looks good and runs 3x faster, so we will keep it.</p>
+<p>We can then preview this new configuration by <code>Arm Data Acquisition</code> and <code>Start Preview</code>.  The results are shown in Figure \ref{fig:examplecdaqburstrandompreviewv2}.  This configuration looks good and runs 3x faster, so we will keep it.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -705,7 +705,7 @@ ppgui.geometry = geometry\end{lstlisting}
 -->
 <p><img src="figures/example_cdaq_burst_random_preview_v2.png" alt="example_cdaq_burst_random_preview_v2" /></p>
 <p><strong>B-38. Previewing the measurement with the updated parameter set.</strong></p>
-<p>Press the \inlineCode{Stop Acquisition} button to stop the preview, set a file to store the results to (\inlineCode{beam_shaker_burst.nc4}) and \inlineCode{Start Acquisition}. The acquisition should stop automatically when 30 averages are obtained.  Figure B-39<!--\ref{fig:examplecdaqburstrandomacquire}--> shows the measurement midway through acquisition.</p>
+<p>Press the <code>Stop Acquisition</code> button to stop the preview, set a file to store the results to (<code>beam_shaker_burst.nc4</code>) and <code>Start Acquisition</code>. The acquisition should stop automatically when 30 averages are obtained.  Figure B-39<!--\ref{fig:examplecdaqburstrandomacquire}--> shows the measurement midway through acquisition.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -759,9 +759,9 @@ ax[-1].set_yscale('log')
 <h4 id="b31-constructing-vibration-specifications"><a class="header" href="#b31-constructing-vibration-specifications">B.3.1. Constructing Vibration Specifications <!--B.3.1--></a></h4>
 <!--\subsection{Constructing Vibration Specifications}\label{sec:example_nidaqmx_spec}-->
 <p>Before we can run a test, we will first generate some environment data.  This is the response that we will control to during the vibration testing. We will do this using the modal hammer to randomly impact the structure, and then we will try to get the shaker to control to that response.</p>
-<p>To acquire environment data, we will simply run the modal environment in preview mode, but now use Rattlesnake's \inlineCode{Streaming} functionality to record time data, from which we will construct specifications for vibration testing.</p>
-<p>We will disconnect the shaker from our test article. Then we return to the \inlineCode{Environment Definition} page and set the \inlineCode{Triggering Type} to \inlineCode{Free Run}.</p>
-<p>On the \inlineCode{Run Test} tab, before selecting \inlineCode{Arm Data Acquisition} we select \inlineCode{Start Streaming Immediately} and \inlineCode{Select Streaming File...} to save a time history file called \inlineCode{environment_streaming.nc4}.  This is shown in Figure B-41 <!--\ref{fig:examplecdaqsetupstreaming}-->.</p>
+<p>To acquire environment data, we will simply run the modal environment in preview mode, but now use Rattlesnake's <code>Streaming</code> functionality to record time data, from which we will construct specifications for vibration testing.</p>
+<p>We will disconnect the shaker from our test article. Then we return to the <code>Environment Definition</code> page and set the <code>Triggering Type</code> to <code>Free Run</code>.</p>
+<p>On the <code>Run Test</code> tab, before selecting <code>Arm Data Acquisition</code> we select <code>Start Streaming Immediately</code> and <code>Select Streaming File...</code> to save a time history file called <code>environment_streaming.nc4</code>.  This is shown in Figure B-41 <!--\ref{fig:examplecdaqsetupstreaming}-->.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -772,7 +772,7 @@ ax[-1].set_yscale('log')
 -->
 <p><img src="figures/example_cdaq_set_up_streaming.png" alt="example_cdaq_set_up_streaming" /></p>
 <p><strong>Figure B-41. Run Test tab with Streaming enabled</strong></p>
-<p>Now we can \inlineCode{Arm Data Acquisition} and then \inlineCode{Preview Acquisition}. Once the data acquisition is running, we will tap the structure with the modal hammer repeatedly along the length of the beam.  Don't worry that the hammer is not plugged in, as we only care about the accelerometer response. Once we have recorded a few seconds of impacts, we can select \inlineCode{Stop Acquisition} and \inlineCode{Disarm Data Acquisition}. Note that the streaming file will not be available until the data acquisition is disarmed.  We can now close Rattlesnake because we are done with the Modal environment.</p>
+<p>Now we can <code>Arm Data Acquisition</code> and then <code>Preview Acquisition</code>. Once the data acquisition is running, we will tap the structure with the modal hammer repeatedly along the length of the beam.  Don't worry that the hammer is not plugged in, as we only care about the accelerometer response. Once we have recorded a few seconds of impacts, we can select <code>Stop Acquisition</code> and <code>Disarm Data Acquisition</code>. Note that the streaming file will not be available until the data acquisition is disarmed.  We can now close Rattlesnake because we are done with the Modal environment.</p>
 <p>We will now load the streaming file with SDynPy to create an environment.</p>
 <pre><code class="language-python">time_history, channel_table = sdpy.rattlesnake.read_rattlesnake_output(
     'environment_streaming.nc4')
@@ -858,7 +858,7 @@ transient_spec.to_rattlesnake_specification('transient_specification.npz')
 -->
 <p><img src="figures/example_cdaq_two_shaker_setup.png" alt="example_cdaq_two_shaker_setup" /></p>
 <p><strong>Figure B-46. Vibration test setup showing two shakers attached to the test article.</strong></p>
-<p>Because we only have 6 acquisition channels, we must remove the force gauge to make room for the second shaker drive signal. We have now teed the first shaker's drive from \inlineCode{cDAQ9185-217ED78Mod3}'s \inlineCode{ao0} channel to the \inlineCode{ai1} channel of \inlineCode{cDAQ9185-217ED78Mod2}. The second shaker will be driven by \inlineCode{cDAQ9185-217ED78Mod3}'s \inlineCode{ao1} channel and is teed to the \inlineCode{ai2} channel of \inlineCode{cDAQ9185-217ED78Mod2}.  This is shown in Figure B-47<!--\ref{fig:examplecdaqtwoshakerhardwaresetup}-->.</p>
+<p>Because we only have 6 acquisition channels, we must remove the force gauge to make room for the second shaker drive signal. We have now teed the first shaker's drive from <code>cDAQ9185-217ED78Mod3</code>'s <code>ao0</code> channel to the <code>ai1</code> channel of <code>cDAQ9185-217ED78Mod2</code>. The second shaker will be driven by <code>cDAQ9185-217ED78Mod3</code>'s <code>ao1</code> channel and is teed to the <code>ai2</code> channel of <code>cDAQ9185-217ED78Mod2</code>.  This is shown in Figure B-47<!--\ref{fig:examplecdaqtwoshakerhardwaresetup}-->.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -882,7 +882,7 @@ transient_spec.to_rattlesnake_specification('transient_specification.npz')
 <p><strong>Figure B-48. Channel table for the random vibration test setup</strong></p>
 <h4 id="b33-setting-up-the-random-vibration-test"><a class="header" href="#b33-setting-up-the-random-vibration-test">B.3.3. Setting up the Random Vibration Test <!--B.3.3--></a></h4>
 <!--\subsection{Setting up the Random Vibration Test}-->
-<p>Now that the test hardware and channel table are set up, we will set up our random vibration test. We will open Rattlesnake and select the \inlineCode{MIMO Random Vibration} environment as shown in Figure B-49 <!--\ref{fig:examplecdaqmimorandomselection}-->.</p>
+<p>Now that the test hardware and channel table are set up, we will set up our random vibration test. We will open Rattlesnake and select the <code>MIMO Random Vibration</code> environment as shown in Figure B-49 <!--\ref{fig:examplecdaqmimorandomselection}-->.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -893,7 +893,7 @@ transient_spec.to_rattlesnake_specification('transient_specification.npz')
 -->
 <p><img src="figures/example_cdaq_mimo_random_selection.png" alt="example_cdaq_mimo_random_selection" /></p>
 <p><strong>Figure B-49. Selecting the MIMO Random Vibration environment</strong></p>
-<p>On the \inlineCode{Data Acquisition Setup} tab, we will \inlineCode{Load Channel Table} to import our Excel channel spreadsheet. We will also set the \inlineCode{Sample Rate} to \inlineCode{5120}. The other parameters can be left at their default values.  Figure B-50<!--\ref{fig:examplecdaqvibrationdataacquisitionsetup}--> shows these parameters.</p>
+<p>On the <code>Data Acquisition Setup</code> tab, we will <code>Load Channel Table</code> to import our Excel channel spreadsheet. We will also set the <code>Sample Rate</code> to <code>5120</code>. The other parameters can be left at their default values.  Figure B-50<!--\ref{fig:examplecdaqvibrationdataacquisitionsetup}--> shows these parameters.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -904,10 +904,10 @@ transient_spec.to_rattlesnake_specification('transient_specification.npz')
 -->
 <p><img src="figures/example_cdaq_vibration_data_acquisition_setup.png" alt="example_cdaq_vibration_data_acquisition_setup" /></p>
 <p><strong>Figure B-50. Data acquisition setup for the vibration tests.</strong></p>
-<p>Click the \inlineCode{Initialize Data Acquisition} button to proceed.</p>
-<p>On the \inlineCode{Environment Definition} tab, we will keep the \inlineCode{Samples Per Frame} set to \inlineCode{5120}, which is consistent with the parameters used to construct the specification. In the \inlineCode{Control Python Script} section, we will click \inlineCode{Load} to select a control law. We will use the \inlineCode{control_laws.py} file, which is located in the \inlineCode{control_laws} folder of the main Rattlesnake directory. In the \inlineCode{Control Python Function} drop-down, we will select \inlineCode{pseudoinverse_control}.</p>
-<p>In the \inlineCode{Control Channels} section, we will select all four acceleration channels, which we will use to control to the environment.</p>
-<p>Finally we will click the \inlineCode{Load Spec} button and navigate to our random specification file \inlineCode{random_specification.npz} from SDynPy. The specification should then appear in the plots.</p>
+<p>Click the <code>Initialize Data Acquisition</code> button to proceed.</p>
+<p>On the <code>Environment Definition</code> tab, we will keep the <code>Samples Per Frame</code> set to <code>5120</code>, which is consistent with the parameters used to construct the specification. In the <code>Control Python Script</code> section, we will click <code>Load</code> to select a control law. We will use the <code>control_laws.py</code> file, which is located in the <code>control_laws</code> folder of the main Rattlesnake directory. In the <code>Control Python Function</code> drop-down, we will select <code>pseudoinverse_control</code>.</p>
+<p>In the <code>Control Channels</code> section, we will select all four acceleration channels, which we will use to control to the environment.</p>
+<p>Finally we will click the <code>Load Spec</code> button and navigate to our random specification file <code>random_specification.npz</code> from SDynPy. The specification should then appear in the plots.</p>
 <p>With these parameters selected, we can click the Initialize Environments button to proceed.  Figure B-51 <!--\ref{fig:examplecdaqrandomvibrationparameters}--> shows the parameters in the Rattlesnake \ac{GUI}.</p>
 <!--
     \begin{figure}[H]
@@ -919,7 +919,7 @@ transient_spec.to_rattlesnake_specification('transient_specification.npz')
 -->
 <p><img src="figures/example_cdaq_random_vibration_parameters.png" alt="example_cdaq_random_vibration_parameters" /></p>
 <p><strong>Figure B-51. Random vibration parameters specified in the Rattlesnake \ac{GUI}.</strong></p>
-<p>At this point, we must run the \inlineCode{System Identification} phase of the controller. We will set the Level to \inlineCode{0.1 V RMS}, then click \inlineCode{Start} to start the system identification. A noise floor check will first be run, then the system identification follows. Rattlesnake will determine the transfer functions between the two shaker drive signals and the four accelerometer channels. When the specified number of averages have been obtained, the System Identification will stop automatically.  Figure B-52 <!--\ref{fig:examplecdaqrandomvibrationsystemid}--> shows the system identification phase of the controller.</p>
+<p>At this point, we must run the <code>System Identification</code> phase of the controller. We will set the Level to <code>0.1 V RMS</code>, then click <code>Start</code> to start the system identification. A noise floor check will first be run, then the system identification follows. Rattlesnake will determine the transfer functions between the two shaker drive signals and the four accelerometer channels. When the specified number of averages have been obtained, the System Identification will stop automatically.  Figure B-52 <!--\ref{fig:examplecdaqrandomvibrationsystemid}--> shows the system identification phase of the controller.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -931,7 +931,7 @@ transient_spec.to_rattlesnake_specification('transient_specification.npz')
 <p>k
 <img src="figures/example_cdaq_random_vibration_system_id.png" alt="example_cdaq_random_vibration_system_id" /></p>
 <p><strong>Figure B-52. System identification for the Random Vibration environment.</strong></p>
-<p>On the \inlineCode{Test Prediction} tab, Rattlesnake will make predictions of the voltage that it will need to output to achieve the control specified, as well as the responses predicted to be obtained. Here it is important to note that the output signals are not too large for the shakers.  Figure B-53<!--\ref{fig:examplecdaqrandomvibrationpredictions}--> shows the predictions for this test.</p>
+<p>On the <code>Test Prediction</code> tab, Rattlesnake will make predictions of the voltage that it will need to output to achieve the control specified, as well as the responses predicted to be obtained. Here it is important to note that the output signals are not too large for the shakers.  Figure B-53<!--\ref{fig:examplecdaqrandomvibrationpredictions}--> shows the predictions for this test.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -945,9 +945,9 @@ transient_spec.to_rattlesnake_specification('transient_specification.npz')
 <p>If the predictions look good, we can proceed to the Test Profile tab, which we will again leave blank and click the Initialize Test Profile button to proceed to the Run Test tab.</p>
 <h4 id="b34-running-a-random-vibration-test"><a class="header" href="#b34-running-a-random-vibration-test">B.3.4. Running a Random Vibration Test <!--B.3.4--></a></h4>
 <!--\subsection{Running a Random Vibration Test}-->
-<p>On the \inlineCode{Run Test} tab, we see a different interface than the one we saw for the modal test. We can click the \inlineCode{Arm Data Acquisition} button to enable the Random environment.</p>
-<p>To start, we will set the \inlineCode{Current Test Level} to \inlineCode{-12} dB to ensure when we start the test we don't break anything. We will then step up slowly to the full \inlineCode{0} dB level test.</p>
-<p>We can then click the \inlineCode{Start Environment} button to start the test.  Figure B-54<!--\ref{fig:examplecdaqrandomvibrationstart}--> shows the \ac{GUI} prior to starting the test with the test level turned down to -12 dB.</p>
+<p>On the <code>Run Test</code> tab, we see a different interface than the one we saw for the modal test. We can click the <code>Arm Data Acquisition</code> button to enable the Random environment.</p>
+<p>To start, we will set the <code>Current Test Level</code> to <code>-12</code> dB to ensure when we start the test we don't break anything. We will then step up slowly to the full <code>0</code> dB level test.</p>
+<p>We can then click the <code>Start Environment</code> button to start the test.  Figure B-54<!--\ref{fig:examplecdaqrandomvibrationstart}--> shows the \ac{GUI} prior to starting the test with the test level turned down to -12 dB.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -958,7 +958,7 @@ transient_spec.to_rattlesnake_specification('transient_specification.npz')
 -->
 <p><img src="figures/example_cdaq_random_vibration_start.png" alt="example_cdaq_random_vibration_start" /></p>
 <p><strong>Figure B-54. Ready to start a random vibration test in Rattlesnake</strong></p>
-<p>As the test is running, the main Rattlesnake interface will show the sum of \ac{APSD}s, which is the trace of the \ac{CPSD} matrix and can be thought of as an average response of the test (Figure B-55<!--\ref{fig:examplecdaqrandomvibrationsumasds}-->). To visualize individual channels, windows can be created in the \inlineCode{Data Display} section of the window (Figure B-56<!--\ref{fig:examplecdaqrandomvibrationindividualchannels}-->).</p>
+<p>As the test is running, the main Rattlesnake interface will show the sum of \ac{APSD}s, which is the trace of the \ac{CPSD} matrix and can be thought of as an average response of the test (Figure B-55<!--\ref{fig:examplecdaqrandomvibrationsumasds}-->). To visualize individual channels, windows can be created in the <code>Data Display</code> section of the window (Figure B-56<!--\ref{fig:examplecdaqrandomvibrationindividualchannels}-->).</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -979,7 +979,7 @@ transient_spec.to_rattlesnake_specification('transient_specification.npz')
 -->
 <p><img src="figures/example_cdaq_random_vibration_individual_channels.png" alt="example_cdaq_random_vibration_individual_channels" /></p>
 <p><strong>Figure B-56. Individual channel \ac{APSD}s showing how well each channel is matching the test level.</strong></p>
-<p>If the controller is controlling sufficiently well, we can step up the level to \inlineCode{0} dB as shown in Figure B-57 <!--\ref{fig:examplecdaqrandomvibrationsumasdsfulllevel}-->.</p>
+<p>If the controller is controlling sufficiently well, we can step up the level to <code>0</code> dB as shown in Figure B-57 <!--\ref{fig:examplecdaqrandomvibrationsumasdsfulllevel}-->.</p>
 <pre><code>\begin{figure}
     \centering
     \includegraphics[width=\linewidth]{figures/example_cdaq_random_vibration_sum_asds_full_level}
@@ -989,18 +989,18 @@ transient_spec.to_rattlesnake_specification('transient_specification.npz')
 </code></pre>
 <p><img src="figures/example_cdaq_random_vibration_sum_asds_full_level.png" alt="example_cdaq_random_vibration_sum_asds_full_level" /></p>
 <p><strong>B-57. Vibration control at full specification level.</strong></p>
-<p>Feel free to investigate other control laws in the \inlineCode{control_laws.py} file, as they can result in a better control than the standard pseudoinverse control. Figure B-58 <!--\ref{fig:examplecdaqrandomvibrationsumasdsmatchtrace}--> shows the results using the \inlineCode{match_trace_pseudoinverse} approach.  In particular, we see the regions between the peaks improve in this case.</p>
+<p>Feel free to investigate other control laws in the <code>control_laws.py</code> file, as they can result in a better control than the standard pseudoinverse control. Figure B-58 <!--\ref{fig:examplecdaqrandomvibrationsumasdsmatchtrace}--> shows the results using the <code>match_trace_pseudoinverse</code> approach.  In particular, we see the regions between the peaks improve in this case.</p>
 <!--
     \begin{figure}[H]
         \centering
         \includegraphics[width=\linewidth]{figures/example_cdaq_random_vibration_sum_asds_match_trace}
-        \caption{Improved control using a closed loop control law found in \inlineCode{match_trace_pseudoinverse}.}
+        \caption{Improved control using a closed loop control law found in `match_trace_pseudoinverse`.}
         \label{fig:examplecdaqrandomvibrationsumasdsmatchtrace}
     \end{figure}
 -->
-<p><strong>Figure B-58. Improved control using a closed loop control law found in \inlineCode{match_trace_pseudoinverse}.</strong></p>
+<p><strong>Figure B-58. Improved control using a closed loop control law found in <code>match_trace_pseudoinverse</code>.</strong></p>
 <p>Clearly, Rattlesnake has obtained relatively good control for this test.</p>
-<p>To save data from the test, we can either stream time data using the same approach used previously, or we can simply use the \inlineCode{Save Current Spectral Data} to save out the current realizations of the control \ac{CPSD}s, which we will call \inlineCode{random_vibration_spectral_results.nc4}. This is the quickest way to do comparisons between the specification and the control achieved. We can load this file with SDynPy and use SDynPy to make comparisons between the test and specification.  The results are shown in Figure B-59<!--\ref{fig:examplecdaqrandomvibrationerrorsummary}-->.</p>
+<p>To save data from the test, we can either stream time data using the same approach used previously, or we can simply use the <code>Save Current Spectral Data</code> to save out the current realizations of the control \ac{CPSD}s, which we will call <code>random_vibration_spectral_results.nc4</code>. This is the quickest way to do comparisons between the specification and the control achieved. We can load this file with SDynPy and use SDynPy to make comparisons between the test and specification.  The results are shown in Figure B-59<!--\ref{fig:examplecdaqrandomvibrationerrorsummary}-->.</p>
 <pre><code class="language-python">control, spec, drives = sdpy.rattlesnake.read_random_spectral_data(
     'random_vibration_spectral_results.nc4')
 spec = spec.extract_elements_by_abscissa(20,2000)
@@ -1017,10 +1017,10 @@ spec.error_summary(figure_kwargs={'figsize':(10,6)},Control=control)
 -->
 <p><img src="figures/example_cdaq_random_vibration_error_summary.png" alt="example_cdaq_random_vibration_error_summary" /></p>
 <p><strong>Figure B-59. Error summary between the test and specification for the random vibration control.</strong></p>
-<p>We can then \inlineCode{Stop Environment}, \inlineCode{Disarm Data Acquisition} and close the software.</p>
+<p>We can then <code>Stop Environment</code>, <code>Disarm Data Acquisition</code> and close the software.</p>
 <h4 id="b35-setting-up-the-transient-vibration-test"><a class="header" href="#b35-setting-up-the-transient-vibration-test">B.3.5. Setting up the Transient Vibration Test <!--B.3.5--></a></h4>
 <!--\subsection{Setting up the Transient Vibration Test}-->
-<p>The last demonstration will show how we can perform a MIMO Transient environment test. Open Rattlesnake and select the \inlineCode{MIMO Transient} environment as shown in Figure B-60<!--\ref{fig:examplecdaqmimotransientselection}-->.</p>
+<p>The last demonstration will show how we can perform a MIMO Transient environment test. Open Rattlesnake and select the <code>MIMO Transient</code> environment as shown in Figure B-60<!--\ref{fig:examplecdaqmimotransientselection}-->.</p>
 <pre><code>\begin{figure}[H]
     \centering
     \includegraphics[width=0.5\linewidth]{figures/example_cdaq_mimo_transient_selection}
@@ -1030,10 +1030,10 @@ spec.error_summary(figure_kwargs={'figsize':(10,6)},Control=control)
 </code></pre>
 <p><img src="figures/example_cdaq_mimo_transient_selection.png" alt="example_cdaq_mimo_transient_selection" /></p>
 <p><strong>Figure B-60. Selecting the \ac{MIMO} Transient environment</strong></p>
-<p>We will set the \inlineCode{Data Acquisition Setup} tab identical to what was used before, as shown in Figure B-50<!--\ref{fig:examplecdaqvibrationdataacquisitionsetup}-->. Click the \inlineCode{Initialize Data Acquisition} button to proceed.</p>
-<p>On the \inlineCode{Environment Definition tab}, we will again \inlineCode{Load} a control law file. This time we will load the \inlineCode{transient_control_laws.py} file, which contains transient control laws for Rattlesnake. We will select the \inlineCode{pseudoinverse_control} function.</p>
-<p>In the \inlineCode{Control Channels} section, we will again select all four accelerometer channels as the control channels.</p>
-<p>Finally, we will select the \inlineCode{Load Signal} button to load in our specification file \inlineCode{transient_specification.npz}.  Figure B-61<!--\ref{fig:examplecdaqtransientparameters}--> shows these parameters set in the Rattlesnake \ac{GUI}.  With these parameters set, we will click the \inlineCode{Initialize Environments} button to proceed.</p>
+<p>We will set the <code>Data Acquisition Setup</code> tab identical to what was used before, as shown in Figure B-50<!--\ref{fig:examplecdaqvibrationdataacquisitionsetup}-->. Click the <code>Initialize Data Acquisition</code> button to proceed.</p>
+<p>On the <code>Environment Definition tab</code>, we will again <code>Load</code> a control law file. This time we will load the <code>transient_control_laws.py</code> file, which contains transient control laws for Rattlesnake. We will select the <code>pseudoinverse_control</code> function.</p>
+<p>In the <code>Control Channels</code> section, we will again select all four accelerometer channels as the control channels.</p>
+<p>Finally, we will select the <code>Load Signal</code> button to load in our specification file <code>transient_specification.npz</code>.  Figure B-61<!--\ref{fig:examplecdaqtransientparameters}--> shows these parameters set in the Rattlesnake \ac{GUI}.  With these parameters set, we will click the <code>Initialize Environments</code> button to proceed.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -1044,7 +1044,7 @@ spec.error_summary(figure_kwargs={'figsize':(10,6)},Control=control)
 -->
 <p><img src="figures/example_cdaq_transient_parameters.png" alt="example_cdaq_transient_parameters" /></p>
 <p><strong>Figure B-61. Parameters set for the Transient environment in the Rattlesnake \ac{GUI}.</strong></p>
-<p>The Transient environment will also need to perform a \inlineCode{System Identification}. Again set the \inlineCode{Level} to \inlineCode{0.1 V RMS} and click \inlineCode{Start} to start the noise floor and system identification. Here it may be useful to look at the \inlineCode{Impulse Response}, as that is useful to understand how transient control will be performed.  This is shown in Figure B-62<!--\ref{fig:examplecdaqtransientsystemid}-->.</p>
+<p>The Transient environment will also need to perform a <code>System Identification</code>. Again set the <code>Level</code> to <code>0.1 V RMS</code> and click <code>Start</code> to start the noise floor and system identification. Here it may be useful to look at the <code>Impulse Response</code>, as that is useful to understand how transient control will be performed.  This is shown in Figure B-62<!--\ref{fig:examplecdaqtransientsystemid}-->.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -1055,7 +1055,7 @@ spec.error_summary(figure_kwargs={'figsize':(10,6)},Control=control)
 -->
 <p><img src="figures/example_cdaq_transient_system_id.png" alt="example_cdaq_transient_system_id" /></p>
 <p><strong>Figure B-62. System Identification for the Transient environment with Impulse Response function shown.</strong></p>
-<p>Once the system identification has been performed, Rattlesnake will again make a prediction as to the results of the test and show it on the \inlineCode{Test Predictions} tab. It will show the peak voltage it aims to output, as well as the response it predicts that it will get compared to the desired response.  Figure B-63<!--\ref{fig:examplecdaqtransientpredictions}--> shows these predictions.</p>
+<p>Once the system identification has been performed, Rattlesnake will again make a prediction as to the results of the test and show it on the <code>Test Predictions</code> tab. It will show the peak voltage it aims to output, as well as the response it predicts that it will get compared to the desired response.  Figure B-63<!--\ref{fig:examplecdaqtransientpredictions}--> shows these predictions.</p>
 <!--
     \begin{figure}[H]
         \centering
@@ -1066,10 +1066,10 @@ spec.error_summary(figure_kwargs={'figsize':(10,6)},Control=control)
 -->
 <p><img src="figures/example_cdaq_transient_predictions.png" alt="example_cdaq_transient_predictions" /></p>
 <p><strong>Figure B-63. Test predictions and voltage that will be output for the transient control.</strong></p>
-<p>We can then proceed to the \inlineCode{Test Profile} tab, click the \inlineCode{Initialize Profile} button, and we are ready to run the test.</p>
+<p>We can then proceed to the <code>Test Profile</code> tab, click the <code>Initialize Profile</code> button, and we are ready to run the test.</p>
 <h4 id="b36-running-a-transient-test"><a class="header" href="#b36-running-a-transient-test">B.3.6. Running a Transient Test <!--B.3.6--></a></h4>
 <!--\subsection{Running a Transient Test}-->
-<p>We can now click the \inlineCode{Arm Data Acquisition} button to enable the Transient control functionality. We can set the \inlineCode{Signal Level} to \inlineCode{-12} dB to start so we don't break anything when we run. If it runs successfully, then we can step back up to full level.</p>
+<p>We can now click the <code>Arm Data Acquisition</code> button to enable the Transient control functionality. We can set the <code>Signal Level</code> to <code>-12</code> dB to start so we don't break anything when we run. If it runs successfully, then we can step back up to full level.</p>
 <p>Rattlesnake will identify the control signal as it comes through the data acquisition and surround it with a box, as shown in Figure B-64<!--\ref{fig:examplecdaqtransientcontrolresults}-->.</p>
 <!--
     \begin{figure}[H]
@@ -1081,7 +1081,7 @@ spec.error_summary(figure_kwargs={'figsize':(10,6)},Control=control)
 -->
 <p><img src="figures/example_cdaq_transient_control_results.png" alt="example_cdaq_transient_control_results" /></p>
 <p><strong>Figure B-64. Running the transient control with the control signal identified.</strong></p>
-<p>To visualize individual channels, new windows can be created in the \inlineCode{Data Display} portion of the window.  The four control channels can be seen in Figure B-65 <!--\ref{fig:examplecdaqtransientcontrolchannels}--></p>
+<p>To visualize individual channels, new windows can be created in the <code>Data Display</code> portion of the window.  The four control channels can be seen in Figure B-65 <!--\ref{fig:examplecdaqtransientcontrolchannels}--></p>
 <!--
     \begin{figure}[H]
         \centering
@@ -1092,7 +1092,7 @@ spec.error_summary(figure_kwargs={'figsize':(10,6)},Control=control)
 -->
 <p><img src="figures/example_cdaq_transient_control_channels.png" alt="example_cdaq_transient_control_channels" /></p>
 <p><strong>Figure B-65. Control achieved on each control channel in the Transient vibration test.</strong></p>
-<p>To save out data, we can click the \inlineCode{Save Current Control Data} button. We will save the data to the file \inlineCode{transient_vibration_control_results.nc4}. This can be loaded into SDynPy to do comparisons to the desired signal.  It can be useful to zoom in to the starts of each impulse to see that while the ring down does match quite well, the initial impulse cannot be achieved as well with the modal shakers as it was with the impact hammer.  These results are shown in Figure B-66<!--\ref{fig:examplecdaqtransientzoom}-->.</p>
+<p>To save out data, we can click the <code>Save Current Control Data</code> button. We will save the data to the file <code>transient_vibration_control_results.nc4</code>. This can be loaded into SDynPy to do comparisons to the desired signal.  It can be useful to zoom in to the starts of each impulse to see that while the ring down does match quite well, the initial impulse cannot be achieved as well with the modal shakers as it was with the impact hammer.  These results are shown in Figure B-66<!--\ref{fig:examplecdaqtransientzoom}-->.</p>
 <pre><code class="language-python">control, specification, drives = sdpy.rattlesnake.read_transient_control_data(
 'transient_vibration_control_results.nc4')
 
