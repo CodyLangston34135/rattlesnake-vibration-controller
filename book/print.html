@@ -3635,34 +3635,21 @@ ppgui.geometry = geometry\end{lstlisting}
 <p>![example_cdaq_burst_random_acquire](figures/example_cdaq_burst_random_acquire.png}</p>
 <p><strong>Figure B-39. Acquiring the burst random data</strong></p>
 <h4 id="b26-analyzing-modal-shaker-data"><a class="header" href="#b26-analyzing-modal-shaker-data">B.2.6. Analyzing Modal Shaker Data <!--B.2.6--></a></h4>
-<h3 id="b3-running-a-vibration-test-with-rattlesnake"><a class="header" href="#b3-running-a-vibration-test-with-rattlesnake">B.3. Running a Vibration Test with Rattlesnake <!--B.3--></a></h3>
-<h4 id="b31-constructing-vibration-specifications"><a class="header" href="#b31-constructing-vibration-specifications">B.3.1. Constructing Vibration Specifications <!--B.3.1--></a></h4>
-<h4 id="b32-setting-up-the-shakers-and-channel-table"><a class="header" href="#b32-setting-up-the-shakers-and-channel-table">B.3.2. Setting up the Shakers and Channel Table <!--B.3.2--></a></h4>
-<h4 id="b33-setting-up-the-random-vibration-test"><a class="header" href="#b33-setting-up-the-random-vibration-test">B.3.3. Setting up the Random Vibration Test <!--B.3.3--></a></h4>
-<h4 id="b34-running-a-random-vibration-test"><a class="header" href="#b34-running-a-random-vibration-test">B.3.4. Running a Random Vibration Test <!--B.3.4--></a></h4>
-<h4 id="b35-setting-up-the-transient-vibration-test"><a class="header" href="#b35-setting-up-the-transient-vibration-test">B.3.5. Setting up the Transient Vibration Test <!--B.3.5--></a></h4>
-<h4 id="b36-running-a-transient-test"><a class="header" href="#b36-running-a-transient-test">B.3.6. Running a Transient Test <!--B.3.6--></a></h4>
-<h3 id="b4-summary"><a class="header" href="#b4-summary">B.4. Summary <!--B.4--></a></h3>
-<pre><code>\subsection{Analyzing Modal Shaker Data}
-
-We can now analyze the shaker data similarly to the hammer data using SDynPy.  We will also load in the impact data from the tip.  While we did not excite the structure at node 1 with the hammer, we can use symmetry of the beam to compare between the two measurement types.
-
-\begin{lstlisting}[language=Python]
-</code></pre>
-<h1 id="read-a-rattlesnake-file-using-read_modal_data"><a class="header" href="#read-a-rattlesnake-file-using-read_modal_data">Read a rattlesnake file using <code>read_modal_data</code></a></h1>
-<p>time_data_pr, frfs_pr, coherence_pr, channel_table_pr = sdpy.rattlesnake.read_modal_data(
-'beam_shaker_pseudorandom.nc4')
+<!--\subsection{Analyzing Modal Shaker Data}-->
+<p>We can now analyze the shaker data similarly to the hammer data using SDynPy.  We will also load in the impact data from the tip.  While we did not excite the structure at node 1 with the hammer, we can use symmetry of the beam to compare between the two measurement types.</p>
+<pre><code class="language-python"># Read a rattlesnake file using `read_modal_data`
+time_data_pr, frfs_pr, coherence_pr, channel_table_pr = sdpy.rattlesnake.read_modal_data(
+    'beam_shaker_pseudorandom.nc4')
 time_data_br, frfs_br, coherence_br, channel_table_br = sdpy.rattlesnake.read_modal_data(
-'beam_shaker_burst.nc4')</p>
-<h1 id="compare-to-the-impact"><a class="header" href="#compare-to-the-impact">Compare to the impact</a></h1>
-<p>time_data_im, frfs_im, coherence_im, channel_table_im = sdpy.rattlesnake.read_modal_data(
-'beam_hammer_impact_0000.nc4')\end{lstlisting}</p>
-<pre><code>We can use SDynPy to extract common degrees of freedom from each test and plot the FRFs for each.  
-
-\begin{lstlisting}[language=Python]
+    'beam_shaker_burst.nc4')
+# Compare to the impact
+time_data_im, frfs_im, coherence_im, channel_table_im = sdpy.rattlesnake.read_modal_data(
+    'beam_hammer_impact_0000.nc4')
 </code></pre>
-<p>import matplotlib.pyplot as plt</p>
-<p>ref_resp_dofs = sdpy.coordinate_array([1,23],'Y+')
+<p>We can use SDynPy to extract common degrees of freedom from each test and plot the FRFs for each.</p>
+<pre><code class="language-python">import matplotlib.pyplot as plt
+
+ref_resp_dofs = sdpy.coordinate_array([1,23],'Y+')
 compare_frfs = [frfs_pr[ref_resp_dofs[::-1]][np.newaxis],
 frfs_br[ref_resp_dofs[::-1]][np.newaxis],
 frfs_im[ref_resp_dofs][np.newaxis]]
@@ -3670,142 +3657,149 @@ fig,ax = plt.subplots(2)
 for frf in compare_frfs:
 frf.plot(ax)
 ax[-1].legend(['Psuedorandom','Burst','Hammer'])
-ax[-1].set_yscale('log')\end{lstlisting}</p>
-<pre><code>This gives the following plot:
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.5\linewidth]{figures/example_cdaq_modal_comparison}
-    \caption{Comparison of hammer impact testing compared to shaker excitation with two types of signals.}
-    \label{fig:examplecdaqmodalcomparison}
-\end{figure}
-
-We can note that the peaks are shifted slightly lower in frequency for the shaker testing, likely due to the small amount of mass loading of the shaker.  Additionally, there appears to be some shaker-structure interactions going on near the third mode, but otherwise there is reasonably good agreement between the three tests.
-
-\section{Running a Vibration Test with Rattlesnake}
-
-Now we will demonstrate how we can run a controlled vibration test with Rattlesnake.  We will demonstrate both Random and Transient vibration control in this section.
-
-\subsection{Constructing Vibration Specifications}\label{sec:example_nidaqmx_spec}
-
-Before we can run a test, we will first generate some environment data.  This is the response that we will control to during the vibration testing. We will do this using the modal hammer to randomly impact the structure, and then we will try to get the shaker to control to that response.
-
-To acquire environment data, we will simply run the modal environment in preview mode, but now use Rattlesnake's \inlineCode{Streaming} functionality to record time data, from which we will construct specifications for vibration testing.
-
-We will disconnect the shaker from our test article. Then we return to the \inlineCode{Environment Definition} page and set the \inlineCode{Triggering Type} to \inlineCode{Free Run}.
-
-On the \inlineCode{Run Test} tab, before selecting \inlineCode{Arm Data Acquisition} we select \inlineCode{Start Streaming Immediately} and \inlineCode{Select Streaming File...} to save a time history file called \inlineCode{environment_streaming.nc4}.  This is shown in Figure \ref{fig:examplecdaqsetupstreaming}.
-
-\begin{figure}[H]
+ax[-1].set_yscale('log')
+</code></pre>
+<p>This gives the following plot:</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.5\linewidth]{figures/example_cdaq_modal_comparison}
+        \caption{Comparison of hammer impact testing compared to shaker excitation with two types of signals.}
+        \label{fig:examplecdaqmodalcomparison}
+    \end{figure}
+-->
+<p>![example_cdaq_modal_comparison](figures/example_cdaq_modal_comparison.png}</p>
+<p><strong>Figure B-40. Comparison of hammer impact testing compared to shaker excitation with two types of signals.</strong></p>
+<p>We can note that the peaks are shifted slightly lower in frequency for the shaker testing, likely due to the small amount of mass loading of the shaker.  Additionally, there appears to be some shaker-structure interactions going on near the third mode, but otherwise there is reasonably good agreement between the three tests.</p>
+<h3 id="b3-running-a-vibration-test-with-rattlesnake"><a class="header" href="#b3-running-a-vibration-test-with-rattlesnake">B.3. Running a Vibration Test with Rattlesnake <!--B.3--></a></h3>
+<!--\section{Running a Vibration Test with Rattlesnake}-->
+<p>Now we will demonstrate how we can run a controlled vibration test with Rattlesnake.  We will demonstrate both Random and Transient vibration control in this section.</p>
+<h4 id="b31-constructing-vibration-specifications"><a class="header" href="#b31-constructing-vibration-specifications">B.3.1. Constructing Vibration Specifications <!--B.3.1--></a></h4>
+<!--\subsection{Constructing Vibration Specifications}\label{sec:example_nidaqmx_spec}-->
+<p>Before we can run a test, we will first generate some environment data.  This is the response that we will control to during the vibration testing. We will do this using the modal hammer to randomly impact the structure, and then we will try to get the shaker to control to that response.</p>
+<p>To acquire environment data, we will simply run the modal environment in preview mode, but now use Rattlesnake's \inlineCode{Streaming} functionality to record time data, from which we will construct specifications for vibration testing.</p>
+<p>We will disconnect the shaker from our test article. Then we return to the \inlineCode{Environment Definition} page and set the \inlineCode{Triggering Type} to \inlineCode{Free Run}.</p>
+<p>On the \inlineCode{Run Test} tab, before selecting \inlineCode{Arm Data Acquisition} we select \inlineCode{Start Streaming Immediately} and \inlineCode{Select Streaming File...} to save a time history file called \inlineCode{environment_streaming.nc4}.  This is shown in Figure B-41 <!--\ref{fig:examplecdaqsetupstreaming}-->.</p>
+<pre><code>\begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/example_cdaq_set_up_streaming}
     \caption{Run Test tab with Streaming enabled}
     \label{fig:examplecdaqsetupstreaming}
 \end{figure}
-
-Now we can \inlineCode{Arm Data Acquisition} and then \inlineCode{Preview Acquisition}. Once the data acquisition is running, we will tap the structure with the modal hammer repeatedly along the length of the beam.  Don't worry that the hammer is not plugged in, as we only care about the accelerometer response. Once we have recorded a few seconds of impacts, we can select \inlineCode{Stop Acquisition} and \inlineCode{Disarm Data Acquisition}. Note that the streaming file will not be available until the data acquisition is disarmed.  We can now close Rattlesnake because we are done with the Modal environment.
-
-We will now load the streaming file with SDynPy to create an environment.
-
-\begin{lstlisting}[language=Python]
 </code></pre>
-<p>time_history, channel_table = sdpy.rattlesnake.read_rattlesnake_output(
-'environment_streaming.nc4')\end{lstlisting}</p>
-<pre><code>We will extract just the first four acceleration channels for our environment, which are shown in Figure \ref{fig:examplecdaqspecificationsignal}
-
-\begin{lstlisting}[language=Python]
+<p>**Figure B-41.  \caption{Run Test tab with Streaming enabled}</p>
+<p>Now we can \inlineCode{Arm Data Acquisition} and then \inlineCode{Preview Acquisition}. Once the data acquisition is running, we will tap the structure with the modal hammer repeatedly along the length of the beam.  Don't worry that the hammer is not plugged in, as we only care about the accelerometer response. Once we have recorded a few seconds of impacts, we can select \inlineCode{Stop Acquisition} and \inlineCode{Disarm Data Acquisition}. Note that the streaming file will not be available until the data acquisition is disarmed.  We can now close Rattlesnake because we are done with the Modal environment.</p>
+<p>We will now load the streaming file with SDynPy to create an environment.</p>
+<pre><code class="language-python">time_history, channel_table = sdpy.rattlesnake.read_rattlesnake_output(
+    'environment_streaming.nc4')
 </code></pre>
-<p>accelerations = time_history[:4]
-accelerations.plot()\end{lstlisting}</p>
-<pre><code>\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.5\linewidth]{figures/example_cdaq_specification_signal}
-    \caption{Measured acceleration data that we will turn into vibration specifications.}
-    \label{fig:examplecdaqspecificationsignal}
-\end{figure}
-
-Looking at the data, we can truncate it to just the time range of interest, shown in Figure \ref{fig:examplecdaqspecificationsignaltruncated}.
-
-\begin{lstlisting}[language=Python]
+<p>We will extract just the first four acceleration channels for our environment, which are shown in Figure B-42 <!--\ref{fig:examplecdaqspecificationsignal}--></p>
+<pre><code class="language-python">accelerations = time_history[:4]
+accelerations.plot()
 </code></pre>
-<p>truncated_accelerations = accelerations.extract_elements_by_abscissa(2.3,16.3)
-truncated_accelerations.plot()\end{lstlisting}</p>
-<pre><code>\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.5\linewidth]{figures/example_cdaq_specification_signal_truncated}
-    \caption{Truncated acceleration data that we will turn into vibration specifications.}
-    \label{fig:examplecdaqspecificationsignaltruncated}
-\end{figure}
-
-To construct a random vibration environment, we will compute \ac{CPSD}s from this signal. While this isn't really an appropriate signal for a random vibration specification, it is good enough to demonstrate Rattlesnake's capabilities.  Figure \ref{fig:examplecdaqcpsdspecification} shows the \ac{APSD}s, which are the diagonal entries of the \ac{CPSD} specification matrix.
-
-\begin{lstlisting}[language=Python]
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.5\linewidth]{figures/example_cdaq_specification_signal}
+        \caption{Measured acceleration data that we will turn into vibration specifications.}
+        \label{fig:examplecdaqspecificationsignal}
+    \end{figure}
+-->
+<p>![example_cdaq_specification_signal](figures/example_cdaq_specification_signal.png}</p>
+<p><strong>Figure B-42. Measured acceleration data that we will turn into vibration specifications.</strong></p>
+<p>Looking at the data, we can truncate it to just the time range of interest, shown in Figure B-43<!--\ref{fig:examplecdaqspecificationsignaltruncated}-->.</p>
+<pre><code class="language-python">truncated_accelerations = accelerations.extract_elements_by_abscissa(2.3,16.3)
+truncated_accelerations.plot()
 </code></pre>
-<p>random_spec = truncated_accelerations.cpsd(samples_per_frame = 5120, overlap=0.5, window = 'hann')</p>
-<h1 id="remove-low-frequency-and-antialiasing-filters"><a class="header" href="#remove-low-frequency-and-antialiasing-filters">Remove low frequency and antialiasing filters</a></h1>
-<p>random_spec = random_spec.extract_elements_by_abscissa(20,2000)</p>
-<h1 id="scale-it-down-so-we-dont-break-shakers-trying-to-hit-it"><a class="header" href="#scale-it-down-so-we-dont-break-shakers-trying-to-hit-it">Scale it down so we don't break shakers trying to hit it</a></h1>
-<p>random_spec = random_spec / 100</p>
-<p>ax = random_spec.plot_asds()
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.5\linewidth]{figures/example_cdaq_specification_signal_truncated}
+        \caption{Truncated acceleration data that we will turn into vibration specifications.}
+        \label{fig:examplecdaqspecificationsignaltruncated}
+    \end{figure}
+-->
+<p>![example_cdaq_specification_signal_truncated](figures/example_cdaq_specification_signal_truncated.png}</p>
+<p><strong>Figure B-43. Truncated acceleration data that we will turn into vibration specifications.</strong></p>
+<p>To construct a random vibration environment, we will compute \ac{CPSD}s from this signal. While this isn't really an appropriate signal for a random vibration specification, it is good enough to demonstrate Rattlesnake's capabilities.  Figure B-44<!--\ref{fig:examplecdaqcpsdspecification}--> shows the \ac{APSD}s, which are the diagonal entries of the \ac{CPSD} specification matrix.</p>
+<pre><code class="language-python">random_spec = truncated_accelerations.cpsd(samples_per_frame = 5120, overlap=0.5, window = 'hann')
+# Remove low frequency and antialiasing filters
+random_spec = random_spec.extract_elements_by_abscissa(20,2000)
+# Scale it down so we don't break shakers trying to hit it
+random_spec = random_spec / 100
+
+ax = random_spec.plot_asds()
 fig = ax[0,0].figure
-fig.tight_layout()\end{lstlisting}</p>
+fig.tight_layout()
+</code></pre>
 <pre><code>\begin{figure}[H]
     \centering
     \includegraphics[width=0.7\linewidth]{figures/example_cdaq_cpsd_specification}
     \caption{Diagonal entries of the random vibration specification \ac{CPSD} matrix.}
     \label{fig:examplecdaqcpsdspecification}
 \end{figure}
-
-We will also construct a transient specification that we will use to test the transient vibration control, shown in Figure \ref{fig:examplecdaqtransientspecification}.
-
-\begin{lstlisting}[language=Python]
 </code></pre>
-<h1 id="we-will-make-it-shorter-and-again-scale-it-down-to-make-it-so-we-dont-break-anything"><a class="header" href="#we-will-make-it-shorter-and-again-scale-it-down-to-make-it-so-we-dont-break-anything">We will make it shorter and again scale it down to make it so we don't break anything</a></h1>
-<p>transient_spec = truncated_accelerations.extract_elements_by_abscissa(11.48,16.3) / 5
-transient_spec.plot()\end{lstlisting}</p>
+<p>![example_cdaq_cpsd_specification](figures/example_cdaq_cpsd_specification.png}</p>
+<p><strong>Figure B-44. Diagonal entries of the random vibration specification \ac{CPSD} matrix.</strong></p>
+<p>We will also construct a transient specification that we will use to test the transient vibration control, shown in Figure B-45<!--\ref{fig:examplecdaqtransientspecification}-->.</p>
+<pre><code class="language-python"># We will make it shorter and again scale it down to make it so we don't break anything
+transient_spec = truncated_accelerations.extract_elements_by_abscissa(11.48,16.3) / 5
+transient_spec.plot()
+</code></pre>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.7\linewidth]{figures/example_cdaq_transient_specification}
+        \caption{Transient specification used for vibration control.}
+        \label{fig:examplecdaqtransientspecification}
+    \end{figure}
+-->
+<p>![example_cdaq_transient_specification](figures/example_cdaq_transient_specification.png}</p>
+<p><strong>Figure B-45. Transient specification used for vibration control.</strong></p>
+<p>We can now save these specifications to disk.</p>
+<pre><code class="language-python">random_spec.to_rattlesnake_specification('random_specification.npz')
+transient_spec.to_rattlesnake_specification('transient_specification.npz')
+</code></pre>
+<h4 id="b32-setting-up-the-shakers-and-channel-table"><a class="header" href="#b32-setting-up-the-shakers-and-channel-table">B.3.2. Setting up the Shakers and Channel Table <!--B.3.2--></a></h4>
+<!--\subsection{Setting up the Shakers and Channel Table}-->
+<p>We will now set up our vibration test.  We add a second shaker to the other end of the beam using a second drive cap over the accelerometer at node 23, shown in Figure B-46<!--\ref{fig:examplecdaqtwoshakersetup}-->.</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.7\linewidth]{figures/example_cdaq_two_shaker_setup}
+        \caption{Vibration test setup showing two shakers attached to the test article.}
+        \label{fig:examplecdaqtwoshakersetup}
+    \end{figure}
+-->
+<p>![example_cdaq_two_shaker_setup](figures/example_cdaq_two_shaker_setup.png}</p>
+<p><strong>Figure B-46. Vibration test setup showing two shakers attached to the test article.</strong></p>
+<p>Because we only have 6 acquisition channels, we must remove the force gauge to make room for the second shaker drive signal. We have now teed the first shaker's drive from \inlineCode{cDAQ9185-217ED78Mod3}'s \inlineCode{ao0} channel to the \inlineCode{ai1} channel of \inlineCode{cDAQ9185-217ED78Mod2}. The second shaker will be driven by \inlineCode{cDAQ9185-217ED78Mod3}'s \inlineCode{ao1} channel and is teed to the \inlineCode{ai2} channel of \inlineCode{cDAQ9185-217ED78Mod2}.  This is shown in Figure B-47<!--\ref{fig:examplecdaqtwoshakerhardwaresetup}-->.</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.7\linewidth]{figures/example_cdaq_two_shaker_hardware_setup}
+        \caption{cDAQ hardware setup using two shakers.}
+        \label{fig:examplecdaqtwoshakerhardwaresetup}
+    \end{figure}
+-->
+<p>![example_cdaq_two_shaker_hardware_setup](figures/example_cdaq_two_shaker_hardware_setup.png}</p>
+<p><strong>Figure B-47. cDAQ hardware setup using two shakers.</strong></p>
+<p>Our channel table now looks like Figure B-48<!--\ref{fig:examplecdaqtwoshakerchanneltable}-->.</p>
 <pre><code>\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{figures/example_cdaq_transient_specification}
-    \caption{Transient specification used for vibration control.}
-    \label{fig:examplecdaqtransientspecification}
-\end{figure}
-
-We can now save these specifications to disk.
-
-\begin{lstlisting}[language=Python]
-</code></pre>
-<p>random_spec.to_rattlesnake_specification('random_specification.npz')
-transient_spec.to_rattlesnake_specification('transient_specification.npz')\end{lstlisting}</p>
-<pre><code>\subsection{Setting up the Shakers and Channel Table}
-
-We will now set up our vibration test.  We add a second shaker to the other end of the beam using a second drive cap over the accelerometer at node 23, shown in Figure \ref{fig:examplecdaqtwoshakersetup}.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{figures/example_cdaq_two_shaker_setup}
-    \caption{Vibration test setup showing two shakers attached to the test article.}
-    \label{fig:examplecdaqtwoshakersetup}
-\end{figure}
-
-Because we only have 6 acquisition channels, we must remove the force gauge to make room for the second shaker drive signal. We have now teed the first shaker's drive from \inlineCode{cDAQ9185-217ED78Mod3}'s \inlineCode{ao0} channel to the \inlineCode{ai1} channel of \inlineCode{cDAQ9185-217ED78Mod2}. The second shaker will be driven by \inlineCode{cDAQ9185-217ED78Mod3}'s \inlineCode{ao1} channel and is teed to the \inlineCode{ai2} channel of \inlineCode{cDAQ9185-217ED78Mod2}.  This is shown in Figure \ref{fig:examplecdaqtwoshakerhardwaresetup}.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{figures/example_cdaq_two_shaker_hardware_setup}
-    \caption{cDAQ hardware setup using two shakers.}
-    \label{fig:examplecdaqtwoshakerhardwaresetup}
-\end{figure}
-
-Our channel table now looks like Figure \ref{fig:examplecdaqtwoshakerchanneltable}.
-
-\begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{figures/example_cdaq_two_shaker_channel_table}
     \caption{Channel table for the random vibration test setup}
     \label{fig:examplecdaqtwoshakerchanneltable}
 \end{figure}
-
-\subsection{Setting up the Random Vibration Test}
+</code></pre>
+<p>![example_cdaq_two_shaker_channel_table](figures/example_cdaq_two_shaker_channel_table.png}</p>
+<p><strong>Figure B-48. Channel table for the random vibration test setup</strong></p>
+<h4 id="b33-setting-up-the-random-vibration-test"><a class="header" href="#b33-setting-up-the-random-vibration-test">B.3.3. Setting up the Random Vibration Test <!--B.3.3--></a></h4>
+<h4 id="b34-running-a-random-vibration-test"><a class="header" href="#b34-running-a-random-vibration-test">B.3.4. Running a Random Vibration Test <!--B.3.4--></a></h4>
+<h4 id="b35-setting-up-the-transient-vibration-test"><a class="header" href="#b35-setting-up-the-transient-vibration-test">B.3.5. Setting up the Transient Vibration Test <!--B.3.5--></a></h4>
+<h4 id="b36-running-a-transient-test"><a class="header" href="#b36-running-a-transient-test">B.3.6. Running a Transient Test <!--B.3.6--></a></h4>
+<h3 id="b4-summary"><a class="header" href="#b4-summary">B.4. Summary <!--B.4--></a></h3>
+<pre><code>\subsection{Setting up the Random Vibration Test}
 Now that the test hardware and channel table are set up, we will set up our random vibration test. We will open Rattlesnake and select the \inlineCode{MIMO Random Vibration} environment as shown in Figure \ref{fig:examplecdaqmimorandomselection}.
 
 \begin{figure}[H]
