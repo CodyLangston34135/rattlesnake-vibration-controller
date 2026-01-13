@@ -661,45 +661,49 @@ ppgui.geometry = geometry\end{lstlisting}
 <p>We will return to the \inlineCode{Environment Definition} tab and set up a \inlineCode{Burst Random} test. We saw that the hammer ring-down took approximately 2 seconds, so we will set the \inlineCode{Samples Per Frame} value to \inlineCode{15360} to achieve a 3 second frame. We will set the \inlineCode{Number of Averages} to \inlineCode{30}. We will set the \inlineCode{Triggering Type} to \inlineCode{First Frame}, remove the \inlineCode{Wait for Steady State} value, and set the \inlineCode{Trigger Channel} to the voltage channel with a \inlineCode{Pretrigger} of \inlineCode{1%}. We will set the \inlineCode{Trigger Level} to \inlineCode{1%}, the \inlineCode{Hysteresis Level} to half that value, and the \inlineCode{Hysteresis Frame %} to \inlineCode{25%}.</p>
 <p>In the \inlineCode{Signal Generator} section, we will select a \inlineCode{Burst Random} signal and set the \inlineCode{On Percentage} to \inlineCode{33%} to provide a 1 second burst and 2 second ring down. We will keep the other parameters the same as our previous Pseudorandom test.</p>
 <p>Figure B-35<!--\ref{fig:examplecdaqburstrandomparameters}--> shows the parameters in the Rattlesnake \ac{GUI}.  Click the \inlineCode{Initialize Environments} button to proceed, and return to the \inlineCode{Run Test} tab.</p>
-<pre><code>\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_burst_random_parameters}
-    \caption{Test parameters for the Burst Random excitation}
-    \label{fig:examplecdaqburstrandomparameters}
-\end{figure}
-</code></pre>
-<p>![example_cdaq_burst_random_parameters](figures/example_cdaq_burst_random_parameters.png}</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_burst_random_parameters}
+        \caption{Test parameters for the Burst Random excitation}
+        \label{fig:examplecdaqburstrandomparameters}
+    \end{figure}
+-->
+<p><img src="figures/example_cdaq_burst_random_parameters.png" alt="example_cdaq_burst_random_parameters" /></p>
 <p><strong>Figure B-35. Test parameters for the Burst Random excitation</strong></p>
 <p>We can preview the signal by clicking the \inlineCode{Preview Acquisition} button to ensure that the triggering has been set up correctly and the signals ring down appropriately.  Figure B-36<!--\ref{fig:examplecdaqburstrandompreview}--> shows the previewed data.</p>
-<pre><code>\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{figures/example_cdaq_burst_random_preview}
-    \caption{Previewing the measurement with the initial parameter set.}
-    \label{fig:examplecdaqburstrandompreview}
-\end{figure}
-</code></pre>
-<p>![example_cdaq_burst_random_preview](figures/example_cdaq_burst_random_preview.png}</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.7\linewidth]{figures/example_cdaq_burst_random_preview}
+        \caption{Previewing the measurement with the initial parameter set.}
+        \label{fig:examplecdaqburstrandompreview}
+    \end{figure}
+-->
+<p><img src="figures/example_cdaq_burst_random_preview.png" alt="example_cdaq_burst_random_preview" /></p>
 <p><strong>Figure B-36. Previewing the measurement with the initial parameter set.</strong></p>
 <p>Apparently the shaker adds enough damping that the structure stops ringing by approximately 1/2 second after the burst finishes. Let's therefore \inlineCode{Stop Acquisition}, \inlineCode{Disarm Data Acquisition}, and return to the \inlineCode{Environment Definition} tab.  We will update the \inlineCode{Samples Per Frame} value to \inlineCode{5120} to achieve a 1 second measurement frame.  We will also change the burst \inlineCode{On Percentage} to \inlineCode{50%}.</p>
 <p>Figure B-37<!--\ref{fig:examplecdaqburstrandomparametersv2}--> shows the updated parameters in the Rattlesnake \ac{GUI}.  Click the \inlineCode{Initialize Environments} button to confirm these settings, and return to the \inlineCode{Run Test} tab.</p>
-<pre><code>\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_burst_random_parameters_v2}
-    \caption{Updated burst random parameters after previewing the initial guess at the parameters.}
-    \label{fig:examplecdaqburstrandomparametersv2}
-\end{figure}
-</code></pre>
-<p>![example_cdaq_burst_random_parameters_v2](figures/example_cdaq_burst_random_parameters_v2.png}</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_burst_random_parameters_v2}
+        \caption{Updated burst random parameters after previewing the initial guess at the parameters.}
+        \label{fig:examplecdaqburstrandomparametersv2}
+    \end{figure}
+-->
+<p><img src="figures/example_cdaq_burst_random_parameters_v2.png" alt="example_cdaq_burst_random_parameters_v2" /></p>
 <p><strong>Figure B-37. Updated burst random parameters after previewing the initial guess at the parameters.</strong></p>
 <p>We can then preview this new configuration by \inlineCode{Arm Data Acquisition} and \inlineCode{Start Preview}.  The results are shown in Figure \ref{fig:examplecdaqburstrandompreviewv2}.  This configuration looks good and runs 3x faster, so we will keep it.</p>
-<pre><code>\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{figures/example_cdaq_burst_random_preview_v2}
-    \caption{Previewing the measurement with the updated parameter set.}
-    \label{fig:examplecdaqburstrandompreviewv2}
-\end{figure}
-</code></pre>
-<p>![example_cdaq_burst_random_preview_v2](figures/example_cdaq_burst_random_preview_v2.png}</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.7\linewidth]{figures/example_cdaq_burst_random_preview_v2}
+        \caption{Previewing the measurement with the updated parameter set.}
+        \label{fig:examplecdaqburstrandompreviewv2}
+    \end{figure}
+-->
+<p><img src="figures/example_cdaq_burst_random_preview_v2.png" alt="example_cdaq_burst_random_preview_v2" /></p>
 <p><strong>B-38. Previewing the measurement with the updated parameter set.</strong></p>
 <p>Press the \inlineCode{Stop Acquisition} button to stop the preview, set a file to store the results to (\inlineCode{beam_shaker_burst.nc4}) and \inlineCode{Start Acquisition}. The acquisition should stop automatically when 30 averages are obtained.  Figure B-39<!--\ref{fig:examplecdaqburstrandomacquire}--> shows the measurement midway through acquisition.</p>
 <!--
@@ -710,7 +714,7 @@ ppgui.geometry = geometry\end{lstlisting}
         \label{fig:examplecdaqburstrandomacquire}
     \end{figure}
 -->
-<p>![example_cdaq_burst_random_acquire](figures/example_cdaq_burst_random_acquire.png}</p>
+<p><img src="figures/example_cdaq_burst_random_acquire.png" alt="example_cdaq_burst_random_acquire" /></p>
 <p><strong>Figure B-39. Acquiring the burst random data</strong></p>
 <h4 id="b26-analyzing-modal-shaker-data"><a class="header" href="#b26-analyzing-modal-shaker-data">B.2.6. Analyzing Modal Shaker Data <!--B.2.6--></a></h4>
 <!--\subsection{Analyzing Modal Shaker Data}-->
@@ -746,7 +750,7 @@ ax[-1].set_yscale('log')
         \label{fig:examplecdaqmodalcomparison}
     \end{figure}
 -->
-<p>![example_cdaq_modal_comparison](figures/example_cdaq_modal_comparison.png}</p>
+<p><img src="figures/example_cdaq_modal_comparison.png" alt="example_cdaq_modal_comparison" /></p>
 <p><strong>Figure B-40. Comparison of hammer impact testing compared to shaker excitation with two types of signals.</strong></p>
 <p>We can note that the peaks are shifted slightly lower in frequency for the shaker testing, likely due to the small amount of mass loading of the shaker.  Additionally, there appears to be some shaker-structure interactions going on near the third mode, but otherwise there is reasonably good agreement between the three tests.</p>
 <h3 id="b3-running-a-vibration-test-with-rattlesnake"><a class="header" href="#b3-running-a-vibration-test-with-rattlesnake">B.3. Running a Vibration Test with Rattlesnake <!--B.3--></a></h3>
@@ -758,14 +762,16 @@ ax[-1].set_yscale('log')
 <p>To acquire environment data, we will simply run the modal environment in preview mode, but now use Rattlesnake's \inlineCode{Streaming} functionality to record time data, from which we will construct specifications for vibration testing.</p>
 <p>We will disconnect the shaker from our test article. Then we return to the \inlineCode{Environment Definition} page and set the \inlineCode{Triggering Type} to \inlineCode{Free Run}.</p>
 <p>On the \inlineCode{Run Test} tab, before selecting \inlineCode{Arm Data Acquisition} we select \inlineCode{Start Streaming Immediately} and \inlineCode{Select Streaming File...} to save a time history file called \inlineCode{environment_streaming.nc4}.  This is shown in Figure B-41 <!--\ref{fig:examplecdaqsetupstreaming}-->.</p>
-<pre><code>\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_set_up_streaming}
-    \caption{Run Test tab with Streaming enabled}
-    \label{fig:examplecdaqsetupstreaming}
-\end{figure}
-</code></pre>
-<p>**Figure B-41.  \caption{Run Test tab with Streaming enabled}</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_set_up_streaming}
+        \caption{Run Test tab with Streaming enabled}
+        \label{fig:examplecdaqsetupstreaming}
+    \end{figure}
+-->
+<p><img src="figures/example_cdaq_set_up_streaming.png" alt="example_cdaq_set_up_streaming" /></p>
+<p><strong>Figure B-41. Run Test tab with Streaming enabled</strong></p>
 <p>Now we can \inlineCode{Arm Data Acquisition} and then \inlineCode{Preview Acquisition}. Once the data acquisition is running, we will tap the structure with the modal hammer repeatedly along the length of the beam.  Don't worry that the hammer is not plugged in, as we only care about the accelerometer response. Once we have recorded a few seconds of impacts, we can select \inlineCode{Stop Acquisition} and \inlineCode{Disarm Data Acquisition}. Note that the streaming file will not be available until the data acquisition is disarmed.  We can now close Rattlesnake because we are done with the Modal environment.</p>
 <p>We will now load the streaming file with SDynPy to create an environment.</p>
 <pre><code class="language-python">time_history, channel_table = sdpy.rattlesnake.read_rattlesnake_output(
@@ -783,7 +789,7 @@ accelerations.plot()
         \label{fig:examplecdaqspecificationsignal}
     \end{figure}
 -->
-<p>![example_cdaq_specification_signal](figures/example_cdaq_specification_signal.png}</p>
+<p><img src="figures/example_cdaq_specification_signal.png" alt="example_cdaq_specification_signal" /></p>
 <p><strong>Figure B-42. Measured acceleration data that we will turn into vibration specifications.</strong></p>
 <p>Looking at the data, we can truncate it to just the time range of interest, shown in Figure B-43<!--\ref{fig:examplecdaqspecificationsignaltruncated}-->.</p>
 <pre><code class="language-python">truncated_accelerations = accelerations.extract_elements_by_abscissa(2.3,16.3)
@@ -797,7 +803,7 @@ truncated_accelerations.plot()
         \label{fig:examplecdaqspecificationsignaltruncated}
     \end{figure}
 -->
-<p>![example_cdaq_specification_signal_truncated](figures/example_cdaq_specification_signal_truncated.png}</p>
+<p><img src="figures/example_cdaq_specification_signal_truncated.png" alt="example_cdaq_specification_signal_truncated" /></p>
 <p><strong>Figure B-43. Truncated acceleration data that we will turn into vibration specifications.</strong></p>
 <p>To construct a random vibration environment, we will compute \ac{CPSD}s from this signal. While this isn't really an appropriate signal for a random vibration specification, it is good enough to demonstrate Rattlesnake's capabilities.  Figure B-44<!--\ref{fig:examplecdaqcpsdspecification}--> shows the \ac{APSD}s, which are the diagonal entries of the \ac{CPSD} specification matrix.</p>
 <pre><code class="language-python">random_spec = truncated_accelerations.cpsd(samples_per_frame = 5120, overlap=0.5, window = 'hann')
@@ -810,14 +816,15 @@ ax = random_spec.plot_asds()
 fig = ax[0,0].figure
 fig.tight_layout()
 </code></pre>
-<pre><code>\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{figures/example_cdaq_cpsd_specification}
-    \caption{Diagonal entries of the random vibration specification \ac{CPSD} matrix.}
-    \label{fig:examplecdaqcpsdspecification}
-\end{figure}
-</code></pre>
-<p>![example_cdaq_cpsd_specification](figures/example_cdaq_cpsd_specification.png}</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.7\linewidth]{figures/example_cdaq_cpsd_specification}
+        \caption{Diagonal entries of the random vibration specification \ac{CPSD} matrix.}
+        \label{fig:examplecdaqcpsdspecification}
+    \end{figure}
+-->
+<p><img src="figures/example_cdaq_cpsd_specification.png" alt="example_cdaq_cpsd_specification" /></p>
 <p><strong>Figure B-44. Diagonal entries of the random vibration specification \ac{CPSD} matrix.</strong></p>
 <p>We will also construct a transient specification that we will use to test the transient vibration control, shown in Figure B-45<!--\ref{fig:examplecdaqtransientspecification}-->.</p>
 <pre><code class="language-python"># We will make it shorter and again scale it down to make it so we don't break anything
@@ -832,7 +839,7 @@ transient_spec.plot()
         \label{fig:examplecdaqtransientspecification}
     \end{figure}
 -->
-<p>![example_cdaq_transient_specification](figures/example_cdaq_transient_specification.png}</p>
+<p><img src="figures/example_cdaq_transient_specification.png" alt="example_cdaq_transient_specification" /></p>
 <p><strong>Figure B-45. Transient specification used for vibration control.</strong></p>
 <p>We can now save these specifications to disk.</p>
 <pre><code class="language-python">random_spec.to_rattlesnake_specification('random_specification.npz')
@@ -849,7 +856,7 @@ transient_spec.to_rattlesnake_specification('transient_specification.npz')
         \label{fig:examplecdaqtwoshakersetup}
     \end{figure}
 -->
-<p>![example_cdaq_two_shaker_setup](figures/example_cdaq_two_shaker_setup.png}</p>
+<p><img src="figures/example_cdaq_two_shaker_setup.png" alt="example_cdaq_two_shaker_setup" /></p>
 <p><strong>Figure B-46. Vibration test setup showing two shakers attached to the test article.</strong></p>
 <p>Because we only have 6 acquisition channels, we must remove the force gauge to make room for the second shaker drive signal. We have now teed the first shaker's drive from \inlineCode{cDAQ9185-217ED78Mod3}'s \inlineCode{ao0} channel to the \inlineCode{ai1} channel of \inlineCode{cDAQ9185-217ED78Mod2}. The second shaker will be driven by \inlineCode{cDAQ9185-217ED78Mod3}'s \inlineCode{ao1} channel and is teed to the \inlineCode{ai2} channel of \inlineCode{cDAQ9185-217ED78Mod2}.  This is shown in Figure B-47<!--\ref{fig:examplecdaqtwoshakerhardwaresetup}-->.</p>
 <!--
@@ -860,148 +867,161 @@ transient_spec.to_rattlesnake_specification('transient_specification.npz')
         \label{fig:examplecdaqtwoshakerhardwaresetup}
     \end{figure}
 -->
-<p>![example_cdaq_two_shaker_hardware_setup](figures/example_cdaq_two_shaker_hardware_setup.png}</p>
+<p><img src="figures/example_cdaq_two_shaker_hardware_setup.png" alt="example_cdaq_two_shaker_hardware_setup" /></p>
 <p><strong>Figure B-47. cDAQ hardware setup using two shakers.</strong></p>
 <p>Our channel table now looks like Figure B-48<!--\ref{fig:examplecdaqtwoshakerchanneltable}-->.</p>
-<pre><code>\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_two_shaker_channel_table}
-    \caption{Channel table for the random vibration test setup}
-    \label{fig:examplecdaqtwoshakerchanneltable}
-\end{figure}
-</code></pre>
-<p>![example_cdaq_two_shaker_channel_table](figures/example_cdaq_two_shaker_channel_table.png}</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_two_shaker_channel_table}
+        \caption{Channel table for the random vibration test setup}
+        \label{fig:examplecdaqtwoshakerchanneltable}
+    \end{figure}
+-->
+<p><img src="figures/example_cdaq_two_shaker_channel_table.png" alt="example_cdaq_two_shaker_channel_table" /></p>
 <p><strong>Figure B-48. Channel table for the random vibration test setup</strong></p>
 <h4 id="b33-setting-up-the-random-vibration-test"><a class="header" href="#b33-setting-up-the-random-vibration-test">B.3.3. Setting up the Random Vibration Test <!--B.3.3--></a></h4>
+<!--\subsection{Setting up the Random Vibration Test}-->
+<p>Now that the test hardware and channel table are set up, we will set up our random vibration test. We will open Rattlesnake and select the \inlineCode{MIMO Random Vibration} environment as shown in Figure B-49 <!--\ref{fig:examplecdaqmimorandomselection}-->.</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.5\linewidth]{figures/example_cdaq_mimo_random_selection}
+        \caption{Selecting the MIMO Random Vibration environment}
+        \label{fig:examplecdaqmimorandomselection}
+    \end{figure}
+-->
+<p><img src="figures/example_cdaq_mimo_random_selection.png" alt="example_cdaq_mimo_random_selection" /></p>
+<p><strong>Figure B-49. Selecting the MIMO Random Vibration environment</strong></p>
+<p>On the \inlineCode{Data Acquisition Setup} tab, we will \inlineCode{Load Channel Table} to import our Excel channel spreadsheet. We will also set the \inlineCode{Sample Rate} to \inlineCode{5120}. The other parameters can be left at their default values.  Figure B-50<!--\ref{fig:examplecdaqvibrationdataacquisitionsetup}--> shows these parameters.</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_vibration_data_acquisition_setup}
+        \caption{Data acquisition setup for the vibration tests.}
+        \label{fig:examplecdaqvibrationdataacquisitionsetup}
+    \end{figure}
+-->
+<p><img src="figures/example_cdaq_vibration_data_acquisition_setup.png" alt="example_cdaq_vibration_data_acquisition_setup" /></p>
+<p><strong>Figure B-50. Data acquisition setup for the vibration tests.</strong></p>
+<p>Click the \inlineCode{Initialize Data Acquisition} button to proceed.</p>
+<p>On the \inlineCode{Environment Definition} tab, we will keep the \inlineCode{Samples Per Frame} set to \inlineCode{5120}, which is consistent with the parameters used to construct the specification. In the \inlineCode{Control Python Script} section, we will click \inlineCode{Load} to select a control law. We will use the \inlineCode{control_laws.py} file, which is located in the \inlineCode{control_laws} folder of the main Rattlesnake directory. In the \inlineCode{Control Python Function} drop-down, we will select \inlineCode{pseudoinverse_control}.</p>
+<p>In the \inlineCode{Control Channels} section, we will select all four acceleration channels, which we will use to control to the environment.</p>
+<p>Finally we will click the \inlineCode{Load Spec} button and navigate to our random specification file \inlineCode{random_specification.npz} from SDynPy. The specification should then appear in the plots.</p>
+<p>With these parameters selected, we can click the Initialize Environments button to proceed.  Figure B-51 <!--\ref{fig:examplecdaqrandomvibrationparameters}--> shows the parameters in the Rattlesnake \ac{GUI}.</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_random_vibration_parameters}
+        \caption{Random vibration parameters specified in the Rattlesnake \ac{GUI}.}
+        \label{fig:examplecdaqrandomvibrationparameters}
+    \end{figure}
+-->
+<p><img src="figures/example_cdaq_random_vibration_parameters.png" alt="example_cdaq_random_vibration_parameters" /></p>
+<p><strong>Figure B-51. Random vibration parameters specified in the Rattlesnake \ac{GUI}.</strong></p>
+<p>At this point, we must run the \inlineCode{System Identification} phase of the controller. We will set the Level to \inlineCode{0.1 V RMS}, then click \inlineCode{Start} to start the system identification. A noise floor check will first be run, then the system identification follows. Rattlesnake will determine the transfer functions between the two shaker drive signals and the four accelerometer channels. When the specified number of averages have been obtained, the System Identification will stop automatically.  Figure B-52 <!--\ref{fig:examplecdaqrandomvibrationsystemid}--> shows the system identification phase of the controller.</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_random_vibration_system_id}
+        \caption{System identification for the Random Vibration environment.}
+        \label{fig:examplecdaqrandomvibrationsystemid}
+    \end{figure}
+-->
+<p>k
+<img src="figures/example_cdaq_random_vibration_system_id.png" alt="example_cdaq_random_vibration_system_id" /></p>
+<p><strong>Figure B-52. System identification for the Random Vibration environment.</strong></p>
+<p>On the \inlineCode{Test Prediction} tab, Rattlesnake will make predictions of the voltage that it will need to output to achieve the control specified, as well as the responses predicted to be obtained. Here it is important to note that the output signals are not too large for the shakers.  Figure B-53<!--\ref{fig:examplecdaqrandomvibrationpredictions}--> shows the predictions for this test.</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_random_vibration_predictions}
+        \caption{Test predictions for the random vibration environment}
+        \label{fig:examplecdaqrandomvibrationpredictions}
+    \end{figure}
+-->
+<p><img src="figures/example_cdaq_random_vibration_predictions.png" alt="example_cdaq_random_vibration_predictions" /></p>
+<p><strong>Figure B-53. Test predictions for the random vibration environment</strong></p>
+<p>If the predictions look good, we can proceed to the Test Profile tab, which we will again leave blank and click the Initialize Test Profile button to proceed to the Run Test tab.</p>
 <h4 id="b34-running-a-random-vibration-test"><a class="header" href="#b34-running-a-random-vibration-test">B.3.4. Running a Random Vibration Test <!--B.3.4--></a></h4>
-<h4 id="b35-setting-up-the-transient-vibration-test"><a class="header" href="#b35-setting-up-the-transient-vibration-test">B.3.5. Setting up the Transient Vibration Test <!--B.3.5--></a></h4>
-<h4 id="b36-running-a-transient-test"><a class="header" href="#b36-running-a-transient-test">B.3.6. Running a Transient Test <!--B.3.6--></a></h4>
-<h3 id="b4-summary"><a class="header" href="#b4-summary">B.4. Summary <!--B.4--></a></h3>
-<pre><code>\subsection{Setting up the Random Vibration Test}
-Now that the test hardware and channel table are set up, we will set up our random vibration test. We will open Rattlesnake and select the \inlineCode{MIMO Random Vibration} environment as shown in Figure \ref{fig:examplecdaqmimorandomselection}.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.5\linewidth]{figures/example_cdaq_mimo_random_selection}
-    \caption{Selecting the MIMO Random Vibration environment}
-    \label{fig:examplecdaqmimorandomselection}
-\end{figure}
-
-On the \inlineCode{Data Acquisition Setup} tab, we will \inlineCode{Load Channel Table} to import our Excel channel spreadsheet. We will also set the \inlineCode{Sample Rate} to \inlineCode{5120}. The other parameters can be left at their default values.  Figure \ref{fig:examplecdaqvibrationdataacquisitionsetup} shows these parameters.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_vibration_data_acquisition_setup}
-    \caption{Data acquisition setup for the vibration tests.}
-    \label{fig:examplecdaqvibrationdataacquisitionsetup}
-\end{figure}
-
-Click the \inlineCode{Initialize Data Acquisition} button to proceed.
-
-On the \inlineCode{Environment Definition} tab, we will keep the \inlineCode{Samples Per Frame} set to \inlineCode{5120}, which is consistent with the parameters used to construct the specification. In the \inlineCode{Control Python Script} section, we will click \inlineCode{Load} to select a control law. We will use the \inlineCode{control_laws.py} file, which is located in the \inlineCode{control_laws} folder of the main Rattlesnake directory. In the \inlineCode{Control Python Function} drop-down, we will select \inlineCode{pseudoinverse_control}.
-
-In the \inlineCode{Control Channels} section, we will select all four acceleration channels, which we will use to control to the environment.
-
-Finally we will click the \inlineCode{Load Spec} button and navigate to our random specification file \inlineCode{random_specification.npz} from SDynPy. The specification should then appear in the plots.
-
-With these parameters selected, we can click the Initialize Environments button to proceed.  Figure \ref{fig:examplecdaqrandomvibrationparameters} shows the parameters in the Rattlesnake \ac{GUI}.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_random_vibration_parameters}
-    \caption{Random vibration parameters specified in the Rattlesnake \ac{GUI}.}
-    \label{fig:examplecdaqrandomvibrationparameters}
-\end{figure}
-
-At this point, we must run the \inlineCode{System Identification} phase of the controller. We will set the Level to \inlineCode{0.1 V RMS}, then click \inlineCode{Start} to start the system identification. A noise floor check will first be run, then the system identification follows. Rattlesnake will determine the transfer functions between the two shaker drive signals and the four accelerometer channels. When the specified number of averages have been obtained, the System Identification will stop automatically.  Figure \ref{fig:examplecdaqrandomvibrationsystemid} shows the system identification phase of the controller.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_random_vibration_system_id}
-    \caption{System identification for the Random Vibration environment.}
-    \label{fig:examplecdaqrandomvibrationsystemid}
-\end{figure}
-
-On the \inlineCode{Test Prediction} tab, Rattlesnake will make predictions of the voltage that it will need to output to achieve the control specified, as well as the responses predicted to be obtained. Here it is important to note that the output signals are not too large for the shakers.  Figure \ref{fig:examplecdaqrandomvibrationpredictions} shows the predictions for this test.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_random_vibration_predictions}
-    \caption{Test predictions for the random vibration environment}
-    \label{fig:examplecdaqrandomvibrationpredictions}
-\end{figure}
-
-If the predictions look good, we can proceed to the Test Profile tab, which we will again leave blank and click the Initialize Test Profile button to proceed to the Run Test tab.
-
-\subsection{Running a Random Vibration Test}
-On the \inlineCode{Run Test} tab, we see a different interface than the one we saw for the modal test. We can click the \inlineCode{Arm Data Acquisition} button to enable the Random environment.
-
-To start, we will set the \inlineCode{Current Test Level} to \inlineCode{-12} dB to ensure when we start the test we don't break anything. We will then step up slowly to the full \inlineCode{0} dB level test.
-
-We can then click the \inlineCode{Start Environment} button to start the test.  Figure \ref{fig:examplecdaqrandomvibrationstart} shows the \ac{GUI} prior to starting the test with the test level turned down to -12 dB.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_random_vibration_start}
-    \caption{Ready to start a random vibration test in Rattlesnake}
-    \label{fig:examplecdaqrandomvibrationstart}
-\end{figure}
-
-As the test is running, the main Rattlesnake interface will show the sum of \ac{APSD}s, which is the trace of the \ac{CPSD} matrix and can be thought of as an average response of the test (Figure \ref{fig:examplecdaqrandomvibrationsumasds}). To visualize individual channels, windows can be created in the \inlineCode{Data Display} section of the window (figure \ref{fig:examplecdaqrandomvibrationindividualchannels}).
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_random_vibration_sum_asds}
-    \caption{Rattlesnake \ac{GUI} showing the average test response}
-    \label{fig:examplecdaqrandomvibrationsumasds}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_random_vibration_individual_channels}
-    \caption{Individual channel \ac{APSD}s showing how well each channel is matching the test level.}
-    \label{fig:examplecdaqrandomvibrationindividualchannels}
-\end{figure}
-
-If the controller is controlling sufficiently well, we can step up the level to \inlineCode{0} dB as shown in Figure \ref{fig:examplecdaqrandomvibrationsumasdsfulllevel}.
-
-\begin{figure}
+<!--\subsection{Running a Random Vibration Test}-->
+<p>On the \inlineCode{Run Test} tab, we see a different interface than the one we saw for the modal test. We can click the \inlineCode{Arm Data Acquisition} button to enable the Random environment.</p>
+<p>To start, we will set the \inlineCode{Current Test Level} to \inlineCode{-12} dB to ensure when we start the test we don't break anything. We will then step up slowly to the full \inlineCode{0} dB level test.</p>
+<p>We can then click the \inlineCode{Start Environment} button to start the test.  Figure B-54<!--\ref{fig:examplecdaqrandomvibrationstart}--> shows the \ac{GUI} prior to starting the test with the test level turned down to -12 dB.</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_random_vibration_start}
+        \caption{Ready to start a random vibration test in Rattlesnake}
+        \label{fig:examplecdaqrandomvibrationstart}
+    \end{figure}
+-->
+<p><img src="figures/example_cdaq_random_vibration_start.png" alt="example_cdaq_random_vibration_start" /></p>
+<p><strong>Figure B-54. Ready to start a random vibration test in Rattlesnake</strong></p>
+<p>As the test is running, the main Rattlesnake interface will show the sum of \ac{APSD}s, which is the trace of the \ac{CPSD} matrix and can be thought of as an average response of the test (Figure B-55<!--\ref{fig:examplecdaqrandomvibrationsumasds}-->). To visualize individual channels, windows can be created in the \inlineCode{Data Display} section of the window (Figure B-56<!--\ref{fig:examplecdaqrandomvibrationindividualchannels}-->).</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_random_vibration_sum_asds}
+        \caption{Rattlesnake \ac{GUI} showing the average test response}
+        \label{fig:examplecdaqrandomvibrationsumasds}
+    \end{figure}
+-->
+<p><img src="figures/example_cdaq_random_vibration_sum_asds.png" alt="example_cdaq_random_vibration_sum_asds" /></p>
+<p><strong>Figure B-55. Rattlesnake \ac{GUI} showing the average test response</strong></p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_random_vibration_individual_channels}
+        \caption{Individual channel \ac{APSD}s showing how well each channel is matching the test level.}
+        \label{fig:examplecdaqrandomvibrationindividualchannels}
+    \end{figure}
+-->
+<p><img src="figures/example_cdaq_random_vibration_individual_channels.png" alt="example_cdaq_random_vibration_individual_channels" /></p>
+<p><strong>Figure B-56. Individual channel \ac{APSD}s showing how well each channel is matching the test level.</strong></p>
+<p>If the controller is controlling sufficiently well, we can step up the level to \inlineCode{0} dB as shown in Figure B-57 <!--\ref{fig:examplecdaqrandomvibrationsumasdsfulllevel}-->.</p>
+<pre><code>\begin{figure}
     \centering
     \includegraphics[width=\linewidth]{figures/example_cdaq_random_vibration_sum_asds_full_level}
     \caption{Vibration control at full specification level.}
     \label{fig:examplecdaqrandomvibrationsumasdsfulllevel}
 \end{figure}
-
-Feel free to investigate other control laws in the \inlineCode{control_laws.py} file, as they can result in a better control than the standard pseudoinverse control. Figure \ref{fig:examplecdaqrandomvibrationsumasdsmatchtrace} shows the results using the \inlineCode{match_trace_pseudoinverse} approach.  In particular, we see the regions between the peaks improve in this case.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_cdaq_random_vibration_sum_asds_match_trace}
-    \caption{Improved control using a closed loop control law found in \inlineCode{match_trace_pseudoinverse}.}
-    \label{fig:examplecdaqrandomvibrationsumasdsmatchtrace}
-\end{figure}
-
-Clearly, Rattlesnake has obtained relatively good control for this test.
-
-To save data from the test, we can either stream time data using the same approach used previously, or we can simply use the \inlineCode{Save Current Spectral Data} to save out the current realizations of the control \ac{CPSD}s, which we will call \inlineCode{random_vibration_spectral_results.nc4}. This is the quickest way to do comparisons between the specification and the control achieved. We can load this file with SDynPy and use SDynPy to make comparisons between the test and specification.  The results are shown in Figure \ref{fig:examplecdaqrandomvibrationerrorsummary}.
-
-\begin{lstlisting}[language=Python]
 </code></pre>
-<p>control, spec, drives = sdpy.rattlesnake.read_random_spectral_data(
-'random_vibration_spectral_results.nc4')
+<p><img src="figures/example_cdaq_random_vibration_sum_asds_full_level.png" alt="example_cdaq_random_vibration_sum_asds_full_level" /></p>
+<p><strong>B-57. Vibration control at full specification level.</strong></p>
+<p>Feel free to investigate other control laws in the \inlineCode{control_laws.py} file, as they can result in a better control than the standard pseudoinverse control. Figure B-58 <!--\ref{fig:examplecdaqrandomvibrationsumasdsmatchtrace}--> shows the results using the \inlineCode{match_trace_pseudoinverse} approach.  In particular, we see the regions between the peaks improve in this case.</p>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{figures/example_cdaq_random_vibration_sum_asds_match_trace}
+        \caption{Improved control using a closed loop control law found in \inlineCode{match_trace_pseudoinverse}.}
+        \label{fig:examplecdaqrandomvibrationsumasdsmatchtrace}
+    \end{figure}
+-->
+<p><strong>Figure B-58. Improved control using a closed loop control law found in \inlineCode{match_trace_pseudoinverse}.</strong></p>
+<p>Clearly, Rattlesnake has obtained relatively good control for this test.</p>
+<p>To save data from the test, we can either stream time data using the same approach used previously, or we can simply use the \inlineCode{Save Current Spectral Data} to save out the current realizations of the control \ac{CPSD}s, which we will call \inlineCode{random_vibration_spectral_results.nc4}. This is the quickest way to do comparisons between the specification and the control achieved. We can load this file with SDynPy and use SDynPy to make comparisons between the test and specification.  The results are shown in Figure B-59<!--\ref{fig:examplecdaqrandomvibrationerrorsummary}-->.</p>
+<pre><code class="language-python">control, spec, drives = sdpy.rattlesnake.read_random_spectral_data(
+    'random_vibration_spectral_results.nc4')
 spec = spec.extract_elements_by_abscissa(20,2000)
 control = control.extract_elements_by_abscissa(20,2000)
-spec.error_summary(figure_kwargs={'figsize':(10,6)},Control=control)\end{lstlisting}</p>
-<pre><code>\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\linewidth]{figures/example_cdaq_random_vibration_error_summary}
-    \caption{Error summary between the test and specification for the random vibration control.}
-    \label{fig:examplecdaqrandomvibrationerrorsummary}
-\end{figure}
-
-We can then \inlineCode{Stop Environment}, \inlineCode{Disarm Data Acquisition} and close the software.
-
-\subsection{Setting up the Transient Vibration Test}
+spec.error_summary(figure_kwargs={'figsize':(10,6)},Control=control)
+</code></pre>
+<!--
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.7\linewidth]{figures/example_cdaq_random_vibration_error_summary}
+        \caption{Error summary between the test and specification for the random vibration control.}
+        \label{fig:examplecdaqrandomvibrationerrorsummary}
+    \end{figure}
+-->
+<p><img src="figures/example_cdaq_random_vibration_error_summary.png" alt="example_cdaq_random_vibration_error_summary" /></p>
+<p><strong>Figure B-59. Error summary between the test and specification for the random vibration control.</strong></p>
+<p>We can then \inlineCode{Stop Environment}, \inlineCode{Disarm Data Acquisition} and close the software.</p>
+<h4 id="b35-setting-up-the-transient-vibration-test"><a class="header" href="#b35-setting-up-the-transient-vibration-test">B.3.5. Setting up the Transient Vibration Test <!--B.3.5--></a></h4>
+<h4 id="b36-running-a-transient-test"><a class="header" href="#b36-running-a-transient-test">B.3.6. Running a Transient Test <!--B.3.6--></a></h4>
+<h3 id="b4-summary"><a class="header" href="#b4-summary">B.4. Summary <!--B.4--></a></h3>
+<pre><code>\subsection{Setting up the Transient Vibration Test}
 
 The last demonstration will show how we can perform a MIMO Transient environment test. Open Rattlesnake and select the \inlineCode{MIMO Transient} environment as shown in Figure \ref{fig:examplecdaqmimotransientselection}.
 
