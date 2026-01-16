@@ -804,7 +804,7 @@ During Control?</string>
                </sizepolicy>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Parameters&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Any additional parameters needed by the control law are entered in this text box.  It is up to the control law to prescribe what is needed to be defined in this box.  The data entered into this box will be passed to the control law as a string to the &amp;quot;extra_parameters&amp;quot; argument.  Control laws should parse this string to extract needed information.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Control Parameters&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Any additional parameters needed by the control law are entered in this text box. It is up to the control law to prescribe what is needed to be defined in this box. The data entered into this box will be passed to the control law as a string to the &amp;quot;extra_parameters&amp;quot; argument. Control laws should parse this string to extract needed information.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="lineWrapMode">
                <enum>QTextEdit::NoWrap</enum>
