@@ -34,6 +34,13 @@ class Rattlesnake:
         self.output_process = mp.Process()
         self.streaming_process = mp.Process()
 
+        # Set up data queue
+        self.acquisition_to_environment_queue = {}
+        self.environment_to_output_queue = {}
+        self.output_to_acquisition_sync_queue = mp.Queue()
+        self.acquisition_to_streaming_queue = mp.Queue()
+        self.single_process_hardware_queue = mp.Queue()
+
         # Set up output queue
         self.gui_update_queue = mp.Queue()
 
