@@ -1,4 +1,4 @@
-from hardware_utilities import Channel
+from hardware_utilities import Channel, HardwareType
 from abc import ABC, abstractmethod
 from typing import List
 import numpy as np
@@ -6,7 +6,20 @@ import numpy as np
 
 class HardwareMetadata(ABC):
     def __init__(self):
+        self.hardware_type = HardwareType.SELECT
         self.channel_list = []
+        self.sample_rate = 1000
+        self.time_per_read = 0.25
+        self.time_per_write = 0.25
+        self.output_oversample = 1
+
+    @property
+    def samples_per_read(self):
+        return round(self.sample_rate * self.time_per_read)
+
+    @property
+    def samples_per_write(self):
+        return round(self.sample_rate * self.time_per_write * self.output_oversample)
 
 
 class HardwareAcquisition(ABC):

@@ -7,6 +7,7 @@ from typing import Dict
 
 class GlobalCommands(Enum):
     QUIT = 0
+    INITIALIZE_HARDWARE = 1
 
 
 def log_file_task(queue: mp.Queue, shutdown_event: mp.Event):

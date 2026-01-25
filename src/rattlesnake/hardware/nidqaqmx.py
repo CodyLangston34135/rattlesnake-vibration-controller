@@ -1,5 +1,5 @@
 from .abstract_hardware import HardwareMetadata, HardwareAcquisition
-from .hardware_utilities import Channel
+from .hardware_utilities import Channel, HardwareType
 import nidaqmx as ni
 import nidaqmx.constants as nic
 import nidaqmx.stream_readers as ni_read
@@ -20,20 +20,10 @@ class TaskTrigger(Enum):
 
 class NIDAQmxMetadata:
     def __init__(self):
-        self.channel_list = []
-        self.sample_rate = 1000
-        self.time_per_read = 0.25
-        self.time_per_write = 0.25
+        super().__init__()
+        self.hardware_type = HardwareType.NI_DAQmx
         self.task_trigger = TaskTrigger.INTERNAL
-        self.trigger_output_channel = 0
-
-    @property
-    def samples_per_read(self):
-        return round(self.sample_rate * self.time_per_read)
-
-    @property
-    def samples_per_write(self):
-        return round(self.sample_rate * self.time_per_write)
+        self.output_trigger_generator = 0
 
 
 class NIDAQmxAcquisition(HardwareAcquisition):
@@ -59,11 +49,9 @@ class NIDAQmxAcquisition(HardwareAcquisition):
         self.output_trigger_generator = None
         self.has_printed_read_statement = False
         self.trigger_output_task = None
-        self.test_data = None
+        self.metadata = None
 
-    def set_up_data_acquisition_parameters_and_channels(
-        self, test_data: NIDAQmxMetadata, channel_data: List[Channel]
-    ):
+    def set_up_data_acquisition_parameters_and_channels(self, metadata: NIDAQmxMetadata):
         """
         Initialize the hardware and set up channels and sampling properties
 
@@ -72,7 +60,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
 
         Parameters
         ----------
-        test_data : NIDAQmxMetadata :
+        metadata : NIDAQmxMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
         channel_data : List[Channel] :
@@ -83,9 +71,9 @@ class NIDAQmxAcquisition(HardwareAcquisition):
         None.
 
         """
-        self.create_response_channels(channel_data)
-        self.set_parameters(test_data)
-        self.test_data = test_data
+        self.create_response_channels(metadata.channel_list)
+        self.set_parameters(metadata)
+        self.metadata = metadata
 
     def create_response_channels(self, channel_data: List[Channel]):
         """Method to set up response channels
@@ -155,11 +143,13 @@ class NIDAQmxAcquisition(HardwareAcquisition):
 
         Parameters
         ----------
-        test_data : NIDAQmxMetadata :
+        metadata : NIDAQmxMetadata :
             A container containing the data acquisition parameters for the
             controller set by the user.
 
         """
+        self.task_trigger = metadata.task_trigger
+        self.output_trigger_generator = metadata.output_trigger_generator
         self.readers = []
         self.read_datas = []
         self.acquisition_delay = BUFFER_SIZE_FACTOR * metadata.samples_per_write
@@ -196,9 +186,9 @@ class NIDAQmxAcquisition(HardwareAcquisition):
                 self.output_trigger_generator, min_val=-3.5, max_val=3.5
             )
             self.trigger_output_task.timing.cfg_samp_clk_timing(
-                self.test_data.sample_rate,
+                self.metadata.sample_rate,
                 sample_mode=nic.AcquisitionType.CONTINUOUS,
-                samps_per_chan=self.test_data.samples_per_write,
+                samps_per_chan=self.metadata.samples_per_write,
             )
             self.trigger_output_task.out_stream.regen_mode = nic.RegenerationMode.ALLOW_REGENERATION
             writer = ni_write.AnalogMultiChannelWriter(
