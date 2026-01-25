@@ -7,7 +7,7 @@ import multiprocessing as mp
 import datetime as datetime
 
 
-class AbstractMetadata(ABC):
+class EnvironmentMetadata(ABC):
     """Abstract class for storing metadata for an environment.
 
     This class is used as a storage container for parameters used by an
@@ -16,13 +16,14 @@ class AbstractMetadata(ABC):
     ``initialize_environment`` function.  Various parts of the controller and
     environment will query the class's data members for parameter values.
 
-    Classes inheriting from AbstractMetadata must define:
+    Classes inheriting from EnvironmentMetadata must define:
       1. store_to_netcdf - A function defining the way the parameters are
          stored to a netCDF file saved during streaming operations.
     """
 
-    def __init__(self, channel_list_boolss):
-        self._channel_list_bools = channel_list_boolss
+    def __init__(self, channel_list_bools):
+        self._channel_list_bools = channel_list_bools
+        self.environment_name = "Environment"
 
     @property
     def channel_list_bools(self):
@@ -188,7 +189,7 @@ class AbstractEnvironment(ABC):
 
         Parameters
         ----------
-        environment_parameters : AbstractMetadata
+        environment_parameters : EnvironmentMetadata
             A container containing the parameters defining the environment
 
         """

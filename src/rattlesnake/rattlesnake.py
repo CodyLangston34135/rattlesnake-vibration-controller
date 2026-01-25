@@ -8,13 +8,13 @@ class Rattlesnake:
     def __init__(self):
         # Initialize values for checking state
         self.shutdown_event = mp.Event()
-        self.acquistion_ready = mp.Value("b", False)
-        self.output_ready = mp.Value("b", False)
-        self.acquisition_active = mp.Value("i", 0)
-        self.output_active = mp.Value("i", 0)
+        acquistion_ready = mp.Value("i", 0)
+        output_ready = mp.Value("i", 0)
+        acquisition_active = mp.Value("i", 0)
+        output_active = mp.Value("i", 0)
 
         # Start up log file process
-        self.log_file_queue = mp.Queue()
+        log_file_queue = mp.Queue()
         self.log_file_process = mp.Process()
         self.log_file_process = mp.Process(
             target=log_file_task,
@@ -26,23 +26,47 @@ class Rattlesnake:
         self.log_file_process.start()
 
         # Start up command queues and processes
-        self.environment_command_queues = {}
-        self.acquisition_command_queue = VerboseMessageQueue(self.log_file_queue, "Acquisition Command Queue")
-        self.output_command_queue = VerboseMessageQueue(self.log_file_queue, "Output Command Queue")
-        self.streaming_command_queue = VerboseMessageQueue(self.log_file_queue, "Streaming Command Queue")
+        acquisition_command_queue = VerboseMessageQueue(self.log_file_queue, "Acquisition Command Queue")
+        output_command_queue = VerboseMessageQueue(self.log_file_queue, "Output Command Queue")
+        streaming_command_queue = VerboseMessageQueue(self.log_file_queue, "Streaming Command Queue")
         self.acquisition_process = mp.Process()
         self.output_process = mp.Process()
         self.streaming_process = mp.Process()
 
         # Set up data queue
-        self.acquisition_to_environment_queue = {}
-        self.environment_to_output_queue = {}
-        self.output_to_acquisition_sync_queue = mp.Queue()
-        self.acquisition_to_streaming_queue = mp.Queue()
-        self.single_process_hardware_queue = mp.Queue()
+        input_output_sync_queue = mp.Queue()
+        acquisition_to_streaming_queue = mp.Queue()
+        single_process_hardware_queue = mp.Queue()
+
+        # Set up environment queues
+        acquisition_env_send, acquisition_env_recv = mp.Pipe(duplex=False)
+        output_env_send, output_env_recv = mp.Pipe(duplex=False)
+        max_environments = 16
+        environment_command_queues = {}
+        environment_data_in_queues = {}
+        environment_data_out_queues = {}
+        for env_idx in range(max_environments):
+            environment_name = "Environment {:}".format(env_idx)
+            environment_command_queues[environment_name] = VerboseMessageQueue(log_file_queue, environment_name + " Command Queue")
+            environment_data_in_queues[environment_name] = mp.Queue()
+            environment_data_out_queues[environment_name] = mp.Queue()
 
         # Set up output queue
-        self.gui_update_queue = mp.Queue()
+        gui_update_queue = mp.Queue()
+
+        # Build queue container
+        queue_container = QueueContainer(
+            acquisition_command_queue,
+            output_command_queue,
+            streaming_command_queue,
+            log_file_queue,
+            input_output_sync_queue,
+            single_process_hardware_queue,
+            gui_update_queue,
+            environment_command_queues,
+            environment_data_in_queues,
+            environment_data_out_queues,
+        )
 
     def set_hardware(self, hardware_metadata: HardwareMetadata):
         if not isinstance(hardware_metadata, HardwareMetadata):

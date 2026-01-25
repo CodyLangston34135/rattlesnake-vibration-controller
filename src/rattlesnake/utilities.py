@@ -8,6 +8,11 @@ from typing import Dict
 class GlobalCommands(Enum):
     QUIT = 0
     INITIALIZE_HARDWARE = 1
+    RUN_HARDWARE = 2
+    STOP_HARDWARE = 3
+    INITIALIZE_ENVIRONMENT = 4
+    START_ENVIRONMENT = 5
+    STOP_ENVIRONMENT = 6
 
 
 def log_file_task(queue: mp.Queue, shutdown_event: mp.Event):
@@ -157,3 +162,75 @@ class VerboseMessageQueue:
     def empty(self):
         """Return true if the queue is empty."""
         return self.queue.empty()
+
+
+class QueueContainer:
+    """A container class for the queues that the controller will manage"""
+
+    def __init__(
+        self,
+        acquisition_command_queue: VerboseMessageQueue,
+        output_command_queue: VerboseMessageQueue,
+        streaming_command_queue: VerboseMessageQueue,
+        log_file_queue: mp.Queue,
+        input_output_sync_queue: mp.Queue,
+        single_process_hardware_queue: mp.Queue,
+        gui_update_queue: mp.Queue,
+        environment_command_queues: Dict[str, VerboseMessageQueue],
+        environment_data_in_queues: Dict[str, mp.Queue],
+        environment_data_out_queues: Dict[str, mp.Queue],
+    ):
+        """A container class for the queues that the controller will manage.
+
+        The controller uses many queues to pass data between the various pieces.
+        This class organizes those queues into one common namespace.
+
+        Parameters
+        ----------
+        controller_communication_queue : VerboseMessageQueue
+            Queue that is read by the controller for global controller commands
+        acquisition_command_queue : VerboseMessageQueue
+            Queue that is read by the acquisition subtask for acquisition commands
+        output_command_queue : VerboseMessageQueue
+            Queue that is read by the output subtask for output commands
+        streaming_command_queue : VerboseMessageQueue
+            Queue that is read by the streaming subtask for streaming commands
+        log_file_queue : mp_queues.Queue
+            Queue for putting logging messages that will be read by the logging
+            subtask and written to a file.
+        input_output_sync_queue : mp_queues.Queue
+            Queue that is used to synchronize input and output signals
+        single_process_hardware_queue : mp_queues.Queue
+            Queue that is used to connect the acquisition and output subtasks
+            for hardware implementations that cannot have acquisition and
+            output in separate processes.
+        gui_update_queue : mp_queues.Queue
+            Queue where various subtasks put instructions for updating the
+            widgets in the user interface
+        environment_command_queues : Dict[str,VerboseMessageQueue]
+            A dictionary where the keys are environment names and the values are
+            VerboseMessageQueues that connect the main controller to the
+            environment subtasks for sending instructions.
+        environment_data_in_queues : Dict[str,multiprocessing.queues.Queue]
+            A dictionary where the keys are environment names and the values are
+            multiprocessing queues that connect the acquisition subtask to the
+            environment subtask.  Each environment will retrieve acquired data
+            from this queue.
+        environment_data_out_queues : Dict[str,multiprocessing.queues.Queue]
+            A dictionary where the keys are environment names and the values are
+            multiprocessing queues that connect the output subtask to the
+            environment subtask.  Each environment will put data that it wants
+            the controller to generate in this queue.
+
+        """
+        self.controller_communication_queue = controller_communication_queue
+        self.acquisition_command_queue = acquisition_command_queue
+        self.output_command_queue = output_command_queue
+        self.streaming_command_queue = streaming_command_queue
+        self.log_file_queue = log_file_queue
+        self.input_output_sync_queue = input_output_sync_queue
+        self.single_process_hardware_queue = single_process_hardware_queue
+        self.gui_update_queue = gui_update_queue
+        self.environment_command_queues = environment_command_queues
+        self.environment_data_in_queues = environment_data_in_queues
+        self.environment_data_out_queues = environment_data_out_queues
