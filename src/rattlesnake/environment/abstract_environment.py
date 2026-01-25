@@ -253,3 +253,59 @@ class EnvironmentProcess(ABC):
             if halt_flag:
                 self.log("Stopping Process")
                 break
+
+
+def run_process(
+    environment_name: str,
+    input_queue: VerboseMessageQueue,
+    gui_update_queue: mp.Queue,
+    controller_communication_queue: VerboseMessageQueue,
+    log_file_queue: mp.Queue,
+    data_in_queue: mp.Queue,
+    data_out_queue: mp.Queue,
+    acquisition_active: mp.sharedctypes.Synchronized,
+    output_active: mp.sharedctypes.Synchronized,
+):
+    """A function called by ``multiprocessing.Process`` to start the environment
+
+    This function should not be called directly, but used as a template for
+    other environments to start up.
+
+    Parameters
+    ----------
+    environment_name : str :
+        The name of the environment
+
+    input_queue : VerboseMessageQueue :
+        The command queue for the environment
+
+    gui_update_queue : Queue :
+        The queue that accepts GUI update ``(message,data)`` pairs.
+
+    controller_communication_queue : VerboseMessageQueue :
+        The queue where global instructions to the controller can be written
+
+    log_file_queue : Queue :
+        The queue where logging messages can be written
+
+    data_in_queue : Queue :
+        The queue from which the environment will receive data from the
+        acquisition hardware
+
+    data_out_queue : Queue :
+        The queue to which the environment should write data so it will be output
+        to the excitation devices in the output hardware
+
+    """
+    process_class = EnvironmentProcess(
+        environment_name,
+        input_queue,
+        gui_update_queue,
+        controller_communication_queue,
+        log_file_queue,
+        data_in_queue,
+        data_out_queue,
+        acquisition_active,
+        output_active,
+    )
+    process_class.run()

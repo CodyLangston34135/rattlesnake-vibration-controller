@@ -23,9 +23,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-from .abstract_environment import EnvironmentMetadata
+from .abstract_environment import EnvironmentMetadata, EnvironmentProcess
 from .environment_utilities import ControlTypes
-from ..utilities import VerboseMessageQueue
+from ..utilities import VerboseMessageQueue, GlobalCommands
+from ..hardware.abstract_hardware import HardwareMetadata
 import copy
 import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
@@ -78,7 +79,7 @@ class TimeQueues:
         self.log_file_queue = log_file_queue
 
 
-class TimeParameters(EnvironmentMetadata):
+class TimeMetadata(EnvironmentMetadata):
     """Storage container for parameters used by the Time Environment"""
 
     def __init__(self, sample_rate, output_signal, cancel_rampdown_time):
@@ -162,3 +163,285 @@ class TimeParameters(EnvironmentMetadata):
             output_signal=ui.signal,
             cancel_rampdown_time=ui.definition_widget.cancel_rampdown_selector.value(),
         )
+
+
+class TimeEnvironment(EnvironmentProcess):
+    """Environment defined by a generated time history signal"""
+
+    def __init__(
+        self,
+        environment_name: str,
+        queue_container: TimeQueues,
+        acquisition_active: mp.sharedctypes.Synchronized,
+        output_active: mp.sharedctypes.Synchronized,
+    ):
+        """
+        Time History Generation Environment Constructor
+
+        This function fills out the command map and initializes parameters to
+        zero or null.
+
+        Parameters
+        ----------
+        environment_name : str
+            Name of the environment.
+        queue_container : TimeQueues
+            Container of queues used by the Time Environment.
+
+        """
+        super().__init__(
+            environment_name,
+            queue_container.environment_command_queue,
+            queue_container.gui_update_queue,
+            queue_container.controller_communication_queue,
+            queue_container.log_file_queue,
+            queue_container.data_in_queue,
+            queue_container.data_out_queue,
+            acquisition_active,
+            output_active,
+        )
+        self.queue_container = queue_container
+        # Define command map
+        self.command_map[GlobalCommands.START_ENVIRONMENT] = self.run_environment
+        # Persistent data
+        self.hardware_metadata = None
+        self.environment_parameters = None
+        self.startup = True
+        self.shutdown_flag = False
+        self.current_test_level = 0.0
+        self.target_test_level = 0.0
+        self.test_level_change = 0.0
+        self.repeat = False
+        self.signal_remainder = None
+        self.output_channels = None
+        self.measurement_channels = None
+
+    def initialize_hardware(self, hardware_metadata: HardwareMetadata):
+        """Initialize the data acquisition parameters in the environment.
+
+        The environment will receive the global data acquisition parameters from
+        the controller, and must set itself up accordingly.
+
+        Parameters
+        ----------
+        hardware_metadata : HardwareMetadata :
+            A container containing data acquisition parameters, including
+            channels active in the environment as well as sampling parameters.
+        """
+        self.log("Initializing Data Acquisition Parameters")
+        self.hardware_metadata = hardware_metadata
+        self.measurement_channels = [index for index, channel in enumerate(self.hardware_metadata.channel_list) if channel.feedback_device is None]
+        self.output_channels = [index for index, channel in enumerate(self.hardware_metadata.channel_list) if not channel.feedback_device is None]
+
+    def initialize_environment_test_parameters(self, environment_parameters: TimeMetadata):
+        """
+        Initialize the environment parameters specific to this environment
+
+        The environment will recieve parameters defining itself from the
+        user interface and must set itself up accordingly.
+
+        Parameters
+        ----------
+        environment_parameters : TimeParameters
+            A container containing the parameters defining the environment
+
+        """
+        self.log("Initializing Environment Parameters")
+        self.environment_parameters = environment_parameters
+
+    def run_environment(self, data):
+        """Runs the time history environment.
+
+        This function handles start up, running, and shutting down the environment
+
+        During startup, the function will initialize a buffer that it will
+        write from that consists of the output signal.
+
+        When running, it will collect data that comes in from the ``data_in_queue``
+        and tell the GUI to display it.  This will also tell
+        the environment whether or not the signal is the last signal and that
+        it should shut down.  The function determines if a
+        new signal is required by checking if the data_out_queue is empty.
+        If it is empty, we write the next portion of the buffer.
+        If the buffer runs dry and the signal is not repeating, it will set the
+        last_signal flag which tells the process to begin shutting down.  If
+        shutdown is occuring, the process continues to get data until the last
+        signal is received.
+
+        Parameters
+        ----------
+        data : Tuple
+            A tuple containing the test level to run the environment at and
+            a boolean specifying whether or not to repeat the signal.
+
+        """
+        if self.startup:
+            if not data is None:
+                self.current_test_level, self.repeat = data
+                self.log("Test Level set to {:}".format(self.current_test_level))
+            self.signal_remainder = self.environment_parameters.output_signal
+            self.startup = False
+        # See if any data has come in
+        try:
+            acquisition_data, last_acquisition = self.queue_container.data_in_queue.get_nowait()
+            measurement_data = acquisition_data[self.measurement_channels]
+            output_data = acquisition_data[self.output_channels]
+            self.queue_container.gui_update_queue.put((self.environment_name, ("time_data", (measurement_data, output_data))))
+        except mp.queues.Empty:
+            last_acquisition = False
+        # See if we need to output data
+        if self.queue_container.data_out_queue.empty():
+            last_signal = False
+            # See if there is enough in the remainder
+            if self.hardware_metadata.samples_per_write > self.signal_remainder.shape[-1] and self.repeat:
+                self.signal_remainder = np.concatenate((self.signal_remainder, self.environment_parameters.output_signal), axis=-1)
+            elif (self.hardware_metadata.samples_per_write >= self.signal_remainder.shape[-1] and not self.repeat) or self.current_test_level == 0.0:
+                last_signal = True
+            self.output(self.signal_remainder[:, : self.hardware_metadata.samples_per_write], last_signal)
+            self.signal_remainder = self.signal_remainder[:, self.hardware_metadata.samples_per_write :]
+            if last_signal:
+                # Wait until we get the last signal from the acquisition
+                while not last_acquisition:
+                    self.log("Waiting for Last Acquisition")
+                    acquisition_data, last_acquisition = self.queue_container.data_in_queue.get()
+                    measurement_data = acquisition_data[self.measurement_channels]
+                    output_data = acquisition_data[self.output_channels]
+                    self.queue_container.gui_update_queue.put((self.environment_name, ("time_data", (measurement_data, output_data))))
+                self.shutdown()
+                return
+        self.queue_container.environment_command_queue.put(self.environment_name, (GlobalCommands.START_ENVIRONMENT, None))
+
+    def output(self, write_data, last_signal=False):
+        """Puts data to the data_out_queue and handles test level changes
+
+        This function keeps track of the environment test level and scales the
+        output signals accordingly prior to placing them into the data_out_queue.
+        This function also handles the ramping between two test levels.
+
+        Parameters
+        ----------
+        write_data : np.ndarray
+            A numpy array containing the signals to be written.
+
+        last_signal :
+            Specifies if the signal being written is the last signal that will
+            be generated due to the signal generation shutting down.  This is
+            passed to the output task to tell it that there will be no more
+            signals from this environment until it is restarted. (Default value
+            = False)
+        """
+        # Perform the output transformation if necessary
+        # Compute the test_level scaling for this dataset
+        if self.test_level_change == 0.0:
+            test_level = self.current_test_level
+            self.log("Test Level at {:}".format(test_level))
+        else:
+            test_level = self.current_test_level + (np.arange(write_data.shape[-1]) + 1) * self.test_level_change
+            # Compute distance in steps from the target test_level and find where it is near the target
+            full_level_index = np.nonzero(abs(test_level - self.test_level_target) / abs(self.test_level_change) < TEST_LEVEL_THRESHOLD)[0]
+            # Check if any are
+            if len(full_level_index) > 0:
+                # If so, set all test_levels after that one to the target test_level
+                test_level[full_level_index[0] + 1 :] = self.test_level_target
+                # And update that our current test_level is now the target test_level
+                self.current_test_level = self.test_level_target
+                self.test_level_change = 0.0
+            else:
+                # Otherwise, our current test_level is the last entry in the test_level scaling
+                self.current_test_level = test_level[-1]
+            self.log("Test level from {:} to {:}".format(test_level[0], test_level[-1]))
+        # Write the test level-scaled data to the task
+        self.log("Sending data to data_out queue")
+        self.queue_container.data_out_queue.put((copy.deepcopy(write_data * test_level), last_signal))
+
+    def stop_environment(self, data):
+        """Stops the environment by setting the test level to zero.
+
+        Parameters
+        ----------
+        data : Ignored
+            This parameter is not used by the function but is required for the
+            ``command_map`` calling signature.
+
+        """
+        self.adjust_test_level(0.0)
+
+    def adjust_test_level(self, data):
+        """Adjusts the test level of the signal
+
+        Parameters
+        ----------
+        data :
+            New target test level
+
+        """
+        self.test_level_target = data
+        self.test_level_change = (self.test_level_target - self.current_test_level) / self.environment_parameters.cancel_rampdown_samples
+        if self.test_level_change != 0.0:
+            self.log(
+                "Changed test level to {:} from {:}, {:} change per sample".format(
+                    self.test_level_target, self.current_test_level, self.test_level_change
+                )
+            )
+
+    def shutdown(self):
+        """Performs final cleanup operations when the system has shut down
+
+        This function is called when the environment has been instructed
+        to shut down and the last acquisition data has been received.  The signal generation
+        is the first process in the Random Vibration environment to stop when
+        shutdown is called, so it notifies the environment process to stop the
+        acquisition and analysis tasks because it is no longer generating signals
+
+        """
+        self.log("Shutting Down Time History Generation")
+        self.queue_container.environment_command_queue.flush(self.environment_name)
+        # Enable the volume controls
+        self.queue_container.gui_update_queue.put((self.environment_name, ("enable", "test_level_selector")))
+        self.queue_container.gui_update_queue.put((self.environment_name, ("enable", "repeat_signal_checkbox")))
+        self.queue_container.gui_update_queue.put((self.environment_name, ("enable", "start_test_button")))
+        self.queue_container.gui_update_queue.put((self.environment_name, ("disable", "stop_test_button")))
+        self.startup = True
+
+
+def time_process(
+    environment_name: str,
+    input_queue: VerboseMessageQueue,
+    gui_update_queue: Queue,
+    controller_communication_queue: VerboseMessageQueue,
+    log_file_queue: Queue,
+    data_in_queue: Queue,
+    data_out_queue: Queue,
+    acquisition_active: mp.sharedctypes.Synchronized,
+    output_active: mp.sharedctypes.Synchronized,
+):
+    """Time signal generation environment process function called by multiprocessing
+
+    This function defines the environment process that
+    gets run by the multiprocessing module when it creates a new process.  It
+    creates a TimeEnviornment object and runs it.
+
+    Parameters
+    ----------
+    environment_name : str :
+        Name of the environment
+    input_queue : VerboseMessageQueue :
+        Queue containing instructions for the environment
+    gui_update_queue : Queue :
+        Queue where GUI updates are put
+    controller_communication_queue : Queue :
+        Queue for global communications with the controller
+    log_file_queue : Queue :
+        Queue for writing log file messages
+    data_in_queue : Queue :
+        Queue from which data will be read by the environment
+    data_out_queue : Queue :
+        Queue to which data will be written that will be output by the hardware.
+
+    """
+
+    # Create vibration queues
+    queue_container = TimeQueues(input_queue, gui_update_queue, controller_communication_queue, data_in_queue, data_out_queue, log_file_queue)
+
+    process_class = TimeEnvironment(environment_name, queue_container, acquisition_active, output_active)
+    process_class.run()
