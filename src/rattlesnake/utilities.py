@@ -1,5 +1,6 @@
 import multiprocessing as mp
 import time
+from ctypes import c_wchar_p
 from datetime import datetime
 from enum import Enum
 from typing import Dict
@@ -39,7 +40,7 @@ def log_file_task(queue: mp.Queue, shutdown_event: mp.Event):
 class VerboseMessageQueue:
     """A queue class that contains automatic logging information"""
 
-    def __init__(self, log_queue, queue_name):
+    def __init__(self, log_queue, queue_name: str = ""):
         """
         A queue class that contains automatic logging information
 
@@ -54,7 +55,7 @@ class VerboseMessageQueue:
         """
         self.queue = mp.Queue()
         self.log_queue = log_queue
-        self.queue_name = queue_name
+        self.queue_name = mp.Value(c_wchar_p, queue_name)
         self.last_put_message = None
         self.last_put_time = -float("inf")
         self.last_get_message = None
@@ -234,3 +235,35 @@ class QueueContainer:
         self.environment_command_queues = environment_command_queues
         self.environment_data_in_queues = environment_data_in_queues
         self.environment_data_out_queues = environment_data_out_queues
+
+
+def flush_queue(queue, timeout=None):
+    """Flushes a queue by getting all the data currently in it.
+
+    Parameters
+    ----------
+    queue : mp.queues.Queue or VerboseMessageQueue:
+        The queue to flush
+
+
+    Returns
+    -------
+    data : iterable
+        A list of all data that were in the queue at flush
+
+    """
+    data = []
+    while True:
+        try:
+            if isinstance(queue, VerboseMessageQueue):
+                data.append(
+                    queue.get(
+                        "Flush",
+                        block=False if timeout is None else True,
+                        timeout=timeout,
+                    )
+                )
+            else:
+                data.append(queue.get(block=False if timeout is None else True, timeout=timeout))
+        except mp.queues.Empty:
+            return data

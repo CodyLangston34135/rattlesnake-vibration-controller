@@ -64,7 +64,7 @@ class EnvironmentMetadata(ABC):
         pass
 
 
-class AbstractEnvironment(ABC):
+class EnvironmentProcess(ABC):
     """Abstract Environment class defining the interface with the controller
 
     This class is used to define the operation of an environment within the

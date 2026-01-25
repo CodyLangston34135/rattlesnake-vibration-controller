@@ -1,7 +1,9 @@
 from .hardware.abstract_hardware import HardwareMetadata
+from .environment.abstract_environment import EnvironmentMetadata
 from .utilities import GlobalCommands, VerboseMessageQueue, QueueContainer, log_file_task
 import multiprocessing as mp
 from datetime import datetime
+from typing import List
 
 
 class Rattlesnake:
@@ -39,17 +41,16 @@ class Rattlesnake:
         single_process_hardware_queue = mp.Queue()
 
         # Set up environment queues
-        acquisition_env_send, acquisition_env_recv = mp.Pipe(duplex=False)
-        output_env_send, output_env_recv = mp.Pipe(duplex=False)
         max_environments = 16
-        environment_command_queues = {}
-        environment_data_in_queues = {}
-        environment_data_out_queues = {}
+        self.environment_metadata_list = []
+        self.environment_command_queues = {}
+        self.environment_data_in_queues = {}
+        self.environment_data_out_queues = {}
         for env_idx in range(max_environments):
             environment_name = "Environment {:}".format(env_idx)
-            environment_command_queues[environment_name] = VerboseMessageQueue(log_file_queue, environment_name + " Command Queue")
-            environment_data_in_queues[environment_name] = mp.Queue()
-            environment_data_out_queues[environment_name] = mp.Queue()
+            self.environment_command_queues[environment_name] = VerboseMessageQueue(log_file_queue, environment_name + " Command Queue")
+            self.environment_data_in_queues[environment_name] = mp.Queue()
+            self.environment_data_out_queues[environment_name] = mp.Queue()
 
         # Set up output queue
         gui_update_queue = mp.Queue()
@@ -63,15 +64,16 @@ class Rattlesnake:
             input_output_sync_queue,
             single_process_hardware_queue,
             gui_update_queue,
-            environment_command_queues,
-            environment_data_in_queues,
-            environment_data_out_queues,
         )
 
-    def set_hardware(self, hardware_metadata: HardwareMetadata):
+    def set_hardware(self, hardware_metadata: HardwareMetadata) -> None:
         if not isinstance(hardware_metadata, HardwareMetadata):
             raise TypeError("Rattlesnake.set_hardware requires a HardwareMetadata class")
         self.hardware_metadata = hardware_metadata
+
+    def set_environments(self, environment_metadata_list: List[EnvironmentMetadata]) -> None:
+        for metadata in environment_metadata_list:
+            pass
 
     def shutdown(self):
         self.log_file_queue.put("{:}: Joining Log File Process\n".format(datetime.now()))

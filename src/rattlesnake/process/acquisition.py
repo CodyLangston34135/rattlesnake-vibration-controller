@@ -1,11 +1,14 @@
 from abstract_message_process import AbstractMessageProcess
-from ..utilities import GlobalCommands, VerboseMessageQueue, QueueContainer
+from .process_utilities import align_signals, correlation_norm_signal_spec_ratio
+from ..utilities import GlobalCommands, VerboseMessageQueue, QueueContainer, flush_queue
 from ..hardware.hardware_utilities import HardwareType, Channel
 from ..hardware.abstract_hardware import HardwareMetadata
 from ..environment.abstract_environment import EnvironmentMetadata
 import multiprocessing as mp
 import numpy as np
+import scipy.signal as sig
 from time import time, sleep
+from typing import List
 
 DEBUG = False
 if DEBUG:
@@ -27,7 +30,6 @@ class AcquisitionProcess(AbstractMessageProcess):
         self,
         process_name: str,
         queue_container: QueueContainer,
-        acquisition_env_send: mp.Connection,
         acquisition_active: mp.sharedctypes.Synchronized,
     ):
         """
@@ -70,7 +72,6 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.sample_rate = None
         self.read_size = None
         # Environment Data
-        self.acquisition_env_send = acquisition_env_send
         self.environment_list = []
         self.environment_acquisition_channels = None
         self.environment_active_flags = {}
@@ -146,13 +147,13 @@ class AcquisitionProcess(AbstractMessageProcess):
         )
 
     def initialize_environment(self, metadata_list: List[EnvironmentMetadata]):
-        for metadata, idx in enumerate(metadata_list):
-            self.environment_list[idx] = [environment[1] for environment in environments]
-            self.environment_acquisition_channels = None
-            self.environment_active_flags = {environment: False for environment in self.environment_list}
-            self.environment_last_data = {environment: False for environment in self.environment_list}
-            self.environment_samples_remaining_to_read = {environment: 0 for environment in self.environment_list}
-            self.environment_first_data = {environment: None for environment in self.environment_list}
+        # for metadata, idx in enumerate(metadata_list):
+        #     self.environment_list[idx] = [environment[1] for environment in environments]
+        #     self.environment_acquisition_channels = None
+        #     self.environment_active_flags = {environment: False for environment in self.environment_list}
+        #     self.environment_last_data = {environment: False for environment in self.environment_list}
+        #     self.environment_samples_remaining_to_read = {environment: 0 for environment in self.environment_list}
+        #     self.environment_first_data = {environment: None for environment in self.environment_list}
         pass
 
     def stop_environment(self, data):
@@ -440,7 +441,6 @@ class AcquisitionProcess(AbstractMessageProcess):
 
 def acquisition_process(
     queue_container: QueueContainer,
-    acquisition_env_send: mp.Pipe,
     acquisition_active: mp.sharedctypes.Synchronized,
 ):
     """Function passed to multiprocessing as the acquisition process
@@ -459,47 +459,6 @@ def acquisition_process(
 
     """
 
-    acquisition_instance = AcquisitionProcess("Acquisition", queue_container, acquisition_env_send, acquisition_active)
+    acquisition_instance = AcquisitionProcess("Acquisition", queue_container, acquisition_active)
 
     acquisition_instance.run()
-
-
-def align_signals(measurement_buffer, specification, correlation_threshold=0.9, perform_subsample=True):
-    maximum_possible_correlation = np.sum(specification**2)
-    correlation = sig.correlate(measurement_buffer, specification, mode="valid").squeeze()
-    delay = np.argmax(correlation)
-    print("Max Correlation: {:}".format(np.max(correlation) / maximum_possible_correlation))
-    if correlation[delay] < correlation_threshold * maximum_possible_correlation:
-        return None, None, None
-    # np.savez('alignment_debug.npz',measurement_buffer=measurement_buffer,
-    #          specification = specification,
-    #          correlation_threshold = correlation_threshold)
-    specification_portion = measurement_buffer[:, delay : delay + specification.shape[-1]]
-
-    if perform_subsample:
-        # Compute ffts for subsample alignment
-        spec_fft = np.fft.rfft(specification, axis=-1)
-        spec_portion_fft = np.fft.rfft(specification_portion, axis=-1)
-
-        # Compute phase angle differences for subpixel alignment
-        phase_difference = np.angle(spec_portion_fft / spec_fft)
-        phase_slope = phase_difference[..., 1:-1] / np.arange(phase_difference.shape[-1])[1:-1]
-        mean_phase_slope = np.median(phase_slope)  # Use Median to discard outliers due to potentially noisy phase
-
-        spec_portion_aligned_fft = spec_portion_fft * np.exp(-1j * mean_phase_slope * np.arange(spec_portion_fft.shape[-1]))
-        spec_portion_aligned = np.fft.irfft(spec_portion_aligned_fft)
-    else:
-        spec_portion_aligned = specification_portion.copy()
-        mean_phase_slope = None
-    return spec_portion_aligned, delay, mean_phase_slope
-
-
-def shift_signal(signal, samples_to_keep, sample_delay, phase_slope):
-    # np.savez('shift_debug.npz',signal=signal,
-    #          samples_to_keep = samples_to_keep,
-    #          sample_delay = sample_delay,
-    #          phase_slope=phase_slope)
-    signal_sample_aligned = signal[..., sample_delay : sample_delay + samples_to_keep]
-    sample_aligned_fft = np.fft.rfft(signal_sample_aligned, axis=-1)
-    subsample_aligned_fft = sample_aligned_fft * np.exp(-1j * phase_slope * np.arange(sample_aligned_fft.shape[-1]))
-    return np.fft.irfft(subsample_aligned_fft)
