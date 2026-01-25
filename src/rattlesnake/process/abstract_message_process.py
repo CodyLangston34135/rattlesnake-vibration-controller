@@ -154,9 +154,7 @@ class AbstractMessageProcess(ABC):
             try:
                 function = self.command_map[message]
             except KeyError:
-                self.log(
-                    f"Undefined Message {message}, acceptable messages are {list(self.command_map)}"
-                )
+                self.log(f"Undefined Message {message}, acceptable messages are {list(self.command_map)}")
                 continue
             try:
                 halt_flag = function(data)

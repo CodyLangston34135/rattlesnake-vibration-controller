@@ -120,18 +120,12 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             if self.task_trigger != 0:
                 if self.read_triggers[task_index] is None:
                     try:
-                        chassis_device = ni.system.device.Device(
-                            channel.physical_device
-                        ).compact_daq_chassis_device
-                        pfi_terminals = [
-                            trigger for trigger in chassis_device.terminals if "/PFI0" in trigger
-                        ]
+                        chassis_device = ni.system.device.Device(channel.physical_device).compact_daq_chassis_device
+                        pfi_terminals = [trigger for trigger in chassis_device.terminals if "/PFI0" in trigger]
                         print(f"PFI Terminals on CDAQ Device:\n{pfi_terminals}")
                         self.read_triggers[task_index] = pfi_terminals[0]
                     except ni.DaqError:
-                        self.read_triggers[task_index] = (
-                            "/" + channel.physical_device.strip() + "/PFI0"
-                        )
+                        self.read_triggers[task_index] = "/" + channel.physical_device.strip() + "/PFI0"
             index += 1
             self._create_channel(channel, task_index)
         print(f"Input Mapping: {self.channel_task_map}")
@@ -182,18 +176,14 @@ class NIDAQmxAcquisition(HardwareAcquisition):
         if self.task_trigger == 2:
             print("Creating Triggering Task")
             self.trigger_output_task = ni.Task()
-            self.trigger_output_task.ao_channels.add_ao_voltage_chan(
-                self.output_trigger_generator, min_val=-3.5, max_val=3.5
-            )
+            self.trigger_output_task.ao_channels.add_ao_voltage_chan(self.output_trigger_generator, min_val=-3.5, max_val=3.5)
             self.trigger_output_task.timing.cfg_samp_clk_timing(
                 self.metadata.sample_rate,
                 sample_mode=nic.AcquisitionType.CONTINUOUS,
                 samps_per_chan=self.metadata.samples_per_write,
             )
             self.trigger_output_task.out_stream.regen_mode = nic.RegenerationMode.ALLOW_REGENERATION
-            writer = ni_write.AnalogMultiChannelWriter(
-                self.trigger_output_task.out_stream, auto_start=False
-            )
+            writer = ni_write.AnalogMultiChannelWriter(self.trigger_output_task.out_stream, auto_start=False)
             writer.write_many_sample(3 * np.ones((1, 100)))
             print("Starting Triggering Task")
             self.trigger_output_task.start()
@@ -225,9 +215,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             2D Data read from the controller with shape ``n_channels`` x
             ``n_samples``
         """
-        for reader, read_data, channel_mapping in zip(
-            self.readers, self.read_datas, self.channel_task_map
-        ):
+        for reader, read_data, channel_mapping in zip(self.readers, self.read_datas, self.channel_task_map):
             reader.read_many_sample(
                 read_data,
                 number_of_samples_per_channel=read_data.shape[-1],
@@ -349,8 +337,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             unit = None
         else:
             raise ValueError(
-                f"{channel_type} not a valid channel type.  "
-                'Must be one of ["acceleration","accelerometer","accel","force","voltage","volt"]'
+                f"{channel_type} not a valid channel type.  " 'Must be one of ["acceleration","accelerometer","accel","force","voltage","volt"]'
             )
         # Excitation Source
         if channel_data.excitation_source.lower() == "internal":
@@ -363,10 +350,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             excitation_source = nic.ExcitationSource.NONE
             excitation = 0
         else:
-            raise ValueError(
-                f"{channel_data.excitation_source} not a valid excitation source.  "
-                'Must be one of ["internal","none"]'
-            )
+            raise ValueError(f"{channel_data.excitation_source} not a valid excitation source.  " 'Must be one of ["internal","none"]')
         # Now go and create the channel
         if channel_type != nic.UsageTypeAI.VOLTAGE:
             min_val = minimum_value * 1000 / sensitivity

@@ -120,4 +120,4 @@ rattlesnake = "rattlesnake.rattlesnake:main"
 #line_length = 100
 
 [tool.black]
-line-length = 100  # Update from 88 to 100
+line-length = 150  # Update from 88 to 100

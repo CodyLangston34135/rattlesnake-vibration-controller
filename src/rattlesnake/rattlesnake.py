@@ -27,13 +27,9 @@ class Rattlesnake:
 
         # Start up command queues and processes
         self.environment_command_queues = {}
-        self.acquisition_command_queue = VerboseMessageQueue(
-            self.log_file_queue, "Acquisition Command Queue"
-        )
+        self.acquisition_command_queue = VerboseMessageQueue(self.log_file_queue, "Acquisition Command Queue")
         self.output_command_queue = VerboseMessageQueue(self.log_file_queue, "Output Command Queue")
-        self.streaming_command_queue = VerboseMessageQueue(
-            self.log_file_queue, "Streaming Command Queue"
-        )
+        self.streaming_command_queue = VerboseMessageQueue(self.log_file_queue, "Streaming Command Queue")
         self.acquisition_process = mp.Process()
         self.output_process = mp.Process()
         self.streaming_process = mp.Process()
