@@ -16,7 +16,7 @@ class GlobalCommands(Enum):
     STOP_ENVIRONMENT = 6
 
 
-def log_file_task(queue: mp.Queue, shutdown_event: mp.Event):
+def log_file_task(queue: mp.Queue, shutdown_event: mp.synchronize.Event):
     """A multiprocessing function that collects logging data and writes to file
 
     Parameters
@@ -224,7 +224,7 @@ class QueueContainer:
             the controller to generate in this queue.
 
         """
-        self.controller_communication_queue = controller_communication_queue
+        # self.controller_communication_queue = controller_communication_queue
         self.acquisition_command_queue = acquisition_command_queue
         self.output_command_queue = output_command_queue
         self.streaming_command_queue = streaming_command_queue

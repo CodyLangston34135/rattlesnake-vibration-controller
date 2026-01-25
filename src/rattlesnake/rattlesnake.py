@@ -43,14 +43,14 @@ class Rattlesnake:
         # Set up environment queues
         max_environments = 16
         self.environment_metadata_list = []
-        self.environment_command_queues = {}
-        self.environment_data_in_queues = {}
-        self.environment_data_out_queues = {}
+        environment_command_queues = {}
+        environment_data_in_queues = {}
+        environment_data_out_queues = {}
         for env_idx in range(max_environments):
             environment_name = "Environment {:}".format(env_idx)
-            self.environment_command_queues[environment_name] = VerboseMessageQueue(log_file_queue, environment_name + " Command Queue")
-            self.environment_data_in_queues[environment_name] = mp.Queue()
-            self.environment_data_out_queues[environment_name] = mp.Queue()
+            environment_command_queues[environment_name] = VerboseMessageQueue(log_file_queue, environment_name + " Command Queue")
+            environment_data_in_queues[environment_name] = mp.Queue()
+            environment_data_out_queues[environment_name] = mp.Queue()
 
         # Set up output queue
         gui_update_queue = mp.Queue()
@@ -64,6 +64,9 @@ class Rattlesnake:
             input_output_sync_queue,
             single_process_hardware_queue,
             gui_update_queue,
+            environment_command_queues,
+            environment_data_in_queues,
+            environment_data_out_queues,
         )
 
     def set_hardware(self, hardware_metadata: HardwareMetadata) -> None:
@@ -72,8 +75,12 @@ class Rattlesnake:
         self.hardware_metadata = hardware_metadata
 
     def set_environments(self, environment_metadata_list: List[EnvironmentMetadata]) -> None:
+        # For environment stuff
+        # Acquisition needs: List of environment names, correct environment queue dict
         for metadata in environment_metadata_list:
-            pass
+            if metadata.environment_name in self.environment_names:
+                # This is going to be sending environment metadata to the stuff
+                pass
 
     def shutdown(self):
         self.log_file_queue.put("{:}: Joining Log File Process\n".format(datetime.now()))

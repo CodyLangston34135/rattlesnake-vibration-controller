@@ -100,8 +100,8 @@ class EnvironmentProcess(ABC):
         to_gui_queue: mp.Queue,
         from_acquisition_queue: mp.Queue,
         to_output_queue: mp.Queue,
-        acquisition_active: mp.Value,
-        output_active: mp.Value,
+        acquisition_active: mp.sharedctypes.Synchronized,
+        output_active: mp.sharedctypes.Synchronized,
     ):
         self._environment_name = environment_name
         self._log_file_queue = log_file_queue

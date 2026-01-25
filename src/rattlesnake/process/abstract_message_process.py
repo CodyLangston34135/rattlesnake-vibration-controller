@@ -98,7 +98,7 @@ class AbstractMessageProcess(ABC):
         return self._command_map
 
     @property
-    def gui_update_queue(self) -> Queue:
+    def gui_update_queue(self) -> mp.Queue:
         """Queue to which GUI update instructions will be written."""
         return self._gui_update_queue
 
