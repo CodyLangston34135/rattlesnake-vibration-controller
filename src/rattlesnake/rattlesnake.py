@@ -1,5 +1,5 @@
 from .hardware.abstract_hardware import HardwareMetadata
-from .utilities import GlobalCommands, VerboseMessageQueue, log_file_task
+from .utilities import GlobalCommands, VerboseMessageQueue, QueueContainer, log_file_task
 import multiprocessing as mp
 from datetime import datetime
 
@@ -30,9 +30,7 @@ class Rattlesnake:
         self.acquisition_command_queue = VerboseMessageQueue(
             self.log_file_queue, "Acquisition Command Queue"
         )
-        self.output_command_queue = VerboseMessageQueue(
-            self.log_file_queue, "Output Command Queue"
-        )
+        self.output_command_queue = VerboseMessageQueue(self.log_file_queue, "Output Command Queue")
         self.streaming_command_queue = VerboseMessageQueue(
             self.log_file_queue, "Streaming Command Queue"
         )
@@ -45,14 +43,10 @@ class Rattlesnake:
 
     def set_hardware(self, hardware_metadata: HardwareMetadata):
         if not isinstance(hardware_metadata, HardwareMetadata):
-            raise TypeError(
-                "Rattlesnake.set_hardware requires a HardwareMetadata class"
-            )
+            raise TypeError("Rattlesnake.set_hardware requires a HardwareMetadata class")
         self.hardware_metadata = hardware_metadata
 
     def shutdown(self):
-        self.log_file_queue.put(
-            "{:}: Joining Log File Process\n".format(datetime.now())
-        )
+        self.log_file_queue.put("{:}: Joining Log File Process\n".format(datetime.now()))
         self.log_file_queue.put(GlobalCommands.QUIT)
         self.log_file_process.join()
