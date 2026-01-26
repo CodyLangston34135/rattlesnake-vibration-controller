@@ -1,6 +1,7 @@
 from .utilities import GlobalCommands, VerboseMessageQueue, QueueContainer, log_file_task
 from .process.acquisition import acquisition_process
 from .process.output import output_process
+from .process.streaming import streaming_process
 from .hardware.abstract_hardware import HardwareMetadata
 from .environment.abstract_environment import EnvironmentMetadata
 from .environment_manager import EnvironmentManager
@@ -77,10 +78,12 @@ class Rattlesnake:
             args=(self.queue_container, self.acquisition_active),
         )
         self.acquisition_proc.start()
-
         self.output_proc = mp.Process(target=output_process, args=(self.queue_container, self.output_active))
         self.output_proc.start()
+        self.streaming_proc = mp.Process(target=streaming_process, args=(self.queue_container,))
+        self.streaming_proc.start()
 
+        # Set up environment manager for future environment processes
         self.environment_manager = EnvironmentManager(self.queue_container)
 
     def set_hardware(self, hardware_metadata: HardwareMetadata) -> None:
@@ -107,6 +110,12 @@ class Rattlesnake:
             self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Output Process\n")
             self.output_proc.terminate()
             self.output_proc.join()
+        self.queue_container.log_file_queue.put(f"{datetime.datetime.now()}: Joining Streaming Process\n")
+        self.streaming_proc.join(timeout=5)
+        if self.streaming_proc.is_alive():
+            self.queue_container.log_file_queue.put(f"{datetime.datetime.now()}: Force Closing Streaming Process\n")
+            self.streaming_proc.terminate()
+            self.streaming_proc.join()
 
         # Close out of environment processes
         self.environment_manager.close_environments()
