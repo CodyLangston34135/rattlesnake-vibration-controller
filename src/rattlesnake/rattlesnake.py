@@ -1,5 +1,6 @@
 from .hardware.abstract_hardware import HardwareMetadata
 from .environment.abstract_environment import EnvironmentMetadata
+from .environment_manager import EnvironmentManager
 from .utilities import GlobalCommands, VerboseMessageQueue, QueueContainer, log_file_task
 import multiprocessing as mp
 from datetime import datetime
@@ -10,10 +11,8 @@ class Rattlesnake:
     def __init__(self):
         # Initialize values for checking state
         self.shutdown_event = mp.Event()
-        acquistion_ready = mp.Value("i", 0)
-        output_ready = mp.Value("i", 0)
-        acquisition_active = mp.Value("i", 0)
-        output_active = mp.Value("i", 0)
+        self.acquisition_active = mp.Value("i", 0)
+        self.output_active = mp.Value("i", 0)
 
         # Start up log file process
         log_file_queue = mp.Queue()
@@ -21,16 +20,16 @@ class Rattlesnake:
         self.log_file_process = mp.Process(
             target=log_file_task,
             args=(
-                self.log_file_queue,
+                log_file_queue,
                 self.shutdown_event,
             ),
         )
         self.log_file_process.start()
 
         # Start up command queues and processes
-        acquisition_command_queue = VerboseMessageQueue(self.log_file_queue, "Acquisition Command Queue")
-        output_command_queue = VerboseMessageQueue(self.log_file_queue, "Output Command Queue")
-        streaming_command_queue = VerboseMessageQueue(self.log_file_queue, "Streaming Command Queue")
+        acquisition_command_queue = VerboseMessageQueue(log_file_queue, "Acquisition Command Queue")
+        output_command_queue = VerboseMessageQueue(log_file_queue, "Output Command Queue")
+        streaming_command_queue = VerboseMessageQueue(log_file_queue, "Streaming Command Queue")
         self.acquisition_process = mp.Process()
         self.output_process = mp.Process()
         self.streaming_process = mp.Process()
@@ -56,7 +55,7 @@ class Rattlesnake:
         gui_update_queue = mp.Queue()
 
         # Build queue container
-        queue_container = QueueContainer(
+        self.queue_container = QueueContainer(
             acquisition_command_queue,
             output_command_queue,
             streaming_command_queue,
@@ -69,9 +68,13 @@ class Rattlesnake:
             environment_data_out_queues,
         )
 
+        self.environment_manager = EnvironmentManager(self.queue_container)
+
     def set_hardware(self, hardware_metadata: HardwareMetadata) -> None:
-        if not isinstance(hardware_metadata, HardwareMetadata):
+        valid_hardware = hardware_metadata.validate()
+        if not valid_hardware:
             raise TypeError("Rattlesnake.set_hardware requires a HardwareMetadata class")
+
         self.hardware_metadata = hardware_metadata
 
     def set_environments(self, environment_metadata_list: List[EnvironmentMetadata]) -> None:

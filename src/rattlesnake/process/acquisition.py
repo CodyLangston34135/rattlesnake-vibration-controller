@@ -5,6 +5,7 @@ from ..hardware.hardware_utilities import HardwareType, Channel
 from ..hardware.abstract_hardware import HardwareMetadata
 from ..environment.abstract_environment import EnvironmentMetadata
 import multiprocessing as mp
+import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import numpy as np
 import scipy.signal as sig
 from time import time, sleep

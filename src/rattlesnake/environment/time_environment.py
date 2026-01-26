@@ -41,48 +41,10 @@ MAX_RESPONSES_TO_PLOT = 20
 MAX_SAMPLES_TO_PLOT = 100000
 
 
-class TimeQueues:
-    """A set of queues used by the Time environment"""
-
-    def __init__(
-        self,
-        environment_command_queue: VerboseMessageQueue,
-        gui_update_queue: mp.queues.Queue,
-        controller_communication_queue: VerboseMessageQueue,
-        data_in_queue: mp.queues.Queue,
-        data_out_queue: mp.queues.Queue,
-        log_file_queue: VerboseMessageQueue,
-    ):
-        """
-        Creates a namespace to store all the queues used by the Time Environment
-
-        Parameters
-        ----------
-        environment_command_queue : VerboseMessageQueue
-            Queue from which the environment will receive instructions.
-        gui_update_queue : mp.queues.Queue
-            Queue to which the environment will put GUI updates.
-        controller_communication_queue : VerboseMessageQueue
-            Queue to which the environment will put global contorller instructions.
-        data_in_queue : mp.queues.Queue
-            Queue from which the environment will receive data from acquisition.
-        data_out_queue : mp.queues.Queue
-            Queue to which the environment will write data for output.
-        log_file_queue : VerboseMessageQueue
-            Queue to which the environment will write log file messages.
-        """
-        self.environment_command_queue = environment_command_queue
-        self.gui_update_queue = gui_update_queue
-        self.controller_communication_queue = controller_communication_queue
-        self.data_in_queue = data_in_queue
-        self.data_out_queue = data_out_queue
-        self.log_file_queue = log_file_queue
-
-
 class TimeMetadata(EnvironmentMetadata):
     """Storage container for parameters used by the Time Environment"""
 
-    def __init__(self, sample_rate, output_signal, cancel_rampdown_time):
+    def __init__(self):
         """
         Container to hold signal processing parameters for the Time environment
 
@@ -98,9 +60,10 @@ class TimeMetadata(EnvironmentMetadata):
             Prevents "hard stops" from damaging equipment.
 
         """
-        self.sample_rate = sample_rate
-        self.output_signal = output_signal
-        self.cancel_rampdown_time = cancel_rampdown_time
+        super().__init__(self, CONTROL_TYPE)
+        self.sample_rate = None
+        self.output_signal = None
+        self.cancel_rampdown_time = None
 
     @property
     def signal_samples(self):
@@ -163,6 +126,44 @@ class TimeMetadata(EnvironmentMetadata):
             output_signal=ui.signal,
             cancel_rampdown_time=ui.definition_widget.cancel_rampdown_selector.value(),
         )
+
+
+class TimeQueues:
+    """A set of queues used by the Time environment"""
+
+    def __init__(
+        self,
+        environment_command_queue: VerboseMessageQueue,
+        gui_update_queue: mp.queues.Queue,
+        controller_communication_queue: VerboseMessageQueue,
+        data_in_queue: mp.queues.Queue,
+        data_out_queue: mp.queues.Queue,
+        log_file_queue: VerboseMessageQueue,
+    ):
+        """
+        Creates a namespace to store all the queues used by the Time Environment
+
+        Parameters
+        ----------
+        environment_command_queue : VerboseMessageQueue
+            Queue from which the environment will receive instructions.
+        gui_update_queue : mp.queues.Queue
+            Queue to which the environment will put GUI updates.
+        controller_communication_queue : VerboseMessageQueue
+            Queue to which the environment will put global contorller instructions.
+        data_in_queue : mp.queues.Queue
+            Queue from which the environment will receive data from acquisition.
+        data_out_queue : mp.queues.Queue
+            Queue to which the environment will write data for output.
+        log_file_queue : VerboseMessageQueue
+            Queue to which the environment will write log file messages.
+        """
+        self.environment_command_queue = environment_command_queue
+        self.gui_update_queue = gui_update_queue
+        self.controller_communication_queue = controller_communication_queue
+        self.data_in_queue = data_in_queue
+        self.data_out_queue = data_out_queue
+        self.log_file_queue = log_file_queue
 
 
 class TimeEnvironment(EnvironmentProcess):

@@ -1,16 +1,17 @@
 from .utilities import QueueContainer, GlobalCommands
+from .environment.abstract_environment import EnvironmentMetadata
 from .environment.environment_utilities import ControlTypes
 from .environment.time_environment import TimeEnvironment, time_process
 import multiprocessing as mp
 from datetime import datetime
+from typing import List
 
 
 class EnvironmentManager:
     """A container class that stores the environment information"""
 
     def __init__(self, queue_container: QueueContainer):
-        self.control_names = []  # Static name for dictionary keys, process names, etc
-        self.environment_names = {}  # Name of environment for Ui purposes
+        self.environment_names = []  # Static name for dictionary keys, process names, etc
         self.environment_types = {}
         self.environment_channels = {}
         self.environment_processes = {}
@@ -32,22 +33,22 @@ class EnvironmentManager:
 
     @property
     def sysid_names(self):
-        sysid_names = [control_name for control_name in self.control_names if self.environment_types[control_name] in self.sysid_environments]
+        sysid_names = [control_name for control_name in self.environment_names if self.environment_types[control_name] in self.sysid_environments]
         return sysid_names
 
     @property
     def row_count(self):
         row_count = 0
         # Find length of environment channels list for first environment
-        if self.control_names:
-            control_name = self.control_names[0]
+        if self.environment_names:
+            control_name = self.environment_names[0]
             row_count = len(self.environment_channels[control_name])
         return row_count
 
     @property
     def environment_channel_indices(self):
         environment_channel_indices = {}
-        for control_name in self.control_names:
+        for control_name in self.environment_names:
             environment_channel_indices[control_name] = [
                 index for index, environment_bool in enumerate(self.environment_channels[control_name]) if environment_bool
             ]
@@ -58,9 +59,19 @@ class EnvironmentManager:
     Environment Container Callback Section:
     """
 
+    def set_environment_metadata(self, metadata_list: List[EnvironmentMetadata]):
+        environment_names = []
+        check_duplicate = set()
+        for idx, metadata in enumerate(metadata_list):
+            environment_name = metadata.environment_name
+            if environment_name in check_duplicate:
+                raise ValueError(f"Duplicate environment_name '{environment_name}' found at index {idx}")
+
+            check_duplicate.add(environment_name)
+            environment_names.append(environment_name)
+
     def clear_environments(self):
-        self.control_names = []
-        self.environment_names = {}
+        self.environment_names = []
         self.environment_types = {}
         self.environment_channels = {}
         self.daq_parameters = {}
@@ -74,7 +85,7 @@ class EnvironmentManager:
         # Find the first available queue for the environment
         control_name = None
         for queue_name in self.available_queues:
-            if queue_name not in self.control_names:
+            if queue_name not in self.environment_names:
                 control_name = queue_name
                 break
 
@@ -84,50 +95,6 @@ class EnvironmentManager:
         environment_name = environment_type.name
 
         # Figure out what type of environment to add
-        # if environment_type == ControlTypes.RANDOM:
-        #     environment_process = mp.Process(
-        #         target=random_vibration_process,
-        #         args=(
-        #             control_name,
-        #             self.queue_container.environment_command_queues[control_name],
-        #             self.queue_container.gui_update_queue,
-        #             self.queue_container.controller_communication_queue,
-        #             self.queue_container.log_file_queue,
-        #             self.queue_container.environment_data_in_queues[control_name],
-        #             self.queue_container.environment_data_out_queues[control_name],
-        #             self.queue_container.acquisition_active,
-        #             self.queue_container.output_active,
-        #         ),
-        #     )
-        #     environment_process.start()
-        #     environment_ui = RandomVibrationUI(
-        #         control_name,
-        #         self.queue_container.environment_command_queues[control_name],
-        #         self.queue_container.controller_communication_queue,
-        #         self.queue_container.log_file_queue,
-        #     )
-        # elif environment_type == ControlTypes.TRANSIENT:
-        #     environment_process = mp.Process(
-        #         target=transient_process,
-        #         args=(
-        #             control_name,
-        #             self.queue_container.environment_command_queues[control_name],
-        #             self.queue_container.gui_update_queue,
-        #             self.queue_container.controller_communication_queue,
-        #             self.queue_container.log_file_queue,
-        #             self.queue_container.environment_data_in_queues[control_name],
-        #             self.queue_container.environment_data_out_queues[control_name],
-        #             self.queue_container.acquisition_active,
-        #             self.queue_container.output_active,
-        #         ),
-        #     )
-        #     environment_process.start()
-        #     environment_ui = TransientUI(
-        #         control_name,
-        #         self.queue_container.environment_command_queues[control_name],
-        #         self.queue_container.controller_communication_queue,
-        #         self.queue_container.log_file_queue,
-        #     )
         if environment_type == ControlTypes.TIME:
             environment_process = mp.Process(
                 target=time_process,
@@ -144,34 +111,11 @@ class EnvironmentManager:
                 ),
             )
             environment_process.start()
-        # elif environment_type == ControlTypes.MODAL:
-        #     environment_process = mp.Process(
-        #         target=modal_process,
-        #         args=(
-        #             control_name,
-        #             self.queue_container.environment_command_queues[control_name],
-        #             self.queue_container.gui_update_queue,
-        #             self.queue_container.controller_communication_queue,
-        #             self.queue_container.log_file_queue,
-        #             self.queue_container.environment_data_in_queues[control_name],
-        #             self.queue_container.environment_data_out_queues[control_name],
-        #             self.queue_container.acquisition_active,
-        #             self.queue_container.output_active,
-        #         ),
-        #     )
-        #     environment_process.start()
-        #     environment_ui = ModalUI(
-        #         control_name,
-        #         self.queue_container.environment_command_queues[control_name],
-        #         self.queue_container.controller_communication_queue,
-        #         self.queue_container.log_file_queue,
-        #     )
         else:  # If "Select Environment" was chosen
             return
 
         # Store the environment to the container
-        self.control_names.append(control_name)
-        self.environment_names[control_name] = environment_name
+        self.environment_names.append(control_name)
         self.environment_types[control_name] = environment_type
         self.environment_processes[control_name] = environment_process
         self.environment_channels[control_name] = valid_channels
@@ -182,9 +126,8 @@ class EnvironmentManager:
         """Removes environment from container"""
         # Check if index corresponds to an existing environment
         if 0 <= index < len(self.control_names):
-            control_name = self.control_names[index]
-            self.control_names.pop(index)
-            self.environment_names.pop(control_name, None)
+            control_name = self.environment_names[index]
+            self.environment_names.pop(index)
             self.environment_types.pop(control_name, None)
             self.environment_uis.pop(control_name, None)
             self.environment_channels.pop(control_name, None)
@@ -203,19 +146,19 @@ class EnvironmentManager:
             self.environment_processes.pop(control_name, None)
 
         else:
-            raise IndexError(f"Invalid index: {index}. Must be between 0 and {len(self.control_names) - 1}.")
+            raise IndexError(f"Invalid index: {index}. Must be between 0 and {len(self.environment_names) - 1}.")
 
     def change_environment_order(self, to_idx: int, from_idx: int):
-        """Changes the control_names list order"""
+        """Changes the environment_names list order"""
         # Validate indices
-        if not (0 <= from_idx < len(self.control_names)):
-            raise IndexError(f"Invalid from_idx: {from_idx}. Must be between 0 and {len(self.control_names) - 1}.")
-        if not (0 <= to_idx <= len(self.control_names)):  # Allow inserting at the end
-            raise IndexError(f"Invalid to_idx: {to_idx}. Must be between 0 and {len(self.control_names)}.")
+        if not (0 <= from_idx < len(self.environment_names)):
+            raise IndexError(f"Invalid from_idx: {from_idx}. Must be between 0 and {len(self.environment_names) - 1}.")
+        if not (0 <= to_idx <= len(self.environment_names)):  # Allow inserting at the end
+            raise IndexError(f"Invalid to_idx: {to_idx}. Must be between 0 and {len(self.environment_names)}.")
 
         # Reorder the environment names list to match the tabs positioning
-        environment_move = self.control_names.pop(from_idx)
-        self.control_names.insert(to_idx, environment_move)
+        environment_move = self.environment_names.pop(from_idx)
+        self.environment_names.insert(to_idx, environment_move)
 
     def rename_environment(self, control_name: str, new_name: str):
         """Renames an environment in the container
@@ -228,7 +171,7 @@ class EnvironmentManager:
         The name of the new index to display
         """
         # Check if the index corresponds to an environment in the container
-        if control_name in self.control_names:
+        if control_name in self.environment_names:
             # Rename environment and update dictionary keys
             self.environment_names[control_name] = str(new_name)
         else:
@@ -247,7 +190,7 @@ class EnvironmentManager:
         The column of the checkbox
         """
         # Change the boolean in the environment_channels list to the state
-        control_name = self.control_names[col]
+        control_name = self.environment_names[col]
         environment_channel = self.environment_channels[control_name]
         environment_channel[row] = state
 
@@ -263,7 +206,7 @@ class EnvironmentManager:
         The total number of rows that the environment_channels_table should have
         """
         # Loop through environments
-        for control_name in self.control_names:
+        for control_name in self.environment_names:
             environment_channel = self.environment_channels[control_name]
 
             # Check if we need to add or remove empty checkboxes at end of list
@@ -288,7 +231,7 @@ class EnvironmentManager:
         The row to delete
         """
         # Loop through environments and delete that row
-        for control_name in self.control_names:
+        for control_name in self.environment_names:
             self.environment_channels[control_name].pop(row)
 
     def insert_channel_row(self, row: int):
@@ -299,7 +242,7 @@ class EnvironmentManager:
         row : int :
         The row index that the new row should be inserted above
         """
-        for control_name in self.control_names:
+        for control_name in self.environment_names:
             self.environment_channels[control_name].insert(row, False)
 
     """

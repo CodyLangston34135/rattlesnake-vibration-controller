@@ -4,6 +4,7 @@ import traceback
 import os
 import netCDF4 as nc4
 import multiprocessing as mp
+import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import datetime as datetime
 
 
@@ -21,8 +22,9 @@ class EnvironmentMetadata(ABC):
          stored to a netCDF file saved during streaming operations.
     """
 
-    def __init__(self, channel_list_bools):
-        self._channel_list_bools = channel_list_bools
+    def __init__(self, environment_type):
+        self.environment_type = environment_type
+        self.channel_list_bools = []
         self.environment_name = "Environment"
 
     @property

@@ -25,6 +25,9 @@ class NIDAQmxMetadata:
         self.task_trigger = TaskTrigger.INTERNAL
         self.output_trigger_generator = 0
 
+    def validate(self):
+        return True
+
 
 class NIDAQmxAcquisition(HardwareAcquisition):
     """Class defining the interface between the controller and NI hardware

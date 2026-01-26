@@ -16,7 +16,7 @@ class GlobalCommands(Enum):
     STOP_ENVIRONMENT = 6
 
 
-def log_file_task(queue: mp.Queue, shutdown_event: mp.synchronize.Event):
+def log_file_task(queue: mp.Queue, shutdown_event: mp.Event):
     """A multiprocessing function that collects logging data and writes to file
 
     Parameters

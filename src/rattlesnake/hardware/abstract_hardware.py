@@ -1,4 +1,4 @@
-from hardware_utilities import Channel, HardwareType
+from .hardware_utilities import Channel, HardwareType
 from abc import ABC, abstractmethod
 from typing import List
 import numpy as np
@@ -20,6 +20,15 @@ class HardwareMetadata(ABC):
     @property
     def samples_per_write(self):
         return round(self.sample_rate * self.time_per_write * self.output_oversample)
+
+    @abstractmethod
+    def validate(self):
+        """ "
+        Check if the hardware exists and is reconizable. Return True if everything
+        checks out
+
+        Please throw detailed errors while validating. Makes it easier for user to debug
+        """
 
 
 class HardwareAcquisition(ABC):
