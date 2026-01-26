@@ -60,7 +60,7 @@ class TimeMetadata(EnvironmentMetadata):
             Prevents "hard stops" from damaging equipment.
 
         """
-        super().__init__(self, CONTROL_TYPE, environment_name)
+        super().__init__(CONTROL_TYPE, environment_name)
         self.sample_rate = None
         self.output_signal = None
         self.cancel_rampdown_time = None
@@ -210,10 +210,10 @@ class TimeEnvironment(EnvironmentProcess):
         )
         self.queue_container = queue_container
         # Define command map
-        self.command_map[GlobalCommands.START_ENVIRONMENT] = self.run_environment
+        self.command_map[GlobalCommands.START_ENVIRONMENT] = self.start_environment
         # Persistent data
         self.hardware_metadata = None
-        self.environment_parameters = None
+        self.metadata = None
         self.startup = True
         self.shutdown_flag = False
         self.current_test_level = 0.0
@@ -241,7 +241,7 @@ class TimeEnvironment(EnvironmentProcess):
         self.measurement_channels = [index for index, channel in enumerate(self.hardware_metadata.channel_list) if channel.feedback_device is None]
         self.output_channels = [index for index, channel in enumerate(self.hardware_metadata.channel_list) if not channel.feedback_device is None]
 
-    def initialize_environment_test_parameters(self, environment_parameters: TimeMetadata):
+    def initialize_environment(self, metadata: TimeMetadata):
         """
         Initialize the environment parameters specific to this environment
 
@@ -250,14 +250,14 @@ class TimeEnvironment(EnvironmentProcess):
 
         Parameters
         ----------
-        environment_parameters : TimeParameters
+        metadata : TimeMetadata
             A container containing the parameters defining the environment
 
         """
         self.log("Initializing Environment Parameters")
-        self.environment_parameters = environment_parameters
+        self.metadata = metadata
 
-    def run_environment(self, data):
+    def start_environment(self, data):
         """Runs the time history environment.
 
         This function handles start up, running, and shutting down the environment
@@ -287,7 +287,7 @@ class TimeEnvironment(EnvironmentProcess):
             if not data is None:
                 self.current_test_level, self.repeat = data
                 self.log("Test Level set to {:}".format(self.current_test_level))
-            self.signal_remainder = self.environment_parameters.output_signal
+            self.signal_remainder = self.metadata.output_signal
             self.startup = False
         # See if any data has come in
         try:
@@ -302,7 +302,7 @@ class TimeEnvironment(EnvironmentProcess):
             last_signal = False
             # See if there is enough in the remainder
             if self.hardware_metadata.samples_per_write > self.signal_remainder.shape[-1] and self.repeat:
-                self.signal_remainder = np.concatenate((self.signal_remainder, self.environment_parameters.output_signal), axis=-1)
+                self.signal_remainder = np.concatenate((self.signal_remainder, self.metadata.output_signal), axis=-1)
             elif (self.hardware_metadata.samples_per_write >= self.signal_remainder.shape[-1] and not self.repeat) or self.current_test_level == 0.0:
                 last_signal = True
             self.output(self.signal_remainder[:, : self.hardware_metadata.samples_per_write], last_signal)
@@ -384,7 +384,7 @@ class TimeEnvironment(EnvironmentProcess):
 
         """
         self.test_level_target = data
-        self.test_level_change = (self.test_level_target - self.current_test_level) / self.environment_parameters.cancel_rampdown_samples
+        self.test_level_change = (self.test_level_target - self.current_test_level) / self.metadata.cancel_rampdown_samples
         if self.test_level_change != 0.0:
             self.log(
                 "Changed test level to {:} from {:}, {:} change per sample".format(

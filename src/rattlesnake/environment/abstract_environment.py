@@ -1,11 +1,17 @@
 from ..utilities import VerboseMessageQueue, GlobalCommands
+from ..hardware.abstract_hardware import HardwareMetadata
 from abc import ABC, abstractmethod
 import traceback
 import os
 import netCDF4 as nc4
 import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
-import datetime as datetime
+from datetime import datetime
+
+PICKLE_ON_ERROR = False
+
+if PICKLE_ON_ERROR:
+    import pickle
 
 
 class EnvironmentMetadata(ABC):
@@ -119,28 +125,44 @@ class EnvironmentProcess(ABC):
     instruct the program to quit should not return any value that could be
     interpreted as true."""
 
+    def dump_to_dict(self):
+        """Dumps the environment to a dictionary to be pickled if an error occurs"""
+        if PICKLE_ON_ERROR:
+            state = self.__dict__.copy()
+            for key, value in state.items():
+                try:
+                    pickle.dumps(value)
+                    print(f"{key} is pickleable")
+                except Exception:  # pylint: disable=broad-exception-caught
+                    print(f"{key} is not pickleable")
+                    state[key] = None
+            return state
+        else:
+            return self.__dict__.copy()
+
     def __init__(
         self,
         environment_name: str,
+        command_queue: VerboseMessageQueue,
+        gui_update_queue: mp.Queue,
+        controller_communication_queue: VerboseMessageQueue,
         log_file_queue: mp.Queue,
-        from_command_queue: VerboseMessageQueue,
-        to_gui_queue: mp.Queue,
-        from_acquisition_queue: mp.Queue,
-        to_output_queue: mp.Queue,
+        data_in_queue: mp.Queue,
+        data_out_queue: mp.Queue,
         acquisition_active: mp.sharedctypes.Synchronized,
         output_active: mp.sharedctypes.Synchronized,
     ):
         self._environment_name = environment_name
+        self._command_queue = command_queue
+        self._gui_update_queue = gui_update_queue
+        self._controller_communication_queue = controller_communication_queue
         self._log_file_queue = log_file_queue
-        self._from_command_queue = from_command_queue
-        self._to_gui_queue = to_gui_queue
-        self._from_acquisition_queue = from_acquisition_queue
-        self._to_output_queue = to_output_queue
+        self._data_in_queue = data_in_queue
+        self._data_out_queue = data_out_queue
         self._command_map = {
             GlobalCommands.QUIT: self.quit,
             GlobalCommands.INITIALIZE_HARDWARE: self.initialize_hardware,
             GlobalCommands.INITIALIZE_ENVIRONMENT: self.initialize_environment,
-            GlobalCommands.RUN_ENVIRONMENT: self.run_environment,
             GlobalCommands.STOP_ENVIRONMENT: self.stop_environment,
         }
         self._acquisition_active = acquisition_active
@@ -148,11 +170,113 @@ class EnvironmentProcess(ABC):
 
     @property
     def acquisition_active(self):
+        """Flag to check if acquisition is active"""
+        # print('Checking if Acquisition Active: {:}'.format(bool(self._acquisition_active.value)))
         return bool(self._acquisition_active.value)
 
     @property
     def output_active(self):
+        """Flag to check if output is active"""
+        # print('Checking if Output Active: {:}'.format(bool(self._output_active.value)))
         return bool(self._output_active.value)
+
+    @abstractmethod
+    def initialize_hardware(self, hardware_metadata: HardwareMetadata):
+        """Initialize the data acquisition parameters in the environment.
+
+        The environment will receive the global data acquisition parameters from
+        the controller, and must set itself up accordingly.
+
+        Parameters
+        ----------
+        data_acquisition_parameters : DataAcquisitionParameters :
+            A container containing data acquisition parameters, including
+            channels active in the environment as well as sampling parameters.
+        """
+
+    @abstractmethod
+    def initialize_environment(self, environment_metadata: EnvironmentMetadata):
+        """
+        Initialize the environment parameters specific to this environment
+
+        The environment will recieve parameters defining itself from the
+        user interface and must set itself up accordingly.
+
+        Parameters
+        ----------
+        environment_parameters : AbstractMetadata
+            A container containing the parameters defining the environment
+
+        """
+
+    @abstractmethod
+    def stop_environment(self, data):
+        """Stop the environment gracefully
+
+        This function defines the operations to shut down the environment
+        gracefully so there is no hard stop that might damage test equipment
+        or parts.
+
+        Parameters
+        ----------
+        data : Ignored
+            This parameter is not used by the function but must be present
+            due to the calling signature of functions called through the
+            ``command_map``
+
+        """
+
+    @property
+    def environment_command_queue(self) -> VerboseMessageQueue:
+        """The queue that provides commands to the environment."""
+        return self._command_queue
+
+    @property
+    def data_in_queue(self) -> mp.Queue:
+        """The queue from which data is delivered to the environment"""
+        return self._data_in_queue
+
+    @property
+    def data_out_queue(self) -> mp.Queue:
+        """The queue to which data is written that will be output to exciters"""
+        return self._data_out_queue
+
+    @property
+    def gui_update_queue(self) -> mp.Queue:
+        """The queue that GUI update instructions are written to"""
+        return self._gui_update_queue
+
+    @property
+    def controller_communication_queue(self) -> mp.Queue:
+        """The queue that global controller updates are written to"""
+        return self._controller_communication_queue
+
+    @property
+    def log_file_queue(self) -> mp.Queue:
+        """The queue that log file messages are written to"""
+        return self._log_file_queue
+
+    def log(self, message: str):
+        """Write a message to the log file
+
+        This function puts a message onto the ``log_file_queue`` so it will
+        eventually be written to the log file.
+
+        When written to the log file, the message will include the date and
+        time that the message was queued, the name of the environment, and
+        then the message itself.
+
+        Parameters
+        ----------
+        message : str :
+            A message that will be written to the log file.
+        """
+        self.log_file_queue.put(f"{datetime.now()}: {self.environment_name} -- {message}\n")
+
+    @property
+    def environment_name(self) -> str:
+        """A string defining the name of the environment"""
+        return self._environment_name
 
     @property
     def command_map(self) -> dict:
@@ -174,76 +298,6 @@ class EnvironmentProcess(ABC):
         """
         self._command_map[key] = function
 
-    def log(self, message: str):
-        """Write a message to the log file
-
-        This function puts a message onto the ``log_file_queue`` so it will
-        eventually be written to the log file.
-
-        When written to the log file, the message will include the date and
-        time that the message was queued, the name of the environment, and
-        then the message itself.
-
-        Parameters
-        ----------
-        message : str :
-            A message that will be written to the log file.
-        """
-        self.log_file_queue.put("{:}: {:} -- {:}\n".format(datetime.now(), self.environment_name, message))
-
-    @abstractmethod
-    def initialize_hardware(self, data):
-        """Initialize the data acquisition parameters in the environment.
-
-        The environment will receive the global data acquisition parameters from
-        the controller, and must set itself up accordingly.
-
-        Parameters
-        ----------
-        data_acquisition_parameters : DataAcquisitionParameters :
-            A container containing data acquisition parameters, including
-            channels active in the environment as well as sampling parameters.
-        """
-        pass
-
-    @abstractmethod
-    def initialize_environment(self, data):
-        """
-        Initialize the environment parameters specific to this environment
-
-        The environment will recieve parameters defining itself from the
-        user interface and must set itself up accordingly.
-
-        Parameters
-        ----------
-        environment_parameters : EnvironmentMetadata
-            A container containing the parameters defining the environment
-
-        """
-        pass
-
-    @abstractmethod
-    def start_environment(self, data):
-        pass
-
-    @abstractmethod
-    def stop_environment(self, data):
-        """Stop the environment gracefully
-
-        This function defines the operations to shut down the environment
-        gracefully so there is no hard stop that might damage test equipment
-        or parts.
-
-        Parameters
-        ----------
-        data : Ignored
-            This parameter is not used by the function but must be present
-            due to the calling signature of functions called through the
-            ``command_map``
-
-        """
-        pass
-
     def run(self):
         """The main function that is run by the environment's process
 
@@ -259,7 +313,7 @@ class EnvironmentProcess(ABC):
 
 
         """
-        self.log("Starting Process with PID {:}".format(os.getpid()))
+        self.log(f"Starting Process with PID {os.getpid()}")
         while True:
             # Get the message from the queue
             message, data = self.environment_command_queue.get(self.environment_name)
@@ -267,19 +321,53 @@ class EnvironmentProcess(ABC):
             try:
                 function = self.command_map[message]
             except KeyError:
-                self.log("Undefined Message {:}, acceptable messages are {:}".format(message, [key for key in self.command_map]))
+                self.log(f"Undefined Message {message}, acceptable messages are {[key for key in self.command_map]}")
                 continue
             try:
                 halt_flag = function(data)
-            except Exception:
+            except Exception:  # pylint: disable=broad-exception-caught
                 tb = traceback.format_exc()
-                self.log("ERROR\n\n {:}".format(tb))
-                self.gui_update_queue.put(("error", ("{:} Error".format(self.environment_name), "!!!UNKNOWN ERROR!!!\n\n{:}".format(tb))))
+                self.log(f"ERROR\n\n {tb}")
+                self.gui_update_queue.put(
+                    (
+                        "error",
+                        (
+                            f"{self.environment_name} Error",
+                            f"!!!UNKNOWN ERROR!!!\n\n{tb}",
+                        ),
+                    )
+                )
+                if PICKLE_ON_ERROR:
+                    with open(f"debug_data/{self.environment_name}_error_state.txt", "w", encoding="utf-8") as f:
+                        f.write(f"{tb}")
+                    with open(f"debug_data/{self.environment_name}_error_state.pkl", "wb") as f:
+                        dic = self.dump_to_dict()
+                        pickle.dump(dic, f)
+                    print("Done Writing Pickle File from Error...")
                 halt_flag = False
             # If we get a true value, stop.
             if halt_flag:
                 self.log("Stopping Process")
                 break
+
+    def quit(self, data):  # pylint: disable=unused-argument
+        """Returns True to stop the ``run`` while loop and exit the process
+
+        Parameters
+        ----------
+        data : Ignored
+            This parameter is not used by the function but must be present
+            due to the calling signature of functions called through the
+            ``command_map``
+
+        Returns
+        -------
+        True :
+            This function returns True to signal to the ``run`` while loop
+            that it is time to close down the environment.
+
+        """
+        return True
 
 
 def run_process(

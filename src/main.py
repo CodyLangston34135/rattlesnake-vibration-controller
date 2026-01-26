@@ -33,8 +33,10 @@ def main():
     envrionment_metadata.sample_rate = 1000
     envrionment_metadata.output_signal = np.ones(1000)
     envrionment_metadata.cancel_rampdown_time = 500
+    envrionment_metadata_list = [envrionment_metadata]
 
     rattlesnake.set_hardware(hardware_metadata)
+    rattlesnake.set_environments(envrionment_metadata_list)
     rattlesnake.shutdown()
 
 

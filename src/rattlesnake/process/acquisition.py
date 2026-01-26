@@ -85,9 +85,9 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.map_command(GlobalCommands.INITIALIZE_HARDWARE, self.initialize_hardware)
         self.map_command(GlobalCommands.RUN_HARDWARE, self.acquire_signal)
         self.map_command(GlobalCommands.STOP_HARDWARE, self.stop_acquisition)
-        # self.map_command(GlobalCommands.STOP_ENVIRONMENT, self.stop_environment)
-        # self.map_command(GlobalCommands.START_STREAMING, self.start_streaming)
-        # self.map_command(GlobalCommands.STOP_STREAMING, self.stop_streaming)
+        self.map_command(GlobalCommands.STOP_ENVIRONMENT, self.stop_environment)
+        self.map_command(GlobalCommands.START_STREAMING, self.start_streaming)
+        self.map_command(GlobalCommands.STOP_STREAMING, self.stop_streaming)
 
         # Communication
         self.queue_container = queue_container
@@ -488,6 +488,6 @@ def acquisition_process(
 
     """
 
-    acquisition_instance = AcquisitionProcess("Acquisition", queue_container, acquisition_active)
+    acquisition_instance = AcquisitionProcess(TASK_NAME, queue_container, acquisition_active)
 
     acquisition_instance.run()

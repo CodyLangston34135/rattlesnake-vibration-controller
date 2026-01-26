@@ -14,6 +14,8 @@ class GlobalCommands(Enum):
     INITIALIZE_ENVIRONMENT = 4
     START_ENVIRONMENT = 5
     STOP_ENVIRONMENT = 6
+    START_STREAMING = 7
+    STOP_STREAMING = 8
 
 
 def log_file_task(queue: mp.Queue, shutdown_event):
@@ -163,6 +165,14 @@ class VerboseMessageQueue:
     def empty(self):
         """Return true if the queue is empty."""
         return self.queue.empty()
+
+    def close(self):
+        """Closes queue"""
+        self.queue.close()
+
+    def join_thread(self):
+        """Joins thread"""
+        self.queue.join_thread()
 
 
 class QueueContainer:

@@ -122,7 +122,7 @@ class Channel:
             "model",
             "expiration",
             "physical_device",
-            "physical_chnannel",
+            "physical_channel",
             "channel_type",
             "minimum_value",
             "maximum_value",
@@ -145,4 +145,7 @@ class Channel:
         if not isinstance(other, Channel):
             return NotImplemented
 
-        return all(getattr(self, attr) == getattr(other, attr) for attr in self.channel_attr_list)
+        return all(getattr(self, attr_name) == getattr(other, attr_name) for attr_name in self.channel_attr_list)
+
+    def __hash__(self):
+        return hash(tuple(getattr(self, attr_name) for attr_name in self.channel_attr_list))

@@ -30,14 +30,16 @@ class EnvironmentManager:
         sysid_names = [queue_name for queue_name in self.queue_names if self.environment_types[queue_name] in self.sysid_environments]
         return sysid_names
 
-    def initialize_environments(self, metadata_list: List[EnvironmentMetadata]):
+    def initialize_environments(self, metadata_list: List[EnvironmentMetadata], acquisition_active, output_active):
         mapped_queue_names = set()
         extra_metadata = []
 
         # Check if there is an existing process that maps to this environment type
         # If there is, hijack it and give it new metadata
         for metadata in metadata_list:
-            metadata.validate()
+            valid_environment = metadata.validate()
+            if not valid_environment:
+                raise TypeError("Rattlesnake.set_environment requires a valid EnvironmentMetadata class")
 
             environment_type = metadata.environment_type
             environment_name = metadata.environment_name
@@ -67,11 +69,12 @@ class EnvironmentManager:
         # Add process for metadata that needs a new process. Could do this in loop above
         # but I want to clear up queue_names before assigning new ones
         for metadata in extra_metadata:
-            self.add_environment(metadata)
+            self.add_environment(metadata, acquisition_active, output_active)
 
         # Send metadata information to associated processes
         metadata_list = list(self.environment_metadata.values())
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata_list))
+        self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata_list))
 
     def clear_environments(self):
         self.queue_names = []
@@ -81,7 +84,7 @@ class EnvironmentManager:
         self.close_environments()
         self.environment_processes = {}
 
-    def add_environment(self, metadata: EnvironmentMetadata):
+    def add_environment(self, metadata: EnvironmentMetadata, acquisition_active, output_active):
         """Adds environment to container with unique name"""
         # Find the first available queue for the environment
         queue_name = None
@@ -108,8 +111,8 @@ class EnvironmentManager:
                     self.queue_container.log_file_queue,
                     self.queue_container.environment_data_in_queues[queue_name],
                     self.queue_container.environment_data_out_queues[queue_name],
-                    self.queue_container.acquisition_active,
-                    self.queue_container.output_active,
+                    acquisition_active,
+                    output_active,
                 ),
             )
             environment_process.start()
@@ -150,7 +153,7 @@ class EnvironmentManager:
     def close_environments(self):
         for queue_name, environment_process in self.environment_processes.items():
             self.queue_container.environment_command_queues[queue_name].put("Environments", (GlobalCommands.QUIT, None))
-            self.queue_container.log_file_queue.put("{:}: Joining {:} Process\n".format(datetime.datetime.now(), queue_name))
+            self.queue_container.log_file_queue.put("{:}: Joining {:} Process\n".format(datetime.now(), queue_name))
             environment_process.join(timeout=5)
             if environment_process.is_alive():
                 environment_process.terminate()

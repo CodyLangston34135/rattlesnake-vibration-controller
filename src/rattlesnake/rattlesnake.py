@@ -1,7 +1,9 @@
+from .utilities import GlobalCommands, VerboseMessageQueue, QueueContainer, log_file_task
+from .process.acquisition import acquisition_process
+from .process.output import output_process
 from .hardware.abstract_hardware import HardwareMetadata
 from .environment.abstract_environment import EnvironmentMetadata
 from .environment_manager import EnvironmentManager
-from .utilities import GlobalCommands, VerboseMessageQueue, QueueContainer, log_file_task
 import multiprocessing as mp
 from datetime import datetime
 from typing import List
@@ -69,24 +71,47 @@ class Rattlesnake:
             environment_data_out_queues,
         )
 
+        # Start up acquisition, output, streaming processes
+        self.acquisition_proc = mp.Process(
+            target=acquisition_process,
+            args=(self.queue_container, self.acquisition_active),
+        )
+        self.acquisition_proc.start()
+
+        self.output_proc = mp.Process(target=output_process, args=(self.queue_container, self.output_active))
+        self.output_proc.start()
+
         self.environment_manager = EnvironmentManager(self.queue_container)
 
     def set_hardware(self, hardware_metadata: HardwareMetadata) -> None:
         valid_hardware = hardware_metadata.validate()
         if not valid_hardware:
-            raise TypeError("Rattlesnake.set_hardware requires a HardwareMetadata class")
+            raise TypeError("Rattlesnake.set_hardware requires a valid HardwareMetadata class")
 
         self.hardware_metadata = hardware_metadata
 
     def set_environments(self, environment_metadata_list: List[EnvironmentMetadata]):
-        # For environment stuff
-        # Acquisition needs: List of environment names, correct environment queue dict
-        for metadata in environment_metadata_list:
-            if metadata.environment_name in self.environment_names:
-                # This is going to be sending environment metadata to the stuff
-                pass
+        self.environment_manager.initialize_environments(environment_metadata_list, self.acquisition_active, self.output_active)
 
     def shutdown(self):
-        self.log_file_queue.put("{:}: Joining Log File Process\n".format(datetime.now()))
-        self.log_file_queue.put(GlobalCommands.QUIT)
+        # Close out of acquisition, output, streaming process
+        self.queue_container.log_file_queue.put(f"{datetime.now()}: Joining Acquisition Process\n")
+        self.acquisition_proc.join(timeout=5)
+        if self.acquisition_proc.is_alive():
+            self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Acquisition Process\n")
+            self.acquisition_proc.terminate()
+            self.acquisition_proc.join()
+        self.queue_container.log_file_queue.put(f"{datetime.now()}: Joining Output Process\n")
+        self.output_proc.join(timeout=5)
+        if self.output_proc.is_alive():
+            self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Output Process\n")
+            self.output_proc.terminate()
+            self.output_proc.join()
+
+        # Close out of environment processes
+        self.environment_manager.close_environments()
+
+        # Close out log file process
+        self.queue_container.log_file_queue.put("{:}: Joining Log File Process\n".format(datetime.now()))
+        self.queue_container.log_file_queue.put(GlobalCommands.QUIT)
         self.log_file_process.join()

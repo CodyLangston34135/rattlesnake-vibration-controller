@@ -56,7 +56,6 @@ class OutputProcess(AbstractMessageProcess):
         self,
         process_name: str,
         queue_container: QueueContainer,
-        environments: list,
         output_active: mp.sharedctypes.Synchronized,
     ):
         """
@@ -82,9 +81,10 @@ class OutputProcess(AbstractMessageProcess):
             queue_container.output_command_queue,
             queue_container.gui_update_queue,
         )
-        self.map_command(GlobalCommands.INITIALIZE_DATA_ACQUISITION, self.initialize_data_acquisition)
+        self.map_command(GlobalCommands.INITIALIZE_HARDWARE, self.initialize_hardware)
         self.map_command(GlobalCommands.RUN_HARDWARE, self.output_signal)
         self.map_command(GlobalCommands.STOP_HARDWARE, self.stop_output)
+        self.map_command(GlobalCommands.INITIALIZE_ENVIRONMENT, self.initialize_environment)
         self.map_command(GlobalCommands.START_ENVIRONMENT, self.start_environment)
         # Communication
         self.queue_container = queue_container
@@ -96,13 +96,13 @@ class OutputProcess(AbstractMessageProcess):
         self.num_outputs = None
         self.output_oversample = None
         # Environment Data
-        self.environment_list = self.environment_list = [environment[1] for environment in environments]
+        self.environment_list = []
         self.environment_output_channels = None
-        self.environment_active_flags = {environment: False for environment in self.environment_list}
-        self.environment_starting_up_flags = {environment: False for environment in self.environment_list}
-        self.environment_shutting_down_flags = {environment: False for environment in self.environment_list}
+        self.environment_active_flags = {}
+        self.environment_starting_up_flags = {}
+        self.environment_shutting_down_flags = {}
         self.environment_data_out_remainders = None
-        self.environment_first_data = {environment: False for environment in self.environment_list}
+        self.environment_first_data = {}
         # Hardware data
         self.hardware = None
         self.hardware_metadata = None
@@ -407,7 +407,7 @@ class OutputProcess(AbstractMessageProcess):
         return True
 
 
-def output_process(queue_container: QueueContainer, environments: list, output_active: mp.sharedctypes.Synchronized):
+def output_process(queue_container: QueueContainer, output_active: mp.sharedctypes.Synchronized):
     """Function passed to multiprocessing as the output process
 
     This process creates the ``OutputProcess`` object and calls the ``run``
@@ -424,6 +424,6 @@ def output_process(queue_container: QueueContainer, environments: list, output_a
 
     """
 
-    output_instance = OutputProcess(TASK_NAME, queue_container, environments, output_active)
+    output_instance = OutputProcess(TASK_NAME, queue_container, output_active)
 
     output_instance.run()
