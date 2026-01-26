@@ -14,8 +14,12 @@ class GlobalCommands(Enum):
     INITIALIZE_ENVIRONMENT = 4
     START_ENVIRONMENT = 5
     STOP_ENVIRONMENT = 6
-    START_STREAMING = 7
-    STOP_STREAMING = 8
+    INITIALIZE_STREAMING = 7
+    CREATE_NEW_STREAM = 8
+    START_STREAMING = 9
+    STREAMING_DATA = 10
+    STOP_STREAMING = 11
+    FINALIZE_STREAMING = 12
 
 
 def log_file_task(queue: mp.Queue, shutdown_event):
