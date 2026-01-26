@@ -37,6 +37,8 @@ class EnvironmentManager:
         # Check if there is an existing process that maps to this environment type
         # If there is, hijack it and give it new metadata
         for metadata in metadata_list:
+            metadata.validate()
+
             environment_type = metadata.environment_type
             environment_name = metadata.environment_name
 
@@ -50,6 +52,7 @@ class EnvironmentManager:
                 continue
 
             metadata.queue_name = queue_name
+            self.environment_types[queue_name] = environment_type
             self.environment_names[queue_name] = environment_name
             self.environment_metadata[queue_name] = metadata
             self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata))
@@ -66,10 +69,14 @@ class EnvironmentManager:
         for metadata in extra_metadata:
             self.add_environment(metadata)
 
+        # Send metadata information to associated processes
+        metadata_list = list(self.environment_metadata.values())
+        self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata_list))
+
     def clear_environments(self):
         self.queue_names = []
-        self.environment_names = {}
         self.environment_types = {}
+        self.environment_names = {}
         self.environment_metadata = {}
         self.close_environments()
         self.environment_processes = {}
@@ -114,6 +121,7 @@ class EnvironmentManager:
         self.environment_names[queue_name] = environment_name
         self.environment_types[queue_name] = environment_type
         self.environment_processes[queue_name] = environment_process
+        metadata.queue_name = queue_name
         self.environment_metadata[queue_name] = metadata
 
     def remove_environment(self, queue_name):

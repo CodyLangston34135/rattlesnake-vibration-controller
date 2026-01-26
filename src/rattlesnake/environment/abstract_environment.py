@@ -44,11 +44,6 @@ class EnvironmentMetadata(ABC):
         self._channel_list_bools = value
 
     def map_channel_bools(self, hardware_channel_list):
-
-        # Prevent duplicate entries
-        if len(self.channel_list) != len(set(self.channel_list)):
-            raise ValueError("Duplicate channels found in environment channel_list")
-
         # Prevent non-existing channels
         hardware_channel_set = set(hardware_channel_list)
         missing_channels = set(self.channel_list) - hardware_channel_set
@@ -58,6 +53,16 @@ class EnvironmentMetadata(ABC):
         # Create boolean map
         channel_set = set(self.channel_list)
         return [channel in channel_set for channel in hardware_channel_list]
+
+    @abstractmethod
+    def validate(self):
+        """Validate whether the metadata will work for that environment. Return True if valid
+
+        Throw errors if metadata is invalid. This should contain checks for
+        things like duplicate channel_list entries, valid control channels,
+        etc.
+        """
+        pass
 
     @abstractmethod
     def store_to_netcdf(self, netcdf_group_handle: nc4._netCDF4.Group):

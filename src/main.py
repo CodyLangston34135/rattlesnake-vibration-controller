@@ -1,6 +1,8 @@
 from rattlesnake.rattlesnake import Rattlesnake
 from rattlesnake.hardware.hardware_utilities import Channel
 from rattlesnake.hardware.nidqaqmx import NIDAQmxMetadata, TaskTrigger
+from rattlesnake.environment.time_environment import TimeMetadata
+import numpy as np
 
 
 def main():
@@ -25,6 +27,12 @@ def main():
     hardware_metadata.time_per_read = 0.25
     hardware_metadata.time_per_write = 0.25
     hardware_metadata.task_trigger = TaskTrigger.INTERNAL
+
+    envrionment_metadata = TimeMetadata("Time Environment 1")
+    envrionment_metadata.channel_list = channel_list
+    envrionment_metadata.sample_rate = 1000
+    envrionment_metadata.output_signal = np.ones(1000)
+    envrionment_metadata.cancel_rampdown_time = 500
 
     rattlesnake.set_hardware(hardware_metadata)
     rattlesnake.shutdown()

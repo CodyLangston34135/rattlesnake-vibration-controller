@@ -85,6 +85,13 @@ class TimeMetadata(EnvironmentMetadata):
         """The number of samples required to ramp down the signal when cancelled"""
         return int(self.cancel_rampdown_time * self.sample_rate)
 
+    def validate(self):
+        # Prevent duplicate entries
+        if len(self.channel_list) != len(set(self.channel_list)):
+            raise ValueError("Duplicate channels found in environment channel_list")
+
+        return True
+
     def store_to_netcdf(
         self,
         netcdf_group_handle: nc4._netCDF4.Group,  # pylint: disable=c-extension-no-member
