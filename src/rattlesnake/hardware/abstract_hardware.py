@@ -21,13 +21,30 @@ class HardwareMetadata(ABC):
     def samples_per_write(self):
         return round(self.sample_rate * self.time_per_write * self.output_oversample)
 
+    @property
+    def nyquist_frequency(self):
+        """Property returning the Nyquist frequency of the data acquisition."""
+        return self.sample_rate / 2
+
+    @property
+    def output_sample_rate(self):
+        """Property returning the output sample rate"""
+        return self.sample_rate * self.output_oversample
+
     @abstractmethod
     def validate(self):
-        """ "
+        """
         Check if the hardware exists and is reconizable. Return True if everything
         checks out
 
         Please throw detailed errors while validating. Makes it easier for user to debug
+        """
+
+    @abstractmethod
+    def extra_attr_list(self):
+        """Return a list of attributes unique to this hardware
+
+        Required for netcdf5 metadata handling.
         """
 
 

@@ -32,6 +32,9 @@ class NIDAQmxMetadata:
 
         return True
 
+    def extra_attr_list(self):
+        extra_attr_list = ["task_trigger", "output_trigger_generator"]
+
 
 class NIDAQmxAcquisition(HardwareAcquisition):
     """Class defining the interface between the controller and NI hardware

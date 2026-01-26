@@ -33,21 +33,20 @@ class EnvironmentMetadata(ABC):
         self.environment_name = environment_name
         self.queue_name = None  # Name used to assign environment to queues
         self.channel_list = []
+        self._channel_list_bools = []
 
-    @property
-    def channel_list_bools(self):
-        return self._channel_list_bools
+    def map_channel_bools(self, hardware_channel_list):
+        # Prevent non-existing channels
+        hardware_channel_set = set(hardware_channel_list)
+        missing_channels = set(self.channel_list) - hardware_channel_set
+        if missing_channels:
+            raise ValueError(f"channel_list contains channels not in hardware_channel_list: " f"{missing_channels}")
 
-    @channel_list_bools.setter
-    def channel_list_bools(self, value):
-        if not isinstance(value, list):
-            raise TypeError("channel_list_bools must be a list.")
+        # Create boolean map
+        channel_set = set(self.channel_list)
+        channel_list_bools = [channel in channel_set for channel in hardware_channel_list]
 
-        # Ensure all elements are strictly booleans
-        if not all(isinstance(v, bool) for v in value):
-            raise ValueError("All elements in channel_list_bools must be True or False.")
-
-        self._channel_list_bools = value
+        return channel_list_bools
 
     def map_channel_indices(self, hardware_channel_list):
         # Prevent non-existing channels
