@@ -81,6 +81,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.environment_first_data = {}
         # Hardware data
         self.hardware = None
+        self.hardware_metadata = HardwareMetadata()
         # Streaming Information
         self.streaming = False
         self.has_streamed = False
@@ -148,14 +149,14 @@ class AcquisitionProcess(AbstractMessageProcess):
         )
 
     def initialize_environment(self, metadata_list: List[EnvironmentMetadata]):
-        # for metadata, idx in enumerate(metadata_list):
-        #     self.environment_list[idx] = [environment[1] for environment in environments]
-        #     self.environment_acquisition_channels = None
-        #     self.environment_active_flags = {environment: False for environment in self.environment_list}
-        #     self.environment_last_data = {environment: False for environment in self.environment_list}
-        #     self.environment_samples_remaining_to_read = {environment: 0 for environment in self.environment_list}
-        #     self.environment_first_data = {environment: None for environment in self.environment_list}
-        pass
+        for idx, metadata in enumerate(metadata_list):
+            environment = metadata.queue_name
+            self.environment_list[idx] = environment
+            self.environment_acquisition_channels[environment] = metadata.map_channel_bools(self.hardware_metadata.channel_list)
+            self.environment_active_flags[environment] = False
+            self.environment_last_data[environment] = False
+            self.environment_samples_remaining_to_read[environment] = 0
+            self.environment_first_data[environment] = None
 
     def stop_environment(self, data):
         """Sets flags stating that the specified environment will be ending.

@@ -140,3 +140,9 @@ class Channel:
     def is_empty(self):
         """Returns True if every attribute in channel is equalt to None"""
         return all(getattr(self, attr_name) is None for attr_name in self.channel_attr_list)
+
+    def __eq__(self, other):
+        if not isinstance(other, Channel):
+            return NotImplemented
+
+        return all(getattr(self, attr) == getattr(other, attr) for attr in self.channel_attr_list)

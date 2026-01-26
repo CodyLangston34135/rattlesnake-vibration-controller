@@ -25,6 +25,7 @@ class EnvironmentMetadata(ABC):
     def __init__(self, environment_type, environment_name):
         self.environment_type = environment_type
         self.environment_name = environment_name
+        self.queue_name = None  # Name used to assign environment to queues
         self.channel_list = []
 
     @property
@@ -41,6 +42,22 @@ class EnvironmentMetadata(ABC):
             raise ValueError("All elements in channel_list_bools must be True or False.")
 
         self._channel_list_bools = value
+
+    def map_channel_bools(self, hardware_channel_list):
+
+        # Prevent duplicate entries
+        if len(self.channel_list) != len(set(self.channel_list)):
+            raise ValueError("Duplicate channels found in environment channel_list")
+
+        # Prevent non-existing channels
+        hardware_channel_set = set(hardware_channel_list)
+        missing_channels = set(self.channel_list) - hardware_channel_set
+        if missing_channels:
+            raise ValueError(f"channel_list contains channels not in hardware_channel_list: " f"{missing_channels}")
+
+        # Create boolean map
+        channel_set = set(self.channel_list)
+        return [channel in channel_set for channel in hardware_channel_list]
 
     @abstractmethod
     def store_to_netcdf(self, netcdf_group_handle: nc4._netCDF4.Group):

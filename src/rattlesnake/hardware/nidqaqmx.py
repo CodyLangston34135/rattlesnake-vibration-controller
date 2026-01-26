@@ -26,6 +26,9 @@ class NIDAQmxMetadata:
         self.output_trigger_generator = 0
 
     def validate(self):
+        if len(self.channel_list) != len(set(self.channel_list)):
+            raise ValueError("Duplicate channels found in channel_list")
+
         return True
 
 
