@@ -23,8 +23,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from .abstract_message_process import AbstractMessageProcess
 from .process_utilities import align_signals, correlation_norm_signal_spec_ratio
-from ..utilities import GlobalCommands, VerboseMessageQueue, QueueContainer, flush_queue
-from ..hardware.hardware_utilities import HardwareType, Channel
+from ..utilities import GlobalCommands, QueueContainer, flush_queue
+from ..hardware.hardware_utilities import HardwareType
 from ..hardware.abstract_hardware import HardwareMetadata
 from ..environment.abstract_environment import EnvironmentMetadata
 import multiprocessing as mp
