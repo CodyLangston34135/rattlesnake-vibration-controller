@@ -10,4 +10,8 @@ class UICommands:
 
 class DebugPlot:
     def __init__(self, gui_update_queue):
+        self.gui_update_queue = gui_update_queue
+        pass
+
+    def run(self):
         pass
