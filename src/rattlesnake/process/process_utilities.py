@@ -84,3 +84,24 @@ def moving_sum(signal, n):
     return_value = np.cumsum(signal, axis=-1)
     return_value[..., n:] = return_value[..., n:] - return_value[..., :-n]
     return return_value[..., n - 1 :]
+
+
+def rms_time(signal, axis=None, keepdims=False):
+    """Computes RMS over a time signal
+
+    Parameters
+    ----------
+    signal : np.ndarray :
+        Signal over which to compute the root-mean-square value
+    axis : int :
+        The dimension over which the mean is performed (Default value = None)
+    keepdims : bool :
+        Whether to keep the dimension over which mean is computed (Default value = False)
+
+    Returns
+    -------
+    rms : numpy scalar or numpy.ndarray
+        The root-mean-square value of signal
+
+    """
+    return np.sqrt(np.mean(signal**2, axis=axis, keepdims=keepdims))

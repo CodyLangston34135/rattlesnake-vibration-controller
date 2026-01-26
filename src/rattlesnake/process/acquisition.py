@@ -1,4 +1,27 @@
-from abstract_message_process import AbstractMessageProcess
+# -*- coding: utf-8 -*-
+"""
+Controller Subsystem that handles the reading of data from the hardware.
+
+Rattlesnake Vibration Control Software
+Copyright (C) 2021  National Technology & Engineering Solutions of Sandia, LLC
+(NTESS). Under the terms of Contract DE-NA0003525 with NTESS, the U.S.
+Government retains certain rights in this software.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+"""
+
+from .abstract_message_process import AbstractMessageProcess
 from .process_utilities import align_signals, correlation_norm_signal_spec_ratio
 from ..utilities import GlobalCommands, VerboseMessageQueue, QueueContainer, flush_queue
 from ..hardware.hardware_utilities import HardwareType, Channel
@@ -10,6 +33,8 @@ import numpy as np
 import scipy.signal as sig
 from time import time, sleep
 from typing import List
+
+TASK_NAME = "Acquisition"
 
 DEBUG = False
 if DEBUG:
@@ -81,7 +106,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.environment_first_data = {}
         # Hardware data
         self.hardware = None
-        self.hardware_metadata = HardwareMetadata()
+        self.hardware_metadata = None
         # Streaming Information
         self.streaming = False
         self.has_streamed = False
@@ -148,11 +173,13 @@ class AcquisitionProcess(AbstractMessageProcess):
             )
         )
 
+        self.hardware_metadata = metadata
+
     def initialize_environment(self, metadata_list: List[EnvironmentMetadata]):
         for idx, metadata in enumerate(metadata_list):
             environment = metadata.queue_name
             self.environment_list[idx] = environment
-            self.environment_acquisition_channels[environment] = metadata.map_channel_bools(self.hardware_metadata.channel_list)
+            self.environment_acquisition_channels[environment] = metadata.map_channel_indices(self.hardware_metadata.channel_list)
             self.environment_active_flags[environment] = False
             self.environment_last_data[environment] = False
             self.environment_samples_remaining_to_read[environment] = 0

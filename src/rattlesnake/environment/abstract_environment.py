@@ -43,7 +43,7 @@ class EnvironmentMetadata(ABC):
 
         self._channel_list_bools = value
 
-    def map_channel_bools(self, hardware_channel_list):
+    def map_channel_indices(self, hardware_channel_list):
         # Prevent non-existing channels
         hardware_channel_set = set(hardware_channel_list)
         missing_channels = set(self.channel_list) - hardware_channel_set
@@ -52,7 +52,10 @@ class EnvironmentMetadata(ABC):
 
         # Create boolean map
         channel_set = set(self.channel_list)
-        return [channel in channel_set for channel in hardware_channel_list]
+        channel_bools = [channel in channel_set for channel in hardware_channel_list]
+
+        channel_indices = [index for index, environment_bool in enumerate(channel_bools) if environment_bool]
+        return channel_indices
 
     @abstractmethod
     def validate(self):

@@ -1,4 +1,4 @@
-from .abstract_hardware import HardwareMetadata, HardwareAcquisition
+from .abstract_hardware import HardwareMetadata, HardwareAcquisition, HardwareOutput
 from .hardware_utilities import Channel, HardwareType
 import nidaqmx as ni
 import nidaqmx.constants as nic
@@ -7,6 +7,7 @@ import nidaqmx.stream_writers as ni_write
 import numpy as np
 from enum import Enum
 from typing import List
+import time
 
 BUFFER_SIZE_FACTOR = 3
 
@@ -427,4 +428,201 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             )
         else:
             raise ValueError(f"Channel Type Not Implemented: {channel_type}")
+        return channel
+
+
+class NIDAQmxOutput(HardwareOutput):
+    """Class defining the interface between the controller and NI hardware
+
+    This class defines the interfaces between the controller and National
+    Instruments Hardware that runs the NI-DAQmx library.  It is run by the
+    Output process, and must define how to get data from the controller to the
+    output hardware."""
+
+    def __init__(self):
+        """
+        Constructs the NIDAQmx Output class and initializes values to null.
+        """
+        self.tasks = None
+        self.channel_task_map = None
+        self.writers = None
+        self.write_trigger = None
+        self.signal_samples = None
+        self.sample_rate = None
+        self.buffer_size_factor = BUFFER_SIZE_FACTOR
+
+    def set_up_data_output_parameters_and_channels(self, metadata: HardwareMetadata):
+        """
+        Initialize the hardware and set up sources and sampling properties
+
+        The function must create channels on the hardware corresponding to
+        the sources in the test.  It must also set the sampling rates.
+
+        Parameters
+        ----------
+        test_data : DataAcquisitionParameters :
+            A container containing the data acquisition parameters for the
+            controller set by the user.
+        channel_data : List[Channel] :
+            A list of ``Channel`` objects defining the channels in the test
+
+        Returns
+        -------
+        None.
+
+        """
+        self.create_sources(metadata.channel_list)
+        self.set_parameters(metadata)
+
+    def create_sources(self, channel_data: List[Channel]):
+        """Method to set up excitation sources
+
+        This function takes channels from the supplied list of channels and
+        creates analog outputs on the hardware.
+
+        Parameters
+        ----------
+        channel_data : List[Channel] :
+            A list of ``Channel`` objects defining the channels in the test
+        """
+        # Get the physical devices
+        physical_devices = list(
+            set(
+                [
+                    ni.system.device.Device(channel.feedback_device).product_type
+                    for channel in channel_data
+                    if not (channel.feedback_device is None) and not (channel.feedback_device.strip() == "")
+                ]
+            )
+        )
+        # Check if it's a CDAQ device
+        try:
+            devices = [
+                ni.system.device.Device(channel.feedback_device)
+                for channel in channel_data
+                if not (channel.feedback_device is None) and not (channel.feedback_device.strip() == "")
+            ]
+            if len(devices) == 0:
+                self.write_trigger = None  # No output device
+            else:
+                chassis_device = devices[0].compact_daq_chassis_device
+                self.write_trigger = [trigger for trigger in chassis_device.terminals if "ai/StartTrigger" in trigger][0]
+        except ni.DaqError:
+            self.write_trigger = "/" + channel_data[0].physical_device + "/ai/StartTrigger"
+        print("Output Devices: {:}".format(physical_devices))
+        self.tasks = [ni.Task() for device in physical_devices]
+        index = 0
+        self.channel_task_map = [[] for device in physical_devices]
+        for channel in channel_data:
+            if not (channel.feedback_device is None) and not (channel.feedback_device.strip() == ""):
+                device_index = physical_devices.index(ni.system.device.Device(channel.feedback_device).product_type)
+                self.channel_task_map[device_index].append(index)
+                index += 1
+                self._create_channel(channel, device_index)
+        print("Output Mapping: {:}".format(self.channel_task_map))
+
+    def set_parameters(self, metadata: HardwareMetadata):
+        """Method to set up sampling rate and other test parameters
+
+        This function sets the clock configuration on the NIDAQmx hardware.
+
+        Parameters
+        ----------
+        test_data : DataAcquisitionParameters :
+            A container containing the data acquisition parameters for the
+            controller set by the user.
+        """
+        self.signal_samples = metadata.samples_per_write
+        self.sample_rate = metadata.sample_rate
+        self.writers = []
+        for task in self.tasks:
+            task.timing.cfg_samp_clk_timing(
+                metadata.sample_rate, sample_mode=nic.AcquisitionType.CONTINUOUS, samps_per_chan=metadata.samples_per_write
+            )
+            task.out_stream.regen_mode = nic.RegenerationMode.DONT_ALLOW_REGENERATION
+            # task.out_stream.relative_to = nic.WriteRelativeTo.CURRENT_WRITE_POSITION
+            task.triggers.start_trigger.dig_edge_src = self.write_trigger
+            task.triggers.start_trigger.dig_edge_edge = ni.constants.Edge.RISING
+            task.triggers.start_trigger.trig_type = ni.constants.TriggerType.DIGITAL_EDGE
+            task.out_stream.output_buf_size = self.buffer_size_factor * metadata.samples_per_write
+            self.writers.append(ni_write.AnalogMultiChannelWriter(task.out_stream, auto_start=False))
+            print("Actual Output Sample Rate: {:}".format(task.timing.samp_clk_rate))
+
+    def start(self):
+        """Method to start acquiring data"""
+        for task in self.tasks:
+            task.start()
+
+    def write(self, data):
+        """Method to write a frame of data
+
+        Parameters
+        ----------
+        data : np.ndarray
+            2D Data to be written to the controller with shape ``n_sources`` x
+            ``n_samples``
+
+        """
+        for i, writer in enumerate(self.writers):
+            writer.write_many_sample(data[self.channel_task_map[i]])
+
+    def stop(self):
+        """Method to stop the output"""
+        # Need to output everything in the buffer and then some zeros and we'll
+        # shut down during the zeros portion
+        for i, writer in enumerate(self.writers):
+            writer.write_many_sample(np.zeros((len(self.channel_task_map[i]), self.signal_samples)))
+        # Now figure out how many samples are remaining
+        samples_remaining = (
+            self.tasks[0].out_stream.curr_write_pos - self.tasks[0].out_stream.total_samp_per_chan_generated - self.signal_samples
+        )  # Subtract off the zeros
+        time_remaining = samples_remaining / self.sample_rate
+        time.sleep(time_remaining)
+        for task in self.tasks:
+            task.stop()
+
+    def close(self):
+        """Method to close down the hardware"""
+        if not self.tasks is None:
+            for task in self.tasks:
+                task.close()
+
+    def ready_for_new_output(self):
+        """Returns true if the system is ready for new outputs
+
+        Returns
+        -------
+        bool :
+            True if the hardware is accepting the next data to write."""
+        return (
+            self.tasks[0].out_stream.curr_write_pos - self.tasks[0].out_stream.total_samp_per_chan_generated
+            < (self.buffer_size_factor - 1) * self.signal_samples
+        )
+
+    def _create_channel(self, channel_data: Channel, device_index):
+        """
+        Helper function to construct a channel on the hardware.
+
+        Parameters
+        ----------
+        channel_data: Channel :
+            Channel object specifying the channel parameters.
+
+        Returns
+        -------
+            channel :
+                A reference to the NIDAQmx channel created by the function
+        """
+        # Minimum Value
+        try:
+            minimum_value = float(channel_data.minimum_value)
+        except (TypeError, ValueError):
+            raise ValueError("{:} not a valid minimum value".format(channel_data.minimum_value))
+        # Maximum Value
+        try:
+            maximum_value = float(channel_data.maximum_value)
+        except (TypeError, ValueError):
+            raise ValueError("{:} not a valid maximum value".format(channel_data.maximum_value))
+        physical_channel = channel_data.feedback_device + "/" + channel_data.feedback_channel
+        channel = self.tasks[device_index].ao_channels.add_ao_voltage_chan(physical_channel, min_val=minimum_value, max_val=maximum_value)
         return channel
