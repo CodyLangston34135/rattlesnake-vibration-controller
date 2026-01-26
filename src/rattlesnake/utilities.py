@@ -170,6 +170,7 @@ class QueueContainer:
 
     def __init__(
         self,
+        controller_communication_queue: VerboseMessageQueue,
         acquisition_command_queue: VerboseMessageQueue,
         output_command_queue: VerboseMessageQueue,
         streaming_command_queue: VerboseMessageQueue,
@@ -224,7 +225,7 @@ class QueueContainer:
             the controller to generate in this queue.
 
         """
-        # self.controller_communication_queue = controller_communication_queue
+        self.controller_communication_queue = controller_communication_queue
         self.acquisition_command_queue = acquisition_command_queue
         self.output_command_queue = output_command_queue
         self.streaming_command_queue = streaming_command_queue

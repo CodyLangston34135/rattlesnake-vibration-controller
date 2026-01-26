@@ -6,26 +6,20 @@ import multiprocessing as mp
 from datetime import datetime
 from typing import List
 
+TASK_NAME = "Environment Manager"
+
 
 class EnvironmentManager:
     """A container class that stores the environment information"""
 
     def __init__(self, queue_container: QueueContainer):
-        self.environment_names = []  # Static name for dictionary keys, process names, etc
+        self.control_names = []  # Static name for dictionary keys, process names, etc
+        self.environment_names = {}  # Name of environment for Ui purposes
         self.environment_types = {}
-        self.environment_channels = {}
-        self.environment_processes = {}
-        self.environment_uis = {}
-        self.daq_parameters = {}
         self.environment_metadata = {}
+        self.environment_processes = {}
         self.queue_container = queue_container
         self.available_queues = list(queue_container.environment_command_queues.keys())
-
-    @property
-    def attributes(self):
-        """Lists the attributes for looping through container"""
-        attributes = ["environment_types", "environment_uis", "environment_channels"]
-        return attributes
 
     @property
     def sysid_environments(self):
@@ -33,66 +27,66 @@ class EnvironmentManager:
 
     @property
     def sysid_names(self):
-        sysid_names = [control_name for control_name in self.environment_names if self.environment_types[control_name] in self.sysid_environments]
+        sysid_names = [control_name for control_name in self.control_names if self.environment_types[control_name] in self.sysid_environments]
         return sysid_names
 
-    @property
-    def row_count(self):
-        row_count = 0
-        # Find length of environment channels list for first environment
-        if self.environment_names:
-            control_name = self.environment_names[0]
-            row_count = len(self.environment_channels[control_name])
-        return row_count
+    def initialize_environments(self, metadata_list: List[EnvironmentMetadata]):
+        mapped_control_names = set()
+        extra_metadata = []
 
-    @property
-    def environment_channel_indices(self):
-        environment_channel_indices = {}
-        for control_name in self.environment_names:
-            environment_channel_indices[control_name] = [
-                index for index, environment_bool in enumerate(self.environment_channels[control_name]) if environment_bool
-            ]
-
-        return environment_channel_indices
-
-    """
-    Environment Container Callback Section:
-    """
-
-    def set_environment_metadata(self, metadata_list: List[EnvironmentMetadata]):
-        environment_names = []
-        check_duplicate = set()
-        for idx, metadata in enumerate(metadata_list):
+        # Check if there is an existing process that maps to this environment type
+        # If there is, hijack it and give it new metadata
+        for metadata in metadata_list:
+            environment_type = metadata.environment_type
             environment_name = metadata.environment_name
-            if environment_name in check_duplicate:
-                raise ValueError(f"Duplicate environment_name '{environment_name}' found at index {idx}")
 
-            check_duplicate.add(environment_name)
-            environment_names.append(environment_name)
+            control_name = next(
+                (name for name, env_type in self.environment_types.items() if env_type == environment_type),
+                None,
+            )
+
+            if control_name is None:
+                extra_metadata.append(metadata)
+                continue
+
+            self.environment_names[control_name] = environment_name
+            self.environment_metadata[control_name] = metadata
+            self.queue_container.environment_command_queues[control_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata))
+
+            mapped_control_names.add(control_name)
+
+        # Close existing processes that dont have metadata associated with them
+        unmapped_control_names = set(self.environment_types.keys()) - mapped_control_names
+        for control_name in unmapped_control_names:
+            self.remove_environment(control_name)
+
+        # Add process for metadata that needs a new process. Could do this in loop above
+        # but I want to clear up control_names before assigning new ones
+        for metadata in extra_metadata:
+            self.add_environment(metadata)
 
     def clear_environments(self):
-        self.environment_names = []
+        self.control_names = []
+        self.environment_names = {}
         self.environment_types = {}
-        self.environment_channels = {}
-        self.daq_parameters = {}
         self.environment_metadata = {}
-
         self.close_environments()
         self.environment_processes = {}
 
-    def add_environment(self, environment_type: ControlTypes, valid_channels: list[bool]):
+    def add_environment(self, metadata: EnvironmentMetadata):
         """Adds environment to container with unique name"""
         # Find the first available queue for the environment
         control_name = None
         for queue_name in self.available_queues:
-            if queue_name not in self.environment_names:
+            if queue_name not in self.control_names:
                 control_name = queue_name
                 break
 
         if control_name == None:
-            raise KeyError("Not enough environment command queues. Increase max_environments variable in rattlesnake.py __init__")
+            raise KeyError("Not enough environment command queues. Increase max_environments in rattlesnake.py")
 
-        environment_name = environment_type.name
+        environment_type = metadata.environment_type
+        environment_name = metadata.environment_name
 
         # Figure out what type of environment to add
         if environment_type == ControlTypes.TIME:
@@ -115,23 +109,19 @@ class EnvironmentManager:
             return
 
         # Store the environment to the container
-        self.environment_names.append(control_name)
+        self.control_names.append(control_name)
+        self.environment_names[control_name] = environment_name
         self.environment_types[control_name] = environment_type
         self.environment_processes[control_name] = environment_process
-        self.environment_channels[control_name] = valid_channels
-        self.daq_parameters[control_name] = None
-        self.environment_metadata[control_name] = None
+        self.environment_metadata[control_name] = metadata
 
-    def remove_environment(self, index: int):
+    def remove_environment(self, control_name):
         """Removes environment from container"""
         # Check if index corresponds to an existing environment
-        if 0 <= index < len(self.control_names):
-            control_name = self.environment_names[index]
-            self.environment_names.pop(index)
+        if control_name in self.control_names:
+            self.control_names.remove[control_name]
+            self.environment_names.pop(control_name, None)
             self.environment_types.pop(control_name, None)
-            self.environment_uis.pop(control_name, None)
-            self.environment_channels.pop(control_name, None)
-            self.daq_parameters.pop(control_name, None)
             self.environment_metadata.pop(control_name, None)
 
             # Join environment process
@@ -146,108 +136,7 @@ class EnvironmentManager:
             self.environment_processes.pop(control_name, None)
 
         else:
-            raise IndexError(f"Invalid index: {index}. Must be between 0 and {len(self.environment_names) - 1}.")
-
-    def change_environment_order(self, to_idx: int, from_idx: int):
-        """Changes the environment_names list order"""
-        # Validate indices
-        if not (0 <= from_idx < len(self.environment_names)):
-            raise IndexError(f"Invalid from_idx: {from_idx}. Must be between 0 and {len(self.environment_names) - 1}.")
-        if not (0 <= to_idx <= len(self.environment_names)):  # Allow inserting at the end
-            raise IndexError(f"Invalid to_idx: {to_idx}. Must be between 0 and {len(self.environment_names)}.")
-
-        # Reorder the environment names list to match the tabs positioning
-        environment_move = self.environment_names.pop(from_idx)
-        self.environment_names.insert(to_idx, environment_move)
-
-    def rename_environment(self, control_name: str, new_name: str):
-        """Renames an environment in the container
-
-        Parameters
-        ----------
-        index : int :
-        The index of the environment to rename
-        new_name : str :
-        The name of the new index to display
-        """
-        # Check if the index corresponds to an environment in the container
-        if control_name in self.environment_names:
-            # Rename environment and update dictionary keys
-            self.environment_names[control_name] = str(new_name)
-        else:
-            raise IndexError(f"Invalid environment name")
-
-    def change_environment_checkbox(self, state: bool, row: int, col: int):
-        """Edits the state of a checkbox in the enviornment_channels list
-
-        Parameters
-        ----------
-        state : bool :
-        The state to change the checkbox to (checked/unchecked)
-        row : int :
-        The row of the checkbox
-        col : int :
-        The column of the checkbox
-        """
-        # Change the boolean in the environment_channels list to the state
-        control_name = self.environment_names[col]
-        environment_channel = self.environment_channels[control_name]
-        environment_channel[row] = state
-
-        # Update the list
-        self.environment_channels[control_name] = environment_channel
-
-    def update_channel_rows(self, row_count: int):
-        """Updates the number of empty rows at the end of the environment_channels list
-
-        Parameters
-        ----------
-        row_count : int :
-        The total number of rows that the environment_channels_table should have
-        """
-        # Loop through environments
-        for control_name in self.environment_names:
-            environment_channel = self.environment_channels[control_name]
-
-            # Check if we need to add or remove empty checkboxes at end of list
-            prev_len = len(environment_channel)
-            add_len = row_count - prev_len
-            # If adding empty checkboxes, add to end of list
-            if add_len > 0:
-                environment_channel.extend([False] * add_len)
-            # If removing empty checkboxes, delete end of list
-            elif add_len < 0:
-                del environment_channel[add_len:]
-
-            # Store new environment_channel list
-            self.environment_channels[control_name] = environment_channel
-
-    def delete_channel_row(self, row: int):
-        """Removes a row in the environment_channels list
-
-        Parameters
-        ----------
-        row : int :
-        The row to delete
-        """
-        # Loop through environments and delete that row
-        for control_name in self.environment_names:
-            self.environment_channels[control_name].pop(row)
-
-    def insert_channel_row(self, row: int):
-        """Inserts a row into the environment_channels list
-
-        Parameters
-        ----------
-        row : int :
-        The row index that the new row should be inserted above
-        """
-        for control_name in self.environment_names:
-            self.environment_channels[control_name].insert(row, False)
-
-    """
-    Environment Ui Callback Section:
-    """
+            raise IndexError(f"Invalid control name: {control_name}. Must be mapped to available queue")
 
     def close_environments(self):
         for control_name, environment_process in self.environment_processes.items():

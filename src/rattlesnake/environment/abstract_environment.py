@@ -22,10 +22,10 @@ class EnvironmentMetadata(ABC):
          stored to a netCDF file saved during streaming operations.
     """
 
-    def __init__(self, environment_type):
+    def __init__(self, environment_type, environment_name):
         self.environment_type = environment_type
-        self.channel_list_bools = []
-        self.environment_name = "Environment"
+        self.environment_name = environment_name
+        self.channel_list = []
 
     @property
     def channel_list_bools(self):

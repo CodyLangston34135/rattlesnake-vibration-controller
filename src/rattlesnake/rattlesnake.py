@@ -27,6 +27,7 @@ class Rattlesnake:
         self.log_file_process.start()
 
         # Start up command queues and processes
+        controller_command_queue = VerboseMessageQueue(log_file_queue, "Controller Communication Queue")
         acquisition_command_queue = VerboseMessageQueue(log_file_queue, "Acquisition Command Queue")
         output_command_queue = VerboseMessageQueue(log_file_queue, "Output Command Queue")
         streaming_command_queue = VerboseMessageQueue(log_file_queue, "Streaming Command Queue")
@@ -36,7 +37,6 @@ class Rattlesnake:
 
         # Set up data queue
         input_output_sync_queue = mp.Queue()
-        acquisition_to_streaming_queue = mp.Queue()
         single_process_hardware_queue = mp.Queue()
 
         # Set up environment queues
@@ -56,6 +56,7 @@ class Rattlesnake:
 
         # Build queue container
         self.queue_container = QueueContainer(
+            controller_command_queue,
             acquisition_command_queue,
             output_command_queue,
             streaming_command_queue,
@@ -77,7 +78,7 @@ class Rattlesnake:
 
         self.hardware_metadata = hardware_metadata
 
-    def set_environments(self, environment_metadata_list: List[EnvironmentMetadata]) -> None:
+    def set_environments(self, environment_metadata_list: List[EnvironmentMetadata]):
         # For environment stuff
         # Acquisition needs: List of environment names, correct environment queue dict
         for metadata in environment_metadata_list:

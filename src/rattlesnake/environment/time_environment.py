@@ -44,7 +44,7 @@ MAX_SAMPLES_TO_PLOT = 100000
 class TimeMetadata(EnvironmentMetadata):
     """Storage container for parameters used by the Time Environment"""
 
-    def __init__(self):
+    def __init__(self, environment_name: str = "Time"):
         """
         Container to hold signal processing parameters for the Time environment
 
@@ -60,7 +60,7 @@ class TimeMetadata(EnvironmentMetadata):
             Prevents "hard stops" from damaging equipment.
 
         """
-        super().__init__(self, CONTROL_TYPE)
+        super().__init__(self, CONTROL_TYPE, environment_name)
         self.sample_rate = None
         self.output_signal = None
         self.cancel_rampdown_time = None
