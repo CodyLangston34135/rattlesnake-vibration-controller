@@ -60,7 +60,6 @@ project:
         - file: mdbook/src/appendix_b.md
         - file: mdbook/src/appendix_c.md
         - file: mdbook/src/appendix_d.md
-    - file: mdbook/src/nomenclature.md
     - file: mdbook/src/notation.md
     - file: mdbook/src/bibliography.md
     - file: mdbook/src/SUMMARY.md
@@ -76,7 +75,30 @@ project:
       continue: false
     equation:
       continue: false
-  
+  thumbnail: mdbook/src/figures/Rattlesnake_Logo_Banner.png
+  abbreviations:
+    6DoF: Six Degree-of-Freedom
+    API: Application Programming Interface
+    APSD: Auto-Power Spectral Density
+    CCLD: Constant Current Line Drive
+    COLA: Constant Overlap and Add
+    CPSD: Cross-Power Spectral Density
+    FEM: Finite Element Model
+    FFT: Fast Fourier Transform
+    FRF: Frequency Response Function
+    GUI: Graphical User Interface
+    ICP: Integrated Circuit Piezoelectric
+    IDE: Integrated Development Environment
+    IEPE: Integrated Electronics PiezoElectric
+    IFFT: Inverse Fast Fourier Transform
+    IP: Internet Protocol
+    JSON: Javascript Object Notation
+    MIMO: Multiple Input, Multiple Output
+    ReST: Representational State Transfer
+    RMS: Root-Mean-Square
+    SVD: Singular Value Decomposition
+    TRAC: Time Response Assurance Criterion
+    UI: User Interface
 site:
   template: book-theme
   options:
@@ -86,3 +108,11 @@ site:
     hide_authors: false
     numbered_references: true
     hide_title_block: false
+  parts:
+    primary_sidebar_footer: |
+      [Github Repository](https://github.com/sandialabs/rattlesnake-vibration-controller)
+
+      [Python Package Index](https://pypi.org/project/rattlesnake-vibration-controller/)
+
+      [Report an Issue](https://github.com/sandialabs/rattlesnake-vibration-controller/issues)
+

@@ -43,5 +43,4 @@
 
 -----------
 
-- @sec:glossary
 - @sec:notation

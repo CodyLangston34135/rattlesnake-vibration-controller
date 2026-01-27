@@ -11,7 +11,7 @@ numbering:
   code:
     enumerator: 16.%s
 ---
-# 16. Combined Environments
+# Combined Environments
 
 (sec:combined_environments)=
 # Combined Environments

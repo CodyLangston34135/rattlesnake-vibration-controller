@@ -19,13 +19,16 @@ numbering:
 (sec:new_hardware)=
 # Implementing New Hardware Devices with Rattlesnake
 
+ Rattlesnake allows users to implement new hardware devices with minimal modifications to the controller.  Within the [GitHub repository](https://github.com/sandialabs/rattlesnake-vibration-controller), there is a source file `components/abstract_hardware.py` that defines abstract base classes `HardwareAcquisition` and `HardwareOutput`.  All hardware devices used by Rattlesnake must implement acquisition and output classes that inherit from these abstract base classes and define functions that overwrite the abstract methods in these base classes.
+ 
+ The acquisition and output will generally be run on separate processes in Rattlesnake to ensure that output can be streamed to the device as acquired data is simultaneously read from the device.  A flowchart of the operations performed by each hardware process is shown in @fig:hardware_flowchart.
 
-    
- Rattlesnake allows users to implement new hardware devices with minimal modifications to the controller.  Within the [GitHub repository](https://github.com/sandialabs/rattlesnake-vibration-controller), there is a source file `components/abstract_hardware.py` that defines abstract base classes `HardwareAcquisition` and `HardwareOutput`.  All hardware devices used by Rattlesnake must implement acquisition and output classes that inherit from these abstract base classes and define functions that overwrite the abstract methods in these base classes.  The acquisition and output will generally be run on separate processes in Rattlesnake to ensure that output can be streamed to the device as acquired data is simultaneously read from the device.  A flowchart of the operations performed by each hardware process is shown in Figure 11-1.
-    
-![hardware_flowchart](figures/hardware_flowchart.png)
-
-**Figure 11-1. Flowchart of Hardware Operations. Note that each process will proceed at its own pace, so it is generally not possible to ensure that an Acquisition function is called before or after an Output function. The only place where order of operations is enforced is at startup, where the Output `start` function finishes before the Acquisition `start` function is called.**
+:::{figure} figures/hardware_flowchart.png
+:label: fig:hardware_flowchart
+:alt: Hardware Flowchart
+:align: center
+Flowchart of Hardware Operations. Note that each process will proceed at its own pace, so it is generally not possible to ensure that an Acquisition function is called before or after an Output function. The only place where order of operations is enforced is at startup, where the Output `start` function finishes before the Acquisition `start` function is called.
+:::
 
     
 The hardware setup in Rattlesnake generally assumes that separate processes are required for acquisition and output.  However, this may not be the case for all hardware devices.  If a device can only run on a single process, users can utilize a `multiprocessing` queue to pass the output data from the output process to the acquisition process and perform all hardware processes there.  See, for example, the hardware implementation in `components/state_space_virtual_hardware.py` for more details on this approach; the excitation signal is obtained by the `write` method and immediately passed to a queue to deliver to the acquisition process.

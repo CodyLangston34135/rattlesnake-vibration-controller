@@ -22,6 +22,29 @@ Drivers can be found [here](https://www.ni.com/en-us/support/downloads/drivers.h
 
 @sec:example_nidaq shows a complete example problem using a NI data acquisition system.
 
+:::{note} NI Hardware Compatability
+There are a huge number of NI configurations that can be created using different combinations of
+chassis, modules, and devices.  Rattlesnake cannot hope to support all of these combinations due to
+the complicated triggering and synchronization capabilities in NI-DAQmx, as well as incompatible
+discrete sample rates.  For example, certain devices
+can share the same start trigger and clock, allowing them to be easily synchronized.  Other devices
+cannot be synchronized easily.  PXIe Devices can generally use arbitrary sample rates, whereas
+cDAQ and other devices may be constrained to discrete sample rates, which may not overlap between
+acquisition and output modules.  See @warn:ni_sample_rate for additional considerations.
+
+Rattlesnake has been used successfully with the following hardware configurations:
+- cDAQ:
+  - Chassis: cDAQ-9185
+  - Acquisition: NI-9232
+  - Output: NI-9260
+- PXIe:
+  - Chassis: PXIe-1083, PXIe-1085, PXIe-1088, PXIe-1095
+  - Acquisition: PXIe-4497
+  - Output: PXIe-4463
+- USB:
+  - NI-4431
+:::
+
 ## Setting up the Channel Table for NI-DAQmx Device <!--Section 4.1-->
 
 This section lists the channel table requirements specific to NI-DAQmx.
@@ -38,7 +61,7 @@ The channel type of a given channel determines what parameters are used and requ
     
 `Voltage` channel types need not have a sensitivity or unit specified, as they will always be reported in volts.  A best practice is to fill out these columns anyways with the correct values `V` for engineering unit and sensitivity of 1000 mV/V.  Note that if a sensitivity is not specified, the Warning and Abort limits may not be correctly computed, as they rely on sensitivity information to convert between a measured raw voltage and the correct sensitivity unit.
 
-:::{warning}
+:::{warning} Voltage Sensitivities
 Specifying a different sensitivity for a voltage channel **WILL NOT** result in the voltage being scaled.  The NI-DAQmx implementation does not have the ability to scale voltage channels.  Users should specify 1000 mV/V as the sensitivity on voltage channels.
 :::
     
@@ -54,13 +77,17 @@ Current Excitation should typically be set to 0.004 A (4 mA) unless the sensor r
 
 ## Hardward Parameters <!--Section 4.2-->
 
-Besides the sample rate, no additional hardware-specific parameters must be specified for NI hardware.  Figure 4.1 shows the parameters for NI-DAQmx hardware devices.
-    
-![nidaqmx_data_acquisition_parameters](figures/nidaqmx_data_acquisition_parameters.png)
+Besides the sample rate, no additional hardware-specific parameters must be specified for NI hardware.  @fig:nidaqmx_data_acquisition_parameters shows the parameters for NI-DAQmx hardware devices.
 
-**Figure 4-1. NI-DAQmx Data Acquisition Parameters**
+:::{figure} figures/nidaqmx_data_acquisition_parameters.png
+:label: fig:nidaqmx_data_acquisition_parameters
+:alt: NI Data Acquisition Parameters
+:align: center
+NI-DAQmx Data Acquisition Parameters
+:::
 
-:::{warning}    
+(warn:ni_sample_rate)=
+:::{warning} NI Sample Rates
 Some NI-DAQmx devices have discrete allowable sample rates, while others can have any sample rate that is desired up to some maximum value.  Please refer to the documentation of your device to determine which sample rates are allowable for your device.  The NI-DAQmx drivers, when provided an incompatible sample rate, often simply select the closest available rate or the next highest rate, which can result in data being acquired at a rate that is not equivalent to the rate selected in the software.  Additionally, further issues can occur when the sample rate of an output device is not compatible with the sample rate of an acquisition device, meaning the output is being delivered at a different rate than it is being measured, resulting in inconsistent data.  **Currently Rattlesnake does not do very rigorous checks to determine if the specified sample rate is allowable, so it falls on the user to ensure that it is!**
 :::
 

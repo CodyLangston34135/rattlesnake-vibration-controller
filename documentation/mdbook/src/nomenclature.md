@@ -63,5 +63,5 @@ TRAC
 : time response assurance criterion; a comparison metric applicable to time data that judges how similar two time histories are to one another.  A TRAC of 1 indicates the time histories are identical to within a scale factor.  A TRAC of 0 indicates the time histories are not similar.  
 
 UI
-: user interface; an interface into software that allows a user to issue commands.  It may be a {term}`GUI` or a command line interface.
+: user interface; an interface into software that allows a user to issue commands.  It may be a GUI or a command line interface.
 :::

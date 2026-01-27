@@ -22,14 +22,25 @@ Rattlesnake is able to run HBK LAN-XI devices using the hardware's [OpenAPI](htt
 
 This section describes the process to set a channel table in Rattlesnake for the LAN-XI hardware.
     
-LAN-XI devices are defined by an IP address, which is displayed on each module when it is plugged into a computer or a LAN-XI frame.  This IP address should be specified as the `Physical Device` or `Feedback Device` in the channel table for a acquisition or output channel, respectively.  The `Physical Channel` or `Feedback Channel` range from 1 to the number of channels on the module.  Figure 5-1 shows an example case for setting up a LAN-XI test.
+LAN-XI devices are defined by an IP address, which is displayed on each module when it is plugged into a computer or a LAN-XI frame.  This IP address should be specified as the `Physical Device` or `Feedback Device` in the channel table for a acquisition or output channel, respectively.  The `Physical Channel` or `Feedback Channel` range from 1 to the number of channels on the module.  @fig:lanxi_physical_device shows an example case for setting up a LAN-XI test.
     
-![figures/lanxi_physical_device](figures/lanxi_physical_device.png)
+:::{figure} figures/lanxi_physical_device.png
+:label: fig:lanxi_physical_device
+:alt: LAN-XI Physical Device
+:align: center
+Physical Channel and Feedback Channels for LAN-XI modules.  The left device would have the Physical Device 169.254.113.201 and Physical Channels 1, 2, 3, 4, 5, and 6.  The right device would have Physical Device 169.254.211.152 and Physical Channels 1, 2, 3, and 4.  The right device would also have Feedback Device 169.254.211.152 and Feedback Channels 1 and 2
+:::
 
-**Figure 5-1. Physical Channel and Feedback Channels for LAN-XI modules.  The left device would have the Physical Device 169.254.113.201 and Physical Channels 1, 2, 3, 4, 5, and 6.  The right device would have Physical Device 169.254.211.152 and Physical Channels 1, 2, 3, and 4.  The right device would also have Feedback Device 169.254.211.152 and Feedback Channels 1 and 2**
-    
 The `Maximum Value` column in the channel table is used to set the range on the LAN-XI hardware.  The only two valid options for LAN-XI hardware ranges are `10` and `31.6`.  No other range is allowable.  The Minimum Value column is not used and can be left blank.
-    
+
+:::{warning}
+While some software allows LAN-XI hardware to be set up with 1 V or 3.16 V ranges, the Rattlesnake
+developers have found strange data is returned from the LAN-XI OpenAPI when these settings are used,
+as if some scale factor was applied to the data.  The developers have not had the opportunity to
+investigate this further, and therefore recommend that the smallest voltage range to be used is 10
+V.
+:::
+
 The Coupling column in the channel table is used to specify the filter used in the LAN-XI hardware.  Valid values for coupling are `DC`, `0.7 Hz`, `7.0 Hz`, `22.4 Hz`, or `Intensity`.
     
 Current Excitation Source is used to specify if a channel uses CCLD or not.  If CCLD is to be used on a given channel the Current Excitation Source column should contain `CCLD`.  If CCLD is not to be used for that channel, the column can be left blank.
@@ -39,11 +50,13 @@ Current Excitation Source is used to specify if a channel uses CCLD or not.  If 
 LAN-XI hardware devices have discrete sample rates, which are powers of 2 staring with 4096 samples per second.  The minimum sample rate of the generator is 16,384 Hz, so the output must be over-sampled if the acquisition sample rate is less than 16,384 samples per second.  Environments defined in Rattlesnake must be able to handle output oversampling when required by the hardware device.
     
 For large channel count tests, Rattlesnake struggles to pull data off the acquisition device fast enough using just one process.  Therefore, a maximum number of acquisition processes can be specified.  If too few processes are used, it will take longer to read data off the hardware than it took to acquire the data.  This will result in the controller falling behind and the data buffer on the hardware slowly filling.  Alternatively if too many processes are used, the computer running Rattlesnake will get bogged down swapping between processes, and other parts of the controller (particularly the GUI) may become slow.  Generally, 20-40 channels per process is a reasonable rule of thumb, though this will depend on the Sample Rate of the hardware.
-    
 
-![lanxi_data_acquisition_parameters](figures/lanxi_data_acquisition_parameters.png)
-
-**Figure 5-2. LAN-XI data acquisition parameters.**
+:::{figure} figures/lanxi_data_acquisition_parameters.png
+:label: fig:lanxi_data_acquisition_parameters
+:alt: LAN-XI Data Acquisition Parameters
+:align: center
+LAN-XI data acquisition parameters.
+:::
 
 ## Implementation Details <!--Section 5.3-->
 

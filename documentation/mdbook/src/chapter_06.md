@@ -60,10 +60,13 @@ The API is accessed using the Python `ctypes` module, by calling its `WinDLL` me
 
 ### Debugging <!--Subsection 6.3.3-->
     
-If issues with the Quattro devices are encountered, users can look at the Rattlesnake command prompt that appears when the software is loaded, or the command prompt from which Rattlesnake is run.  The DpQuattro API will print messages to this prompt periodically that can be useful in debugging issues.  These will generally be prefixed by `CAceSys` and provide some information on the issue encountered.  Figure \ref{fig:quattroissuecommandline} shows an example that occurred if the Quattro devices is not connected to the computer.  Other diagnostic messages are also printed, so a message appearing does not necessarily mean an error has occurred.
-    
-![quattro_issue_command_line](figures/quattro_issue_command_line.png)
-    
-**Figure 6-1. An example issue where the Quattro fails to connect.**
+If issues with the Quattro devices are encountered, users can look at the Rattlesnake command prompt that appears when the software is loaded, or the command prompt from which Rattlesnake is run.  The DpQuattro API will print messages to this prompt periodically that can be useful in debugging issues.  These will generally be prefixed by `CAceSys` and provide some information on the issue encountered.  @fig:quattro_issue_command_line shows an example that occurred if the Quattro devices is not connected to the computer.  Other diagnostic messages are also printed, so a message appearing does not necessarily mean an error has occurred.
+
+:::{figure} figures/quattro_issue_command_line.png
+:label: fig:quattro_issue_command_line
+:alt: Example Quattro Issue shown on the command line
+:align: center
+An example issue where the Quattro fails to connect.
+:::
 
 For more debugging information, there is a `DEBUG` flag in the file `components/data_physics_interface.py` that is by default set to `False`.  If users change the value to `DEBUG = True`, then the Quattro interface will output a log file with more information about its activities.
