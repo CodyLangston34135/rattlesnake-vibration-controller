@@ -61,7 +61,6 @@ project:
         - file: mdbook/src/appendix_c.md
         - file: mdbook/src/appendix_d.md
     - file: mdbook/src/notation.md
-    - file: mdbook/src/bibliography.md
     - file: mdbook/src/SUMMARY.md
   numbering:
     headings: true
@@ -99,6 +98,8 @@ project:
     SVD: Singular Value Decomposition
     TRAC: Time Response Assurance Criterion
     UI: User Interface
+  bibliography:
+    - mdbook/bibliography.bib
 site:
   template: book-theme
   options:
