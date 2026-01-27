@@ -1,4 +1,7 @@
-## 5. LAN-XI Devices <!--Chapter 5, line 934 of Rattlesnake.tex-->
+# 5. LAN-XI Devices
+
+(sec:lanxi_hardware)=
+# LAN-XI Devices
 
 Rattlesnake is able to run HBK LAN-XI devices using the hardware's [OpenAPI](https://www.bksv.com/en/instruments/daq-data-acquisition/lan-xi-daq-system/open-api).  Rattlesnake communicates with the LAN-XI hardware via Ethernet, so for best results, the computer's Ethernet card should be connected with the LAN-XI hardware rather than using a USB Ethernet dongle, which in the author's experience can lead to lower network speeds and more time required to pull data off the hardware.
 

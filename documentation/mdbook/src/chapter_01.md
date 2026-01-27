@@ -1,16 +1,40 @@
-## 1. Introduction
+---
+title: Rattlesnake Vibration Controller
+authors:
+  - name: Daniel Rohe
+    affiliation: Sandia National Laboratories
+    email: dprohe@sandia.gov
+  - name: Ryan Schultz
+    affiliation: Sandia National Laboratories
+    email: rschult@sandia.gov
+  - name: Norman Hunter
+    affiliation: Sandia National Laboratories
+    email: nfhunte@sandia.gov
+---
 
-The field of multiple input/multiple output (MIMO) vibration testing has grown substantially in the past few years.  MIMO vibration testing provides the capability to match a field environment more accurately and at more locations on the test article than traditional single-axis vibration testing.  Unfortunately, many existing vibration control systems are proprietary, which makes it difficult to implement new MIMO techniques.  
+Rattlesnake is a combined-environments, multiple input/multiple output control system for
+dynamic excitation of structures under test.  It provides capabilities to control multiple
+responses on the part using multiple exciters using various control strategies.  Rattlesnake
+is written in the Python programming language to facilitate multiple input/multiple output
+vibration research by allowing users to prescribe custom control laws to the controller.
+Rattlesnake can target multiple hardware devices, or even perform synthetic control to simulate
+a test virtually.  Rattlesnake has been used to execute control problems with up to 200
+response channels and 24 shaker drives.  This document describes the functionality,
+architecture, and usage of the Rattlesnake controller to perform combined environments testing.
 
-Currently, MIMO vibration practitioners must either develop a control system from scratch to implement their ideas, or alternatively convince an MIMO vibration software vendor to implement their ideas into existing devices, and neither of these approaches are conducive to the rapid and iterative nature of research.  
+(sec:introduction)=
+# Introduction
 
-The Rattlesnake framework was developed to overcome these limitations and facilitate MIMO vibration research.  Rattlesnake is a MIMO control system that provides the user the ability to overcome testing challenges by providing a flexible framework that can be extended and modified to meet testing demands.  Rattlesnake can run multiple environments simultaneously, providing a combined-environments capability that does not yet exist in commercial software packages.  It can target multiple hardware devices, or even perform control virtually using a state space model, finite element model (FEM) results, or a [SDynPy](https://github.com/sandialabs/sdynpy) System.
+The field of multiple input/multiple output ({term}`MIMO`) vibration testing has grown substantially in the past few years.  {term}`MIMO` vibration testing provides the capability to match a field environment more accurately and at more locations on the test article than traditional single-axis vibration testing.  Unfortunately, many existing vibration control systems are proprietary, which makes it difficult to implement new {term}`MIMO` techniques.  
 
-### 1.1 Document Overview
+Currently, {term}`MIMO` vibration practitioners must either develop a control system from scratch to implement their ideas, or alternatively convince an {term}`MIMO` vibration software vendor to implement their ideas into existing devices, and neither of these approaches are conducive to the rapid and iterative nature of research.  
 
-This document provides information about the functionality in the Rattlesnake software, as well as instructions for how to use that functionality.  The document is divided into Parts targeting different aspects of the software.
+The Rattlesnake framework was developed to overcome these limitations and facilitate {term}`MIMO` vibration research.  Rattlesnake is a {term}`MIMO` control system that provides the user the ability to overcome testing challenges by providing a flexible framework that can be extended and modified to meet testing demands.  Rattlesnake can run multiple environments simultaneously, providing a combined-environments capability that does not yet exist in commercial software packages.  It can target multiple hardware devices, or even perform control virtually using a state space model, finite element model ({term}`FEM`) results, or a [SDynPy](https://github.com/sandialabs/sdynpy) System.
 
-* [Part I](./chapter_02.md) provides an overview of the software as well as instructions for how to acquire and run the software.  Chapter 2 includes instructions for setting up the Python ecosystem required to run the software, if necessary.  Chapter 3 describes the Rattlesnake userinterface (UI).  Each main portion of the Rattlesnake interface is described along with the parameters that should be defined within that interface.
-* [Part II](./chapter_04.md) describes the hardware devices available to the Rattlesnake software, as well as the hardware-specific considerations in the controller.  Each Chapter in this Part is dedicated to a specific hardware device.  Synthetic or virtual control is also discussed in this part, as well as instructions to extend Rattlesnake to additional hardware devices.
-* [Part III](./chapter_12.md) describes the various control environments contained within the Rattlesnake software.  The environments defined within Rattlesnake are where the next output data that will be sent to the exciters are computed based off the previously acquired data.  Each chapter in this Part is dedicated to a environment type within Rattlesnake.  This chapter also provides instructions to combine environments as well as extend Rattlesnake to additional environments.
-* The [Appendices](./appendix_a.md) contain several example problems.  Users with a reasonable understanding of the Rattlesnake workflow can use these chapters as a kind of "Quick Start" guide to the software.  [Appendix B](./appendix_b.md) demonstrates a series of tests on a simple beam using a NI cDAQ hardware device.  [Appendix C](./appendix_c.md) and [Appendix D](./appendix_d.md) demonstrate virtual control problems using SDynPy System and State Space models, respectively, which only require a computer to run.
+:::{figure} figures/Rattlesnake_Logo_Banner.png
+:label: fig:rattlesnake_logo
+:alt: Rattlesnake Logo
+:align: center
+
+Rattlesnake Logo
+:::

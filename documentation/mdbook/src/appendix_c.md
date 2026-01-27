@@ -1,3 +1,6 @@
-## Appendix C. Synthetic Example Problem with a SDynPy System
+# Synthetic Example Problem with a SDynPy System
+
+(sec:example_sdynpy)=
+# Synthetic Example Problem with a SDynPy System
 
 This example problem

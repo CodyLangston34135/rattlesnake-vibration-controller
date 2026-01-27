@@ -1,17 +1,18 @@
-## Notation
+(sec:notation)=
+# Notation
 
-### Accents
+## Accents
 
 * $\mathbf{x}$ (bold, non-italic typeface) Matrix or vector
 * $x$ (non-bold, italic typeface) Scalar or array
 
-### Variables
+## Variables
 
 * $n_f$ Number of frequency lines
 * $n_c$ Number of control channels
 * $n_o$ Number of output signals
 * $n_s$ Number of samples in a signal
-* $n_os$ Number of samples in an oversampled output signal
+* $n_{os}$ Number of samples in an oversampled output signal
 * $\mathbf{G}_{vv}$ CPSD matrix for the output signals
 * $\mathbf{G}_{xx}$ CPSD matrix for the responses (i.e. the specification)
 * $\mathbf{H}_{xv}$ Transfer function matrix between the responses and the output signals
@@ -29,7 +30,7 @@
 * $\mathbf{C}$ Damping matrix for 2nd-order differential equations of motion
 * $\mathbf{K}$ Stiffness matrix for 2nd-order differential equations of motion
 
-### Operations
+## Operations
 
 * ⬚$^+$ Pseudoinverse of a matrix
 * ⬚$^H$ Complex-conjugate transpose of a matrix (hermitian)

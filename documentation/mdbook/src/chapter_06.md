@@ -1,4 +1,7 @@
-## 6. Data Physics Quattro Devices
+# Data Physics Quattro Devices
+
+(sec:dp_quattro_hardware)=
+# Data Physics Quattro Devices
 
 Rattlesnake is able to run Data Physics Quattro devices through the programming interface exposed by `DPQuattro.dll`, which is provided with installation materials for the Quattro device.  Users must have the proper drivers installed in order to communicate with the Quattro device.  Issues with device installation and licensing are outside the scope of the document; users are encouraged to contact Data Physics support for issues communicating with the hardware.  If users can run the examples provided by Data Physics for the Quattro device, it should also work with Rattlesnake, as the same library calls are used.
 

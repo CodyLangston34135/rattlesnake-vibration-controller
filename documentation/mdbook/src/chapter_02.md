@@ -1,22 +1,19 @@
-# Part I. Rattlesnake Overview
+# Acquiring and Running Rattlesnake
 
-This Part provides a general overview of Rattlesnake software.  [Chapter 2](#2-acquiring-and-running-rattlesnake) provides an overview of how to acquire and run the software.  [Chapter 3](./chapter_03.md) describes the general software workflow.
-
-This Part with only deal with "global" Rattlesnake paramters. For hardware-specific parameters, see [Part II](./chapter_04.md).  For environment-specific parameters, see [Part III](./chapter_12.md).
-
-## 2. Acquiring and Running Rattlesnake
+(sec:acquiring_and_running_rattlesnake)=
+# Acquiring and Running Rattlesnake
 
 Two methods are provided to acquire the Rattlesnake software.  The software can be downloaded as an executable and run directly with no other dependencies.  Alternatively, the software can be downloaded in its Python script form and run using a Python interpreter.  The former approach is simpler, but results in a larger file size and longer software loading time due to the necessity to pack the Python ecosystem into the executable for distribution and unpack it prior to execution.  The latter approach is more suited to users who wish to utilize the full functionality of the Rattlesnake framework, which would include activities such as coding up custom control laws.  In this case, it will be advantageous to have a Python ecosystem installed on the user's computer, so simply downloading the source code and executing it similarly to other Python scripts will potentially be easier than the executable approach.
 
-### Running from an Executable
+## Running from an Executable
 
 Python code can be compiled into a single executable file, which makes it easier to distribute Python code.  The user need not have a Python distribution installed on their computer to simply run the executable, as the executable will contain the required Python interpreter and libraries compiled within it.  The executable approach has a few disadvantages.  The file size of the executable will generally be larger than the raw source code.  Additionally, the executable will generally be slower to start due to the necessary unpacking of the Python ecosystem from it.  Still, if a user is not familiar with Python, the executable will be the easiest approach to run the software.
 
-#### Downloading the Executable
+### Downloading the Executable
 
 Executables for Rattlesnake are generally stored in the [GitHub Project](https://github.com/sandialabs/rattlesnake-vibration-controller) on the [GitHub Releases page](https://github.com/sandialabs/rattlesnake-vibration-controller/releases).  A user can simply download the executable corresponding to the user's operating system and save it to their computer.  No installation is necessary to run this executable.
 
-#### Running the Executable
+### Running the Executable
 
 Running Rattlesnake from an executable is as simple as running any other program.  Simply double click on the executable (or otherwise execute it) and the program will run.  Note that there may be a significant delay between executing the executable and the program appearing, as the executable will unpack a Python distribution into the user's temporary space in order to run the included Python code.
 
@@ -26,7 +23,7 @@ It may be beneficial to run the executable through the command terminal, as othe
 
 ## Running from the Python script
 
-The alternative to running the Rattlesnake as an executable is to run it as a Python script, which users familiar with the Python programming language should be accustomed to.  This approach provides the user the ability to modify code directly without needing to recompile an executable.  Additionally, if the user plans on developing custom control laws for the Rattlesnake (see, e.g., Chapter \ref{sec:rattlesnake_environments_mimo_random} for more information), they will generally require a Python ecosystem installed on their computer, so the running of the code as a script is not a great burden.
+The alternative to running the Rattlesnake as an executable is to run it as a Python script, which users familiar with the Python programming language should be accustomed to.  This approach provides the user the ability to modify code directly without needing to recompile an executable.  Additionally, if the user plans on developing custom control laws for the Rattlesnake (see, e.g., @sec:mimo_random_control_laws for more information), they will generally require a Python ecosystem installed on their computer, so the running of the code as a script is not a great burden.
 
 ### Setting up a Python Ecosystem
 
@@ -62,7 +59,13 @@ from a command line in the directory in which Rattlesnake was downloaded to exec
 
 Many users will find it more comfortable to forgo the command line and launch Rattlesnake directly from their favorite integrated development environment (IDE).  Note that the Rattlesnake uses the `multiprocessing` Python package to spawn several processes, and these processes sometimes do not play nice with IDE consoles.  Therefore if running from an IDE, the IDE should be instructed to run the `rattlesnake.py` script from an external system terminal rather than a terminal inside the `IDE`.  When executing in an external terminal, it is again useful to keep the terminal active after execution in case of errors occurring.  The error message and traceback displayed in the terminal will be instrumental in debugging the source of the error.  In Spyder, this can be configured per file from the `Run` menu, so the run settings for `rattlesnake.py` should be set as shown in Figure 2-1.
 
-**Figure 2-1. Spyder run configuration showing execution in an external system terminal as well as allowing interaction with the Python console after execution.**
+:::{figure} figures/spyder_run_configuration.png
+:label: fig:spyder_configuration
+:alt: Spyder run configuration for executing Rattlesnake
+:align: center
+
+Spyder run configuration showing execution in an external system terminal as well as allowing interaction with the Python console after execution.
+:::
 
 ## Computational Requirements
 

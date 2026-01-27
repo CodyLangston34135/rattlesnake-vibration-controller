@@ -1,47 +1,47 @@
 # Summary
 
-[Abstract](./abstract.md)
-[Nomenclature](./nomenclature.md)
-[Notation](./notation.md)
-- [Introduction](./chapter_01.md)
+- @sec:glossary
+- @sec:notation
+- @sec:introduction
 
 -----------
 
-# Part I. Rattlesnake Overview
+@sec:rattlesnake_overview
 
-- [Acquiring and Running Rattlesnake](./chapter_02.md)
-- [Using Rattlesnake](./chapter_03.md)
-
------------
-
-# Part II. Rattlesnake Hardware Devices
-
-- [NI-DAQMX Devices](./chapter_04.md)
-- [LAN-XI Devices](./chapter_05.md)
-- [Data Physics Quattro Devices](./chapter_06.md)
-- [Data Physics 900-series Devices](./chapter_07.md)
-- [Virtual Control using State Space Matrices](./chapter_08.md)
-- [Virtual Control using Finite Element Results in Exodus Files](./chapter_09.md)
-- [Virtual Control using SDYNPY System Objects](./chapter_10.md)
-- [Implementing New Hardware Devices with Rattlesnake](./chapter_11.md)
+- @sec:acquiring_and_running_rattlesnake
+- @sec:using_rattlesnake
 
 -----------
 
-# Part III. Rattlesnake Environments
+@sec:rattlesnake_hardware
 
-- [Multiple Input/Multiple Ouptut Random Vibration](./chapter_12.md)
-- [Multiple Input/Multiple Output Transient Control](./chapter_13.md)
-- [Time History Generator](./chapter_14.md)
-- [Modal Testing](./chapter_15.md)
-- [Combined Environments](./chapter_16.md)
-- [Implementing New Environment Types](./chapter_17.md)
+- @sec:nidaq_hardware
+- @sec:lanxi_hardware
+- @sec:dp_quattro_hardware
+- @sec:dp_900_hardware
+- @sec:state_space_hardware
+- @sec:exodus_hardware
+- @sec:sdynpy_hardware
+- @sec:new_hardware
 
 -----------
 
-[Appendix A. Introduction to Example Problems](./appendix_a.md)
-[Appendix B. Example Problem using NI cDAQ Hardware and the NII DAQmx Interface](./appendix_b.md)
-[Appendix C. Synthetic Example Problem with a SDynPy System](./appendix_c.md)
-[Appendix D. Synthetic Example Problem using State Space Metrics](./appendix_d.md)
+@sec:rattlesnake_environments
+
+- @sec:mimo_random
+- @sec:mimo_transient
+- @sec:mimo_time
+- @sec:modal
+- @sec:combined_environments
+- @sec:new_environment
+
+-----------
+
+@sec:examples
+
+- @sec:example_nidaq
+- @sec:example_sdynpy
+- @sec:example_state_space
 
 -----------
 

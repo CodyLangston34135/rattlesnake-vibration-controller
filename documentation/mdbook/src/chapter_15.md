@@ -1,3 +1,6 @@
-## 15. Modal Testing
+# Modal Testing
+
+(sec:modal)=
+# Modal Testing
 
 Rattlesnake's most recent

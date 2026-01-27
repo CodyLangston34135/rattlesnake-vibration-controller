@@ -1,4 +1,7 @@
-## 8. Virtual Control using State Space Matrices
+# Virtual Control using State Space Matrices
+
+(sec:state_space_hardware)=
+# Virtual Control using State Space Matrices
 
 If no data acquisition hardware is available, it can still be advantageous to run Rattlesnake in a "virtual" mode by simulating responses to virtual forces using some kind of model.  This would allow users of the software to develop new control laws and environments without risking damage to potentially expensive test hardware if the control law or environment is not implemented correctly.  Additionally, synthetic control can be used to determine proper test parameters prior to the actual test occurring, which can help determine if a given test is feasible or not.
 
@@ -14,7 +17,7 @@ $$
 \tag{8.2}
 $$
 
-where $\mathbf{A}$ is the state matrix, $\mathbf{B}$ is the input matrix, $\mathbf{C}$ is the output matrix, $\mathbf{D}$ is the feedthrough matrix, $\mathbf{x}$ is the state vector, $\mathbf{u}$ is the input vector, and $\mathbf{y}$ is the output vector.  Equation (8.1) defines how the state changes with time $\dot{\mathbf{x}}$ given the current state $\mathbf{x}$ and inputs $\mathbf{u}$ to the system.  Equation (8.2) describes how the output degrees of freedom $\mathbf{y}$ are constructed from the current state and inputs to the system.  When used within Rattlesnake, the output signals from Rattlesnake will be supplied to the system as $\mathbf{u}$, and the output degrees of freedom $\mathbf{y}$ will be acquired by Rattlesnake.  A complete example for running this type of test can be found in [Appendix D](./appendix_d.md).
+where $\mathbf{A}$ is the state matrix, $\mathbf{B}$ is the input matrix, $\mathbf{C}$ is the output matrix, $\mathbf{D}$ is the feedthrough matrix, $\mathbf{x}$ is the state vector, $\mathbf{u}$ is the input vector, and $\mathbf{y}$ is the output vector.  Equation (8.1) defines how the state changes with time $\dot{\mathbf{x}}$ given the current state $\mathbf{x}$ and inputs $\mathbf{u}$ to the system.  Equation (8.2) describes how the output degrees of freedom $\mathbf{y}$ are constructed from the current state and inputs to the system.  When used within Rattlesnake, the output signals from Rattlesnake will be supplied to the system as $\mathbf{u}$, and the output degrees of freedom $\mathbf{y}$ will be acquired by Rattlesnake.  A complete example for running this type of test can be found in @sec:example_state_space.
     
 For many structural dynamic analyses, the user will have mass, stiffness, and damping matrices $\mathbf{M}$, $\mathbf{K}$, and $\mathbf{C}$, respectively, in the typical 2nd-order differential equations of motion
 
@@ -79,9 +82,9 @@ $$
 \tag{8.9}
 $$
 
-where the first row partition recovers displacements $\mathbf{z}$, the second row partition recovers velocities $\dot{\mathbf{z}}$, the third row partition recovers accelerations $\ddot{\mathbf{z}}$, and the fourth row partition recovers forces $\mathbf{u}$.  Note that Rattlesnake requires its output signals (corresponding to the input signals to the system $\mathbf{u}$) to be measured in order to function (see Section \ref{sec:channel_table}) so the input signals to the system $\mathbf{u}$ must be passed through directly to output degrees of freedom $\mathbf{y}$ which are the acquired data in Rattlesnake.  Practically, this means that there should always be at least one row partition of $\mathbf{C}$ containing zeros, and the same row partition of $\mathbf{D}$ should contain the identity matrix.
+where the first row partition recovers displacements $\mathbf{z}$, the second row partition recovers velocities $\dot{\mathbf{z}}$, the third row partition recovers accelerations $\ddot{\mathbf{z}}$, and the fourth row partition recovers forces $\mathbf{u}$.  Note that Rattlesnake requires its output signals (corresponding to the input signals to the system $\mathbf{u}$) to be measured in order to function (see @sec:channel_table) so the input signals to the system $\mathbf{u}$ must be passed through directly to output degrees of freedom $\mathbf{y}$ which are the acquired data in Rattlesnake.  Practically, this means that there should always be at least one row partition of $\mathbf{C}$ containing zeros, and the same row partition of $\mathbf{D}$ should contain the identity matrix.
     
-This chapter describes the setup and implementation details for running a synthetic control problem using state space matrices.  For a complete example of using this type of control, see [Appendix D](./appendix_d.md).
+This chapter describes the setup and implementation details for running a synthetic control problem using state space matrices.  For a complete example of using this type of control, see @sec:example_state_space.
 
 ### Setting up the Channel Table for Virtual Control using State Space Matrics <!--Section 8.1-->
 
@@ -89,8 +92,9 @@ Required channel table inputs for virtual control using state space matrices are
 
 ### Hardware Parameters <!--Section 8.2-->
 
-Hardware parameters are similar to those found in [Chapter 9](./chapter_09.md).  When the `State Space Integration...` hardware device is selected, Rattlesnake will bring up a file dialog box that will allow the user to specify a Numpy or Matlab file from which the state space matrices will be loaded.  This file should contain fields `A`, `B`, `C`, and `D` containing the appropriately sized matrices.  An additional parameter will appear in the `Data Acquisition Parameters` portion of the `Data Acquisition Setup` tab that allows the user to specify an `Integration Oversample` amount, as the integration time steps should generally be finer than the sample rate of the controller.  A value of 10 is typically sufficient for integration of a linear system using `lsim` from `scipy.signal`.
+Hardware parameters are similar to those found in @sec:exodus_hardware.  When the `State Space Integration...` hardware device is selected, Rattlesnake will bring up a file dialog box that will allow the user to specify a Numpy or Matlab file from which the state space matrices will be loaded.  This file should contain fields `A`, `B`, `C`, and `D` containing the appropriately sized matrices.  An additional parameter will appear in the `Data Acquisition Parameters` portion of the `Data Acquisition Setup` tab that allows the user to specify an `Integration Oversample` amount, as the integration time steps should generally be finer than the sample rate of the controller.  A value of 10 is typically sufficient for integration of a linear system using `lsim` from `scipy.signal`.
 
+(sec:state_space_implementation_details)=
 ### Implementation Details <!-- Section 8.3-->
 
 A `scipy.signal.StateSpace` model is created from the loaded matrices which are used for integration using the `scipy.signal.lsim` function.

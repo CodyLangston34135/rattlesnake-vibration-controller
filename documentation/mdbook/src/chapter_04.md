@@ -1,20 +1,13 @@
-# Part II. Rattlesnake Hardware Devices
+# NI-DAQmx Devices
 
-Designed for flexibility, Rattlesnake can be used with multiple hardware devices and even perform virtual control using a synthetic data acquisition system.  This Part will cover the hardware-specific implementation details that must be considered when running Rattlesnake with each hardware device.
-
-Rattlesnake is designed so there is minimal differences in software workflow when using different hardware devices.  Nonetheless, there are some slight differences in how channels and devices must be specified, and these differences are primarily found on the `Data Acquisition Setup` tab in the Rattlesnake software.
-
-The Chapters in this Part document the hardware devices that are able to be used by Rattlesnake, as well as the virtual devices that can be used to simulate control.  [Chapter 4](./chapter_04.md) describes the implementation and utilization of NI-DAQmx devices.  [Chapter 5](./chapter_05.md) describes the HBK LAN-XI hardware.  [Chapter 6](./chapter_06.md) and [Chapter 7](./chapter_07.md) describe the Data Physics Quattro and 900-series hardware devices, respectively.  [Chapter 8](./chapter_08.md), [Chapter 9](./chapter_09.md), and [Chapter 10](./chapter_10.md) describe virtual or synthetic hardware devices that are defined using state space matrices, eigensolution results stored in an exodus file, or a SDynPy System object, respectively.
-
-If a user is interested in implementing a new hardware device, [Chapter 11](./chapter_11.md) describes some of the things to be aware of.  Implementation of new hardware devices will require a good amount of knowledge of the Rattlesnake architecture.
-
-## Chapter 4. NI-DAQmx Devices
+(sec:nidaq_hardware)=
+# NI-DAQmx Devices
 
 Rattlesnake is able to run National Instruments devices that utilize the NI-DAQmx programming interface.  See the [NI-DAQmx Documentation](https://www.ni.com/pdf/manuals/374768ae.html#MXSupport) for a list of supported devices for this programming interface.  Note that users must have the proper drivers installed in order to communicate with their devices, though users need not have LabView or other NI software installed.  See the instruction manual or online documentation for the specific device in use.
 
 Drivers can be found [here](https://www.ni.com/en-us/support/downloads/drivers.html).
 
-[Appendix B](./appendix_b.md) shows a complete example problem using a NI data acquisition system.
+@sec:example_nidaq shows a complete example problem using a NI data acquisition system.
 
 ### Setting up the Channel Table for NI-DAQmx Device <!--Section 4.1-->
 

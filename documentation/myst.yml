@@ -1,0 +1,84 @@
+# See docs at: https://mystmd.org/guide/frontmatter
+version: 1
+project:
+  id: 060cd82a-0b83-4d67-9875-cf6b1b8348eb
+  title:  Rattlesnake Vibration Controller
+  description: User's Manual and Examples for the Rattlesnake Vibration Controller
+  abstract: |
+    Rattlesnake is a combined-environments, multiple input/multiple output control system for
+    dynamic excitation of structures under test.  It provides capabilities to control multiple
+    responses on the part using multiple exciters using various control strategies.  Rattlesnake
+    is written in the Python programming language to facilitate multiple input/multiple output
+    vibration research by allowing users to prescribe custom control laws to the controller.
+    Rattlesnake can target multiple hardware devices, or even perform synthetic control to simulate
+    a test virtually.  Rattlesnake has been used to execute control problems with up to 200
+    response channels and 24 shaker drives.  This document describes the functionality,
+    architecture, and usage of the Rattlesnake controller to perform combined environments testing.
+  keywords:
+    - mimo
+    - vibration
+    - modal
+    - structural-dynamics
+  # authors:
+  #   - name: Daniel Rohe
+  #     affiliation: Sandia National Laboratories
+  #     email: dprohe@sandia.gov
+  #   - name: Ryan Schultz
+  #     affiliation: Sandia National Laboratories
+  #     email: rschult@sandia.gov
+  #   - name: Norman Hunter
+  #     affiliation: Sandia National Laboratories
+  #     email: nfhunte@sandia.gov
+  github: https://github.com/sandialabs/rattlesnake-vibration-controller
+  toc:
+    - file: mdbook/src/chapter_01.md
+    - file: mdbook/src/document_overview.md
+    - file: mdbook/src/part_1.md
+      children:
+        - file: mdbook/src/chapter_02.md
+        - file: mdbook/src/chapter_03.md
+    - file: mdbook/src/part_2.md
+      children:
+        - file: mdbook/src/chapter_04.md
+        - file: mdbook/src/chapter_05.md
+        - file: mdbook/src/chapter_06.md
+        - file: mdbook/src/chapter_07.md
+        - file: mdbook/src/chapter_08.md
+        - file: mdbook/src/chapter_09.md
+        - file: mdbook/src/chapter_10.md
+        - file: mdbook/src/chapter_11.md
+    - file: mdbook/src/part_3.md
+      children:
+        - file: mdbook/src/chapter_12.md
+        - file: mdbook/src/chapter_13.md
+        - file: mdbook/src/chapter_14.md
+        - file: mdbook/src/chapter_15.md
+        - file: mdbook/src/chapter_16.md
+        - file: mdbook/src/chapter_17.md
+    - file: mdbook/src/examples.md
+      children:
+        - file: mdbook/src/appendix_b.md
+        - file: mdbook/src/appendix_c.md
+        - file: mdbook/src/appendix_d.md
+    - file: mdbook/src/nomenclature.md
+    - file: mdbook/src/notation.md
+    - file: mdbook/src/bibliography.md
+    - file: mdbook/src/SUMMARY.md
+  numbering:
+    headings: false
+    figure:
+      continue: true
+    table:
+      continue: true
+    equation:
+      continue: true
+  
+site:
+  template: book-theme
+  options:
+    favicon: mdbook/src/figures/Rattlesnake_Icon.ico
+    logo: mdbook/src/figures/Rattlesnake_Icon.ico
+    logo_text: Rattlesnake Vibration Controller
+    hide_authors: false
+    numbered_references: true
+    hide_title_block: false

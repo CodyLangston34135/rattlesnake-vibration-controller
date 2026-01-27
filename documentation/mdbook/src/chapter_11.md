@@ -1,6 +1,12 @@
-## 11. Implementing New Hardware Devices with Rattlesnake
+# Implementing New Hardware Devices with Rattlesnake
 
-**WARNING:** This chapter contains advanced Rattlesnake operations that require a reasonably good understanding of the Rattlesnake software architecture.  Understanding this chapter is not required to run the software successfully, and therefore this chapter can be skipped if the user is not interested in implementing a new hardware device.
+:::{note}This chapter contains advanced Rattlesnake operations that require a reasonably good understanding of the Rattlesnake software architecture.  Understanding this chapter is not required to run the software successfully, and therefore this chapter can be skipped if the user is not interested in implementing a new hardware device.
+:::
+
+(sec:new_hardware)=
+# Implementing New Hardware Devices with Rattlesnake
+
+
     
  Rattlesnake allows users to implement new hardware devices with minimal modifications to the controller.  Within the [GitHub repository](https://github.com/sandialabs/rattlesnake-vibration-controller), there is a source file `components/abstract_hardware.py` that defines abstract base classes `HardwareAcquisition` and `HardwareOutput`.  All hardware devices used by Rattlesnake must implement acquisition and output classes that inherit from these abstract base classes and define functions that overwrite the abstract methods in these base classes.  The acquisition and output will generally be run on separate processes in Rattlesnake to ensure that output can be streamed to the device as acquired data is simultaneously read from the device.  A flowchart of the operations performed by each hardware process is shown in Figure 11-1.
     

@@ -1,8 +1,11 @@
-## 10. Virtual Control using SDYNPY System Objects
+# Virtual Control using SDYNPY System Objects
+
+(sec:sdynpy_hardware)=
+# Virtual Control using SDYNPY System Objects
 
 The final option for synthetic control in Rattlesnake is to load in a SDynPy [`System`](https://sandialabs.github.io/sdynpy/_autosummary/sdynpy.core.sdynpy_system.System.html) object, which gets stored from SDynPy using the [`sdyn.System.save`](https://sandialabs.github.io/sdynpy/_autosummary/sdynpy.core.sdynpy_system.System.html#sdynpy.core.sdynpy_system.System.save) method.  SDynPy `System` objects store mass, stiffness, and damping matrices.  They also store transformation matrices which transform its internal system space into the physical space.  This allows SDynPy `System` objects to represent both "full" physical systems as well as "reduced" systems (e.g., Craig-Bampton or Modal systems).  The final part of the SDynPy `System` is the degree of freedom information that is stored with the matrices.  This maps rows of the transformation matrix (or rows of the mass, stiffness, and damping matrices if the transformation is the identity matrix) to physical degrees of freedom.
 
-A complete example problem using a SDynPy `System` object can be found in [Appendix C](./appendix_c.md).
+A complete example problem using a SDynPy `System` object can be found in @sec:example_sdynpy.
 
 ### Setting up the Channel Table <!--Section 10.1-->
 
@@ -27,7 +30,7 @@ This section describes the implementation details for the SDynPy System integrat
     
 Rattlesnake is able to integrate linear time-invariant equations of motion using general state space matrices.  The general form for state space equations of motion is given in Equations (8.1) and (8.2).
     
-[Chapter 8](./chapter_08.md) describes how the state space equations can be constructed from mass, stiffness, and damping matrices.  The state space formulation can be extended to allow for a transformation matrix between the mass, stiffness, and damping matrices, and the physical degrees of freedom.
+@sec:state_space_hardware describes how the state space equations can be constructed from mass, stiffness, and damping matrices.  The state space formulation can be extended to allow for a transformation matrix between the mass, stiffness, and damping matrices, and the physical degrees of freedom.
     
 $$
 \mathbf{C} = \begin{bmatrix}
@@ -49,4 +52,4 @@ Here the system transformation $\mathbf{\Phi}$ is partitioned into the response 
     
 Matrices $\mathbf{A}$ and $\mathbf{B}$ are unchanged and defined in equations (8.6) and (8.7).
     
-The state space matrices are then integrated using `scipy.signal.lsim`, similar to the State Space formulation described in [Chapter 8](./chapter_08.md).
+The state space matrices are then integrated using `scipy.signal.lsim`, similar to the State Space formulation described in @sec:state_space_hardware.
