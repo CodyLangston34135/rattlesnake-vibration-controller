@@ -89,7 +89,7 @@
        <item row="1" column="0">
         <widget class="QPushButton" name="maximum_voltage_button">
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Go to Maximum Excitation&lt;/span&gt;&lt;br/&gt;Shows the excitation channel with the largest voltage&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Go to Maximum Excitation&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Shows the excitation channel with the largest voltage&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
           <string>Go to Maximum</string>

@@ -783,7 +783,7 @@
            <item>
             <widget class="GraphicsLayoutWidget" name="impulse_graphicslayout">
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Transfer Function Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the current estimation of the impulse response function for the currently selected reference and response channels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Impulse Response Plot&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Displays the current estimation of the impulse response function for the currently selected reference and response channels.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
             </widget>
            </item>
