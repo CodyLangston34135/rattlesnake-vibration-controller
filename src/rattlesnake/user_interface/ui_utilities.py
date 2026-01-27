@@ -37,33 +37,33 @@ if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
 else:
     directory = this_path
 # Base Controller UI
-ui_path = os.path.join(directory, "combined_environments_controller.ui")
-headless_ui_path = os.path.join(directory, "headless_ui.ui")
-environment_select_ui_path = os.path.join(directory, "environment_selector.ui")
-control_select_ui_path = os.path.join(directory, "control_select.ui")
+ui_path = os.path.join(directory, "ui_files", "combined_environments_controller.ui")
+headless_ui_path = os.path.join(directory, "ui_files", "headless.ui")
+environment_select_ui_path = os.path.join(directory, "ui_files", "environment_selector.ui")
+control_select_ui_path = os.path.join(directory, "ui_files", "control_select.ui")
 # Random Vibration Environment
-environment_definition_ui_paths[ControlTypes.RANDOM] = os.path.join(directory, "random_vibration_definition.ui")
-environment_prediction_ui_paths[ControlTypes.RANDOM] = os.path.join(directory, "random_vibration_prediction.ui")
-environment_run_ui_paths[ControlTypes.RANDOM] = os.path.join(directory, "random_vibration_run.ui")
-system_identification_ui_path = os.path.join(directory, "system_identification.ui")
-transformation_matrices_ui_path = os.path.join(directory, "transformation_matrices.ui")
+environment_definition_ui_paths[ControlTypes.RANDOM] = os.path.join(directory, "ui_files", "random_vibration_definition.ui")
+environment_prediction_ui_paths[ControlTypes.RANDOM] = os.path.join(directory, "ui_files", "random_vibration_prediction.ui")
+environment_run_ui_paths[ControlTypes.RANDOM] = os.path.join(directory, "ui_files", "random_vibration_run.ui")
+system_identification_ui_path = os.path.join(directory, "ui_files", "system_identification.ui")
+transformation_matrices_ui_path = os.path.join(directory, "ui_files", "transformation_matrices.ui")
 # Time Environment
-environment_definition_ui_paths[ControlTypes.TIME] = os.path.join(directory, "time_definition.ui")
-environment_run_ui_paths[ControlTypes.TIME] = os.path.join(directory, "time_run.ui")
+environment_definition_ui_paths[ControlTypes.TIME] = os.path.join(directory, "ui_files", "time_definition.ui")
+environment_run_ui_paths[ControlTypes.TIME] = os.path.join(directory, "ui_files", "time_run.ui")
 # Transient Environment
-environment_definition_ui_paths[ControlTypes.TRANSIENT] = os.path.join(directory, "transient_definition.ui")
-environment_prediction_ui_paths[ControlTypes.TRANSIENT] = os.path.join(directory, "transient_prediction.ui")
-environment_run_ui_paths[ControlTypes.TRANSIENT] = os.path.join(directory, "transient_run.ui")
+environment_definition_ui_paths[ControlTypes.TRANSIENT] = os.path.join(directory, "ui_files", "transient_definition.ui")
+environment_prediction_ui_paths[ControlTypes.TRANSIENT] = os.path.join(directory, "ui_files", "transient_prediction.ui")
+environment_run_ui_paths[ControlTypes.TRANSIENT] = os.path.join(directory, "ui_files", "transient_run.ui")
 # Sine Environment
-environment_definition_ui_paths[ControlTypes.SINE] = os.path.join(directory, "sine_definition.ui")
-environment_prediction_ui_paths[ControlTypes.SINE] = os.path.join(directory, "sine_prediction.ui")
-environment_run_ui_paths[ControlTypes.SINE] = os.path.join(directory, "sine_run.ui")
-sine_sweep_table_ui_path = os.path.join(directory, "sine_sweep_table.ui")
-filter_explorer_ui_path = os.path.join(directory, "sine_filter_explorer.ui")
+environment_definition_ui_paths[ControlTypes.SINE] = os.path.join(directory, "ui_files", "sine_definition.ui")
+environment_prediction_ui_paths[ControlTypes.SINE] = os.path.join(directory, "ui_files", "sine_prediction.ui")
+environment_run_ui_paths[ControlTypes.SINE] = os.path.join(directory, "ui_files", "sine_run.ui")
+sine_sweep_table_ui_path = os.path.join(directory, "ui_files", "sine_sweep_table.ui")
+filter_explorer_ui_path = os.path.join(directory, "ui_files", "sine_filter_explorer.ui")
 # Modal Environments
-environment_definition_ui_paths[ControlTypes.MODAL] = os.path.join(directory, "modal_definition.ui")
-environment_run_ui_paths[ControlTypes.MODAL] = os.path.join(directory, "modal_run.ui")
-modal_mdi_ui_path = os.path.join(directory, "modal_acquisition_window.ui")
+environment_definition_ui_paths[ControlTypes.MODAL] = os.path.join(directory, "ui_files", "modal_definition.ui")
+environment_run_ui_paths[ControlTypes.MODAL] = os.path.join(directory, "ui_files", "modal_run.ui")
+modal_mdi_ui_path = os.path.join(directory, "ui_files", "modal_acquisition_window.ui")
 
 
 class UpdaterSignals(QtCore.QObject):

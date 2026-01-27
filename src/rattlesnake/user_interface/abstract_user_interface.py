@@ -85,7 +85,7 @@ class AbstractUI(ABC):
         """
 
     @abstractmethod
-    def initialize_data_acquisition(self, hardware_metadata: HardwareMetadata):
+    def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         """Update the user interface with data acquisition parameters
 
         This function is called when the Data Acquisition parameters are

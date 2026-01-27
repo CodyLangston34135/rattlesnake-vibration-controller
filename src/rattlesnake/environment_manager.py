@@ -75,6 +75,7 @@ class EnvironmentManager:
         metadata_list = list(self.environment_metadata.values())
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata_list))
         self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata_list))
+        return metadata_list
 
     def clear_environments(self):
         self.queue_names = []

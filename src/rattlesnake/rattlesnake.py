@@ -94,7 +94,9 @@ class Rattlesnake:
         self.hardware_metadata = hardware_metadata
 
     def set_environments(self, environment_metadata_list: List[EnvironmentMetadata]):
-        self.environment_manager.initialize_environments(environment_metadata_list, self.acquisition_active, self.output_active)
+        self.environment_metadata_list = self.environment_manager.initialize_environments(
+            environment_metadata_list, self.acquisition_active, self.output_active
+        )
 
     def shutdown(self):
         # Close out of acquisition, output, streaming process
@@ -110,10 +112,10 @@ class Rattlesnake:
             self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Output Process\n")
             self.output_proc.terminate()
             self.output_proc.join()
-        self.queue_container.log_file_queue.put(f"{datetime.datetime.now()}: Joining Streaming Process\n")
+        self.queue_container.log_file_queue.put(f"{datetime.now()}: Joining Streaming Process\n")
         self.streaming_proc.join(timeout=5)
         if self.streaming_proc.is_alive():
-            self.queue_container.log_file_queue.put(f"{datetime.datetime.now()}: Force Closing Streaming Process\n")
+            self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Streaming Process\n")
             self.streaming_proc.terminate()
             self.streaming_proc.join()
 

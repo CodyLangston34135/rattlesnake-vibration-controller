@@ -21,62 +21,8 @@
        <string>Select portion of the Rattlesnake controller.</string>
       </property>
       <property name="currentIndex">
-       <number>3</number>
+       <number>0</number>
       </property>
-      <widget class="QWidget" name="environment_definition_tab">
-       <attribute name="title">
-        <string>Environment Definition</string>
-       </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout_4">
-        <item>
-         <widget class="QTabWidget" name="environment_definition_environment_tabs">
-          <property name="tabPosition">
-           <enum>QTabWidget::West</enum>
-          </property>
-          <property name="tabShape">
-           <enum>QTabWidget::Rounded</enum>
-          </property>
-          <property name="currentIndex">
-           <number>-1</number>
-          </property>
-          <property name="elideMode">
-           <enum>Qt::ElideNone</enum>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-      <widget class="QWidget" name="system_id_tab">
-       <attribute name="title">
-        <string>System Identification</string>
-       </attribute>
-       <layout class="QVBoxLayout" name="verticalLayout_5">
-        <item>
-         <widget class="QTabWidget" name="system_id_environment_tabs">
-          <property name="tabPosition">
-           <enum>QTabWidget::West</enum>
-          </property>
-          <property name="currentIndex">
-           <number>-1</number>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-      <widget class="QWidget" name="test_prediction_tab">
-       <attribute name="title">
-        <string>Test Predictions</string>
-       </attribute>
-       <layout class="QHBoxLayout" name="horizontalLayout_40">
-        <item>
-         <widget class="QTabWidget" name="test_prediction_environment_tabs">
-          <property name="tabPosition">
-           <enum>QTabWidget::West</enum>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
       <widget class="QWidget" name="run_test_tab">
        <attribute name="title">
         <string>Run Test</string>

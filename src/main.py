@@ -2,7 +2,10 @@ from rattlesnake.rattlesnake import Rattlesnake
 from rattlesnake.hardware.hardware_utilities import Channel
 from rattlesnake.hardware.nidqaqmx import NIDAQmxMetadata, TaskTrigger
 from rattlesnake.environment.time_environment import TimeMetadata
+from rattlesnake.user_interface.headless_ui import HeadlessUi
+import sys
 import numpy as np
+from qtpy import QtWidgets
 
 
 def main():
@@ -37,6 +40,11 @@ def main():
 
     rattlesnake.set_hardware(hardware_metadata)
     rattlesnake.set_environments(envrionment_metadata_list)
+
+    app = QtWidgets.QApplication(sys.argv)
+    _ = HeadlessUi(rattlesnake.queue_container, rattlesnake.environment_metadata_list, "Dark")
+    app.exec_()
+
     rattlesnake.shutdown()
 
 
