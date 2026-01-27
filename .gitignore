@@ -37,4 +37,4 @@ coverage.xml
 # ignore local build target for mdbook
 documentation/mdbook/book/
 # ignore local documentation that is automatically generated
-documentation/mdbook/_generated/**
+documentation/mdbook/src/_generated/**
