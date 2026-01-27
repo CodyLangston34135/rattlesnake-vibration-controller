@@ -25,9 +25,42 @@ from .abstract_message_process import AbstractMessageProcess
 from ..utilities import GlobalCommands, QueueContainer
 from ..hardware.abstract_hardware import HardwareMetadata
 from ..environment.abstract_environment import EnvironmentMetadata
-from typing import List
 import netCDF4 as nc
 import numpy as np
+import os
+from pathlib import Path
+from typing import List
+from enum import Enum
+
+
+class StreamType(Enum):
+    NO_STREAM = 0
+    STREAM_IMMEDIATELY = 1
+    PROFILE_INSTRUCTION = 2
+    TEST_LEVEL = 3
+    MANUAL = 4
+
+
+class StreamMetadata:
+    def __init__(self):
+        self.stream_type = None
+        self.stream_file = None
+        self.test_level = None
+
+    def validate(self):
+        if self.stream_type != StreamType.NO_STREAM:
+            if not self.stream_file or not isinstance(self.stream_file, (str, Path)):
+                raise ValueError("Streaming was enabled but no valid stream file path was provided")
+
+            parent_dir = Path(self.stream_file).parent
+            if not parent_dir.exists():
+                raise ValueError(f"The directory for the stream file does not exist: {parent_dir}")
+
+        if self.stream_type == StreamType.TEST_LEVEL:
+            if self.test_level is None or not isinstance(self.test_level, float):
+                raise ValueError("No test level was chosen for stream to start at")
+
+        return True
 
 
 class StreamingProcess(AbstractMessageProcess):

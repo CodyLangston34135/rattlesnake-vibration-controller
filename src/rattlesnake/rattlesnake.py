@@ -1,13 +1,15 @@
 from .utilities import GlobalCommands, VerboseMessageQueue, QueueContainer, log_file_task
 from .process.acquisition import acquisition_process
 from .process.output import output_process
-from .process.streaming import streaming_process
+from .process.streaming import StreamType, StreamMetadata, streaming_process
 from .hardware.abstract_hardware import HardwareMetadata
 from .environment.abstract_environment import EnvironmentMetadata
 from .environment_manager import EnvironmentManager
 import multiprocessing as mp
 from datetime import datetime
 from typing import List
+
+TASK_NAME = "Rattlesnake"
 
 
 class Rattlesnake:
@@ -93,10 +95,25 @@ class Rattlesnake:
 
         self.hardware_metadata = hardware_metadata
 
+        self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata))
+        self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata))
+
     def set_environments(self, environment_metadata_list: List[EnvironmentMetadata]):
         self.environment_metadata_list = self.environment_manager.initialize_environments(
             environment_metadata_list, self.acquisition_active, self.output_active
         )
+
+    def arm_test(self, stream_metadata: StreamMetadata):
+        self.queue_container.controller_communication_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, None))
+
+        if stream_metadata.stream_type != StreamType.NO_STREAM:
+            self.queue_container.streaming_command_queue.put(
+                TASK_NAME,
+                (GlobalCommands.INITIALIZE_STREAMING, (stream_metadata.stream_file, self.hardware_metadata, self.environment_metadata_list)),
+            )
+
+        if stream_metadata.stream_type == StreamType.STREAM_IMMEDIATELY:
+            self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.START_STREAMING, None))
 
     def shutdown(self):
         # Close out of acquisition, output, streaming process
