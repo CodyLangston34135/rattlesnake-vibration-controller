@@ -26,14 +26,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import re
 import sys
+from qtpy import QtWidgets, uic
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
-# from glob import glob
-
-from qtpy import QtWidgets, uic
-
-# files = glob('../src/rattlesnake/components/*.ui')
 files = [
     dir_path + "/" + v
     for v in [
