@@ -1,3 +1,22 @@
+from .abstract_user_interface import AbstractUI
+from .ui_utilities import TimeUICommands, environment_definition_ui_paths, environment_run_ui_paths, multiline_plotter
+from ..utilities import VerboseMessageQueue, GlobalCommands
+from ..math_operations import load_time_history, rms_time, db2scale
+from ..hardware.abstract_hardware import HardwareMetadata
+from ..environment.environment_utilities import ControlTypes
+from ..environment.abstract_environment import EnvironmentMetadata
+from ..environment.time_environment import TimeMetadata
+import openpyxl
+import multiprocessing as mp
+import numpy as np
+import netCDF4 as nc4
+from qtpy import QtCore, QtWidgets, uic
+
+CONTROL_TYPE = ControlTypes.TIME
+MAX_RESPONSES_TO_PLOT = 20
+MAX_SAMPLES_TO_PLOT = 100000
+
+
 class TimeUI(AbstractUI):
     """Class defining the user interface for a Random Vibration environment.
 
@@ -17,7 +36,7 @@ class TimeUI(AbstractUI):
         run_tabwidget: QtWidgets.QTabWidget,
         environment_command_queue: VerboseMessageQueue,
         controller_communication_queue: VerboseMessageQueue,
-        log_file_queue: Queue,
+        log_file_queue: mp.Queue,
     ):
         """
         Constructs a Time User Interfae
@@ -66,8 +85,8 @@ class TimeUI(AbstractUI):
         run_tabwidget.addTab(self.run_widget, self.environment_name)
 
         # Set up some persistent data
-        self.data_acquisition_parameters = None
-        self.environment_parameters = None
+        self.hardware_metadata = None
+        self.environment_metadata = None
         self.signal = None
         self.physical_output_names = None
         self.physical_measurement_names = None
@@ -82,7 +101,7 @@ class TimeUI(AbstractUI):
         self.command_map["Set Repeat"] = self.set_repeat_from_profile
         self.command_map["Set No Repeat"] = self.set_norepeat_from_profile
 
-    def collect_environment_definition_parameters(self) -> TimeParameters:
+    def collect_environment_definition_parameters(self) -> TimeMetadata:
         """Collect the parameters from the user interface defining the environment
 
         Returns
@@ -91,7 +110,8 @@ class TimeUI(AbstractUI):
             A metadata or parameters object containing the parameters defining
             the corresponding environment.
         """
-        return TimeParameters.from_ui(self)
+        # return TimeParameters.from_ui(self)
+        return TimeMetadata()
 
     def complete_ui(self):
         """Helper Function to continue setting up the user interface"""
@@ -113,7 +133,7 @@ class TimeUI(AbstractUI):
         self.run_widget.start_test_button.clicked.connect(self.start_control)
         self.run_widget.stop_test_button.clicked.connect(self.stop_control)
 
-    def initialize_data_acquisition(self, data_acquisition_parameters: DataAcquisitionParameters):
+    def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         """Update the user interface with data acquisition parameters
 
         This function is called when the Data Acquisition parameters are
@@ -122,7 +142,7 @@ class TimeUI(AbstractUI):
 
         Parameters
         ----------
-        data_acquisition_parameters : DataAcquisitionParameters :
+        hardware_metadata : DataAcquisitionParameters :
             Container containing the data acquisition parameters, including
             channel table and sampling information.
 
@@ -130,7 +150,7 @@ class TimeUI(AbstractUI):
         self.log("Initializing Data Acquisition")
         self.signal = None
         # Get channel information
-        channels = data_acquisition_parameters.channel_list
+        channels = hardware_metadata.channel_list
         num_measurements = len([channel for channel in channels if channel.feedback_device is None])
         num_output = len([channel for channel in channels if channel.feedback_device is not None])
         self.physical_output_names = [
@@ -165,10 +185,8 @@ class TimeUI(AbstractUI):
             item.setFlags(item.flags() ^ QtCore.Qt.ItemIsEditable)
             self.definition_widget.signal_information_table.setItem(i, 3, item)
         # Fill in the info at the bottom
-        self.definition_widget.sample_rate_display.setValue(data_acquisition_parameters.sample_rate)
-        self.definition_widget.output_sample_rate_display.setValue(
-            data_acquisition_parameters.sample_rate * data_acquisition_parameters.output_oversample
-        )
+        self.definition_widget.sample_rate_display.setValue(hardware_metadata.sample_rate)
+        self.definition_widget.output_sample_rate_display.setValue(hardware_metadata.sample_rate * hardware_metadata.output_oversample)
         self.definition_widget.output_channels_display.setValue(num_output)
 
         # Clear the signal plot
@@ -204,7 +222,7 @@ class TimeUI(AbstractUI):
             names=self.physical_measurement_names,
         )
 
-        self.data_acquisition_parameters = data_acquisition_parameters
+        self.hardware_metadata = hardware_metadata
 
     def load_signal(self, clicked, filename=None):  # pylint: disable=unused-argument
         """Loads a time signal using a dialog or the specified filename
@@ -250,7 +268,7 @@ class TimeUI(AbstractUI):
             else:
                 curve.setData((0, 0), (0, 0))
 
-    def initialize_environment(self) -> AbstractMetadata:
+    def initialize_environment(self) -> EnvironmentMetadata:
         """Update the user interface with environment parameters
 
         This function is called when the Environment parameters are initialized.
@@ -278,16 +296,16 @@ class TimeUI(AbstractUI):
                 curve.setData(
                     np.arange(
                         (
-                            data.output_signal.shape[-1] // self.data_acquisition_parameters.output_oversample * 2
-                            if data.output_signal.shape[-1] // self.data_acquisition_parameters.output_oversample * 2 < MAX_SAMPLES_TO_PLOT
+                            data.output_signal.shape[-1] // self.hardware_metadata.output_oversample * 2
+                            if data.output_signal.shape[-1] // self.hardware_metadata.output_oversample * 2 < MAX_SAMPLES_TO_PLOT
                             else MAX_SAMPLES_TO_PLOT
                         )
                     )
-                    / self.data_acquisition_parameters.sample_rate,
+                    / self.hardware_metadata.sample_rate,
                     np.zeros(
                         (
-                            data.output_signal.shape[-1] // self.data_acquisition_parameters.output_oversample * 2
-                            if data.output_signal.shape[-1] // self.data_acquisition_parameters.output_oversample * 2 < MAX_SAMPLES_TO_PLOT
+                            data.output_signal.shape[-1] // self.hardware_metadata.output_oversample * 2
+                            if data.output_signal.shape[-1] // self.hardware_metadata.output_oversample * 2 < MAX_SAMPLES_TO_PLOT
                             else MAX_SAMPLES_TO_PLOT
                         )
                     ),
@@ -398,7 +416,7 @@ class TimeUI(AbstractUI):
             to be displayed.
         """
         message, data = queue_data
-        if message == "time_data":
+        if message == TimeUICommands.TIME_DATA:
             response_data, output_data = data
             for curve, this_data in zip(self.plot_data_items["response_signal_measurement"], response_data):
                 x, y = curve.getData()
@@ -409,7 +427,7 @@ class TimeUI(AbstractUI):
                 x, y = curve.getData()
                 y = np.concatenate((y[this_output.size :], this_output[-x.size :]), axis=0)
                 curve.setData(x, y)
-        elif message == "enable":
+        elif message == TimeUICommands.ENABLE:
             widget = None
             for parent in [self.definition_widget, self.run_widget]:
                 try:
@@ -420,7 +438,7 @@ class TimeUI(AbstractUI):
             if widget is None:
                 raise ValueError(f"Cannot Enable Widget {data}: not found in UI")
             widget.setEnabled(True)
-        elif message == "disable":
+        elif message == TimeUICommands.DISABLE:
             widget = None
             for parent in [self.definition_widget, self.run_widget]:
                 try:

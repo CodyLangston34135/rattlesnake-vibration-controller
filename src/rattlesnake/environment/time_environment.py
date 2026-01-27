@@ -27,6 +27,7 @@ from .abstract_environment import EnvironmentMetadata, EnvironmentProcess
 from .environment_utilities import ControlTypes
 from ..utilities import VerboseMessageQueue, GlobalCommands
 from ..hardware.abstract_hardware import HardwareMetadata
+from ..user_interface.ui_utilities import TimeUICommands
 import copy
 import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
@@ -37,8 +38,6 @@ import numpy as np
 
 CONTROL_TYPE = ControlTypes.TIME
 TEST_LEVEL_THRESHOLD = 1.01
-MAX_RESPONSES_TO_PLOT = 20
-MAX_SAMPLES_TO_PLOT = 100000
 
 
 class TimeMetadata(EnvironmentMetadata):
@@ -294,7 +293,7 @@ class TimeEnvironment(EnvironmentProcess):
             acquisition_data, last_acquisition = self.queue_container.data_in_queue.get_nowait()
             measurement_data = acquisition_data[self.measurement_channels]
             output_data = acquisition_data[self.output_channels]
-            self.queue_container.gui_update_queue.put((self.environment_name, ("time_data", (measurement_data, output_data))))
+            self.queue_container.gui_update_queue.put((self.environment_name, (TimeUICommands.TIME_DATA, (measurement_data, output_data))))
         except mp.queues.Empty:
             last_acquisition = False
         # See if we need to output data
@@ -314,7 +313,7 @@ class TimeEnvironment(EnvironmentProcess):
                     acquisition_data, last_acquisition = self.queue_container.data_in_queue.get()
                     measurement_data = acquisition_data[self.measurement_channels]
                     output_data = acquisition_data[self.output_channels]
-                    self.queue_container.gui_update_queue.put((self.environment_name, ("time_data", (measurement_data, output_data))))
+                    self.queue_container.gui_update_queue.put((self.environment_name, (TimeUICommands.TIME_DATA, (measurement_data, output_data))))
                 self.shutdown()
                 return
         self.queue_container.environment_command_queue.put(self.environment_name, (GlobalCommands.START_ENVIRONMENT, None))
@@ -405,10 +404,10 @@ class TimeEnvironment(EnvironmentProcess):
         self.log("Shutting Down Time History Generation")
         self.queue_container.environment_command_queue.flush(self.environment_name)
         # Enable the volume controls
-        self.queue_container.gui_update_queue.put((self.environment_name, ("enable", "test_level_selector")))
-        self.queue_container.gui_update_queue.put((self.environment_name, ("enable", "repeat_signal_checkbox")))
-        self.queue_container.gui_update_queue.put((self.environment_name, ("enable", "start_test_button")))
-        self.queue_container.gui_update_queue.put((self.environment_name, ("disable", "stop_test_button")))
+        self.queue_container.gui_update_queue.put((self.environment_name, (TimeUICommands.ENABLE, "test_level_selector")))
+        self.queue_container.gui_update_queue.put((self.environment_name, (TimeUICommands.ENABLE, "repeat_signal_checkbox")))
+        self.queue_container.gui_update_queue.put((self.environment_name, (TimeUICommands.ENABLE, "start_test_button")))
+        self.queue_container.gui_update_queue.put((self.environment_name, (TimeUICommands.DISABLE, "stop_test_button")))
         self.startup = True
 
 
