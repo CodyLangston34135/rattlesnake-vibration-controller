@@ -1,3 +1,16 @@
+---
+numbering:
+  heading_2:
+    start: 10
+  figure:
+    enumerator: 10.%s
+  table:
+    enumerator: 10.%s
+  equation:
+    enumerator: 10.%s
+  code:
+    enumerator: 10.%s
+---
 # Virtual Control using SDYNPY System Objects
 
 (sec:sdynpy_hardware)=

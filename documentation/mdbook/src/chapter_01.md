@@ -10,6 +10,18 @@ authors:
   - name: Norman Hunter
     affiliation: Sandia National Laboratories
     email: nfhunte@sandia.gov
+numbering:
+  heading_1:
+    template: "Chapter %s"
+    start: 1
+  figure:
+    enumerator: 1.%s
+  table:
+    enumerator: 1.%s
+  equation:
+    enumerator: 1.%s
+  code:
+    enumerator: 1.%s
 ---
 
 Rattlesnake is a combined-environments, multiple input/multiple output control system for

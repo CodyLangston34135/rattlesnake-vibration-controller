@@ -1,3 +1,16 @@
+---
+numbering:
+  heading_2:
+    start: 8
+  figure:
+    enumerator: 8.%s
+  table:
+    enumerator: 8.%s
+  equation:
+    enumerator: 8.%s
+  code:
+    enumerator: 8.%s
+---
 # Virtual Control using State Space Matrices
 
 (sec:state_space_hardware)=

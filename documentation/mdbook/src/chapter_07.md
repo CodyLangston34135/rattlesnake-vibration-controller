@@ -1,3 +1,16 @@
+---
+numbering:
+  heading_2:
+    start: 7
+  figure:
+    enumerator: 7.%s
+  table:
+    enumerator: 7.%s
+  equation:
+    enumerator: 7.%s
+  code:
+    enumerator: 7.%s
+---
 # Data Physics 900-series Devices
 
 (sec:dp_900_hardware)=

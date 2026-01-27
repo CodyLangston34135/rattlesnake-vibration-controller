@@ -65,13 +65,17 @@ project:
     - file: mdbook/src/bibliography.md
     - file: mdbook/src/SUMMARY.md
   numbering:
-    headings: false
+    headings: true
+    heading_1:
+      continue: false
+    heading_2:
+      template: "Chapter %s"
     figure:
-      continue: true
+      continue: false
     table:
-      continue: true
+      continue: false
     equation:
-      continue: true
+      continue: false
   
 site:
   template: book-theme

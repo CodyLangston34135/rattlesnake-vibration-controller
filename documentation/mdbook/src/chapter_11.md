@@ -1,3 +1,16 @@
+---
+numbering:
+  heading_2:
+    start: 11
+  figure:
+    enumerator: 11.%s
+  table:
+    enumerator: 11.%s
+  equation:
+    enumerator: 11.%s
+  code:
+    enumerator: 11.%s
+---
 # Implementing New Hardware Devices with Rattlesnake
 
 :::{note}This chapter contains advanced Rattlesnake operations that require a reasonably good understanding of the Rattlesnake software architecture.  Understanding this chapter is not required to run the software successfully, and therefore this chapter can be skipped if the user is not interested in implementing a new hardware device.

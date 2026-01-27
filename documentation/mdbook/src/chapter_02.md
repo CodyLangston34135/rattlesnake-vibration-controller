@@ -1,3 +1,16 @@
+---
+numbering:
+  heading_2:
+    start: 2
+  figure:
+    enumerator: 2.%s
+  table:
+    enumerator: 2.%s
+  equation:
+    enumerator: 2.%s
+  code:
+    enumerator: 2.%s
+---
 # Acquiring and Running Rattlesnake
 
 (sec:acquiring_and_running_rattlesnake)=

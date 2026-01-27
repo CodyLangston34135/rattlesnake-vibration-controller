@@ -1,3 +1,16 @@
+---
+numbering:
+  heading_2:
+    start: 9
+  figure:
+    enumerator: 9.%s
+  table:
+    enumerator: 9.%s
+  equation:
+    enumerator: 9.%s
+  code:
+    enumerator: 9.%s
+---
 # Virtual Control using Finite Element Results in Exodus Files
 
 (sec:exodus_hardware)=

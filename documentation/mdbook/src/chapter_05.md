@@ -1,11 +1,24 @@
-# 5. LAN-XI Devices
+---
+numbering:
+  heading_2:
+    start: 5
+  figure:
+    enumerator: 5.%s
+  table:
+    enumerator: 5.%s
+  equation:
+    enumerator: 5.%s
+  code:
+    enumerator: 5.%s
+---
+# LAN-XI Devices
 
 (sec:lanxi_hardware)=
 # LAN-XI Devices
 
 Rattlesnake is able to run HBK LAN-XI devices using the hardware's [OpenAPI](https://www.bksv.com/en/instruments/daq-data-acquisition/lan-xi-daq-system/open-api).  Rattlesnake communicates with the LAN-XI hardware via Ethernet, so for best results, the computer's Ethernet card should be connected with the LAN-XI hardware rather than using a USB Ethernet dongle, which in the author's experience can lead to lower network speeds and more time required to pull data off the hardware.
 
-### Setting up the Channel Table for LAN-XI Devices <!--Section 5.1-->
+## Setting up the Channel Table for LAN-XI Devices <!--Section 5.1-->
 
 This section describes the process to set a channel table in Rattlesnake for the LAN-XI hardware.
     
@@ -21,7 +34,7 @@ The Coupling column in the channel table is used to specify the filter used in t
     
 Current Excitation Source is used to specify if a channel uses CCLD or not.  If CCLD is to be used on a given channel the Current Excitation Source column should contain `CCLD`.  If CCLD is not to be used for that channel, the column can be left blank.
 
-### Hardware Parametters <!--Section 5.2-->
+## Hardware Parametters <!--Section 5.2-->
 
 LAN-XI hardware devices have discrete sample rates, which are powers of 2 staring with 4096 samples per second.  The minimum sample rate of the generator is 16,384 Hz, so the output must be over-sampled if the acquisition sample rate is less than 16,384 samples per second.  Environments defined in Rattlesnake must be able to handle output oversampling when required by the hardware device.
     
@@ -32,15 +45,15 @@ For large channel count tests, Rattlesnake struggles to pull data off the acquis
 
 **Figure 5-2. LAN-XI data acquisition parameters.**
 
-### Implementation Details <!--Section 5.3-->
+## Implementation Details <!--Section 5.3-->
 
 This section contains details on the LAN-XI implementation in Rattlesnake, which may be helpful for users when diagnosing issues that arise in the controller.
 
-#### ReST API <!--Subsection 5.3.1-->
+### ReST API <!--Subsection 5.3.1-->
 
 Rattlesnake communicates with the LAN-XI using a ReST interface.  Rattlesnake sends and receives JSON packages that define state transitions in the hardware using HTTP commands.
 
-#### Setting up the LAN-XI <!--Subsection 5.3.2-->
+### Setting up the LAN-XI <!--Subsection 5.3.2-->
 
 The LAN-XI hardware is set up primarily by the Output process of the controller.  The LAN-XI hardware can be used in either single or multi-module mode.  It will generally take a while to set up the LAN-XI configuration.  Lights will flash on the LAN-XI hardware while the setup is occurring, and information will be printed to the command terminal that appears when Rattlesnake is run.  When the LAN-XI setup is completed, the statement `Data Acquisition Ready for Acquire` will be printed to the command terminal.  Do not start a test prior to seeing this message.
     
@@ -48,7 +61,7 @@ Various network issues and firewall settings can block or slow down data transfe
     
 It has been found that for larger channel count tests (typically three or more 11-card frames used simultaneously) that individual cards can hang during this setup process.  The authors currently do not know why this occurs, as the exact same setup configuration causes no issues with lower channel counts.  Cycling power on the hardware devices has been found to resolve this issue.
 
-#### Acquistion Processe <!--Subsection 5.3.3-->
+### Acquistion Processes <!--Subsection 5.3.3-->
 
 The LAN-XI interface used by Rattlesnake uses multiple processes to acquire data from the hardware.  When starting to acquire data, Rattlesnake starts a number of processes less than or equal to the maximum number of acquisition processes allowed on the `Data Acquisition Setup` tab.  Each process will generally handle multiple hardware modules, with each module having one socket over which the data communication occurs.  After all sockets are connected, the measurement is started.
     
@@ -56,19 +69,19 @@ The LAN-XI interface used by Rattlesnake uses multiple processes to acquire data
     
  When an acquisition activity ends, the Rattlesnake process will attempt to recover the LAN-XI subprocesses.  When all processes have been recovered, the LAN-XI interface will print `All processes recovered, ready for next acquire.` to the command terminal.  Periodically, one of these processes may not be recovered successfully, which will cause the acquisition process to hang.  It is currently unknown why this occurs.
 
-#### Decoding Acquisition Data <!--Subsection 5.3.4-->
+### Decoding Acquisition Data <!--Subsection 5.3.4-->
 
 Raw acquisition data is provided to the controller from the hardware as bytes that must be interpreted correctly to be meaningful.  A data stream from the hardware consists of messages transmitted sequentially.  The message header is always 28 bytes long and specifies what type of message is being transmitted as well as the total length of the message.  This then allows the socket reader to receive the rest of the message.  Message types read by the Rattlesnake can either be "interpretations" or "signals". Interpretation messages specify how the subsequent signal data is to be interpreted and are sent whenever a signal changes.  Interpretations provide an offset and a scale factor to apply to the raw acquisition data to create the physical measurements.  Signal messages carry the raw acquisition data.  Rattlesnake uses Kaitai Struct to decode the binary data stream into Python objects which are accessed by the controller.
 
-#### Encoding Output Data <!--Subsection 5.3.5-->
+### Encoding Output Data <!--Subsection 5.3.5-->
 
 Data is provided to the hardware for output in bytes as well.  LAN-XI hardware accepts output data as the 32-bit integers with only the upper 24 bits used.  Floating point signals that are desired to be output are divided by 10 and multiplied by 8,372,224.  These values are then truncated to integers and converted to bytes.  These bytes are then sent via socket communications to the generator on the LAN-XI module.
 
-#### Output Oversampling <!--Subsection 5.3.6-->
+### Output Oversampling <!--Subsection 5.3.6-->
 
 The generator on the LAN-XI module always runs at its full rate of 131,072 samples per second.  If the acquisition sample rate is equal to or greater than 16,384 samples per second, the LAN-XI hardware performs over-sampling automatically.  However, if the sample rate is less than 16,384, Rattlesnake must over-sample its output.  It is left to each environment within Rattlesnake to determine how to handle the oversampling of its output data.  For \ac{FFT}-based environments, this can be as simple as padding the FFT with zeros prior to creating the signal.  For time-based environments, more thought must be given to ensure signals are not made to be discontinuous by the up-sampling procedure.
 
-#### Starting Up and Running the LAN-XI Acquisition <!--Subsection 5.3.7-->
+### Starting Up and Running the LAN-XI Acquisition <!--Subsection 5.3.7-->
 
 When an acquisition is started, the LAN-XI will immediately start acquiring data.  Rattlesnake may take some time to set up all of the required network connections to the device, so there may be a delay between starting the acquisition and receiving data in the Rattlesnake software.  During this time, the buffer on the hardware will start to fill up.  Once Rattlesnake starts pulling data off the LAN-XI device, the buffer will generally empty, as Rattlesnake ideally can pull data off the device faster than it is acquired.  For each read, Rattlesnake will print the amount of time it took to read to the command terminal.  Initially, the value reported will be smaller than the `Time per Read` value that is specified on the `Data Acquisition Setup` tab, because the software will be pulling data off of the hardware buffer that has accumulated during the delay in starting up the measurement.  After the buffer is emptied, users should see that the value reported will hover around `Time per Read` value that is specified on the `Data Acquisition Setup` tab, because that is the amount of time it takes to fill the buffer enough for the next read.  The value may be lower or higher for any given read, but on average, it should be approximately equal to the `Time per Read` value.  For maximal controller responsiveness, we want the hardware buffer to be empty so we can react to new data as quickly as possible, so it is therefore a good practice to not start any environment until the time that it is taking to read data becomes approximately equal to the specified `Time per Read` value.
     

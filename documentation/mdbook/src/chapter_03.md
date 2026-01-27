@@ -1,3 +1,16 @@
+---
+numbering:
+  heading_2:
+    start: 3
+  figure:
+    enumerator: 3.%s
+  table:
+    enumerator: 3.%s
+  equation:
+    enumerator: 3.%s
+  code:
+    enumerator: 3.%s
+---
 # Using Rattlesnake
 
 (sec:using_rattlesnake)=

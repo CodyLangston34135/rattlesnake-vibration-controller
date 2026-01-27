@@ -1,3 +1,9 @@
+---
+numbering:
+  heading_1:
+    enumerator: 1.%s
+    template: "Section %s"
+---
 # Document Overview
 
 (sec:doc_overview)=

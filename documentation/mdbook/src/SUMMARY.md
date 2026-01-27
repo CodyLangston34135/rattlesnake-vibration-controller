@@ -1,7 +1,5 @@
 # Summary
 
-- @sec:glossary
-- @sec:notation
 - @sec:introduction
 
 -----------
@@ -45,5 +43,5 @@
 
 -----------
 
-<!-- [Bibliography](./bibliography.md)  # deprecated, see contributors.html#bibliography -->
-[Contributors ](./contributors.md)
+- @sec:glossary
+- @sec:notation

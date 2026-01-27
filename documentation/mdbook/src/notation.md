@@ -1,3 +1,7 @@
+---
+numbering:
+    headings: false
+---
 (sec:notation)=
 # Notation
 
