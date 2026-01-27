@@ -25,6 +25,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import re
+import sys
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
 
 # from glob import glob
 
@@ -32,7 +35,31 @@ from qtpy import QtWidgets, uic
 
 # files = glob('../src/rattlesnake/components/*.ui')
 files = [
-    "../src/rattlesnake/components/random_vibration_definition.ui",
+    dir_path + "/" + v
+    for v in [
+        "../src/rattlesnake/components/random_vibration_prediction.ui",
+        "../src/rattlesnake/components/modal_run.ui",
+        "../src/rattlesnake/components/modal_definition.ui",
+        "../src/rattlesnake/components/modal_acquisition_window.ui",
+        # "../src/rattlesnake/components/ip_manager.ui",
+        # "../src/rattlesnake/components/environment_selector.ui",
+        # "../src/rattlesnake/components/combined_environments_controller.ui",
+        # "../src/rattlesnake/components/control_select.ui",
+        "../src/rattlesnake/components/transient_run.ui",
+        "../src/rattlesnake/components/transient_prediction.ui",
+        "../src/rattlesnake/components/transient_definition.ui",
+        "../src/rattlesnake/components/transformation_matrices.ui",
+        "../src/rattlesnake/components/time_run.ui",
+        "../src/rattlesnake/components/time_definition.ui",
+        "../src/rattlesnake/components/system_identification.ui",
+        "../src/rattlesnake/components/sine_run.ui",
+        "../src/rattlesnake/components/sine_prediction.ui",
+        "../src/rattlesnake/components/random_vibration_definition.ui",
+        "../src/rattlesnake/components/sine_sweep_table.ui",
+        "../src/rattlesnake/components/sine_filter_explorer.ui",
+        "../src/rattlesnake/components/sine_definition.ui",
+        "../src/rattlesnake/components/random_vibration_run.ui",
+    ]
 ]
 
 
@@ -265,10 +292,14 @@ class UIAnalyzer(QtWidgets.QMainWindow):
         return this_markdown
 
 
+app = QtWidgets.QApplication(sys.argv)
+
 for file in files:
     print(f"Analyzing {file}")
     ui = UIAnalyzer(file)
     markdown_text = ui.generate_markdown()
     filename = os.path.splitext(os.path.split(file)[1])[0]
-    with open(f"mdbook/src/{filename}_doc.md", "w", encoding='utf-8') as f:
+    with open(
+        dir_path + "/" + f"mdbook/src/_generated/{filename}_doc.md", "w", encoding="utf-8"
+    ) as f:
         f.write(markdown_text)
