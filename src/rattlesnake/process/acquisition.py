@@ -482,9 +482,6 @@ def acquisition_process(
     queue_container : QueueContainer
         A container containing the queues used to communicate between
         controller processes
-    environments : list
-        A list of ``(ControlType,environment_name)`` pairs that define the
-        environments in the controller.
 
     """
 

@@ -1,4 +1,5 @@
 from .utilities import GlobalCommands, VerboseMessageQueue, QueueContainer, log_file_task
+from .process.controller import controller_process
 from .process.acquisition import acquisition_process
 from .process.output import output_process
 from .process.streaming import StreamType, StreamMetadata, streaming_process
@@ -6,16 +7,25 @@ from .hardware.abstract_hardware import HardwareMetadata
 from .environment.abstract_environment import EnvironmentMetadata
 from .environment_manager import EnvironmentManager
 import multiprocessing as mp
+from enum import Enum
 from datetime import datetime
 from typing import List
 
 TASK_NAME = "Rattlesnake"
 
 
+class RattlesnakeState(Enum):
+    INIT = 0
+    HARDWARE_STORE = 1
+    ENVIRONMENT_STORE = 2
+    ACQUISITION_START = 3
+    OUTPUT_START = 4
+
+
 class Rattlesnake:
     def __init__(self):
         # Initialize values for checking state
-        self.shutdown_event = mp.Event()
+        self.state = mp.Value("i", RattlesnakeState.INIT.value)
         self.acquisition_active = mp.Value("i", 0)
         self.output_active = mp.Value("i", 0)
 
@@ -24,15 +34,12 @@ class Rattlesnake:
         self.log_file_process = mp.Process()
         self.log_file_process = mp.Process(
             target=log_file_task,
-            args=(
-                log_file_queue,
-                self.shutdown_event,
-            ),
+            args=(log_file_queue),
         )
         self.log_file_process.start()
 
         # Start up command queues and processes
-        controller_command_queue = VerboseMessageQueue(log_file_queue, "Controller Communication Queue")
+        controller_command_queue = VerboseMessageQueue(log_file_queue, "Controller Command Queue")
         acquisition_command_queue = VerboseMessageQueue(log_file_queue, "Acquisition Command Queue")
         output_command_queue = VerboseMessageQueue(log_file_queue, "Output Command Queue")
         streaming_command_queue = VerboseMessageQueue(log_file_queue, "Streaming Command Queue")
@@ -75,6 +82,7 @@ class Rattlesnake:
         )
 
         # Start up acquisition, output, streaming processes
+        self.controller_proc = mp.Process(target=controller_process, args=(self.queue_container,))
         self.acquisition_proc = mp.Process(
             target=acquisition_process,
             args=(self.queue_container, self.acquisition_active),
@@ -88,35 +96,84 @@ class Rattlesnake:
         # Set up environment manager for future environment processes
         self.environment_manager = EnvironmentManager(self.queue_container)
 
+        self.hardware_metadata = None
+        self.environment_metadata_list = []
+        self.stream_metadata = None
+        self.profile_metadata = None
+
     def set_hardware(self, hardware_metadata: HardwareMetadata) -> None:
+        # Check for valid states
+        if not self.state == RattlesnakeState.INIT or self.state == RattlesnakeState.ENVIRONMENT_STORE:
+            raise RuntimeError(f"Invalid state for this setting hardware: {self.state}")
+
         valid_hardware = hardware_metadata.validate()
         if not valid_hardware:
             raise TypeError("Rattlesnake.set_hardware requires a valid HardwareMetadata class")
 
+        self.log("Setting Hardware")
         self.hardware_metadata = hardware_metadata
 
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata))
         self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata))
 
+        self.state = RattlesnakeState.HARDWARE_STORE
+
     def set_environments(self, environment_metadata_list: List[EnvironmentMetadata]):
+        # Check for valid states
+        if self.state != RattlesnakeState.HARDWARE_STORE or self.state != RattlesnakeState.ENVIRONMENT_STORE:
+            raise RuntimeError(f"Invalid state for setting environment: {self.state}")
+
+        self.log("Setting Environment")
+
         self.environment_metadata_list = self.environment_manager.initialize_environments(
             environment_metadata_list, self.acquisition_active, self.output_active
         )
 
-    def arm_test(self, stream_metadata: StreamMetadata):
-        self.queue_container.controller_communication_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, None))
+    def set_stream(self, stream_metadata: StreamMetadata):
+        valid_stream = stream_metadata.validate()
+        if not valid_stream:
+            raise TypeError("Rattlesnake.set_stream requires a valid StreamMetadata class")
 
-        if stream_metadata.stream_type != StreamType.NO_STREAM:
+        self.stream_metadata = stream_metadata
+
+    def set_profile(self, profile_metadata):
+        pass
+
+    def start_acquisition(self):
+        # Check for basic issues
+        if self.state != RattlesnakeState.ENVIRONMENT_STORE or self.state != RattlesnakeState.OUTPUT_START:
+            raise RuntimeError(f"Invalid state for starting acquisition: {self.state}")
+        if not isinstance(self.stream_metadata, StreamMetadata):
+            raise TypeError(f"Stream metadata must be defined before arming data acquisition")
+
+        self.log("Arming Test Hardware")
+        self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, None))
+
+        if self.stream_metadata.stream_type != StreamType.NO_STREAM:
             self.queue_container.streaming_command_queue.put(
                 TASK_NAME,
-                (GlobalCommands.INITIALIZE_STREAMING, (stream_metadata.stream_file, self.hardware_metadata, self.environment_metadata_list)),
+                (GlobalCommands.INITIALIZE_STREAMING, (self.stream_metadata.stream_file, self.hardware_metadata, self.environment_metadata_list)),
             )
 
-        if stream_metadata.stream_type == StreamType.STREAM_IMMEDIATELY:
-            self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.START_STREAMING, None))
+        if self.stream_metadata.stream_type == StreamType.STREAM_IMMEDIATELY:
+            self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.START_STREAMING, None))
+
+    def stop_acquisition(self):
+        self.log("Disarming Test Hardware")
+        for metadata in self.environment_metadata_list:
+            self.queue_container.controller_command_queue.put(
+                TASK_NAME,
+            )
+        self.queue_container.controller_communication_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))
 
     def shutdown(self):
         # Close out of acquisition, output, streaming process
+        self.queue_container.log_file_queue.put(f"{datetime.now()}: Joining Controller Process\n")
+        self.controller_proc.join(timeout=5)
+        if self.controller_proc.is_alive():
+            self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Controller Process\n")
+            self.controller_proc.terminate()
+            self.controller_proc.join()
         self.queue_container.log_file_queue.put(f"{datetime.now()}: Joining Acquisition Process\n")
         self.acquisition_proc.join(timeout=5)
         if self.acquisition_proc.is_alive():
@@ -143,3 +200,14 @@ class Rattlesnake:
         self.queue_container.log_file_queue.put("{:}: Joining Log File Process\n".format(datetime.now()))
         self.queue_container.log_file_queue.put(GlobalCommands.QUIT)
         self.log_file_process.join()
+
+    def log(self, string):
+        """Pass a message to the log_file_queue along with date/time and task name
+
+        Parameters
+        ----------
+        string : str
+            Message that will be written to the queue
+
+        """
+        self.queue_container.log_file_queue.put(f"{datetime.now()}: {TASK_NAME} -- {string}\n")

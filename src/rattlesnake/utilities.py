@@ -8,22 +8,22 @@ from typing import Dict
 
 
 class GlobalCommands(Enum):
-    QUIT = 0
-    INITIALIZE_HARDWARE = 1
-    RUN_HARDWARE = 2
-    STOP_HARDWARE = 3
-    INITIALIZE_ENVIRONMENT = 4
-    START_ENVIRONMENT = 5
-    STOP_ENVIRONMENT = 6
-    INITIALIZE_STREAMING = 7
-    CREATE_NEW_STREAM = 8
-    START_STREAMING = 9
-    STREAMING_DATA = 10
-    STOP_STREAMING = 11
-    FINALIZE_STREAMING = 12
+    QUIT = 0  # Stop individual processes
+    INITIALIZE_HARDWARE = 1  # Store hardware metadata to processes
+    RUN_HARDWARE = 2  # Start running acquisition/output process
+    STOP_HARDWARE = 3  # Stops running acquisition/output process
+    INITIALIZE_ENVIRONMENT = 4  # Stores metadata to processes
+    START_ENVIRONMENT = 5  # Tells output to start that environment
+    STOP_ENVIRONMENT = 6  # Tells output to stop that environment
+    INITIALIZE_STREAMING = 7  # Creates stream file to store to
+    CREATE_NEW_STREAM = 8  # Create new stream of data in file
+    START_STREAMING = 9  # Acquisition sends data to stream process
+    STREAMING_DATA = 10  # Continue storing data
+    STOP_STREAMING = 11  # Acquisition stops sending data to stream process
+    FINALIZE_STREAMING = 12  # Close out of stream file
 
 
-def log_file_task(queue: mp.Queue, shutdown_event):
+def log_file_task(queue: mp.Queue):
     """A multiprocessing function that collects logging data and writes to file
 
     Parameters
@@ -32,7 +32,7 @@ def log_file_task(queue: mp.Queue, shutdown_event):
         The multiprocessing queue to collect logging messages from
     """
     with open("Rattlesnake.log", "w") as f:
-        while not shutdown_event.is_set():
+        while True:
             output = queue.get()
             if output == GlobalCommands.QUIT:
                 f.write("Program quitting, logging terminated.")
@@ -185,7 +185,7 @@ class QueueContainer:
 
     def __init__(
         self,
-        controller_communication_queue: VerboseMessageQueue,
+        controller_command_queue: VerboseMessageQueue,
         acquisition_command_queue: VerboseMessageQueue,
         output_command_queue: VerboseMessageQueue,
         streaming_command_queue: VerboseMessageQueue,
@@ -204,7 +204,7 @@ class QueueContainer:
 
         Parameters
         ----------
-        controller_communication_queue : VerboseMessageQueue
+        controller_command_queue : VerboseMessageQueue
             Queue that is read by the controller for global controller commands
         acquisition_command_queue : VerboseMessageQueue
             Queue that is read by the acquisition subtask for acquisition commands
@@ -240,7 +240,7 @@ class QueueContainer:
             the controller to generate in this queue.
 
         """
-        self.controller_communication_queue = controller_communication_queue
+        self.controller_command_queue = controller_command_queue
         self.acquisition_command_queue = acquisition_command_queue
         self.output_command_queue = output_command_queue
         self.streaming_command_queue = streaming_command_queue

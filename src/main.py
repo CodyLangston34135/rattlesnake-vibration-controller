@@ -3,6 +3,7 @@ from rattlesnake.hardware.hardware_utilities import Channel
 from rattlesnake.hardware.nidqaqmx import NIDAQmxMetadata, TaskTrigger
 from rattlesnake.environment.time_environment import TimeMetadata
 from rattlesnake.user_interface.headless_ui import HeadlessUi
+from rattlesnake.process.streaming import StreamType, StreamMetadata
 import sys
 import numpy as np
 from qtpy import QtWidgets
@@ -31,6 +32,8 @@ def main():
     hardware_metadata.time_per_write = 0.25
     hardware_metadata.task_trigger = TaskTrigger.INTERNAL
 
+    rattlesnake.set_hardware(hardware_metadata)
+
     envrionment_metadata = TimeMetadata("Time Environment 1")
     envrionment_metadata.channel_list = channel_list
     envrionment_metadata.sample_rate = 1000
@@ -38,8 +41,14 @@ def main():
     envrionment_metadata.cancel_rampdown_time = 500
     envrionment_metadata_list = [envrionment_metadata]
 
-    rattlesnake.set_hardware(hardware_metadata)
     rattlesnake.set_environments(envrionment_metadata_list)
+
+    streaming_metadata = StreamMetadata()
+    streaming_metadata.stream_type = StreamType.NO_STREAM
+    streaming_metadata.stream_file = None
+    streaming_metadata.test_level = None
+
+    rattlesnake.arm_test(streaming_metadata)
 
     app = QtWidgets.QApplication(sys.argv)
     _ = HeadlessUi(rattlesnake.queue_container, rattlesnake.environment_metadata_list, "Dark")
