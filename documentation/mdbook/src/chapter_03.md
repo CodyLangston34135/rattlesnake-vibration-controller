@@ -20,14 +20,12 @@ This chapter will describe how to use Rattlesnake through its graphical user int
 
 :::{figure} figures/Rattlesnake_Main_GUI_Combined_Environments.png
 :label: fig:rattlesnake_main_gui_combined_environments
-:alt: A Rattlesnake test including combined environments capabilties 
 :align: center
 Rattlesnake GUI tabs when running a combined environments test with an environment that requires a system identification.
 :::
 
 :::{figure} figures/Rattlesnake_Main_GUI_Time_Generation.png
 :label: fig:rattlesnake_main_gui_time_generation
-:alt: A Rattlesnake test not including combined environments or system identification.
 :align: center
 Rattlesnake GUI tabs when running a single environment with no system identification phase.
 :::
@@ -42,7 +40,6 @@ When Rattlesnake is opened, the first GUI window that the user will see allows t
 
 :::{figure} figures/environment_selection.png
 :label: fig:environment_selection
-:alt: Environment Selection Dialog
 :align: center
 Initial Rattlesnake dialog to select the type of control that will be run.
 :::
@@ -55,7 +52,6 @@ The `Data Acquisition Setup` tab of the Rattlesnake GUI specifies the global tes
 
 :::{figure} figures/data_acquisition_setup.png
 :label: fig:data_acquisition_setup
-:alt: Data Acquisition Setup Tab
 :align: center
 Data Acqisition Setup tab in the Rattlesnake Controller where the Channel Table, Environment Table, and Data Acquisition Parameters are specified.
 :::
@@ -70,7 +66,6 @@ In general, for a given test there will be a set of excitation devices that use 
 
 :::{figure} figures/lanxi_source_tee_labelled.png
 :label: fig:lanxi_source_tee_labelled
-:alt: Output channel setup
 :align: center
 Output channels teed to acquisition channels so they can be read by the controller.
 :::
@@ -131,7 +126,6 @@ With the Data Acquisition Settings specified in the GUI, the Data Acquisition ca
 
 :::{figure} figures/data_acquisition_setup_tab.png
 :label: fig:data_acquisition_setup_tab
-:alt: Completed Data Acquisition Setup
 :align: center
 Example of a completed `Data Acquisition Setup` tab with three response channels and one output channel.
 :::
@@ -143,7 +137,6 @@ The `Environment Definition` tab is the second tab in the Rattlesnake software. 
 
 :::{figure} figures/environment_definition_subtabs.png
 :label: fig:environment_definition_subtabs
-:alt: Sub-tabs for environments
 :align: center
 Sub-tabs for environments `A` and `B` in the `Environment Definition` tab.
 :::
@@ -152,13 +145,13 @@ Different environment types will have different parameters that can be set.  See
 
 When all environments are defined, the `Initialize Environments` button can be pressed to proceed to the next portion of the controller.
 
+(sec:using_rattlesnake_system_identification)=
 ## System Identification
 
 With the environments defined, the controller proceeds to the `System Identification` tab if required by any environment, shown in @fig:system_identification.  During this phase of the controller, the controller will develop relationships between the excitation signals and the responses of the test article to those excitation signals.  It will also make a measurement of the noise floor of the test.
 
 :::{figure} figures/system_identification.png
 :label: fig:system_identification
-:alt: System Identification Tab
 :align: center
 System identification tab showing various signals and spectral quantities that can be used to evaluate the test.
 :::
@@ -167,37 +160,82 @@ Not all environment types will require a system identification.  For environment
 
 There will be one sub-tab for each environment that requires a System Identification.  System identification must be run for each sub-tab before the test can be run.  When system identification is performed, the software will first perform a noise floor measurement, where all channels are recorded, but no excitation signal is provided.  After the noise floor calculation completes, the system identification will begin.
 
-The `System Identification` tab has been significantly overhauled since the previous version of controller.  The system identification now has a number of dedicated parameters on its tab that the user can select.  These are:
+The `System Identification` tab has been significantly overhauled since the initial version of controller.  The system identification now has a number of dedicated parameters on its tab that the user can select.  These are:
 
-* **Samples per Frame** The number of samples used in each measurement frame.
-* **Averaging Type** The type of averaging used to compute the spectral quantities.  Linear averaging weights each measurement frame equally.  Exponential averaging weights more recent frames more heavily.
-* **Noise Averages** The number of averages used in the noise characterization.
-* **System ID Averages** The number of averages used in the System Identification characterization.
-* **Averaging Coefficient** If Exponential Averaging is used, this is the weighting of the most recent frame compared to the weighting of the previous frames.  If the averaging coefficient is $\alpha$, then the most recent frame will be weighted $\alpha$, the frame before that will be weighted $\alpha(1-\alpha)$, the frame before that will be $\alpha(1-\alpha)^2$, etc.
-* **Estimator** The estimator used to compute transfer functions between voltage signals and responses.
-* **Level** The RMS voltage level used for the system identification
-* **Level Ramp Time** The startup and shutdown time of the system identification.
+* **Samples per Frame** Samples per measurement frame used in the system identification.  Some environments force system identification to use the same frame size as the signal processing performed in the environment.  If this field cannot be edited here, then check the Environment Definition tab for a similar property.
+* **Averaging Type** Type of averaging used in the system identification.  Linear averaging weights each measurement frame equally.  Exponential averaging treats more recent averages with a higher weight.
+* **Noise Averages** Number of measurement frames to acquire to analyze the noise level of the test.
+* **System ID Averages** Number of measurement frames to acquire to identify the system and compute transfer functions.
+* **Averaging Coefficient** Averaging coefficient used to weight the most recent measurement frame if exponential averaging is used.
+* **Estimator** The estimator to use to compute transfer functions when performing system identification.
+* **Level** Root-mean-square voltage level to play to the shakers when computing system identification
+* **Ramp Time** Time to ramp the system identification voltage to the test level.
 
 The new system identification tab also gives the option to select the signal to use for system identification.
 
-* **Signal Type** The type of signal that will be used for System Identification.  This can be Random, Burst Random, Chirp, or Pseudorandom.  Random is the most flexible, but requires a Hann window which can distort data.  Burst Random does not require a window, but the response signal must decay within the measurement frame.  Chirp and Pseudorandom do not require windows, and do not need to decay, but they are only useful for environments with a single excitation device.
-* **Window** The window function used for the system identification signal
-* **Overlap** The overlap percentage between measurement frames used in System Identification
-* **On Fraction** The fraction of the frame that the Burst Random signal is active for
-* **Pretrigger** The fraction of the frame before the Burst Random signal starts
-* **Ramp Fraction** The fraction of the Burst Random On Fraction that is used to ramp up and ramp down.
+* **Signal Type** Excitation used for system identification.  Random and Burst random excitation are suitable for MIMO control problems.  Chirp and Pseudorandom should only be used for single-shaker excitation.
+* **Window** Window function to apply to the data when computing transfer functions during system identification.
+* **Overlap** Overlap to use between measurement frames when computing transfer functions.
+* **On Fraction** Fraction of the measurement frame that the burst random excitation is active for.
+* **Pretrigger** Percentage of the measurement frame that is before the burst random excitation.
+* **Ramp Fraction** Percentage of the burst that is used to ramp from zero to the test level.
+* **Bandwidth Minimum Frequency** The lowest frequency content in the excitation signal used in system identification.
+* **Bandwidth Maximum Frequency** The highest frequency content in the excitation signal used in system identification.
 
-The system identification phase can stream time data to disk by selecting a streaming file and clicking the `Stream Time Data` checkbox.  If streaming time data, the noise measurement will be saved to the variable name `time_data` and the system identification measurement will be saved to the variable name `time_data_1` (see @sec:using_rattlesnake_output_files for more information on the structure of this file).  The spectral data from the system identification can be saved to disk by clicking the `Save System Identification Data` button and selecting the file.
+The system identification phase can stream time data to disk by selecting a streaming file and clicking the `Stream Time Data` checkbox.  If streaming time data, the noise measurement will be saved to the variable name `time_data` and the system identification measurement will be saved to the variable name `time_data_1` (see @sec:using_rattlesnake_output_files for more information on the structure of this file).
+
+* **Stream Time Data** If checked, time data from system identification will be streamed to disk.
+* **Select File...** Opens a file dialog to select the file to which the system identification data will be streamed.
+* **Streaming File:** File to which system identification data will be streamed.
+
+The spectral data from the system identification can be saved to disk by clicking the `Save System Identification Data` button and selecting the file.  When loading system identification data, one must be careful that the loaded data has the same control and excitation degrees of freedom as the current environment, and that they are in the same order.  Otherwise the channels in the loaded data will not map correctly to the current environment.
+
+* **Save System Identification Data** Save system identification spectral data to a file on the disk.
+* **Load System Identification Data** Loads system identification data from a file on the disk.  System identification being loaded must contain the same control and excitation degrees of freedom in the same order as the current environment.
 
 To run the system identification, there are buttons to Preview the Noise or System ID characterizations.  When ready, the `Start` button can be clicked.  It will run a Noise Characterization for the specified number of `Noise Averages`, and then subsequently run the System Identification characterization for the specified number of `System ID Averages`.  If the user wishes to run either the noise or system identification phases continuously, they can click the `Preview Noise` or `Preview System ID` buttons.
 
+
+* **Preview Noise** Starts the noise identification of the system identification process in preview mode.  No excitation will be applied to the shakers.  The preview will continue until stopped manually.
+* **Preview System Identification** Starts the system identification process in preview mode with excitation applied to the shakers.  The preview will continue until stopped manually.
+* **Start** Starts the full system identification process, including noise characterization and transfer function computation.  Each step will stop automatically when the requested number of averages has been acquired.
+* **Stop** Manually stops the system identification process.
+
+As the system identification proceeds, the displays in the `Progress` portion of the tab will be updated.
+
+* **Current Averages** Current number of system identification averages that have been acquired.
+* **Total Averages** Total number of system identification averages that will be acquired.
+* **System Identification Progress Bar** Graphically displays the system identification's progress for the current noise or system identification step.
+
 Data will be plotted as the system identification proceeds.  The signals to visualize can be selected by clicking one or more of the `References` or `Responses` channels on the right side of the screen.  In the bottom right corner, there are options to show or hide various quantities of interest.  The `System Identification` tab can show the following:
 
-* **Time Data** Raw Time Data as it is streamed from the data acquisition system.  Only data used in spectral computations is shown, so the users shouldn't see any data that is ramping up or down as if the controller is starting or stopping.
-* **Transfer Function** These are the transfer functions between the References (e.g. voltage signals) and the Responses (e.g. Accelerations or Forces).  The controller will use these transfer functions to develop excitation signals that will be played to the shaker to achieve a desired response.
-* **Impulse Response**  The impulse response of the system can be visualized.  This can be helpful to debug issues with transient control.
-* **Coherence and Conditioning** Coherence will be displayed so the user can judge how satisfactory the input/output relationships that are developed are.  If coherence is poor, it could suggest that the controller won't be able to control the structure properly.  The condition number of the Transfer Function Matrix is also displayed.  This can be useful to determine what level of regularization a control law might need to implement.
-* **Levels** The autopower spectral density of each signal will be displayed both for the system identification as well as for the noise characterization.  This can help identify if the system identification is high enough out of the noise floor.
+* **Time Data Plot** Displays the most recently acquired measurement frames for the selected reference and response channels.
+* **Transfer Function Plot** Displays the current estimation of the system transfer functions for the currently selected reference and response channels.
+* **Impulse Response Plot** Displays the current estimation of the impulse response function for the currently selected reference and response channels.
+* **Coherence and Condition Number Plots** Displays the multiple coherence for the currently selected response channel, and the condition number for each frequency line in the transfer function matrix.
+* **Levels Plots** Displays the levels of the selected response and reference channels compared to the noise level on that measurement.
+* **Kurtosis Plot** Displays the kurtosis of all channels in the system identification.  A kurtosis of 3 suggests gaussian measurements.  A value far from 3 suggests some nonlinear effect is distorting the gaussian excitation signals.
+
+In the `References` section of the window, the user can select the reference channels to visualize:
+
+* **References** Select the reference channels to visualize on the plots on the System Identification tab.
+* **All** Visualize all references.
+* **None** Visualize no references.
+
+In the `Responses` section of the window, the user can select the response channels to visualize:
+
+* **Responses** Select the response channels to visualize on the plots on the System Identification tab.
+* **All** Visualize all responses.
+* **None** Visualize no responses.
+
+In the `Show` section of the window, the user can select which plots are visible and which are hidden.
+
+* **Time Data** Check to show time data during the system identification.
+* **Transfer Function** Check to show transfer functions in the system identification.
+* **Impulse Response** Check to show the impulse response function, which is the IFFT of the transfer function.
+* **Coherence and Conditioning** Check to show multiple coherence and condition number of the transfer function matrix.
+* **Levels** Check to show levels for system identification and noise characterization
+* **Kurtosis** Check to show kurtosis of response and reference channels.
 
 ## Test Predictions
 
@@ -214,17 +252,17 @@ For each event, the following parameters are defined:
 * **Timestamp (s)** The time in seconds after the timeline has started that the event will be executed.
 * **Environment** The environment in which the event will occur.
 * **Operation** The operation that will occur to the event.  Each environment defines its own set of operations that can be executed through the test profile interface.
-* **Data** Any additional data that the operation requires.  For example, if a ``Set Test Level'' event is chosen, the Data field should specify the value that the test level is set to.
+* **Data** Any additional data that the operation requires.  For example, if a "Set Test Level" event is chosen, the Data field should specify the value that the test level is set to.
 
 @fig:test_profile shows an example of a test profile that ramps up the test level of environment `A` from -6 to 0 dB, and then subsequently starts environment `B`.
 
 :::{figure} figures/test_profile.png
 :label: fig:test_profile
-:alt: Test Profile Tab
 :align: center
 Example test profile showing a ramp up of test level for environment `A` and subsequently starting environment `B`.
 :::
 
+(sec:using_rattlesnake_run_test)=
 ## Run Test
 
 The `Run Test` tab is where Rattlesnake finally runs the test.  This tab again has sub-tabs for the different environments in the test, however these sub-tabs will not be enabled until the data acquisition system is armed.
@@ -247,7 +285,6 @@ Alternatively, the user can start or stop the test profile by clicking on the `S
 
 :::{figure} figures/run_test_tab.png
 :label: fig:run_test_tab
-:alt: Run Test Tab
 :align: center
 Run Test Tab.
 :::
@@ -255,7 +292,7 @@ Run Test Tab.
 (sec:using_rattlesnake_output_files)=
 ## Rattlesnake Output Files <!--Section 3.8-->
 
-After data is acquired, the user may wish to analyze or plot the data acquired for a given test report.  Rattlesnake stores data in a self-documenting netCDF file {{#cite unidata2019_netcdf}}, which can be read by multiple platforms.  The output file is described as self-documenting because it contains all parameters necessary to reconstruct a given test using the Rattlesnake controller.  Any parameter that is set by the user in the GUI is stored to the netCDF file.
+After data is acquired, the user may wish to analyze or plot the data acquired for a given test report.  Rattlesnake stores data in a self-documenting netCDF file [@unidata2019_netcdf], which can be read by multiple platforms.  The output file is described as self-documenting because it contains all parameters necessary to reconstruct a given test using the Rattlesnake controller.  Any parameter that is set by the user in the GUI is stored to the netCDF file.
 
 A full description of the netCDF file format is out of this document's scope, but the important points are briefly described here.  NetCDF files have a number of data structures.  Variables are multi-dimensional arrays of data.  Dimensions describe the axes of the variable arrays.  Attributes are used to store small data such as scalars or 1D arrays.  NetCDF files can be separated into different groups, and each group can have its own variables, dimensions, and attributes.
 
@@ -474,7 +511,7 @@ Groups:
        .
 ```
 
-Attributes, dimensions, and other metadata can be read into Matlab using the `ncinfo` function.  Variables information must be read using the \inlineCode{ncread} function.
+Attributes, dimensions, and other metadata can be read into Matlab using the `ncinfo` function.  Variables information must be read using the `ncread` function.
 
 ```matlap
 >>> finfo = ncinfo('path/to/netcdf/file.nc4')
@@ -540,7 +577,6 @@ To aid with understanding the test levels and headroom available for the sensors
 
 :::{figure} figures/channel_monitor.png
 :label: fig:channel_monitor
-:alt: Channel Monitor
 :align: center
 View of the Channel Monitor dialog box showing several channels that have reached the "warning" level (highlighted yellow) and one channel that has reached the "abort" level (highlighted red).
 :::

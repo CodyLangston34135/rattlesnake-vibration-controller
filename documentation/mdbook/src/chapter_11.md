@@ -25,7 +25,6 @@ numbering:
 
 :::{figure} figures/hardware_flowchart.png
 :label: fig:hardware_flowchart
-:alt: Hardware Flowchart
 :align: center
 Flowchart of Hardware Operations. Note that each process will proceed at its own pace, so it is generally not possible to ensure that an Acquisition function is called before or after an Output function. The only place where order of operations is enforced is at startup, where the Output `start` function finishes before the Acquisition `start` function is called.
 :::

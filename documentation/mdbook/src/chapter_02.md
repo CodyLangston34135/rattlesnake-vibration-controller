@@ -32,11 +32,11 @@ Running Rattlesnake from an executable is as simple as running any other program
 
 As with any other executable program, users may create links to the program to put on the desktop or in the start menu to make accessing the program easier.
 
-It may be beneficial to run the executable through the command terminal, as otherwise if an error occurs in the program, the program may simply disappear without the user being aware of any errors.  When running through the command terminal, the user will be able to view any error messages if the program unexpectedly exits, which will be useful in diagnosing the issue if submitted to the issue tracker in the [GitHub Issues](https://github.com/sandialabs/rattlesnake-vibration-controller/issues) (See [Obtaining Support](#obtaining-support) for more information).
+It may be beneficial to run the executable through the command terminal, as otherwise if an error occurs in the program, the program may simply disappear without the user being aware of any errors.  When running through the command terminal, the user will be able to view any error messages if the program unexpectedly exits, which will be useful in diagnosing the issue if submitted to the issue tracker in the [GitHub Issues](https://github.com/sandialabs/rattlesnake-vibration-controller/issues) (See [Obtaining Support](@sec:obtaining_support) for more information).
 
 ## Running from the Python script
 
-The alternative to running the Rattlesnake as an executable is to run it as a Python script, which users familiar with the Python programming language should be accustomed to.  This approach provides the user the ability to modify code directly without needing to recompile an executable.  Additionally, if the user plans on developing custom control laws for the Rattlesnake (see, e.g., @sec:mimo_random_control_laws for more information), they will generally require a Python ecosystem installed on their computer, so the running of the code as a script is not a great burden.
+The alternative to running the Rattlesnake as an executable is to run it as a Python script, which users familiar with the Python programming language should be accustomed to.  This approach provides the user the ability to modify code directly without needing to recompile an executable.  Additionally, if the user plans on developing custom control laws for the Rattlesnake (see, e.g., @sec:rattlesnake_environments_custom_control_law for more information), they will generally require a Python ecosystem installed on their computer, so the running of the code as a script is not a great burden.
 
 ### Setting up a Python Ecosystem
 
@@ -74,7 +74,6 @@ Many users will find it more comfortable to forgo the command line and launch Ra
 
 :::{figure} figures/spyder_run_configuration.png
 :label: fig:spyder_configuration
-:alt: Spyder run configuration for executing Rattlesnake
 :align: center
 
 Spyder run configuration showing execution in an external system terminal as well as allowing interaction with the Python console after execution.
@@ -86,6 +85,7 @@ Rattlesnake is a process-heavy software; it spawns processes for each environmen
    
 While the exact computational requirements will depend on the channel count of the test and size of the control computations, the authors have had success using a 6-core processor with 32 GB RAM for multi-environment control approximately 20 control channels and 4 outputs.  For a 200 acquisition channel test with 50 control channels and 8 outputs, the authors needed to upgrade to a 16 core, 32 GB RAM computer.
 
+(sec:obtaining_support)=
 ## Obtaining Support
 
 Rattlesnake was developed by a small team as a research tool, and as such will not be as polished as commercial vibration software.  Therefore, it should be expected that bugs and errors will occur from time to time.  If a bug occurs, please report it by creating a new issue in the [GitHub issues board](https://github.com/sandialabs/rattlesnake-vibration-controller/issues).  This will notify the development team of the issue and they can work to solve it.  If users have a feature request, these can also be submitted to the [GitHub issues board](https://github.com/sandialabs/rattlesnake-vibration-controller/issues).

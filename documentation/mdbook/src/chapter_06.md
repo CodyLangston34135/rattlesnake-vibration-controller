@@ -64,7 +64,6 @@ If issues with the Quattro devices are encountered, users can look at the Rattle
 
 :::{figure} figures/quattro_issue_command_line.png
 :label: fig:quattro_issue_command_line
-:alt: Example Quattro Issue shown on the command line
 :align: center
 An example issue where the Quattro fails to connect.
 :::

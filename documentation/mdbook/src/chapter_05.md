@@ -26,7 +26,6 @@ LAN-XI devices are defined by an IP address, which is displayed on each module w
     
 :::{figure} figures/lanxi_physical_device.png
 :label: fig:lanxi_physical_device
-:alt: LAN-XI Physical Device
 :align: center
 Physical Channel and Feedback Channels for LAN-XI modules.  The left device would have the Physical Device 169.254.113.201 and Physical Channels 1, 2, 3, 4, 5, and 6.  The right device would have Physical Device 169.254.211.152 and Physical Channels 1, 2, 3, and 4.  The right device would also have Feedback Device 169.254.211.152 and Feedback Channels 1 and 2
 :::
@@ -53,7 +52,6 @@ For large channel count tests, Rattlesnake struggles to pull data off the acquis
 
 :::{figure} figures/lanxi_data_acquisition_parameters.png
 :label: fig:lanxi_data_acquisition_parameters
-:alt: LAN-XI Data Acquisition Parameters
 :align: center
 LAN-XI data acquisition parameters.
 :::
@@ -92,7 +90,7 @@ Data is provided to the hardware for output in bytes as well.  LAN-XI hardware a
 
 ### Output Oversampling <!--Subsection 5.3.6-->
 
-The generator on the LAN-XI module always runs at its full rate of 131,072 samples per second.  If the acquisition sample rate is equal to or greater than 16,384 samples per second, the LAN-XI hardware performs over-sampling automatically.  However, if the sample rate is less than 16,384, Rattlesnake must over-sample its output.  It is left to each environment within Rattlesnake to determine how to handle the oversampling of its output data.  For \ac{FFT}-based environments, this can be as simple as padding the FFT with zeros prior to creating the signal.  For time-based environments, more thought must be given to ensure signals are not made to be discontinuous by the up-sampling procedure.
+The generator on the LAN-XI module always runs at its full rate of 131,072 samples per second.  If the acquisition sample rate is equal to or greater than 16,384 samples per second, the LAN-XI hardware performs over-sampling automatically.  However, if the sample rate is less than 16,384, Rattlesnake must over-sample its output.  It is left to each environment within Rattlesnake to determine how to handle the oversampling of its output data.  For FFT-based environments, this can be as simple as padding the FFT with zeros prior to creating the signal.  For time-based environments, more thought must be given to ensure signals are not made to be discontinuous by the up-sampling procedure.
 
 ### Starting Up and Running the LAN-XI Acquisition <!--Subsection 5.3.7-->
 
