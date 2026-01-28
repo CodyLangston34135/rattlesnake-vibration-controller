@@ -37,7 +37,7 @@
 
 @sec:examples
 
-- @sec:example_nidaq
+- @sec:example_nidaqmx
 - @sec:example_sdynpy
 - @sec:example_state_space
 

@@ -20,7 +20,7 @@ Rattlesnake is able to run National Instruments devices that utilize the NI-DAQm
 
 Drivers can be found [here](https://www.ni.com/en-us/support/downloads/drivers.html).
 
-@sec:example_nidaq shows a complete example problem using a NI data acquisition system.
+@sec:example_nidaqmx shows a complete example problem using a NI data acquisition system.
 
 :::{note} NI Hardware Compatability
 There are a huge number of NI configurations that can be created using different combinations of

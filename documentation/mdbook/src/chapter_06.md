@@ -28,11 +28,11 @@ The `Minimum Value (V)` column is not used.  The `Maximum Value (V)` column spec
     
 The `Coupling` column is where the channel coupling is specified.  Valid coupling values are
 
-**AC Differential** specified by the entry `AC`, `AC Differential`, or `AC Diff` (case insensitive)
-**DC Differential** specified by the entry `DC`, `DC Differential`, or `DC Diff` (case insensitive)
-**AC Single-Ended** specified by the entry `AC Single`, `AC Single Ended`, or `AC Single-Ended` (case insensitive)
-**DC Single-Ended** specified by the entry `DC Single`, `DC Single Ended`, or `DC Single-Ended` (case insensitive)
-**AC IEPE** specified by the entry `IEPE`, `ICP`, `AC ICP`, or `CCLD` (case insensitive)
+* **AC Differential** specified by the entry `AC`, `AC Differential`, or `AC Diff` (case insensitive)
+* **DC Differential** specified by the entry `DC`, `DC Differential`, or `DC Diff` (case insensitive)
+* **AC Single-Ended** specified by the entry `AC Single`, `AC Single Ended`, or `AC Single-Ended` (case insensitive)
+* **DC Single-Ended** specified by the entry `DC Single`, `DC Single Ended`, or `DC Single-Ended` (case insensitive)
+* **AC IEPE** specified by the entry `IEPE`, `ICP`, `AC ICP`, or `CCLD` (case insensitive)
 
 The Quattro device handles all signal conditioning so there doesn't need to be anything entered in the `Current Excitation Source` or `Current Excitation Value` columns.  
 

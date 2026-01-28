@@ -24,7 +24,7 @@ In the current example, we will not do anything as complicated as substructuring
 
 ## Creating a State Space Model
 
-Chapter \ref{sec:rattlesnake_hardware_state_space} provides an overview of the State Space Matrices in equations \eqref{eq:state_eoms} and \eqref{eq:output_eoms}.  They are reproduced here for convenience.
+@sec:state_space_hardware provides an overview of the State Space Matrices in equations @eq:state_eoms and @eq:output_eoms.  They are reproduced here for convenience.
 
 \begin{equation}
     \dot{\mathbf{x}} = \mathbf{A}\mathbf{x} + \mathbf{B}\mathbf{u}
@@ -35,7 +35,7 @@ Chapter \ref{sec:rattlesnake_hardware_state_space} provides an overview of the S
 
 Here $\mathbf{A}$ is the state matrix, $\mathbf{B}$ is the input matrix, $\mathbf{C}$ is the output matrix, $\mathbf{D}$ is the feedthrough matrix, $\mathbf{x}$ is the state vector, $\mathbf{u}$ is the input vector, and $\mathbf{y}$ is the output vector. 
 
-The signals that Rattlesnake outputs are provided to those equations as the inputs $\mathbf{u}$ to the model, and the signals Rattlesnake measures are the output degrees of freedom $\mathbf{y}$.  Users must therefore construct the state space matrices $\mathbf{A}$, $\mathbf{B}$, $\mathbf{C}$, and $\mathbf{D}$ with the correct shape, row order, and column order.  The rows of $\mathbf{u}$ (and therefore the columns of $\mathbf{B}$ and $\mathbf{D}$) must be in the same order as the excitation rows in the channel table (these will be rows with an entry in the `Feedback Device` column).  Similarly, the rows of $\mathbf{y}$ (and therefore the rows of $\mathbf{A}$ and $\mathbf{C}$) must be in the same order as the acquisition rows in the channel table (these will be rows with an entry in the `Physical Device` column).  Note that because Rattlesnake requires its excitation signals to be also measured by the acquisition (e.g., shaker signals must be teed back to acquisition channels for real hardware), there will generally be a row partition of the $\mathbf{C}$ matrix containing zeros and a row partition of the $\mathbf{D}$ matrix containing the identity matrix.  This would result in the input signals $\mathbf{u}$ being directly returned as output degrees of freedom $\mathbf{y}$.  Equation \eqref{eq:excitation_signal_passthrough} shows this, where a partition of zeros in the $\mathbf{C}$ matrix and a partition of identity matrix $\mathbf{I}$ in the $\mathbf{D}$ matrix results in a partition of the output degrees of freedom $\mathbf{y}_i$ being equivalent to the input signals $\mathbf{u}$.
+The signals that Rattlesnake outputs are provided to those equations as the inputs $\mathbf{u}$ to the model, and the signals Rattlesnake measures are the output degrees of freedom $\mathbf{y}$.  Users must therefore construct the state space matrices $\mathbf{A}$, $\mathbf{B}$, $\mathbf{C}$, and $\mathbf{D}$ with the correct shape, row order, and column order.  The rows of $\mathbf{u}$ (and therefore the columns of $\mathbf{B}$ and $\mathbf{D}$) must be in the same order as the excitation rows in the channel table (these will be rows with an entry in the `Feedback Device` column).  Similarly, the rows of $\mathbf{y}$ (and therefore the rows of $\mathbf{A}$ and $\mathbf{C}$) must be in the same order as the acquisition rows in the channel table (these will be rows with an entry in the `Physical Device` column).  Note that because Rattlesnake requires its excitation signals to be also measured by the acquisition (e.g., shaker signals must be teed back to acquisition channels for real hardware), there will generally be a row partition of the $\mathbf{C}$ matrix containing zeros and a row partition of the $\mathbf{D}$ matrix containing the identity matrix.  This would result in the input signals $\mathbf{u}$ being directly returned as output degrees of freedom $\mathbf{y}$.  Equation @eq:excitation_signal_passthrough shows this, where a partition of zeros in the $\mathbf{C}$ matrix and a partition of identity matrix $\mathbf{I}$ in the $\mathbf{D}$ matrix results in a partition of the output degrees of freedom $\mathbf{y}_i$ being equivalent to the input signals $\mathbf{u}$.
 
 \begin{equation}\label{eq:excitation_signal_passthrough}
     \begin{bmatrix}
@@ -57,11 +57,10 @@ Prior to running virtual control using a state space model, that model must be c
 
 This example will create a state space model from a beam mass, stiffness, and damping matrix.  In this example, we will use SDynPy to generate the beam mass, stiffness, and damping matrices, from which state space matrices will be derived.  However, one should note that this is not required.  State space matrices can be computed from many different sources.  Note that we will use a reduced order model of the system for faster integration.  This will require incorporating the reduction transformation that the beam uses.
 
-The first step of this process is to create the beam finite element model.  For simplicity, we will use the same code and model used in Appendix \ref{sec:example_sdynpy}.
+The first step of this process is to create the beam finite element model.  For simplicity, we will use the same code and model used in @sec:example_sdynpy.
 
     
-```
-[language=Python]
+```{code} python
 # Import SDynPy module to get structural dynamics functionality
 import sdynpy as sdpy
 # We'll also import some common Python packages
@@ -95,13 +94,11 @@ modal_system = modes.system()
 ```
 
 
-While SDynPy's `System` object has a `to_state_space` method to automatically construct state space matrices from its internal data, we will instead perform these operations ourselves to demonstrate the approach that can be used if a user is constructing these matrices from some other source.  Prior to constructing the state space matrices, we must determine which physical degrees of freedom we wish to use as outputs, and which we wish to use as inputs, as this will determine which rows and columns of the matrices are used.  We will use the same degrees of freedom in our channel table as were used in Chapter \ref{sec:example_sdynpy}. These will include Accelerations as response degrees of freedom and Forces as excitation degrees of freedom.
+While SDynPy's `System` object has a `to_state_space` method to automatically construct state space matrices from its internal data, we will instead perform these operations ourselves to demonstrate the approach that can be used if a user is constructing these matrices from some other source.  Prior to constructing the state space matrices, we must determine which physical degrees of freedom we wish to use as outputs, and which we wish to use as inputs, as this will determine which rows and columns of the matrices are used.  We will use the same degrees of freedom in our channel table as were used in @sec:example_sdynpy. These will include Accelerations as response degrees of freedom and Forces as excitation degrees of freedom.
 
 We will first extract the mass matrix $\mathbf{M}$, stiffness matrix $\mathbf{K}$, damping matrix $\mathbf{C}$, and reduction transformation matrix $\mathbf{\Phi}$.  We will split up the transformation matrix into $\mathbf{\Phi}_{r}$, which is the rows of $\mathbf{\Phi}$ corresponding to the physical response degrees of freedom, and $\mathbf{\Phi}_{i}$, which is the rows of $\mathbf{\Phi}$ corresponding to the input degrees of freedom.  Note that if the system in question is a physical system without any reduction, then the following equations and code still apply, except that the transformation matrix $\mathbf{\Phi}$ will equal the identity matrix.
 
-    
-```
-[language=Python]
+```{code} python
 # Select degrees of freedom to use in the test, corresponds to the channel table    
 response_coordinates = sdpy.coordinate_array([2,13,19,24],'Y-')
 input_coordinates = sdpy.coordinate_array([2,24],'Y+')
@@ -119,7 +116,6 @@ tdofs_input = phi_input.shape[0]
     
 ```
 
-
 We can then compute the state space matrices from the system matrices.
 
 The state matrix $\mathbf{A}$ has the equation and code:
@@ -132,24 +128,21 @@ The state matrix $\mathbf{A}$ has the equation and code:
 \end{equation}
 
     
-```
-[language=Python]
+```{code} python
 A_state = np.block([[np.zeros((ndofs, ndofs)), np.eye(ndofs)],
                     [-np.linalg.solve(M, K), -np.linalg.solve(M, C)]])
 ```
+    
+The input matrix $\mathbf{B}$ has the equation and code:
 
-    
-    The input matrix $\mathbf{B}$ has the equation and code:
-    
-    \begin{equation}
-        \mathbf{B} = \begin{bmatrix}
-        \mathbf{0} \\ \mathbf{M}^{-1}{\mathbf{\Phi}_i}^T
-        \end{bmatrix}
-    \end{equation}
+\begin{equation}
+    \mathbf{B} = \begin{bmatrix}
+    \mathbf{0} \\ \mathbf{M}^{-1}{\mathbf{\Phi}_i}^T
+    \end{bmatrix}
+\end{equation}
     
     
-```
-[language=Python]
+```{code} python
 B_state = np.block([[np.zeros((ndofs, tdofs_input))],
                     [np.linalg.solve(M, phi_input.T)]])
 ```
@@ -172,8 +165,7 @@ Our outputs will include accelerations and forces, so we will include those part
 \end{equation}
 
 
-```
-[language=Python]
+```{code} python
 C_state = np.block([[-phi_response@np.linalg.solve(M, K), -phi_response@np.linalg.solve(M, C)],
                     [np.zeros((tdofs_input, ndofs)), np.zeros((tdofs_input, ndofs))]])
 
@@ -186,69 +178,63 @@ Note the multiplication by the response transformation $\mathbf{\Phi}_r$ to tran
 
 We must finally save these matrices to a `.mat` file or `.npz` file with fields `A`, `B`, `C`, and `D`, which can be read by Rattlesnake.
 
-Note that this system is set up with channels in the same order as the channel table shown in Figure \ref{fig:examplesdynpytwoshakerchanneltable}, so we can simply use that channel table for this test.  Be aware that the input and response locations are hard-coded into the state space model, therefore if we wish to change the number of shakers or their locations, or change the number of responses or their locations, we must generate a new state space model to use in Rattlesnake.  The advantage of the SDynPy approach described in Appendix \ref{sec:example_sdynpy} is that that hardware will parse the channel table and construct the system equations of motion based off that data, so we need not worry about the channel bookkeeping or generating separate models.  While the state space approach offers more flexibility, we must be aware that it is our responsibility to ensure the channel table in Rattlesnake matches the state space system we have created.
+Note that this system is set up with channels in the same order as the channel table shown in @fig:examplesdynpytwoshakerchanneltable, so we can simply use that channel table for this test.  Be aware that the input and response locations are hard-coded into the state space model, therefore if we wish to change the number of shakers or their locations, or change the number of responses or their locations, we must generate a new state space model to use in Rattlesnake.  The advantage of the SDynPy approach described in @sec:example_sdynpy is that that hardware will parse the channel table and construct the system equations of motion based off that data, so we need not worry about the channel bookkeeping or generating separate models.  While the state space approach offers more flexibility, we must be aware that it is our responsibility to ensure the channel table in Rattlesnake matches the state space system we have created.
 
 
-```
-[language=Python]
+```{code} python
 np.savez('state_space.npz',A = A_state, B = B_state, C = C_state, D = D_state)
 ```
 
 
 ## Running a Synthetic Vibration Test
-Because we have set up our state space system equivalently to the example problem in Appendix \ref{sec:example_sdynpy}, we will utilize the channel table and specifications from that example problem for this example problem as well.  Readers are encouraged to fill out a channel table and run the code from that Appendix to generate the specifications if they have not already.
+Because we have set up our state space system equivalently to the example problem in @sec:example_sdynpy, we will utilize the channel table and specifications from that example problem for this example problem as well.  Readers are encouraged to fill out a channel table and run the code from that Appendix to generate the specifications if they have not already.
 
-It is worth noting again that attempting to run the Modal test as described in Section \ref{sec:example_sdynpy_modal} will not work without modification, because the channel table for that test only utilized one shaker, while our current state space object has two shakers.  After completion of this example problem, a good exercise for the reader would be to modify the system object to remove the second shaker, or to add a second shaker to the modal test and run a burst random test with two shakers.
+It is worth noting again that attempting to run the Modal test as described in @sec:example_sdynpy_modal will not work without modification, because the channel table for that test only utilized one shaker, while our current state space object has two shakers.  After completion of this example problem, a good exercise for the reader would be to modify the system object to remove the second shaker, or to add a second shaker to the modal test and run a burst random test with two shakers.
 
 ### Data Acquisition Setup
 
-Now that the state space matrices are constructed, we will set up a random or transient vibration test using the specifications and channel tables developed in Appendix \ref{sec:example_sdynpy}.  We will open Rattlesnake and select either the `MIMO Random Vibration` environment or `MIMO Transient Environment`.
+Now that the state space matrices are constructed, we will set up a random or transient vibration test using the specifications and channel tables developed in @sec:example_sdynpy.  We will open Rattlesnake and select either the `MIMO Random Vibration` environment or `MIMO Transient Environment`.
     
-On the `Data Acquisition Setup` tab, we will `Load Channel Table` to import our Excel channel spreadsheet. We will set the `Hardware Selector` to `State Space Integration...` and select our state space file `state_space.npz`, as well as set the sample `Sample Rate` to `5120`. The other parameters can be left at their default values.  Figure \ref{fig:examplestatespacevibrationdataacquisitionsetup} shows these parameters.
+On the `Data Acquisition Setup` tab, we will `Load Channel Table` to import our Excel channel spreadsheet. We will set the `Hardware Selector` to `State Space Integration...` and select our state space file `state_space.npz`, as well as set the sample `Sample Rate` to `5120`. The other parameters can be left at their default values.  @fig:examplestatespacevibrationdataacquisitionsetup shows these parameters.
     
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_state_space_vibration_data_acquisition_setup}
-    \caption{Data acquisition setup for the State Space example problem.}
-    \label{fig:examplestatespacevibrationdataacquisitionsetup}
-\end{figure}
+:::{figure} figures/example_state_space_vibration_data_acquisition_setup.png
+:label: fig:examplestatespacevibrationdataacquisitionsetup
+:align: center
+Data acquisition setup for the State Space example problem.
+:::
 
 Click the `Initialize Data Acquisition` button to proceed.
 
 ### Environment Setup and Running a Synthetic Test
 
-The remainder of the operations are identical to those described in Section \ref{sec:example_sdynpy_random_vibration}, so readers are directed to that Section to complete the test.  Rattlesnake is designed such that it utilizes largely the same workflow regardless of which data acquisition hardware is being used.  Figures \ref{fig:examplestatespacevibrationenvironmentsetup}--\ref{fig:examplestatespacevibrationruntest} show screenshots from the Rattlesnake software at different stages of the test.  These should look nominally identical to Figures \ref{fig:examplesdynpyrandomvibrationparameters}--\ref{fig:examplesdynpyrandomvibrationsumasds} from Section \ref{sec:example_sdynpy_random_vibration}.
+The remainder of the operations are identical to those described in @sec:example_sdynpy_random_vibration, so readers are directed to that Section to complete the test.  Rattlesnake is designed such that it utilizes largely the same workflow regardless of which data acquisition hardware is being used.  @fig:examplestatespacevibrationenvironmentsetup through @fig:examplestatespacevibrationruntest show screenshots from the Rattlesnake software at different stages of the test.  These should look nominally identical to @fig:examplesdynpyrandomvibrationparameters through @fig:examplesdynpyrandomvibrationsumasds from @sec:example_sdynpy_random_vibration.
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_state_space_vibration_environment_setup}
-    \caption{Environment Definition for the State Space example problem.}
-    \label{fig:examplestatespacevibrationenvironmentsetup}
-\end{figure}
+:::{figure} figures/example_state_space_vibration_environment_setup.png
+:label: fig:examplestatespacevibrationenvironmentsetup
+:align: center
+Environment Definition for the State Space example problem.
+:::
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_state_space_vibration_system_identification}
-    \caption{System Identification for the State Space example problem}
-    \label{fig:examplestatespacevibrationsystemidentification}
-\end{figure}
+:::{figure} figures/example_state_space_vibration_system_identification.png
+:label: fig:examplestatespacevibrationsystemidentification
+:align: center
+System Identification for the State Space example problem
+:::
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{figures/example_state_space_vibration_predictions}
-    \caption{Test Predictions for the State Space Example Problem}
-    \label{fig:examplestatespacevibrationpredictions}
-\end{figure}
+:::{figure} figures/example_state_space_vibration_predictions.png
+:label: fig:examplestatespacevibrationpredictions
+:align: center
+Test Predictions for the State Space Example Problem
+:::
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\linewidth]{figures/example_state_space_vibration_run_test}
-\caption{Running a MIMO Random environment with the State Space example problem.}
-\label{fig:examplestatespacevibrationruntest}
-\end{figure}
+:::{figure} figures/example_state_space_vibration_run_test.png
+:label: fig:examplestatespacevibrationruntest
+:align: center
+Running a MIMO Random environment with the State Space example problem.
+:::
 
 ## Summary
 This appendix has walked through an example test using virtual hardware with Rattlesnake.  Users are encouraged to use this Appendix as a quick-start guide to using Rattlesnake.  Rattlesnake constructed equations of motion from state space matrices.  These equations of motion were integrated over time by Rattlesnake to simulate a test being performed on that structure.
 
-This Appendix only showed the data acquisition setup portion of the controller, as the remaining controller activities are identical to those from Appendix \ref{sec:example_sdynpy}, highlighting Rattlesnake's common workflow regardless of which data acquistion hardware is used.
+This Appendix only showed the data acquisition setup portion of the controller, as the remaining controller activities are identical to those from @sec:example_sdynpy, highlighting Rattlesnake's common workflow regardless of which data acquistion hardware is used.
 % \printindex

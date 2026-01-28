@@ -129,7 +129,9 @@ The `Control and Drive Transforms` section of the MIMO Random Vibration definiti
 * **Transform Controls** A display showing the number of virtual control channels in the environment due to transformation matrices applied to the physical control channels.
 * **Transform Outputs** A display showing the number of virtual excitation channels in the environment due to transformation matrices applied to the physical excitation channels.
 
-Note that if Transformation matrices are defined, the number of control channels ends up being the number of rows of the `Response Transformation Matrix`, rather than the number of physical control channels.  The number of physical control channels will be equal to the number of columns of the transformation matrix.  The number of rows and columns of the specification loaded should be equal to the number of rows in the transformation.
+Note that if transformation matrices are defined, the number of control channels ends up being the number of rows of the `Response Transformation Matrix`, rather than the number of physical control channels.  The number of physical control channels will be equal to the number of columns of the transformation matrix.  The number of rows and columns of the specification loaded should be equal to the number of rows in the transformation.
+
+See @sec:rattlesnake_environments_transformation_matrices for more information on specifying transformation matrices.
 
 ### Test Specification
 The test specification is loaded into the environment in the `Test Specification` section of the MIMO Random Vibration definition:
@@ -1177,6 +1179,45 @@ the modal quantities $\mathbf{q}$ can be computed from physical quantities $\mat
     \mathbf{q} = \mathbf{\Phi}^+\mathbf{x}
 \end{equation}
 In this case, the transformation matrix is simply the inverse mode shape matrix $\mathbf{\Phi}$, which acts as a modal filter.
+
+### Specifying Transformation Matrices
+
+Transformation matrices are specified by clicking the `Transformation Matrices...` button, which will bring up a dialog box allowing users to define the transformations.  This is shown in @fig:transformation_matrix_dialog.
+
+:::{figure} figures/transformation_matrix_dialog.png
+:label: fig:transformation_matrix_dialog
+:align: center
+Transformation Matrix Dialog Box
+:::
+
+The top portion of the window corresponds to the Response Transformations, which are transformations applied to the physical control channels to create virtual control channels, and the bottom portion of the window corresponds to the Output transformations, which are transformations applied to the physical excitation channels to create virtual excitation sources.
+
+The number of rows in each matrix are the number of virtual channels that exist in the environment.  Virtual channels can be added or removed by adding or removing rows of the matrices.  The number of columns in each matrix corresponds to the number of physical channels that exist in the environment.  The number of columns is therefore specified by the number of control or excitation degrees of freedom active in the environment; these cannot be changed in the Transformation Matrix Definition dialog box, but must rather be changed through the channel table or environment definition.
+
+To remove transformations, the matrices can simply be set to the identity matrix, in which case, each physical degree of freedom corresponds directly to a virtual degree of freedom, meaning the virtual degrees of freedom are the physical degrees of freedom.
+
+Rather than entering the matrix values manually, which may be tedious for a large test, users can load transformation matrix from CSV, `*.mat`, `*.npy`, or `*.npz` files.  Users can also save existing transformation matrices to those file types.
+
+* **Response Transformation Matrix Add Row** Add a virtual control channel to the response transformation
+* **Response Transformation Matrix Remove Row** Remove the selected virtual control channel from the response transformation
+* **Response Transformation Matrix Save** Opens a file dialog allowing the user to save the response transformation matrix to a file.
+* **Response Transformation Matrix Load** Opens a file dialog to allow the user to load in a response transformation matrix from a file.
+* **Response Transformation Matrix Identity** Set the response transformation to the identity matrix (effectively removes the transformation)
+* **Response Transformation 6DoF Kinematic** Sets the response transformation matrix to a kinematic transformation matrix based on a typical 6-DoF shaker configuration, such as that found in the Team Tensor shaker.
+* **Response Transformation 6DoF Kinematic Reversed** Sets the response transformation matrix to a kinematic transformation matrix based on a typical 6-DoF shaker configuration, such as that found in the Team Tensor shaker. This default switches the signs on some of the coefficients based on shaker wiring.
+
+* **Output Transformation Matrix Add Row** Add a virtual excitation channel to the output transformation
+* **Output Transformation Matrix Remove Row** Remove the selected virtual excitation channel from the output transformation
+* **Output Transformation Matrix Save** Opens a file dialog allowing the user to save the output transformation matrix to a file.
+* **Output Transformation Matrix Load** Opens a file dialog to allow the user to load in an output transformation matrix from a file.
+* **Output Transformation Matrix Identity** Set the output transformation to the identity matrix (effectively removes the transformation)
+* **Output Transformation 6DoF Kinematic** Sets the output transformation matrix to a kinematic transformation matrix based on a typical 6-DoF shaker configuration, such as that found in the Team Tensor shaker.
+* **Output Transformation 6DoF Kinematic Reversed** Sets the output transformation matrix to a kinematic transformation matrix based on a typical 6-DoF shaker configuration, such as that found in the Team Tensor shaker. This default switches the signs on some of the coefficients based on shaker wiring.
+
+To exit the dialog, the user will press either the `OK` button to keep the specified transformations, or the `Cancel` dialog to reject the specified transformations.
+
+* **OK** Saves the transformation matrices to the environment
+* **Cancel** Cancels modification of the transformation matrices
 
 (sec:rattlesnake_environments_generating_time_histories)=
 ## Generation of Time Histories

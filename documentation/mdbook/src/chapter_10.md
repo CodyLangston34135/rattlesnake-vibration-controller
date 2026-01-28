@@ -20,7 +20,7 @@ The final option for synthetic control in Rattlesnake is to load in a SDynPy [`S
 
 A complete example problem using a SDynPy `System` object can be found in @sec:example_sdynpy.
 
-### Setting up the Channel Table <!--Section 10.1-->
+## Setting up the Channel Table <!--Section 10.1-->
 
 Setting up the channel table is very straightforward for a SDynPy System.  Degrees of freedom in the SDynPy system are selected in the Rattlesnake test by specifying the node and direction of the degree of freedom in the `Node` and `Direction` of the `coordinate` field of the SDynPy system.  The node is specified as an integer, and the direction is specified as a string (X+, Y+, Z+, X-, Y-, or Z-).
     
@@ -30,18 +30,18 @@ The `Channel Type` must also be specified.  It is used to specify the derivative
     
 All other columns of the channel table can be left empty, though it may be useful to put entries into them to document the virtual test better.
 
-### Hardware Parameters <!--Section 10.2-->
+## Hardware Parameters <!--Section 10.2-->
 
  When the `SDynPy System Integration...` hardware device is selected, Rattlesnake will bring up a file dialog box that will allow the user to specify the file from which the SDynPy system will be loaded.  An additional parameter will appear in the `Data Acquisition Parameters` portion of the `Data Acquisition Setup` tab that allows the user to specify an `Integration Oversample` amount, as the integration time steps should generally be finer than the sample rate of the controller.  A value of 10 is typically sufficient for integration of a linear system using `lsim` from `scipy.signal`.
     
 
-### Implementation Details <!--Section 10.3-->
+## Implementation Details <!--Section 10.3-->
 
 This section describes the implementation details for the SDynPy System integration.
 
-#### Setting up the State Space System <!--Subsection 10.3.1-->
+### Setting up the State Space System <!--Subsection 10.3.1-->
     
-Rattlesnake is able to integrate linear time-invariant equations of motion using general state space matrices.  The general form for state space equations of motion is given in Equations (8.1) and (8.2).
+Rattlesnake is able to integrate linear time-invariant equations of motion using general state space matrices.  The general form for state space equations of motion is given in Equations @eq:state_eoms and @eq:output_eoms.
     
 @sec:state_space_hardware describes how the state space equations can be constructed from mass, stiffness, and damping matrices.  The state space formulation can be extended to allow for a transformation matrix between the mass, stiffness, and damping matrices, and the physical degrees of freedom.
     
@@ -52,17 +52,15 @@ $$
             -\mathbf{\Phi}_r\mathbf{M}^{-1}\mathbf{K} & -\mathbf{\Phi}_r\mathbf{M}^{-1}\mathbf{C} \\
             \mathbf{0} & \mathbf{0}
         \end{bmatrix}
-\tag{10.1}
 $$
 $$
 \mathbf{D} = \begin{bmatrix}
             \mathbf{0} \\\mathbf{0} \\ \mathbf{\Phi}_r\mathbf{M}^{-1}{\mathbf{\Phi}_e}^T \\ \mathbf{I}
         \end{bmatrix}
-\tag{10.2}
 $$
 
 Here the system transformation $\mathbf{\Phi}$ is partitioned into the response degrees of freedom $\mathbf{\Phi}_r$ and excitation degrees of freedom $\mathbf{\Phi}_e$.
     
-Matrices $\mathbf{A}$ and $\mathbf{B}$ are unchanged and defined in equations (8.6) and (8.7).
+Matrices $\mathbf{A}$ and $\mathbf{B}$ are unchanged and defined in equations @eq:state_space_a and @eq:state_space_b.
     
 The state space matrices are then integrated using `scipy.signal.lsim`, similar to the State Space formulation described in @sec:state_space_hardware.
