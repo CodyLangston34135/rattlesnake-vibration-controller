@@ -33,7 +33,6 @@ class EnvironmentMetadata(ABC):
         self.environment_name = environment_name
         self.queue_name = None  # Name used to assign environment to queues
         self.channel_list = []
-        self._channel_list_bools = []
 
     def map_channel_bools(self, hardware_channel_list):
         # Prevent non-existing channels

@@ -100,7 +100,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.read_size = None
         # Environment Data
         self.environment_list = []
-        self.environment_acquisition_channels = None
+        self.environment_acquisition_channels = {}
         self.environment_active_flags = {}
         self.environment_last_data = {}
         self.environment_samples_remaining_to_read = {}
@@ -137,7 +137,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         if metadata.hardware_type == HardwareType.NI_DAQmx:
             from ..hardware.nidqaqmx import NIDAQmxAcquisition
 
-            self.hardware = NIDAQmxAcquisition()
+            self.hardware = NIDAQmxAcquisition(metadata.task_trigger, metadata.output_trigger_generator)
         # Initialize hardware and create channels
         self.hardware.set_up_data_acquisition_parameters_and_channels(metadata)
         # Set up warning and abort limits
@@ -177,9 +177,15 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.hardware_metadata = metadata
 
     def initialize_environment(self, metadata_list: List[EnvironmentMetadata]):
-        for idx, metadata in enumerate(metadata_list):
+        self.environment_list = []
+        self.environment_acquisition_channels = {}
+        self.environment_active_flags = {}
+        self.environment_last_data = {}
+        self.environment_samples_remaining_to_read = {}
+        self.environment_first_data = {}
+        for metadata in metadata_list:
             environment = metadata.queue_name
-            self.environment_list[idx] = environment
+            self.environment_list.append(environment)
             self.environment_acquisition_channels[environment] = metadata.map_channel_indices(self.hardware_metadata.channel_list)
             self.environment_active_flags[environment] = False
             self.environment_last_data[environment] = False

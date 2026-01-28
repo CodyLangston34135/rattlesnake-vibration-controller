@@ -146,10 +146,10 @@ class TimeQueues:
     def __init__(
         self,
         environment_command_queue: VerboseMessageQueue,
-        gui_update_queue: mp.queues.Queue,
+        gui_update_queue: mp.Queue,
         controller_communication_queue: VerboseMessageQueue,
-        data_in_queue: mp.queues.Queue,
-        data_out_queue: mp.queues.Queue,
+        data_in_queue: mp.Queue,
+        data_out_queue: mp.Queue,
         log_file_queue: VerboseMessageQueue,
     ):
         """
@@ -159,13 +159,13 @@ class TimeQueues:
         ----------
         environment_command_queue : VerboseMessageQueue
             Queue from which the environment will receive instructions.
-        gui_update_queue : mp.queues.Queue
+        gui_update_queue : mp.Queue
             Queue to which the environment will put GUI updates.
         controller_communication_queue : VerboseMessageQueue
             Queue to which the environment will put global contorller instructions.
-        data_in_queue : mp.queues.Queue
+        data_in_queue : mp.Queue
             Queue from which the environment will receive data from acquisition.
-        data_out_queue : mp.queues.Queue
+        data_out_queue : mp.Queue
             Queue to which the environment will write data for output.
         log_file_queue : VerboseMessageQueue
             Queue to which the environment will write log file messages.

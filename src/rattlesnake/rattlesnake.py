@@ -25,17 +25,14 @@ class RattlesnakeState(Enum):
 class Rattlesnake:
     def __init__(self):
         # Initialize values for checking state
-        self.state = mp.Value("i", RattlesnakeState.INIT.value)
+        self.state = RattlesnakeState.INIT
         self.acquisition_active = mp.Value("i", 0)
         self.output_active = mp.Value("i", 0)
 
         # Start up log file process
         log_file_queue = mp.Queue()
         self.log_file_process = mp.Process()
-        self.log_file_process = mp.Process(
-            target=log_file_task,
-            args=(log_file_queue),
-        )
+        self.log_file_process = mp.Process(target=log_file_task, args=(log_file_queue,))
         self.log_file_process.start()
 
         # Start up command queues and processes
@@ -83,6 +80,7 @@ class Rattlesnake:
 
         # Start up acquisition, output, streaming processes
         self.controller_proc = mp.Process(target=controller_process, args=(self.queue_container,))
+        self.controller_proc.start()
         self.acquisition_proc = mp.Process(
             target=acquisition_process,
             args=(self.queue_container, self.acquisition_active),
@@ -120,7 +118,7 @@ class Rattlesnake:
 
     def set_environments(self, environment_metadata_list: List[EnvironmentMetadata]):
         # Check for valid states
-        if self.state != RattlesnakeState.HARDWARE_STORE or self.state != RattlesnakeState.ENVIRONMENT_STORE:
+        if not self.state == RattlesnakeState.HARDWARE_STORE or self.state == RattlesnakeState.ENVIRONMENT_STORE:
             raise RuntimeError(f"Invalid state for setting environment: {self.state}")
 
         self.log("Setting Environment")
@@ -133,6 +131,7 @@ class Rattlesnake:
         self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, environment_metadata_list))
 
         self.environment_metadata_list = environment_metadata_list
+        self.state = RattlesnakeState.ENVIRONMENT_STORE
 
     def set_stream(self, stream_metadata: StreamMetadata):
         valid_stream = stream_metadata.validate()
@@ -158,7 +157,7 @@ class Rattlesnake:
 
     def start_acquisition(self):
         # Check for basic issues
-        if self.state != RattlesnakeState.ENVIRONMENT_STORE or self.state != RattlesnakeState.OUTPUT_START:
+        if not self.state == RattlesnakeState.ENVIRONMENT_STORE or self.state == RattlesnakeState.OUTPUT_START:
             raise RuntimeError(f"Invalid state for starting acquisition: {self.state}")
         if not isinstance(self.stream_metadata, StreamMetadata):
             raise TypeError(f"Stream metadata must be defined before arming data acquisition")
@@ -175,7 +174,12 @@ class Rattlesnake:
         if self.stream_metadata.stream_type == StreamType.STREAM_IMMEDIATELY:
             self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.START_STREAMING, None))
 
+        self.state = RattlesnakeState.ACQUISITION_START
+
     def stop_acquisition(self):
+        if not self.state == RattlesnakeState.ACQUISITION_START or self.state == RattlesnakeState.OUTPUT_START:
+            raise RuntimeError(f"Invalid state for stopping acquisition: {self.state}")
+
         self.log("Disarming Test Hardware")
         for metadata in self.environment_metadata_list:
             self.queue_container.controller_command_queue.put(
@@ -183,27 +187,33 @@ class Rattlesnake:
             )
         self.queue_container.controller_communication_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))
 
+        self.state = RattlesnakeState.ENVIRONMENT_STORE
+
     def shutdown(self):
         # Close out of acquisition, output, streaming process
         self.queue_container.log_file_queue.put(f"{datetime.now()}: Joining Controller Process\n")
+        self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
         self.controller_proc.join(timeout=5)
         if self.controller_proc.is_alive():
             self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Controller Process\n")
             self.controller_proc.terminate()
             self.controller_proc.join()
         self.queue_container.log_file_queue.put(f"{datetime.now()}: Joining Acquisition Process\n")
+        self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
         self.acquisition_proc.join(timeout=5)
         if self.acquisition_proc.is_alive():
             self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Acquisition Process\n")
             self.acquisition_proc.terminate()
             self.acquisition_proc.join()
         self.queue_container.log_file_queue.put(f"{datetime.now()}: Joining Output Process\n")
+        self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
         self.output_proc.join(timeout=5)
         if self.output_proc.is_alive():
             self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Output Process\n")
             self.output_proc.terminate()
             self.output_proc.join()
         self.queue_container.log_file_queue.put(f"{datetime.now()}: Joining Streaming Process\n")
+        self.queue_container.streaming_command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
         self.streaming_proc.join(timeout=5)
         if self.streaming_proc.is_alive():
             self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Streaming Process\n")

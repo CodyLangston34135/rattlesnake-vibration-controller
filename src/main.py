@@ -1,7 +1,8 @@
 from rattlesnake.rattlesnake import Rattlesnake
 from rattlesnake.hardware.hardware_utilities import Channel
-from rattlesnake.hardware.nidqaqmx import NIDAQmxMetadata, TaskTrigger
+from rattlesnake.hardware.nidqaqmx import NIDAQmxMetadata
 from rattlesnake.environment.time_environment import TimeMetadata, TimeInstructions
+from rattlesnake.environment.read_environment import ReadMetadata
 from rattlesnake.user_interface.headless_ui import HeadlessUi
 from rattlesnake.process.streaming import StreamType, StreamMetadata
 from rattlesnake.math_operations import db2scale
@@ -31,16 +32,22 @@ def main():
     hardware_metadata.sample_rate = 1000
     hardware_metadata.time_per_read = 0.25
     hardware_metadata.time_per_write = 0.25
-    hardware_metadata.task_trigger = TaskTrigger.INTERNAL
+    hardware_metadata.task_trigger = 0
+    hardware_metadata.output_trigger_generator = ""
 
     rattlesnake.set_hardware(hardware_metadata)
 
-    envrionment_metadata = TimeMetadata("Time Environment 1")
-    envrionment_metadata.channel_list = channel_list
-    envrionment_metadata.sample_rate = 1000
-    envrionment_metadata.output_signal = np.ones(1000)
-    envrionment_metadata.cancel_rampdown_time = 500
-    envrionment_metadata_list = [envrionment_metadata]
+    # Time Environment
+    time_metadata = TimeMetadata("Time Environment 1")
+    time_metadata.channel_list = channel_list
+    time_metadata.sample_rate = 1000
+    time_metadata.output_signal = np.ones(1000)
+    time_metadata.cancel_rampdown_time = 500
+
+    read_metadata = ReadMetadata("Read Environment 1")
+    read_metadata.channel_list = channel_list
+
+    envrionment_metadata_list = [time_metadata, read_metadata]
 
     rattlesnake.set_environments(envrionment_metadata_list)
 
@@ -49,15 +56,16 @@ def main():
     stream_metadata.stream_file = None
     stream_metadata.test_level = None
 
-    rattlesnake.set_stream(stream_metadata)
+    # rattlesnake.set_stream(stream_metadata)
 
-    instructions = TimeInstructions("Time Environment 1")
-    instructions.current_test_level = db2scale(0)
-    instructions.repeat = True
+    time_instructions = TimeInstructions("Time Environment 1")
+    time_instructions.current_test_level = db2scale(0)
+    time_instructions.repeat = True
+    environment_instruction_list = []
 
-    rattlesnake.set_instructions([instructions])
+    # rattlesnake.set_instructions(environment_instruction_list)
 
-    rattlesnake.arm_test()
+    # rattlesnake.start_acquisition()
 
     app = QtWidgets.QApplication(sys.argv)
     _ = HeadlessUi(rattlesnake.queue_container, rattlesnake.environment_metadata_list, "Dark")

@@ -5,8 +5,8 @@ import numpy as np
 
 
 class HardwareMetadata(ABC):
-    def __init__(self):
-        self.hardware_type = HardwareType.SELECT
+    def __init__(self, hardware_type):
+        self.hardware_type = hardware_type
         self.channel_list = []
         self.sample_rate = 1000
         self.time_per_read = 0.25
@@ -57,7 +57,7 @@ class HardwareAcquisition(ABC):
     controller."""
 
     @abstractmethod
-    def set_up_data_output_parameters_and_channels(self, metadata: HardwareMetadata):
+    def set_up_data_acquisition_parameters_and_channels(self, metadata: HardwareMetadata):
         """
         Initialize the hardware and set up channels and sampling properties
 

@@ -108,7 +108,7 @@ class EnvironmentManager:
                     queue_name,
                     self.queue_container.environment_command_queues[queue_name],
                     self.queue_container.gui_update_queue,
-                    self.queue_container.controller_communication_queue,
+                    self.queue_container.controller_command_queue,
                     self.queue_container.log_file_queue,
                     self.queue_container.environment_data_in_queues[queue_name],
                     self.queue_container.environment_data_out_queues[queue_name],

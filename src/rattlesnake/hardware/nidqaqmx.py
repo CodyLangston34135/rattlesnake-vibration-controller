@@ -9,22 +9,15 @@ from enum import Enum
 from typing import List
 import time
 
+HARDWARE_TYPE = HardwareType.NI_DAQmx
 BUFFER_SIZE_FACTOR = 3
 
 
-class TaskTrigger(Enum):
-    INTERNAL = 0
-    EXTERNAL = 1
-    TRIGGERTASK = 2
-    NONE = 3
-
-
-class NIDAQmxMetadata:
+class NIDAQmxMetadata(HardwareMetadata):
     def __init__(self):
-        super().__init__()
-        self.hardware_type = HardwareType.NI_DAQmx
-        self.task_trigger = TaskTrigger.INTERNAL
-        self.output_trigger_generator = 0
+        super().__init__(HARDWARE_TYPE)
+        self.task_trigger = 0
+        self.output_trigger_generator = ""
 
     def validate(self):
         if len(self.channel_list) != len(set(self.channel_list)):
@@ -32,8 +25,9 @@ class NIDAQmxMetadata:
 
         return True
 
+    @property
     def extra_attr_list(self):
-        extra_attr_list = ["task_trigger", "output_trigger_generator"]
+        return ["task_trigger", "output_trigger_generator"]
 
 
 class NIDAQmxAcquisition(HardwareAcquisition):
@@ -44,7 +38,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
     Acquisition process, and must define how to get data from the test
     hardware into the controller."""
 
-    def __init__(self):
+    def __init__(self, task_trigger, output_trigger_generator):
         """
         Constructs the NIDAQmx Acquisition class and specifies values to null.
         """
@@ -55,11 +49,11 @@ class NIDAQmxAcquisition(HardwareAcquisition):
         self.readers = None
         self.acquisition_delay = None
         self.read_triggers = None
-        self.task_trigger = None
-        self.output_trigger_generator = None
+        self.task_trigger = task_trigger
+        self.output_trigger_generator = output_trigger_generator
         self.has_printed_read_statement = False
         self.trigger_output_task = None
-        self.metadata = None
+        self.test_data = None
 
     def set_up_data_acquisition_parameters_and_channels(self, metadata: NIDAQmxMetadata):
         """
@@ -140,20 +134,18 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             self._create_channel(channel, task_index)
         print(f"Input Mapping: {self.channel_task_map}")
 
-    def set_parameters(self, metadata: NIDAQmxMetadata):
+    def set_parameters(self, metadata: HardwareMetadata):
         """Method to set up sampling rate and other test parameters
 
         This function sets the clock configuration on the NIDAQmx hardware.
 
         Parameters
         ----------
-        metadata : NIDAQmxMetadata :
+        test_data : DataAcquisitionParameters :
             A container containing the data acquisition parameters for the
             controller set by the user.
 
         """
-        self.task_trigger = metadata.task_trigger
-        self.output_trigger_generator = metadata.output_trigger_generator
         self.readers = []
         self.read_datas = []
         self.acquisition_delay = BUFFER_SIZE_FACTOR * metadata.samples_per_write
@@ -188,9 +180,9 @@ class NIDAQmxAcquisition(HardwareAcquisition):
             self.trigger_output_task = ni.Task()
             self.trigger_output_task.ao_channels.add_ao_voltage_chan(self.output_trigger_generator, min_val=-3.5, max_val=3.5)
             self.trigger_output_task.timing.cfg_samp_clk_timing(
-                self.metadata.sample_rate,
+                self.test_data.sample_rate,
                 sample_mode=nic.AcquisitionType.CONTINUOUS,
-                samps_per_chan=self.metadata.samples_per_write,
+                samps_per_chan=self.test_data.samples_per_write,
             )
             self.trigger_output_task.out_stream.regen_mode = nic.RegenerationMode.ALLOW_REGENERATION
             writer = ni_write.AnalogMultiChannelWriter(self.trigger_output_task.out_stream, auto_start=False)
@@ -442,17 +434,20 @@ class NIDAQmxOutput(HardwareOutput):
     Output process, and must define how to get data from the controller to the
     output hardware."""
 
-    def __init__(self):
+    def __init__(self, task_trigger, output_trigger_generator):
         """
         Constructs the NIDAQmx Output class and initializes values to null.
         """
         self.tasks = None
         self.channel_task_map = None
         self.writers = None
-        self.write_trigger = None
+        self.write_triggers = None
         self.signal_samples = None
         self.sample_rate = None
         self.buffer_size_factor = BUFFER_SIZE_FACTOR
+        self.task_trigger = task_trigger
+        self.output_trigger_generator = output_trigger_generator
+        self.has_printed_write_statement = False
 
     def set_up_data_output_parameters_and_channels(self, metadata: HardwareMetadata):
         """
@@ -488,41 +483,64 @@ class NIDAQmxOutput(HardwareOutput):
         channel_data : List[Channel] :
             A list of ``Channel`` objects defining the channels in the test
         """
-        # Get the physical devices
-        physical_devices = list(
-            set(
-                [
-                    ni.system.device.Device(channel.feedback_device).product_type
-                    for channel in channel_data
-                    if not (channel.feedback_device is None) and not (channel.feedback_device.strip() == "")
-                ]
-            )
-        )
-        # Check if it's a CDAQ device
-        try:
-            devices = [
-                ni.system.device.Device(channel.feedback_device)
-                for channel in channel_data
-                if not (channel.feedback_device is None) and not (channel.feedback_device.strip() == "")
-            ]
-            if len(devices) == 0:
-                self.write_trigger = None  # No output device
-            else:
-                chassis_device = devices[0].compact_daq_chassis_device
-                self.write_trigger = [trigger for trigger in chassis_device.terminals if "ai/StartTrigger" in trigger][0]
-        except ni.DaqError:
-            self.write_trigger = "/" + channel_data[0].physical_device + "/ai/StartTrigger"
-        print("Output Devices: {:}".format(physical_devices))
-        self.tasks = [ni.Task() for device in physical_devices]
-        index = 0
-        self.channel_task_map = [[] for device in physical_devices]
+        # Get pairs of product_types and physical device names
+        task_names = set()
+        extra_task_index = 1
         for channel in channel_data:
             if not (channel.feedback_device is None) and not (channel.feedback_device.strip() == ""):
-                device_index = physical_devices.index(ni.system.device.Device(channel.feedback_device).product_type)
-                self.channel_task_map[device_index].append(index)
+                device_name = channel.feedback_device
+                device = ni.system.device.Device(device_name)
+                try:
+                    chassis_number = f"P{device.pxi_chassis_num}"
+                except ni.DaqError:
+                    try:
+                        chassis_number = f"C{device.compact_daq_chassis_device.name}"
+                    except ni.DaqError:
+                        chassis_number = f"E{extra_task_index}"
+                        extra_task_index += 1
+                product_name = device.product_type
+                task_names.add((chassis_number, product_name))
+        task_names = list(task_names)
+        print(f"Output Tasks: {task_names}")
+        print("  P: PXI, C: CDAQ, E: Other,  All: All devices on one task")
+        # Check if it's a CDAQ device
+
+        self.tasks = [ni.Task() for name in task_names]
+        self.write_triggers = [None for name in task_names]
+        self.channel_task_map = [[] for name in task_names]
+        index = 0
+        extra_task_index = 1
+        for channel in channel_data:
+            if not (channel.feedback_device is None) and not (channel.feedback_device.strip() == ""):
+                device_name = channel.feedback_device
+                device = ni.system.device.Device(device_name)
+                try:
+                    chassis_number = f"P{device.pxi_chassis_num}"
+                except ni.DaqError:
+                    try:
+                        chassis_number = f"C{device.compact_daq_chassis_device.name}"
+                    except ni.DaqError:
+                        chassis_number = f"E{extra_task_index}"
+                        extra_task_index += 1
+                product_name = device.product_type
+                task_index = task_names.index((chassis_number, product_name))
+                self.channel_task_map[task_index].append(index)
                 index += 1
-                self._create_channel(channel, device_index)
-        print("Output Mapping: {:}".format(self.channel_task_map))
+                if self.write_triggers[task_index] is None:
+                    if self.task_trigger == 0:
+                        try:
+                            chassis_device = ni.system.device.Device(channel.feedback_device).compact_daq_chassis_device
+                            self.write_triggers[task_index] = [trigger for trigger in chassis_device.terminals if "ai/StartTrigger" in trigger][0]
+                        except ni.DaqError:
+                            self.write_triggers[task_index] = "/" + channel_data[0].physical_device.strip() + "/ai/StartTrigger"
+                    else:
+                        try:
+                            chassis_device = ni.system.device.Device(channel.feedback_device).compact_daq_chassis_device
+                            self.write_triggers[task_index] = [trigger for trigger in chassis_device.terminals if "PFI0" in trigger][0]
+                        except ni.DaqError:
+                            self.write_triggers[task_index] = "/" + channel.feedback_device.strip() + "/PFI0"
+                self._create_channel(channel, task_index)
+        print(f"Output Mapping: {self.channel_task_map}")
 
     def set_parameters(self, metadata: HardwareMetadata):
         """Method to set up sampling rate and other test parameters
@@ -538,23 +556,28 @@ class NIDAQmxOutput(HardwareOutput):
         self.signal_samples = metadata.samples_per_write
         self.sample_rate = metadata.sample_rate
         self.writers = []
-        for task in self.tasks:
+        for i, (task, trigger) in enumerate(zip(self.tasks, self.write_triggers)):
             task.timing.cfg_samp_clk_timing(
-                metadata.sample_rate, sample_mode=nic.AcquisitionType.CONTINUOUS, samps_per_chan=metadata.samples_per_write
+                metadata.sample_rate,
+                sample_mode=nic.AcquisitionType.CONTINUOUS,
+                samps_per_chan=metadata.samples_per_write,
             )
             task.out_stream.regen_mode = nic.RegenerationMode.DONT_ALLOW_REGENERATION
             # task.out_stream.relative_to = nic.WriteRelativeTo.CURRENT_WRITE_POSITION
-            task.triggers.start_trigger.dig_edge_src = self.write_trigger
+            task.triggers.start_trigger.dig_edge_src = trigger
             task.triggers.start_trigger.dig_edge_edge = ni.constants.Edge.RISING
             task.triggers.start_trigger.trig_type = ni.constants.TriggerType.DIGITAL_EDGE
+            print(f"Output Task {i} Trigger {trigger}")
             task.out_stream.output_buf_size = self.buffer_size_factor * metadata.samples_per_write
             self.writers.append(ni_write.AnalogMultiChannelWriter(task.out_stream, auto_start=False))
-            print("Actual Output Sample Rate: {:}".format(task.timing.samp_clk_rate))
+            print(f"Output Task {i} Actual Sample Rate: {task.timing.samp_clk_rate}")
 
     def start(self):
         """Method to start acquiring data"""
         for task in self.tasks:
             task.start()
+        if self.task_trigger != 0:
+            print("Output is Running, waiting for PFI Trigger")
 
     def write(self, data):
         """Method to write a frame of data
@@ -567,14 +590,21 @@ class NIDAQmxOutput(HardwareOutput):
 
         """
         for i, writer in enumerate(self.writers):
-            writer.write_many_sample(data[self.channel_task_map[i]])
+            writer.write_many_sample(data[self.channel_task_map[i]], timeout=nic.WAIT_INFINITELY)
+        if not self.has_printed_write_statement:
+            print("Output Wrote Data")
+            self.has_printed_write_statement = True
 
     def stop(self):
         """Method to stop the output"""
+        print("Stopping Output Tasks")
         # Need to output everything in the buffer and then some zeros and we'll
         # shut down during the zeros portion
         for i, writer in enumerate(self.writers):
-            writer.write_many_sample(np.zeros((len(self.channel_task_map[i]), self.signal_samples)))
+            writer.write_many_sample(
+                np.zeros((len(self.channel_task_map[i]), self.signal_samples)),
+                timeout=nic.WAIT_INFINITELY,
+            )
         # Now figure out how many samples are remaining
         samples_remaining = (
             self.tasks[0].out_stream.curr_write_pos - self.tasks[0].out_stream.total_samp_per_chan_generated - self.signal_samples
@@ -583,12 +613,16 @@ class NIDAQmxOutput(HardwareOutput):
         time.sleep(time_remaining)
         for task in self.tasks:
             task.stop()
+        self.has_printed_write_statement = False
+        print("Output Tasks Stopped")
 
     def close(self):
         """Method to close down the hardware"""
-        if not self.tasks is None:
+        print("Closing Output Tasks")
+        if self.tasks is not None:
             for task in self.tasks:
                 task.close()
+        print("Output Tasks Closed")
 
     def ready_for_new_output(self):
         """Returns true if the system is ready for new outputs
@@ -619,13 +653,13 @@ class NIDAQmxOutput(HardwareOutput):
         # Minimum Value
         try:
             minimum_value = float(channel_data.minimum_value)
-        except (TypeError, ValueError):
-            raise ValueError("{:} not a valid minimum value".format(channel_data.minimum_value))
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"{channel_data.minimum_value} not a valid minimum value") from e
         # Maximum Value
         try:
             maximum_value = float(channel_data.maximum_value)
-        except (TypeError, ValueError):
-            raise ValueError("{:} not a valid maximum value".format(channel_data.maximum_value))
+        except (TypeError, ValueError) as e:
+            raise ValueError(f"{channel_data.maximum_value} not a valid maximum value") from e
         physical_channel = channel_data.feedback_device + "/" + channel_data.feedback_channel
         channel = self.tasks[device_index].ao_channels.add_ao_voltage_chan(physical_channel, min_val=minimum_value, max_val=maximum_value)
         return channel

@@ -169,12 +169,17 @@ class OutputProcess(AbstractMessageProcess):
             for index, channel in enumerate(self.hardware_metadata.channel_list)
             if not (channel.feedback_device is None) and not (channel.feedback_device.strip() == "")
         ]
+        self.environment_list = []
         self.environment_output_channels = {}
+        self.environment_active_flags = {}
+        self.environment_starting_up_flags = {}
+        self.environment_shutting_down_flags = {}
         self.environment_data_out_remainders = {}
-        for idx, metadata in enumerate(metadata_list):
+        self.environment_first_data = {}
+        for metadata in metadata_list:
             # Initialize environment dicts
             environment = metadata.queue_name
-            self.environment_list[idx] = environment
+            self.environment_list.append(environment)
             self.environment_active_flags[environment] = False
             self.environment_starting_up_flags[environment] = False
             self.environment_shutting_down_flags[environment] = False

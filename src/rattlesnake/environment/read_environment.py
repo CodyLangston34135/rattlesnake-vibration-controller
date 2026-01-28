@@ -2,7 +2,7 @@ from .abstract_environment import EnvironmentMetadata, EnvironmentInstructions, 
 from .environment_utilities import ControlTypes
 from ..utilities import VerboseMessageQueue, GlobalCommands
 from ..hardware.abstract_hardware import HardwareMetadata
-from ..user_interface.ui_utilities import TimeUICommands
+from ..user_interface.ui_utilities import ReadUICommands
 import copy
 import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
@@ -104,10 +104,11 @@ class ReadEnvironment(EnvironmentProcess):
         try:
             acquisition_data, last_acquisition = self.queue_container.data_in_queue.get_nowait()
             measurement_data = acquisition_data[self.measurement_channels]
-            output_data = acquisition_data[self.output_channels]
-            self.queue_container.gui_update_queue.put((self.environment_name, (TimeUICommands.TIME_DATA, (measurement_data, output_data))))
+            self.queue_container.gui_update_queue.put((self.environment_name, (ReadUICommands.TIME_DATA, measurement_data)))
         except mp.queues.Empty:
             pass
+
+        self.queue_container.environment_command_queue.put(self.environment_name, (GlobalCommands.START_ENVIRONMENT, None))
 
 
 def time_process(

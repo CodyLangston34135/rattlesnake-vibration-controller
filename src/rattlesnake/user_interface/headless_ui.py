@@ -37,7 +37,7 @@ class HeadlessUi(QtWidgets.QMainWindow):
                 self._dummy_prediction_tabs,
                 self.run_environment_tabs,
                 self.queue_container.environment_command_queues[environment_name],
-                self.queue_container.controller_communication_queue,
+                self.queue_container.controller_command_queue,
                 self.queue_container.log_file_queue,
             )
 
