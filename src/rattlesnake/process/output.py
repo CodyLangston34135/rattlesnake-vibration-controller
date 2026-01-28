@@ -446,7 +446,7 @@ class OutputProcess(AbstractMessageProcess):
         return True
 
 
-def output_process(queue_container: QueueContainer, output_active: mp.sharedctypes.Synchronized):
+def output_process(queue_container: QueueContainer, output_active: mp.sharedctypes.Synchronized, shutdown_event):
     """Function passed to multiprocessing as the output process
 
     This process creates the ``OutputProcess`` object and calls the ``run``
@@ -465,4 +465,4 @@ def output_process(queue_container: QueueContainer, output_active: mp.sharedctyp
 
     output_instance = OutputProcess(TASK_NAME, queue_container, output_active)
 
-    output_instance.run()
+    output_instance.run(shutdown_event)

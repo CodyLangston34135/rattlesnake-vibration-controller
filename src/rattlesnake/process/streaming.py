@@ -248,7 +248,7 @@ class StreamingProcess(AbstractMessageProcess):
         return True
 
 
-def streaming_process(queue_container: QueueContainer):
+def streaming_process(queue_container: QueueContainer, shutdown_event):
     """Function passed to multiprocessing as the streaming process
 
     This process creates the ``StreamingProcess`` object and calls the ``run``
@@ -264,4 +264,4 @@ def streaming_process(queue_container: QueueContainer):
 
     streaming_instance = StreamingProcess("Streaming", queue_container)
 
-    streaming_instance.run()
+    streaming_instance.run(shutdown_event)

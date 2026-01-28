@@ -28,6 +28,8 @@ import traceback
 from abc import ABC
 from datetime import datetime
 import multiprocessing as mp
+import multiprocessing.queues as mpqueue
+import queue as thqueue
 
 
 class AbstractMessageProcess(ABC):
@@ -131,7 +133,7 @@ class AbstractMessageProcess(ABC):
         """Queue to which log file messages should be written."""
         return self._log_file_queue
 
-    def run(self):
+    def run(self, shutdown_event):
         """The main function that is run by the process
 
         A function that is called by the process function that
@@ -147,9 +149,12 @@ class AbstractMessageProcess(ABC):
 
         """
         self.log(f"Starting Process with PID {os.getpid()}")
-        while True:
+        while not shutdown_event.is_set():
             # Get the message from the queue
-            message, data = self.command_queue.get(self.process_name)
+            try:
+                message, data = self.command_queue.get(self.process_name, timeout=0.1)  # non-blocking-ish
+            except (thqueue.Empty, mpqueue.Empty):
+                continue
             # Call the function corresponding to that message with the data as argument
             try:
                 function = self.command_map[message]

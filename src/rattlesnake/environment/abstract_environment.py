@@ -6,6 +6,8 @@ import os
 import netCDF4 as nc4
 import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
+import multiprocessing.queues as mpqueue
+import queue as thqueue
 from datetime import datetime
 
 PICKLE_ON_ERROR = False
@@ -336,7 +338,7 @@ class EnvironmentProcess(ABC):
         """
         self._command_map[key] = function
 
-    def run(self):
+    def run(self, shutdown_event):
         """The main function that is run by the environment's process
 
         A function that is called by the environment's process function that
@@ -352,9 +354,12 @@ class EnvironmentProcess(ABC):
 
         """
         self.log(f"Starting Process with PID {os.getpid()}")
-        while True:
+        while not shutdown_event.is_set():
             # Get the message from the queue
-            message, data = self.environment_command_queue.get(self.environment_name)
+            try:
+                message, data = self.environment_command_queue.get(self.environment_name)
+            except (thqueue.Empty, mpqueue.Empty):
+                continue
             # Call the function corresponding to that message with the data as argument
             try:
                 function = self.command_map[message]
@@ -418,6 +423,7 @@ def run_process(
     data_out_queue: mp.Queue,
     acquisition_active: mp.sharedctypes.Synchronized,
     output_active: mp.sharedctypes.Synchronized,
+    shutdown_event,
 ):
     """A function called by ``multiprocessing.Process`` to start the environment
 
@@ -461,4 +467,4 @@ def run_process(
         acquisition_active,
         output_active,
     )
-    process_class.run()
+    process_class.run(shutdown_event)

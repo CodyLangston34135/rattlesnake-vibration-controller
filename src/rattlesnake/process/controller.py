@@ -83,7 +83,7 @@ class Controller(AbstractMessageProcess):
             self.start_streaming()
 
 
-def controller_process(queue_container: QueueContainer):
+def controller_process(queue_container: QueueContainer, shutdown_event):
     """Function passed to multiprocessing as the controller process
 
     This process creates the ``Controller`` object and calls the ``run``
@@ -99,4 +99,4 @@ def controller_process(queue_container: QueueContainer):
 
     acquisition_instance = Controller(TASK_NAME, queue_container)
 
-    acquisition_instance.run()
+    acquisition_instance.run(shutdown_event)

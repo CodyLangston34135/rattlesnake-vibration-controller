@@ -550,10 +550,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         return True
 
 
-def acquisition_process(
-    queue_container: QueueContainer,
-    acquisition_active: mp.sharedctypes.Synchronized,
-):
+def acquisition_process(queue_container: QueueContainer, acquisition_active: mp.sharedctypes.Synchronized, shutdown_event):
     """Function passed to multiprocessing as the acquisition process
 
     This process creates the ``AcquisitionProcess`` object and calls the ``run``
@@ -569,4 +566,4 @@ def acquisition_process(
 
     acquisition_instance = AcquisitionProcess(TASK_NAME, queue_container, acquisition_active)
 
-    acquisition_instance.run()
+    acquisition_instance.run(shutdown_event)

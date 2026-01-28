@@ -31,7 +31,7 @@ class GlobalCommands(Enum):
     AT_TARGET_LEVEL = 18  # REMOVE LATER
 
 
-def log_file_task(queue: mp.Queue):
+def log_file_task(queue: mp.Queue, shutdown_event):
     """A multiprocessing function that collects logging data and writes to file
 
     Parameters
@@ -40,7 +40,7 @@ def log_file_task(queue: mp.Queue):
         The multiprocessing queue to collect logging messages from
     """
     with open("Rattlesnake.log", "w") as f:
-        while True:
+        while not shutdown_event.is_set():
             output = queue.get()
             if output == GlobalCommands.QUIT:
                 f.write("Program quitting, logging terminated.")

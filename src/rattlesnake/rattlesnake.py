@@ -15,7 +15,7 @@ from typing import List
 
 TASK_NAME = "Rattlesnake"
 CLOSE_TIMEOUT = 5
-THREADING = True
+THREADING = False
 
 
 class RattlesnakeState(Enum):
@@ -45,7 +45,11 @@ class Rattlesnake:
 
         # Start up log file process
         log_file_queue = mp.Queue()
-        self.log_file_process = mp.Process(target=log_file_task, args=(log_file_queue,))
+        self.log_file_event = mp.Event()
+        self.log_file_process = mp.Process(
+            target=log_file_task,
+            args=(log_file_queue, self.log_file_event),
+        )
         self.log_file_process.start()
 
         # Start up command queues and processes
@@ -91,16 +95,23 @@ class Rattlesnake:
             environment_data_out_queues,
         )
 
-        self.controller_proc = new_process(target=controller_process, args=(self.queue_container,))
+        self.controller_event = new_event()
+        self.controller_proc = new_process(
+            target=controller_process,
+            args=(self.queue_container, self.controller_event),
+        )
         self.controller_proc.start()
+        self.acquisition_event = new_event()
         self.acquisition_proc = new_process(
             target=acquisition_process,
-            args=(self.queue_container, self.acquisition_active),
+            args=(self.queue_container, self.acquisition_active, self.acquisition_event),
         )
         self.acquisition_proc.start()
-        self.output_proc = new_process(target=output_process, args=(self.queue_container, self.output_active))
+        self.output_event = new_event()
+        self.output_proc = new_process(target=output_process, args=(self.queue_container, self.output_active, self.output_event))
         self.output_proc.start()
-        self.streaming_proc = new_process(target=streaming_process, args=(self.queue_container,))
+        self.streaming_event = new_event()
+        self.streaming_proc = new_process(target=streaming_process, args=(self.queue_container, self.streaming_event))
         self.streaming_proc.start()
 
         # Set up environment manager for future environment processes
@@ -229,29 +240,41 @@ class Rattlesnake:
         self.controller_proc.join(timeout=CLOSE_TIMEOUT)
         if self.controller_proc.is_alive():
             self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Controller Process\n")
-            self.controller_proc.terminate()
-            self.controller_proc.join()
+            self.controller_event.set()
+            self.controller_proc.join(timeout=CLOSE_TIMEOUT)
+            if self.controller_proc.is_alive() and not THREADING:
+                self.controller_proc.terminate()
+                self.controller_proc.join()
         self.queue_container.log_file_queue.put(f"{datetime.now()}: Joining Acquisition Process\n")
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
         self.acquisition_proc.join(timeout=CLOSE_TIMEOUT)
         if self.acquisition_proc.is_alive():
             self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Acquisition Process\n")
-            self.acquisition_proc.terminate()
-            self.acquisition_proc.join()
+            self.acquisition_event.set()
+            self.acquisition_proc.join(timeout=CLOSE_TIMEOUT)
+            if self.acquisition_proc.is_alive() and not THREADING:
+                self.acquisition_proc.terminate()
+                self.acquisition_proc.join()
         self.queue_container.log_file_queue.put(f"{datetime.now()}: Joining Output Process\n")
         self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
         self.output_proc.join(timeout=CLOSE_TIMEOUT)
         if self.output_proc.is_alive():
             self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Output Process\n")
-            self.output_proc.terminate()
-            self.output_proc.join()
+            self.output_event.set()
+            self.output_proc.join(timeout=CLOSE_TIMEOUT)
+            if self.output_proc.is_alive() and not THREADING:
+                self.output_proc.terminate()
+                self.output_proc.join()
         self.queue_container.log_file_queue.put(f"{datetime.now()}: Joining Streaming Process\n")
         self.queue_container.streaming_command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
         self.streaming_proc.join(timeout=CLOSE_TIMEOUT)
         if self.streaming_proc.is_alive():
             self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Streaming Process\n")
-            self.streaming_proc.terminate()
-            self.streaming_proc.join()
+            self.streaming_event.set()
+            self.streaming_proc.join(timeout=CLOSE_TIMEOUT)
+            if self.streaming_proc.is_alive() and not THREADING:
+                self.streaming_proc.terminate()
+                self.streaming_proc.join()
 
         # Close out of environment processes
         self.environment_manager.close_environments(CLOSE_TIMEOUT)
