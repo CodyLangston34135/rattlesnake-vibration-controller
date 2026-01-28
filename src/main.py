@@ -113,7 +113,7 @@ def main():
     hardware_metadata = test_sdynpy_metadata()
 
     rattlesnake.set_hardware(hardware_metadata)
-    time.sleep(2)
+    # time.sleep(2)
 
     # Time Environment
     time_metadata = TimeMetadata("Time Environment 1")
@@ -129,7 +129,7 @@ def main():
 
     rattlesnake.set_environments(envrionment_metadata_list)
 
-    time.sleep(2)
+    # time.sleep(2)
 
     stream_metadata = StreamMetadata()
     stream_metadata.stream_type = StreamType.NO_STREAM

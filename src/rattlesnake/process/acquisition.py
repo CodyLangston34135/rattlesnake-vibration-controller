@@ -28,7 +28,10 @@ from ..hardware.hardware_utilities import HardwareType
 from ..hardware.abstract_hardware import HardwareMetadata
 from ..environment.abstract_environment import EnvironmentMetadata
 import multiprocessing as mp
+import multiprocessing.queues as mpqueue
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
+import threading
+import queue as thqueue
 import numpy as np
 import scipy.signal as sig
 from time import time, sleep
@@ -338,7 +341,7 @@ class AcquisitionProcess(AbstractMessageProcess):
                 # Try to get data from the measurement if we can
                 try:
                     environment, data = self.queue_container.input_output_sync_queue.get_nowait()
-                except mp.queues.Empty:
+                except (thqueue.Empty, mpqueue.Empty):
                     if time() - start_wait_time > 30:
                         self.queue_container.gui_update_queue.put(
                             (

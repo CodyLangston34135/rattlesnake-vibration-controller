@@ -7,12 +7,15 @@ from .hardware.abstract_hardware import HardwareMetadata
 from .environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions
 from .environment_manager import EnvironmentManager
 import multiprocessing as mp
+import threading
+import queue
 from enum import Enum
 from datetime import datetime
 from typing import List
 
 TASK_NAME = "Rattlesnake"
 CLOSE_TIMEOUT = 5
+THREADING = True
 
 
 class RattlesnakeState(Enum):
@@ -31,6 +34,20 @@ class Rattlesnake:
         self.acquisition_active = mp.Value("i", 0)
         self.output_active = mp.Value("i", 0)
 
+        if THREADING:
+            self.threading_startup()
+        else:
+            self.process_startup()
+
+        # Set up environment manager for future environment processes
+        self.environment_manager = EnvironmentManager(self.queue_container)
+
+        self.hardware_metadata = None
+        self.environment_metadata_list = []
+        self.stream_metadata = StreamMetadata()  # Default to no stream
+        self.profile_event_list = []
+
+    def process_startup(self):
         # Start up log file process
         log_file_queue = mp.Queue()
         self.log_file_process = mp.Process()
@@ -43,9 +60,6 @@ class Rattlesnake:
         acquisition_command_queue = VerboseMessageQueue(log_file_queue, self.controller_queue_name_manager, "Acquisition Command Queue")
         output_command_queue = VerboseMessageQueue(log_file_queue, self.controller_queue_name_manager, "Output Command Queue")
         streaming_command_queue = VerboseMessageQueue(log_file_queue, self.controller_queue_name_manager, "Streaming Command Queue")
-        self.acquisition_process = mp.Process()
-        self.output_process = mp.Process()
-        self.streaming_process = mp.Process()
 
         # Set up data queue
         input_output_sync_queue = mp.Queue()
@@ -83,7 +97,6 @@ class Rattlesnake:
             environment_data_out_queues,
         )
 
-        # Start up acquisition, output, streaming processes
         self.controller_proc = mp.Process(target=controller_process, args=(self.queue_container,))
         self.controller_proc.start()
         self.acquisition_proc = mp.Process(
@@ -96,13 +109,67 @@ class Rattlesnake:
         self.streaming_proc = mp.Process(target=streaming_process, args=(self.queue_container,))
         self.streaming_proc.start()
 
-        # Set up environment manager for future environment processes
-        self.environment_manager = EnvironmentManager(self.queue_container)
+    def threading_startup(self):
+        # Start up log file process
+        log_file_queue = mp.Queue()
+        self.log_file_process = mp.Process()
+        self.log_file_process = mp.Process(target=log_file_task, args=(log_file_queue,))
+        self.log_file_process.start()
 
-        self.hardware_metadata = None
+        # Start up command queues and processes
+        self.controller_queue_name_manager = mp.Manager()  # Adds minor overhead which is reasonable for COMMAND queues only
+        controller_command_queue = VerboseMessageQueue(log_file_queue, self.controller_queue_name_manager, "Controller Command Queue")
+        acquisition_command_queue = VerboseMessageQueue(log_file_queue, self.controller_queue_name_manager, "Acquisition Command Queue")
+        output_command_queue = VerboseMessageQueue(log_file_queue, self.controller_queue_name_manager, "Output Command Queue")
+        streaming_command_queue = VerboseMessageQueue(log_file_queue, self.controller_queue_name_manager, "Streaming Command Queue")
+
+        # Set up data queue
+        input_output_sync_queue = mp.Queue()
+        single_process_hardware_queue = mp.Queue()
+
+        # Set up environment queues
+        max_environments = 16
         self.environment_metadata_list = []
-        self.stream_metadata = StreamMetadata()  # Default to no stream
-        self.profile_event_list = []
+        environment_command_queues = {}
+        environment_data_in_queues = {}
+        environment_data_out_queues = {}
+        for env_idx in range(max_environments):
+            environment_name = "Environment {:}".format(env_idx)
+            environment_command_queues[environment_name] = VerboseMessageQueue(
+                log_file_queue, self.controller_queue_name_manager, environment_name + " Command Queue"
+            )
+            environment_data_in_queues[environment_name] = mp.Queue()
+            environment_data_out_queues[environment_name] = mp.Queue()
+
+        # Set up output queue
+        gui_update_queue = mp.Queue()
+
+        # Build queue container
+        self.queue_container = QueueContainer(
+            controller_command_queue,
+            acquisition_command_queue,
+            output_command_queue,
+            streaming_command_queue,
+            log_file_queue,
+            input_output_sync_queue,
+            single_process_hardware_queue,
+            gui_update_queue,
+            environment_command_queues,
+            environment_data_in_queues,
+            environment_data_out_queues,
+        )
+
+        self.controller_proc = threading.Thread(target=controller_process, args=(self.queue_container,))
+        self.controller_proc.start()
+        self.acquisition_proc = threading.Thread(
+            target=acquisition_process,
+            args=(self.queue_container, self.acquisition_active),
+        )
+        self.acquisition_proc.start()
+        self.output_proc = threading.Thread(target=output_process, args=(self.queue_container, self.output_active))
+        self.output_proc.start()
+        self.streaming_proc = threading.Thread(target=streaming_process, args=(self.queue_container,))
+        self.streaming_proc.start()
 
     def set_hardware(self, hardware_metadata: HardwareMetadata) -> None:
         # Check for valid states

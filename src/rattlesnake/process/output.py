@@ -29,7 +29,10 @@ from ..hardware.hardware_utilities import HardwareType
 from ..hardware.abstract_hardware import HardwareMetadata
 from ..environment.abstract_environment import EnvironmentMetadata
 import multiprocessing as mp
+import multiprocessing.queues as mpqueue
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
+import threading
+import queue as thqueue
 import numpy as np
 from typing import List
 
@@ -273,7 +276,7 @@ class OutputProcess(AbstractMessageProcess):
                 try:
                     # Try to grab data from the queue and add it to the remainders.
                     environment_data, last_run = self.queue_container.environment_data_out_queues[environment].get_nowait()
-                except mp.queues.Empty:
+                except (thqueue.Empty, mpqueue.Empty):
                     # If data is not ready yet, simply continue to the next environment and we'll
                     # try on the next time around.
                     continue

@@ -30,6 +30,8 @@ from ..hardware.abstract_hardware import HardwareMetadata
 from ..user_interface.ui_utilities import TimeUICommands
 import copy
 import multiprocessing as mp
+import threading
+import queue
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import netCDF4 as nc4
 import numpy as np
@@ -310,7 +312,7 @@ class TimeEnvironment(EnvironmentProcess):
             measurement_data = acquisition_data[self.measurement_channels]
             output_data = acquisition_data[self.output_channels]
             self.queue_container.gui_update_queue.put((self.queue_name, (TimeUICommands.TIME_DATA, (measurement_data, output_data))))
-        except mp.queues.Empty:
+        except (queue.Empty, mp.queues.Empty):
             last_acquisition = False
         # See if we need to output data
         if self.queue_container.data_out_queue.empty():
