@@ -1,4 +1,4 @@
-from .utilities import GlobalCommands, VerboseMessageQueue, QueueContainer, ProfileTimer, ProfileEvent, log_file_task
+from .utilities import GlobalCommands, VerboseMessageQueue, QueueContainer, log_file_task
 from .process.controller import controller_process
 from .process.acquisition import acquisition_process
 from .process.output import output_process
@@ -16,11 +16,12 @@ CLOSE_TIMEOUT = 5
 
 
 class RattlesnakeState(Enum):
-    INIT = 0
-    HARDWARE_STORE = 1
-    ENVIRONMENT_STORE = 2
-    ACQUISITION_START = 3
-    OUTPUT_START = 4
+    # We don't check for stored stream/profiles because they can be left blank
+    INIT = 0  # Nothing is stored yet
+    HARDWARE_STORE = 1  # Hardware has been stored
+    ENVIRONMENT_STORE = 2  # Environments have been stored
+    ACQUISITION_START = 3  # Acquisition has started
+    OUTPUT_START = 4  # Profile/Environment output has started
 
 
 class Rattlesnake:
@@ -37,10 +38,11 @@ class Rattlesnake:
         self.log_file_process.start()
 
         # Start up command queues and processes
-        controller_command_queue = VerboseMessageQueue(log_file_queue, "Controller Command Queue")
-        acquisition_command_queue = VerboseMessageQueue(log_file_queue, "Acquisition Command Queue")
-        output_command_queue = VerboseMessageQueue(log_file_queue, "Output Command Queue")
-        streaming_command_queue = VerboseMessageQueue(log_file_queue, "Streaming Command Queue")
+        self.controller_queue_name_manager = mp.Manager()  # Adds minor overhead which is reasonable for COMMAND queues only
+        controller_command_queue = VerboseMessageQueue(log_file_queue, self.controller_queue_name_manager, "Controller Command Queue")
+        acquisition_command_queue = VerboseMessageQueue(log_file_queue, self.controller_queue_name_manager, "Acquisition Command Queue")
+        output_command_queue = VerboseMessageQueue(log_file_queue, self.controller_queue_name_manager, "Output Command Queue")
+        streaming_command_queue = VerboseMessageQueue(log_file_queue, self.controller_queue_name_manager, "Streaming Command Queue")
         self.acquisition_process = mp.Process()
         self.output_process = mp.Process()
         self.streaming_process = mp.Process()
@@ -57,7 +59,9 @@ class Rattlesnake:
         environment_data_out_queues = {}
         for env_idx in range(max_environments):
             environment_name = "Environment {:}".format(env_idx)
-            environment_command_queues[environment_name] = VerboseMessageQueue(log_file_queue, environment_name + " Command Queue")
+            environment_command_queues[environment_name] = VerboseMessageQueue(
+                log_file_queue, self.controller_queue_name_manager, environment_name + " Command Queue"
+            )
             environment_data_in_queues[environment_name] = mp.Queue()
             environment_data_out_queues[environment_name] = mp.Queue()
 
@@ -97,7 +101,7 @@ class Rattlesnake:
 
         self.hardware_metadata = None
         self.environment_metadata_list = []
-        self.stream_metadata = None
+        self.stream_metadata = StreamMetadata()  # Default to no stream
         self.profile_event_list = []
 
     def set_hardware(self, hardware_metadata: HardwareMetadata) -> None:
@@ -141,28 +145,33 @@ class Rattlesnake:
         if not valid_stream:
             raise TypeError("Rattlesnake.set_stream requires a valid StreamMetadata class")
 
+        self.log("Setting Stream Metadata")
+        self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_STREAMING, stream_metadata))
         self.stream_metadata = stream_metadata
 
     def set_instructions(self, environment_instructions_list: List[EnvironmentInstructions]):
-        self.log("Setting Instructions")
+        # This is something that will be called when "Start Test From Profile" is called.
+        # Will mainly validate the list of instructions and map it onto the profile manager
+        # so that it has an initial state for when the profile events change the instructions
+        pass
+        # self.log("Setting Instructions")
+        # queue_names_dict = self.environment_manager.queue_names_dict
 
-        queue_name_dict = {metadata.environment_name: metadata.queue_name for metadata in self.environment_metadata_list}
-
-        for instruction in environment_instructions_list:
-            try:
-                instruction.queue_name = queue_name_dict[instruction.environment_name]
-            except KeyError:
-                raise KeyError(f"No environment found for {instruction.environment_name}")
-            self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_INSTRUCTION, instruction))
+        # for instruction in environment_instructions_list:
+        #     try:
+        #         instruction.queue_name = queue_names_dict[instruction.environment_name]
+        #     except KeyError:
+        #         raise KeyError(f"No environment found for {instruction.environment_name}")
+        #     self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_INSTRUCTION, instruction))
 
     def set_profile(self, profile_event_list):
         self.log("Settting Profile Event List")
 
-        queue_name_dict = {metadata.environment_name: metadata.queue_name for metadata in self.environment_metadata_list}
+        queue_names_dict = self.environment_manager.queue_names_dict
 
         for profile_event in self.profile_event_list:
             try:
-                profile_event.queue_name = queue_name_dict[profile_event.environment_name]
+                profile_event.queue_name = queue_names_dict[profile_event.environment_name]
             except KeyError:
                 raise KeyError(f"No environment found for {profile_event.environment_name}")
 

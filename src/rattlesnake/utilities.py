@@ -2,7 +2,6 @@
 import multiprocessing as mp
 import time
 from qtpy import QtCore
-from ctypes import c_wchar_p  # pylint: disable=unused-import
 from datetime import datetime
 from enum import Enum
 from typing import Dict
@@ -53,7 +52,7 @@ def log_file_task(queue: mp.Queue):
 class VerboseMessageQueue:
     """A queue class that contains automatic logging information"""
 
-    def __init__(self, log_queue, queue_name: str = ""):
+    def __init__(self, log_queue, name_manager, base_name: str = ""):
         """
         A queue class that contains automatic logging information
 
@@ -68,13 +67,22 @@ class VerboseMessageQueue:
         """
         self.queue = mp.Queue()
         self.log_queue = log_queue
-        self.queue_name = queue_name
+        self.base_name = base_name
+        self.environment_name = name_manager.Value(str, "")
         self.last_put_message = None
         self.last_put_time = -float("inf")
         self.last_get_message = None
         self.last_get_time = -float("inf")
         self.last_flush = -float("inf")
         self.time_threshold = 1.0
+
+    @property
+    def log_name(self):
+        env = self.environment_name.value
+        return f"{self.base_name} | {env}" if env else self.base_name
+
+    def assign_environment(self, env_name: str):
+        self.environment_name.value = env_name
 
     def put(self, task_name, message_data_tuple, *args, **kwargs):
         """Puts data to a verbose queue
@@ -96,14 +104,7 @@ class VerboseMessageQueue:
         """
         put_time = time.time()
         if self.last_put_message != message_data_tuple[0] or put_time - self.last_put_time > self.time_threshold:
-            self.log_queue.put(
-                "{:}: {:} put {:} to {:}\n".format(
-                    datetime.now(),
-                    task_name,
-                    message_data_tuple[0].name,
-                    self.queue_name,
-                )
-            )
+            self.log_queue.put("{:}: {:} put {:} to {:}\n".format(datetime.now(), task_name, message_data_tuple[0].name, self.log_name))
             self.last_put_message = message_data_tuple[0]
             self.last_put_time = put_time
         self.queue.put(message_data_tuple, *args, **kwargs)
@@ -132,14 +133,7 @@ class VerboseMessageQueue:
         get_time = time.time()
         message_data_tuple = self.queue.get(*args, **kwargs)
         if self.last_get_message != message_data_tuple[0] or get_time - self.last_get_time > self.time_threshold:
-            self.log_queue.put(
-                "{:}: {:} got {:} from {:}\n".format(
-                    datetime.now(),
-                    task_name,
-                    message_data_tuple[0].name,
-                    self.queue_name,
-                )
-            )
+            self.log_queue.put("{:}: {:} got {:} from {:}\n".format(datetime.now(), task_name, message_data_tuple[0].name, self.log_name))
             self.last_get_message = message_data_tuple[0]
             self.last_get_time = get_time
         return message_data_tuple
@@ -163,13 +157,13 @@ class VerboseMessageQueue:
         """
         flush_time = time.time()
         if flush_time - self.last_flush > 0.1:
-            self.log_queue.put("{:}: {:} flushed {:}\n".format(datetime.now(), task_name, self.queue_name))
+            self.log_queue.put("{:}: {:} flushed {:}\n".format(datetime.now(), task_name, self.log_name))
             self.last_flush = flush_time
         data = []
         while True:
             try:
                 data.append(self.queue.get(False))
-                self.log_queue.put("{:}: {:} got {:} from {:} during flush\n".format(datetime.now(), task_name, data[-1][0].name, self.queue_name))
+                self.log_queue.put("{:}: {:} got {:} from {:} during flush\n".format(datetime.now(), task_name, data[-1][0].name, self.log_name))
             except mp.queues.Empty:
                 return data
 

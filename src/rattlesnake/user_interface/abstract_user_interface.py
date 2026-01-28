@@ -18,6 +18,7 @@ class AbstractUI(ABC):
     def __init__(
         self,
         environment_name: str,
+        queue_name: str,
         environment_command_queue: VerboseMessageQueue,
         controller_communication_queue: VerboseMessageQueue,
         log_file_queue: mp.Queue,
@@ -47,8 +48,8 @@ class AbstractUI(ABC):
 
 
         """
-        self._environment_name = environment_name
-        self._log_name = environment_name + " UI"
+        self.environment_name = environment_name
+        self._queue_name = queue_name
         self._log_file_queue = log_file_queue
         self._environment_command_queue = environment_command_queue
         self._controller_communication_queue = controller_communication_queue
@@ -232,15 +233,17 @@ class AbstractUI(ABC):
         return self._controller_communication_queue
 
     @property
-    def environment_name(self):
-        """A property containing the environment's name"""
-        return self._environment_name
-
-    @property
     def log_name(self):
         """A property containing the name that the UI will be referenced by in
         the log file, which will typically be ``self.environment_name + ' UI'``"""
-        return self._log_name
+        return self.environment_name + " UI"
+
+    @property
+    def queue_name(self):
+        """The value of the key pointing to this environment command queue. Used
+        when giving commands so that the controller knows which environment is
+        giving the command even when the environment names can change"""
+        return self._queue_name
 
     def log(self, message: str):
         """Write a message to the log file

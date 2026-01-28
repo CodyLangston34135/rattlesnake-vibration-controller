@@ -4,8 +4,7 @@ from ..utilities import VerboseMessageQueue, GlobalCommands
 from ..math_operations import load_time_history, rms_time, db2scale
 from ..hardware.abstract_hardware import HardwareMetadata
 from ..environment.environment_utilities import ControlTypes
-from ..environment.abstract_environment import EnvironmentMetadata
-from ..environment.time_environment import TimeMetadata
+from ..environment.time_environment import TimeMetadata, TimeInstructions
 import openpyxl
 import multiprocessing as mp
 import numpy as np
@@ -30,6 +29,7 @@ class TimeUI(AbstractUI):
     def __init__(
         self,
         environment_name: str,
+        queue_name: str,
         definition_tabwidget: QtWidgets.QTabWidget,
         system_id_tabwidget: QtWidgets.QTabWidget,  # pylint: disable=unused-argument
         test_predictions_tabwidget: QtWidgets.QTabWidget,  # pylint: disable=unused-argument
@@ -71,6 +71,7 @@ class TimeUI(AbstractUI):
         """
         super().__init__(
             environment_name,
+            queue_name,
             environment_command_queue,
             controller_communication_queue,
             log_file_queue,
@@ -97,9 +98,9 @@ class TimeUI(AbstractUI):
         self.connect_callbacks()
 
         # Complete the profile commands
-        self.command_map["Set Test Level"] = self.change_test_level_from_profile
-        self.command_map["Set Repeat"] = self.set_repeat_from_profile
-        self.command_map["Set No Repeat"] = self.set_norepeat_from_profile
+        # self.command_map["Set Test Level"] = self.change_test_level_from_profile
+        # self.command_map["Set Repeat"] = self.set_repeat_from_profile
+        # self.command_map["Set No Repeat"] = self.set_norepeat_from_profile
 
     def complete_ui(self):
         """Helper Function to continue setting up the user interface"""
@@ -429,18 +430,13 @@ class TimeUI(AbstractUI):
         self.run_widget.start_test_button.setEnabled(False)
         self.run_widget.test_level_selector.setEnabled(False)
         self.run_widget.repeat_signal_checkbox.setEnabled(False)
-        self.controller_communication_queue.put(self.log_name, (GlobalCommands.START_ENVIRONMENT, self.environment_name))
-        self.environment_command_queue.put(
-            self.log_name,
-            (
-                GlobalCommands.START_ENVIRONMENT,
-                (
-                    db2scale(self.run_widget.test_level_selector.value()),
-                    self.run_widget.repeat_signal_checkbox.isChecked(),
-                ),
-            ),
-        )
-        self.controller_communication_queue.put(self.log_name, (GlobalCommands.AT_TARGET_LEVEL, self.environment_name))
+
+        instruction = TimeInstructions(self.environment_name)
+        instruction.current_test_level = db2scale(self.run_widget.test_level_selector.value())
+        instruction.repeat = self.run_widget.repeat_signal_checkbox.isChecked()
+
+        self.controller_communication_queue.put(self.log_name, (GlobalCommands.START_ENVIRONMENT, (self.queue_name, instruction)))
+        self.controller_communication_queue.put(self.log_name, (GlobalCommands.AT_TARGET_LEVEL, self.queue_name))
 
     def stop_control(self):
         """Stops running the environment"""
@@ -449,38 +445,6 @@ class TimeUI(AbstractUI):
         self.run_widget.test_level_selector.setEnabled(True)
         self.run_widget.repeat_signal_checkbox.setEnabled(True)
         self.environment_command_queue.put(self.log_name, (GlobalCommands.STOP_ENVIRONMENT, None))
-
-    def change_test_level_from_profile(self, test_level):
-        """Sets the test level from a profile instruction
-
-        Parameters
-        ----------
-        test_level :
-            Value to set the test level to.
-        """
-        self.run_widget.test_level_selector.setValue(int(test_level))
-
-    def set_repeat_from_profile(self, data):  # pylint: disable=unused-argument
-        """Sets the the signal to repeat from a profile instruction
-
-        Parameters
-        ----------
-        data : Ignored
-            Parameter is ignored but required by the ``command_map``
-
-        """
-        self.run_widget.repeat_signal_checkbox.setChecked(True)
-
-    def set_norepeat_from_profile(self, data):  # pylint: disable=unused-argument
-        """Sets the the signal to not repeat from a profile instruction
-
-        Parameters
-        ----------
-        data : Ignored
-            Parameter is ignored but required by the ``command_map``
-
-        """
-        self.run_widget.repeat_signal_checkbox.setChecked(False)
 
     def update_gui(self, queue_data):
         """Update the graphical interface for the environment

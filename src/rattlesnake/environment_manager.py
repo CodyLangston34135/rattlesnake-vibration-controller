@@ -35,6 +35,10 @@ class EnvironmentManager:
         sysid_names = [queue_name for queue_name in self.queue_names if self.environment_types[queue_name] in self.sysid_environments]
         return sysid_names
 
+    @property
+    def queue_names_dict(self):
+        return {self.environment_names[queue_name]: queue_name for queue_name in self.queue_names}
+
     def log(self, message):
         """Write a message to the log file
 
@@ -124,7 +128,7 @@ class EnvironmentManager:
         queue_name = None
         for queue_name in self.available_queues:
             if queue_name not in self.queue_names:
-                queue_name = queue_name
+                queue_name = str(queue_name)
                 break
 
         if queue_name == None:
@@ -137,9 +141,11 @@ class EnvironmentManager:
         if environment_type == ControlTypes.TIME:
             from .environment.time_environment import time_process
 
+            self.queue_container.environment_command_queues[queue_name].assign_environment(environment_name)
             environment_process = mp.Process(
                 target=time_process,
                 args=(
+                    environment_name,
                     queue_name,
                     self.queue_container.environment_command_queues[queue_name],
                     self.queue_container.gui_update_queue,

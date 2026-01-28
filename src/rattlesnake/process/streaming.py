@@ -43,9 +43,9 @@ class StreamType(Enum):
 
 class StreamMetadata:
     def __init__(self):
-        self.stream_type = None
+        self.stream_type = StreamType.NO_STREAM
         self.stream_file = None
-        self.test_level = None
+        self.test_level_environment_name = None
 
     def validate(self):
         if self.stream_type != StreamType.NO_STREAM:
@@ -56,9 +56,11 @@ class StreamMetadata:
             if not parent_dir.exists():
                 raise ValueError(f"The directory for the stream file does not exist: {parent_dir}")
 
+        # I do not check whether the environment_name corresponds to a valid environment. If it isn't,
+        # the stream just wont start which isn't critical enough to warrant a restructure
         if self.stream_type == StreamType.TEST_LEVEL:
-            if self.test_level is None or not isinstance(self.test_level, float):
-                raise ValueError("No test level was chosen for stream to start at")
+            if self.test_level_environment_name is None or not isinstance(self.test_level_environment_name, str):
+                raise ValueError("No test level environment was chosen for the stream to start at")
 
         return True
 

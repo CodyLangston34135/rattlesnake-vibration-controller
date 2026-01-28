@@ -131,7 +131,6 @@ class EnvironmentInstructions(ABC):
 
     def __init__(self, environment_name):
         self.environment_name = environment_name
-        self.queue_name = None
 
 
 class EnvironmentProcess(ABC):
@@ -180,6 +179,7 @@ class EnvironmentProcess(ABC):
     def __init__(
         self,
         environment_name: str,
+        queue_name: str,
         command_queue: VerboseMessageQueue,
         gui_update_queue: mp.Queue,
         controller_communication_queue: VerboseMessageQueue,
@@ -189,7 +189,8 @@ class EnvironmentProcess(ABC):
         acquisition_active: mp.sharedctypes.Synchronized,
         output_active: mp.sharedctypes.Synchronized,
     ):
-        self._environment_name = environment_name
+        self.environment_name = environment_name  # Used for TASK_NAME/logging purposes, can change adaptively
+        self._queue_name = queue_name  # Used whenever you need a unique id for the environment, stays the same
         self._command_queue = command_queue
         self._gui_update_queue = gui_update_queue
         self._controller_communication_queue = controller_communication_queue
@@ -311,9 +312,9 @@ class EnvironmentProcess(ABC):
         self.log_file_queue.put(f"{datetime.now()}: {self.environment_name} -- {message}\n")
 
     @property
-    def environment_name(self) -> str:
-        """A string defining the name of the environment"""
-        return self._environment_name
+    def queue_name(self) -> str:
+        """A string defining the queue name asigned to the environment"""
+        return self._queue_name
 
     @property
     def command_map(self) -> dict:

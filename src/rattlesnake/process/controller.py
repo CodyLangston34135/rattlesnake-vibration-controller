@@ -1,6 +1,8 @@
 from .abstract_message_process import AbstractMessageProcess
 from ..utilities import QueueContainer, GlobalCommands
-from ..environment.abstract_environment import EnvironmentInstructions
+from ..environment.abstract_environment import EnvironmentInstructions, EnvironmentMetadata
+from .streaming import StreamMetadata, StreamType
+from typing import Dict
 
 
 TASK_NAME = "Controller"
@@ -39,49 +41,46 @@ class Controller(AbstractMessageProcess):
         )
         self.queue_container = queue_container
         self.environment_instructions = {}
+        self.stream_metadata = StreamMetadata()
         self.map_command(GlobalCommands.RUN_HARDWARE, self.run_hardware)
         self.map_command(GlobalCommands.STOP_HARDWARE, self.stop_hardware)
-        self.map_command(GlobalCommands.INITIALIZE_ENVIRONMENT, self.initialize_environment)
         self.map_command(GlobalCommands.START_ENVIRONMENT, self.start_environment)
         self.map_command(GlobalCommands.STOP_ENVIRONMENT, self.stop_environment)
+        self.map_command(GlobalCommands.INITIALIZE_STREAMING, self.initialize_streaming)
         self.map_command(GlobalCommands.START_STREAMING, self.start_streaming)
         self.map_command(GlobalCommands.STOP_STREAMING, self.stop_streaming)
-        self.map_command(GlobalCommands.INITIALIZE_INSTRUCTION, self.set_instruction)
         self.map_command(GlobalCommands.AT_TARGET_LEVEL, self.at_target_level)
 
-    def run_hardware(self, data):
-        self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, data))
-        self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, data))
+    def run_hardware(self, data: None):
+        self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, None))
+        self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, None))
 
-    def stop_hardware(self, data):
-        self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, data))
-        self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, data))
+    def stop_hardware(self, data: None):
+        self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))
+        self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))
 
-    def initialize_environment(self, data):
-        # This just clears the instructions so that you are not starting with problematic queue_names if
-        # the environment order switched around
-        self.environment_instructions = {}
-        for metadata in data:
-            self.environment_instructions[metadata.queue_name] = None
+    def start_environment(self, data: tuple[str, EnvironmentInstructions]):
+        queue_name, instruction = data
+        self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.START_ENVIRONMENT, queue_name))
+        self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.START_ENVIRONMENT, instruction))
 
-    def start_environment(self, data):
-        self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.START_ENVIRONMENT, data))
-        self.queue_container.environment_command_queues[data].put(TASK_NAME, (GlobalCommands.START_ENVIRONMENT, self.environment_instructions[data]))
+    def stop_environment(self, data: str):
+        queue_name = data
+        self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, queue_name))
 
-    def stop_environment(self, data):
-        self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, data))
+    def initialize_streaming(self, data: StreamMetadata):
+        self.stream_metadata = data
 
-    def start_streaming(self, data):
+    def start_streaming(self, data: None):
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.START_STREAMING, None))
 
-    def stop_streaming(self, data):
+    def stop_streaming(self, data: None):
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.STOP_STREAMING, None))
 
-    def set_instruction(self, data):
-        self.environment_instructions[data.queue_name] = data
-
-    def at_target_level(self, data):
-        pass
+    def at_target_level(self, data: str):
+        environment_name = data
+        if self.stream_metadata.stream_type == StreamType.TEST_LEVEL and self.stream_metadata.test_level_environment_name == environment_name:
+            self.start_streaming()
 
 
 def controller_process(queue_container: QueueContainer):
