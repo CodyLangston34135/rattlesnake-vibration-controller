@@ -101,18 +101,6 @@ class TimeUI(AbstractUI):
         self.command_map["Set Repeat"] = self.set_repeat_from_profile
         self.command_map["Set No Repeat"] = self.set_norepeat_from_profile
 
-    def collect_environment_definition_parameters(self) -> TimeMetadata:
-        """Collect the parameters from the user interface defining the environment
-
-        Returns
-        -------
-        TimeParameters
-            A metadata or parameters object containing the parameters defining
-            the corresponding environment.
-        """
-        # return TimeParameters.from_ui(self)
-        return TimeMetadata()
-
     def complete_ui(self):
         """Helper Function to continue setting up the user interface"""
         # Set common look and feel for plots
@@ -133,6 +121,7 @@ class TimeUI(AbstractUI):
         self.run_widget.start_test_button.clicked.connect(self.start_control)
         self.run_widget.stop_test_button.clicked.connect(self.stop_control)
 
+    ## Store/Export metadata methods
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         """Update the user interface with data acquisition parameters
 
@@ -224,6 +213,172 @@ class TimeUI(AbstractUI):
 
         self.hardware_metadata = hardware_metadata
 
+    def initialize_environment(self) -> TimeMetadata:
+        """Collect the parameters from the user interface defining the environment
+
+        Returns
+        -------
+        TimeParameters
+            A metadata or parameters object containing the parameters defining
+            the corresponding environment.
+        """
+        # return TimeParameters.from_ui(self)
+        metadata = TimeMetadata()
+        metadata.channel_list = self.hardware_metadata.channel_list
+        metadata.sample_rate = self.definition_widget.output_sample_rate_display.value()
+        metadata.output_signal = self.signal
+        metadata.cancel_rampdown_time = self.definition_widget.cancel_rampdown_selector.value()
+
+        return metadata
+
+    def store_metadata(self, metadata: TimeMetadata):
+        """Update the user interface with environment parameters
+
+        This function is called when the Environment parameters are initialized.
+        This function should set up the user interface accordingly.  It must
+        return the parameters class of the environment that inherits from
+        AbstractMetadata.
+
+        Returns
+        -------
+        environment_parameters : TimeParameters
+            A TimeParameters object that contains the parameters
+            defining the environment.
+        """
+        self.log("Initializing Environment Parameters")
+        # Make sure everything is defined
+        if metadata.output_signal is None:
+            raise ValueError("Output Signal is not defined!")
+        # Initialize the correct sizes of the arrays
+        self.signal = metadata.output_signal
+        for plot_items in [
+            self.plot_data_items["output_signal_measurement"],
+            self.plot_data_items["response_signal_measurement"],
+        ]:
+            for curve in plot_items:
+                curve.setData(
+                    np.arange(
+                        (
+                            self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2
+                            if self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2 < MAX_SAMPLES_TO_PLOT
+                            else MAX_SAMPLES_TO_PLOT
+                        )
+                    )
+                    / self.hardware_metadata.sample_rate,
+                    np.zeros(
+                        (
+                            self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2
+                            if self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2 < MAX_SAMPLES_TO_PLOT
+                            else MAX_SAMPLES_TO_PLOT
+                        )
+                    ),
+                )
+
+        self.show_signal()
+        self.environment_metadata = metadata
+
+    def store_metadata_from_nc4(
+        self,
+        netcdf_handle: nc4._netCDF4.Dataset,  # pylint: disable=c-extension-no-member
+    ):
+        """Collects environment parameters from a netCDF dataset.
+
+        This function retrieves parameters from a netCDF dataset that was written
+        by the controller during streaming.  It must populate the widgets
+        in the user interface with the proper information.
+
+        This function is the "read" counterpart to the store_to_netcdf
+        function in the TimeParameters class, which will write
+        parameters to the netCDF file to document the metadata.
+
+        Note that the entire dataset is passed to this function, so the function
+        should collect parameters pertaining to the environment from a Group
+        in the dataset sharing the environment's name, e.g.
+
+        ``group = netcdf_handle.groups[self.environment_name]``
+        ``self.definition_widget.parameter_selector.setValue(group.parameter)``
+
+        Parameters
+        ----------
+        netcdf_handle : nc4._netCDF4.Dataset :
+            The netCDF dataset from which the data will be read.  It should have
+            a group name with the enviroment's name.
+        """
+        group = netcdf_handle.groups[self.environment_name]
+        self.signal = group.variables["output_signal"][...].data
+        self.definition_widget.cancel_rampdown_selector.setValue(group.cancel_rampdown_time)
+        maxs = np.max(np.abs(self.signal), axis=-1)
+        rmss = rms_time(self.signal, axis=-1)
+        for i, (mx, rms) in enumerate(zip(maxs, rmss)):
+            self.definition_widget.signal_information_table.item(i, 2).setText(f"{mx:0.2f}")
+            self.definition_widget.signal_information_table.item(i, 3).setText(f"{rms:0.2f}")
+        self.show_signal()
+
+    @staticmethod
+    def create_environment_template(environment_name: str, workbook: openpyxl.workbook.workbook.Workbook):
+        """Creates a template worksheet in an Excel workbook defining the
+        environment.
+
+        This function creates a template worksheet in an Excel workbook that
+        when filled out could be read by the controller to re-create the
+        environment.
+
+        This function is the "write" counterpart to the
+        ``set_parameters_from_template`` function in the ``TimeUI`` class,
+        which reads the values from the template file to populate the user
+        interface.
+
+        Parameters
+        ----------
+        environment_name : str :
+            The name of the environment that will specify the worksheet's name
+        workbook : openpyxl.workbook.workbook.Workbook :
+            A reference to an ``openpyxl`` workbook.
+
+        """
+        worksheet = workbook.create_sheet(environment_name)
+        worksheet.cell(1, 1, "Control Type")
+        worksheet.cell(1, 2, "Time")
+        worksheet.cell(
+            1,
+            4,
+            "Note: Replace cells with hash marks (#) to provide the requested parameters.",
+        )
+        worksheet.cell(2, 1, "Signal File")
+        worksheet.cell(2, 2, "# Path to the file that contains the time signal that will be output")
+        worksheet.cell(3, 1, "Cancel Rampdown Time")
+        worksheet.cell(
+            3,
+            2,
+            "# Time for the environment to ramp to zero if the environment is cancelled.",
+        )
+
+    def store_metadata_from_template(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+        """
+        Collects parameters for the user interface from the Excel template file
+
+        This function reads a filled out template worksheet to create an
+        environment.  Cells on this worksheet contain parameters needed to
+        specify the environment, so this function should read those cells and
+        update the UI widgets with those parameters.
+
+        This function is the "read" counterpart to the
+        ``create_environment_template`` function in the ``TimeUI`` class,
+        which writes a template file that can be filled out by a user.
+
+
+        Parameters
+        ----------
+        worksheet : openpyxl.worksheet.worksheet.Worksheet
+            An openpyxl worksheet that contains the environment template.
+            Cells on this worksheet should contain the parameters needed for the
+            user interface.
+
+        """
+        self.load_signal(None, worksheet.cell(2, 2).value)
+        self.definition_widget.cancel_rampdown_selector.setValue(float(worksheet.cell(3, 2).value))
+
+    ## Callbacks
     def load_signal(self, clicked, filename=None):  # pylint: disable=unused-argument
         """Loads a time signal using a dialog or the specified filename
 
@@ -268,88 +423,6 @@ class TimeUI(AbstractUI):
             else:
                 curve.setData((0, 0), (0, 0))
 
-    def initialize_environment(self) -> EnvironmentMetadata:
-        """Update the user interface with environment parameters
-
-        This function is called when the Environment parameters are initialized.
-        This function should set up the user interface accordingly.  It must
-        return the parameters class of the environment that inherits from
-        AbstractMetadata.
-
-        Returns
-        -------
-        environment_parameters : TimeParameters
-            A TimeParameters object that contains the parameters
-            defining the environment.
-        """
-        self.log("Initializing Environment Parameters")
-        data = self.collect_environment_definition_parameters()
-        # Make sure everything is defined
-        if data.output_signal is None:
-            raise ValueError("Output Signal is not defined!")
-        # Initialize the correct sizes of the arrays
-        for plot_items in [
-            self.plot_data_items["output_signal_measurement"],
-            self.plot_data_items["response_signal_measurement"],
-        ]:
-            for curve in plot_items:
-                curve.setData(
-                    np.arange(
-                        (
-                            data.output_signal.shape[-1] // self.hardware_metadata.output_oversample * 2
-                            if data.output_signal.shape[-1] // self.hardware_metadata.output_oversample * 2 < MAX_SAMPLES_TO_PLOT
-                            else MAX_SAMPLES_TO_PLOT
-                        )
-                    )
-                    / self.hardware_metadata.sample_rate,
-                    np.zeros(
-                        (
-                            data.output_signal.shape[-1] // self.hardware_metadata.output_oversample * 2
-                            if data.output_signal.shape[-1] // self.hardware_metadata.output_oversample * 2 < MAX_SAMPLES_TO_PLOT
-                            else MAX_SAMPLES_TO_PLOT
-                        )
-                    ),
-                )
-        self.environment_parameters = data
-        return data
-
-    def retrieve_metadata(
-        self,
-        netcdf_handle: nc4._netCDF4.Dataset,  # pylint: disable=c-extension-no-member
-    ):
-        """Collects environment parameters from a netCDF dataset.
-
-        This function retrieves parameters from a netCDF dataset that was written
-        by the controller during streaming.  It must populate the widgets
-        in the user interface with the proper information.
-
-        This function is the "read" counterpart to the store_to_netcdf
-        function in the TimeParameters class, which will write
-        parameters to the netCDF file to document the metadata.
-
-        Note that the entire dataset is passed to this function, so the function
-        should collect parameters pertaining to the environment from a Group
-        in the dataset sharing the environment's name, e.g.
-
-        ``group = netcdf_handle.groups[self.environment_name]``
-        ``self.definition_widget.parameter_selector.setValue(group.parameter)``
-
-        Parameters
-        ----------
-        netcdf_handle : nc4._netCDF4.Dataset :
-            The netCDF dataset from which the data will be read.  It should have
-            a group name with the enviroment's name.
-        """
-        group = netcdf_handle.groups[self.environment_name]
-        self.signal = group.variables["output_signal"][...].data
-        self.definition_widget.cancel_rampdown_selector.setValue(group.cancel_rampdown_time)
-        maxs = np.max(np.abs(self.signal), axis=-1)
-        rmss = rms_time(self.signal, axis=-1)
-        for i, (mx, rms) in enumerate(zip(maxs, rmss)):
-            self.definition_widget.signal_information_table.item(i, 2).setText(f"{mx:0.2f}")
-            self.definition_widget.signal_information_table.item(i, 3).setText(f"{rms:0.2f}")
-        self.show_signal()
-
     def start_control(self):
         """Starts running the environment"""
         self.run_widget.stop_test_button.setEnabled(True)
@@ -371,6 +444,10 @@ class TimeUI(AbstractUI):
 
     def stop_control(self):
         """Stops running the environment"""
+        self.run_widget.stop_test_button.setEnabled(False)
+        self.run_widget.start_test_button.setEnabled(True)
+        self.run_widget.test_level_selector.setEnabled(True)
+        self.run_widget.repeat_signal_checkbox.setEnabled(True)
         self.environment_command_queue.put(self.log_name, (GlobalCommands.STOP_ENVIRONMENT, None))
 
     def change_test_level_from_profile(self, test_level):
@@ -468,67 +545,3 @@ class TimeUI(AbstractUI):
             elif isinstance(widget, QtWidgets.QListWidget):
                 widget.clear()
                 widget.addItems([f"{d:.3f}" for d in data])
-
-    @staticmethod
-    def create_environment_template(environment_name: str, workbook: openpyxl.workbook.workbook.Workbook):
-        """Creates a template worksheet in an Excel workbook defining the
-        environment.
-
-        This function creates a template worksheet in an Excel workbook that
-        when filled out could be read by the controller to re-create the
-        environment.
-
-        This function is the "write" counterpart to the
-        ``set_parameters_from_template`` function in the ``TimeUI`` class,
-        which reads the values from the template file to populate the user
-        interface.
-
-        Parameters
-        ----------
-        environment_name : str :
-            The name of the environment that will specify the worksheet's name
-        workbook : openpyxl.workbook.workbook.Workbook :
-            A reference to an ``openpyxl`` workbook.
-
-        """
-        worksheet = workbook.create_sheet(environment_name)
-        worksheet.cell(1, 1, "Control Type")
-        worksheet.cell(1, 2, "Time")
-        worksheet.cell(
-            1,
-            4,
-            "Note: Replace cells with hash marks (#) to provide the requested parameters.",
-        )
-        worksheet.cell(2, 1, "Signal File")
-        worksheet.cell(2, 2, "# Path to the file that contains the time signal that will be output")
-        worksheet.cell(3, 1, "Cancel Rampdown Time")
-        worksheet.cell(
-            3,
-            2,
-            "# Time for the environment to ramp to zero if the environment is cancelled.",
-        )
-
-    def set_parameters_from_template(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
-        """
-        Collects parameters for the user interface from the Excel template file
-
-        This function reads a filled out template worksheet to create an
-        environment.  Cells on this worksheet contain parameters needed to
-        specify the environment, so this function should read those cells and
-        update the UI widgets with those parameters.
-
-        This function is the "read" counterpart to the
-        ``create_environment_template`` function in the ``TimeUI`` class,
-        which writes a template file that can be filled out by a user.
-
-
-        Parameters
-        ----------
-        worksheet : openpyxl.worksheet.worksheet.Worksheet
-            An openpyxl worksheet that contains the environment template.
-            Cells on this worksheet should contain the parameters needed for the
-            user interface.
-
-        """
-        self.load_signal(None, worksheet.cell(2, 2).value)
-        self.definition_widget.cancel_rampdown_selector.setValue(float(worksheet.cell(3, 2).value))

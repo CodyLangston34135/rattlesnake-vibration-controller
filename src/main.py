@@ -4,7 +4,7 @@ from rattlesnake.hardware.nidqaqmx import NIDAQmxMetadata
 from rattlesnake.hardware.sdynpy_system import SDynPySystemMetadata
 from rattlesnake.environment.time_environment import TimeMetadata, TimeInstructions
 from rattlesnake.environment.read_environment import ReadMetadata
-from rattlesnake.user_interface.headless_ui import HeadlessUi
+from rattlesnake.user_interface.headless_ui import HeadlessUI, DebugUI
 from rattlesnake.process.streaming import StreamType, StreamMetadata
 from rattlesnake.math_operations import db2scale
 import sys
@@ -148,7 +148,8 @@ def main():
     rattlesnake.start_acquisition()
 
     app = QtWidgets.QApplication(sys.argv)
-    _ = HeadlessUi(rattlesnake.queue_container, rattlesnake.environment_metadata_list, "Dark")
+    # _ = HeadlessUI(rattlesnake.queue_container, rattlesnake.environment_metadata_list, "Dark")
+    _ = DebugUI(rattlesnake.queue_container, rattlesnake.hardware_metadata, rattlesnake.environment_metadata_list, "Dark")
     app.exec_()
 
     rattlesnake.stop_acquisition()

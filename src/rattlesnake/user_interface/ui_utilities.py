@@ -43,6 +43,7 @@ else:
 # Base Controller UI
 ui_path = os.path.join(directory, "ui_files", "combined_environments_controller.ui")
 headless_ui_path = os.path.join(directory, "ui_files", "headless.ui")
+debug_ui_path = os.path.join(directory, "ui_files", "debug.ui")
 environment_select_ui_path = os.path.join(directory, "ui_files", "environment_selector.ui")
 control_select_ui_path = os.path.join(directory, "ui_files", "control_select.ui")
 # Random Vibration Environment

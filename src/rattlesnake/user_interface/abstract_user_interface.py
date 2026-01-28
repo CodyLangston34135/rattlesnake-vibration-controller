@@ -63,27 +63,7 @@ class AbstractUI(ABC):
         are called when the instruction is executed."""
         return self._command_map
 
-    @abstractmethod
-    def start_control(self):
-        """Runs the corresponding environment in the controller"""
-
-    @abstractmethod
-    def stop_control(self):
-        """Stops the corresponding environment in the controller"""
-
-    @abstractmethod
-    def collect_environment_definition_parameters(self) -> EnvironmentMetadata:
-        """
-        Collect the parameters from the user interface defining the environment
-
-        Returns
-        -------
-        AbstractMetadata
-            A metadata or parameters object containing the parameters defining
-            the corresponding environment.
-
-        """
-
+    ## Store/Export metadata methods
     @abstractmethod
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         """Update the user interface with data acquisition parameters
@@ -103,6 +83,19 @@ class AbstractUI(ABC):
     @abstractmethod
     def initialize_environment(self) -> EnvironmentMetadata:
         """
+        Collect the parameters from the user interface defining the environment
+
+        Returns
+        -------
+        AbstractMetadata
+            A metadata or parameters object containing the parameters defining
+            the corresponding environment.
+
+        """
+
+    @abstractmethod
+    def store_metadata(self) -> EnvironmentMetadata:
+        """
         Update the user interface with environment parameters
 
         This function is called when the Environment parameters are initialized.
@@ -119,7 +112,7 @@ class AbstractUI(ABC):
         """
 
     @abstractmethod
-    def retrieve_metadata(self, netcdf_handle: nc4._netCDF4.Dataset):  # pylint: disable=c-extension-no-member
+    def store_metadata_from_nc4(self, netcdf_handle: nc4._netCDF4.Dataset):  # pylint: disable=c-extension-no-member
         """Collects environment parameters from a netCDF dataset.
 
         This function retrieves parameters from a netCDF dataset that was written
@@ -144,6 +137,63 @@ class AbstractUI(ABC):
             a group name with the enviroment's name.
 
         """
+
+    @staticmethod
+    @abstractmethod
+    def create_environment_template(environment_name: str, workbook: openpyxl.workbook.workbook.Workbook):
+        """Creates a template worksheet in an Excel workbook defining the
+        environment.
+
+        This function creates a template worksheet in an Excel workbook that
+        when filled out could be read by the controller to re-create the
+        environment.
+
+        This function is the "write" counterpart to the
+        ``set_parameters_from_template`` function in the ``AbstractUI`` class,
+        which reads the values from the template file to populate the user
+        interface.
+
+        Parameters
+        ----------
+        environment_name : str :
+            The name of the environment that will specify the worksheet's name
+        workbook : openpyxl.workbook.workbook.Workbook :
+            A reference to an ``openpyxl`` workbook.
+
+        """
+
+    @abstractmethod
+    def store_metadata_from_template(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+        """
+        Collects parameters for the user interface from the Excel template file
+
+        This function reads a filled out template worksheet to create an
+        environment.  Cells on this worksheet contain parameters needed to
+        specify the environment, so this function should read those cells and
+        update the UI widgets with those parameters.
+
+        This function is the "read" counterpart to the
+        ``create_environment_template`` function in the ``AbstractUI`` class,
+        which writes a template file that can be filled out by a user.
+
+
+        Parameters
+        ----------
+        worksheet : openpyxl.worksheet.worksheet.Worksheet
+            An openpyxl worksheet that contains the environment template.
+            Cells on this worksheet should contain the parameters needed for the
+            user interface.
+
+        """
+
+    ## Callbacks
+    @abstractmethod
+    def start_control(self):
+        """Runs the corresponding environment in the controller"""
+
+    @abstractmethod
+    def stop_control(self):
+        """Stops the corresponding environment in the controller"""
 
     @abstractmethod
     def update_gui(self, queue_data: tuple):
@@ -209,51 +259,3 @@ class AbstractUI(ABC):
 
         """
         self.log_file_queue.put(f"{datetime.now()}: {self.log_name} -- {message}\n")
-
-    @staticmethod
-    @abstractmethod
-    def create_environment_template(environment_name: str, workbook: openpyxl.workbook.workbook.Workbook):
-        """Creates a template worksheet in an Excel workbook defining the
-        environment.
-
-        This function creates a template worksheet in an Excel workbook that
-        when filled out could be read by the controller to re-create the
-        environment.
-
-        This function is the "write" counterpart to the
-        ``set_parameters_from_template`` function in the ``AbstractUI`` class,
-        which reads the values from the template file to populate the user
-        interface.
-
-        Parameters
-        ----------
-        environment_name : str :
-            The name of the environment that will specify the worksheet's name
-        workbook : openpyxl.workbook.workbook.Workbook :
-            A reference to an ``openpyxl`` workbook.
-
-        """
-
-    @abstractmethod
-    def set_parameters_from_template(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
-        """
-        Collects parameters for the user interface from the Excel template file
-
-        This function reads a filled out template worksheet to create an
-        environment.  Cells on this worksheet contain parameters needed to
-        specify the environment, so this function should read those cells and
-        update the UI widgets with those parameters.
-
-        This function is the "read" counterpart to the
-        ``create_environment_template`` function in the ``AbstractUI`` class,
-        which writes a template file that can be filled out by a user.
-
-
-        Parameters
-        ----------
-        worksheet : openpyxl.worksheet.worksheet.Worksheet
-            An openpyxl worksheet that contains the environment template.
-            Cells on this worksheet should contain the parameters needed for the
-            user interface.
-
-        """
