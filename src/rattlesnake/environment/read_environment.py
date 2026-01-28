@@ -44,15 +44,13 @@ class ReadQueues:
 
     def __init__(
         self,
-        environment_name: str,
         environment_command_queue: VerboseMessageQueue,
         gui_update_queue: mp.Queue,
         controller_communication_queue: VerboseMessageQueue,
         data_in_queue: mp.Queue,
         data_out_queue: mp.Queue,
-        log_file_queue: mp.Queue,
+        log_file_queue: VerboseMessageQueue,
     ):
-        self.environment_name = environment_name
         self.environment_command_queue = environment_command_queue
         self.gui_update_queue = gui_update_queue
         self.controller_communication_queue = controller_communication_queue
@@ -111,7 +109,7 @@ class ReadEnvironment(EnvironmentProcess):
         self.queue_container.environment_command_queue.put(self.environment_name, (GlobalCommands.START_ENVIRONMENT, None))
 
 
-def time_process(
+def read_process(
     environment_name: str,
     input_queue: VerboseMessageQueue,
     gui_update_queue: mp.Queue,

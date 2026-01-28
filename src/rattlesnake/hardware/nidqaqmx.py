@@ -9,7 +9,7 @@ from enum import Enum
 from typing import List
 import time
 
-HARDWARE_TYPE = HardwareType.NI_DAQmx
+HARDWARE_TYPE = HardwareType.NI_DAQMX
 BUFFER_SIZE_FACTOR = 3
 
 
@@ -20,10 +20,7 @@ class NIDAQmxMetadata(HardwareMetadata):
         self.output_trigger_generator = ""
 
     def validate(self):
-        if len(self.channel_list) != len(set(self.channel_list)):
-            raise ValueError("Duplicate channels found in channel_list")
-
-        return True
+        return super().validate()
 
     @property
     def extra_attr_list(self):

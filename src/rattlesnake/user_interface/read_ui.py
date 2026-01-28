@@ -6,8 +6,11 @@ from ..environment.environment_utilities import ControlTypes
 from ..environment.abstract_environment import EnvironmentMetadata
 from ..environment.read_environment import ReadMetadata
 from qtpy import QtCore, QtWidgets, uic
+import openpyxl
 import multiprocessing as mp
 import numpy as np
+import netCDF4 as nc4
+
 
 CONTROL_TYPE = ControlTypes.READ
 TASK_NAME = "Read UI"
@@ -116,3 +119,12 @@ class ReadUI(AbstractUI):
                 x, y = curve.getData()
                 y = np.concatenate((y[this_data.size :], this_data[-x.size :]), axis=0)
                 curve.setData(x, y)
+
+    def retrieve_metadata(self, netcdf_handle: nc4._netCDF4.Dataset):
+        pass
+
+    def create_environment_template(environment_name: str, workbook: openpyxl.workbook.workbook.Workbook):
+        pass
+
+    def set_parameters_from_template(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+        pass

@@ -34,7 +34,7 @@ class Controller(AbstractMessageProcess):
         super().__init__(
             process_name,
             queue_container.log_file_queue,
-            queue_container.streaming_command_queue,
+            queue_container.controller_command_queue,
             queue_container.gui_update_queue,
         )
         self.queue_container = queue_container
@@ -47,6 +47,7 @@ class Controller(AbstractMessageProcess):
         self.map_command(GlobalCommands.START_STREAMING, self.start_streaming)
         self.map_command(GlobalCommands.STOP_STREAMING, self.stop_streaming)
         self.map_command(GlobalCommands.INITIALIZE_INSTRUCTION, self.set_instruction)
+        self.map_command(GlobalCommands.AT_TARGET_LEVEL, self.at_target_level)
 
     def run_hardware(self, data):
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, data))
@@ -77,8 +78,10 @@ class Controller(AbstractMessageProcess):
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.STOP_STREAMING, None))
 
     def set_instruction(self, data):
-        for instruction in data:
-            self.environment_instructions[instruction.queue_name] = instruction
+        self.environment_instructions[data.queue_name] = data
+
+    def at_target_level(self, data):
+        pass
 
 
 def controller_process(queue_container: QueueContainer):

@@ -25,6 +25,7 @@ class GlobalCommands(Enum):
     INITIALIZE_PROFILE = 15  # Send profile metadata to controller
     START_PROFILE = 16  # Start test from profile
     STOP_PROFILE = 17  # Stop test from profile
+    AT_TARGET_LEVEL = 18  # REMOVE LATER
 
 
 def log_file_task(queue: mp.Queue):
@@ -66,7 +67,7 @@ class VerboseMessageQueue:
         """
         self.queue = mp.Queue()
         self.log_queue = log_queue
-        self.queue_name = mp.Value(c_wchar_p, queue_name)
+        self.queue_name = queue_name
         self.last_put_message = None
         self.last_put_time = -float("inf")
         self.last_get_message = None

@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import List
 
 TASK_NAME = "Rattlesnake"
+CLOSE_TIMEOUT = 5
 
 
 class RattlesnakeState(Enum):
@@ -111,6 +112,8 @@ class Rattlesnake:
         self.log("Setting Hardware")
         self.hardware_metadata = hardware_metadata
 
+        self.environment_manager.initialize_hardware(hardware_metadata)
+
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata))
         self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata))
 
@@ -181,11 +184,9 @@ class Rattlesnake:
             raise RuntimeError(f"Invalid state for stopping acquisition: {self.state}")
 
         self.log("Disarming Test Hardware")
+        self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))
         for metadata in self.environment_metadata_list:
-            self.queue_container.controller_command_queue.put(
-                TASK_NAME,
-            )
-        self.queue_container.controller_communication_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))
+            self.queue_container.environment_command_queues[metadata.queue_name].put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, None))
 
         self.state = RattlesnakeState.ENVIRONMENT_STORE
 
@@ -193,35 +194,35 @@ class Rattlesnake:
         # Close out of acquisition, output, streaming process
         self.queue_container.log_file_queue.put(f"{datetime.now()}: Joining Controller Process\n")
         self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
-        self.controller_proc.join(timeout=5)
+        self.controller_proc.join(timeout=CLOSE_TIMEOUT)
         if self.controller_proc.is_alive():
             self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Controller Process\n")
             self.controller_proc.terminate()
             self.controller_proc.join()
         self.queue_container.log_file_queue.put(f"{datetime.now()}: Joining Acquisition Process\n")
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
-        self.acquisition_proc.join(timeout=5)
+        self.acquisition_proc.join(timeout=CLOSE_TIMEOUT)
         if self.acquisition_proc.is_alive():
             self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Acquisition Process\n")
             self.acquisition_proc.terminate()
             self.acquisition_proc.join()
         self.queue_container.log_file_queue.put(f"{datetime.now()}: Joining Output Process\n")
         self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
-        self.output_proc.join(timeout=5)
+        self.output_proc.join(timeout=CLOSE_TIMEOUT)
         if self.output_proc.is_alive():
             self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Output Process\n")
             self.output_proc.terminate()
             self.output_proc.join()
         self.queue_container.log_file_queue.put(f"{datetime.now()}: Joining Streaming Process\n")
         self.queue_container.streaming_command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
-        self.streaming_proc.join(timeout=5)
+        self.streaming_proc.join(timeout=CLOSE_TIMEOUT)
         if self.streaming_proc.is_alive():
             self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Streaming Process\n")
             self.streaming_proc.terminate()
             self.streaming_proc.join()
 
         # Close out of environment processes
-        self.environment_manager.close_environments()
+        self.environment_manager.close_environments(CLOSE_TIMEOUT)
 
         # Close out log file process
         self.queue_container.log_file_queue.put("{:}: Joining Log File Process\n".format(datetime.now()))

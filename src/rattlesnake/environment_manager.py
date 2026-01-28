@@ -1,7 +1,7 @@
 from .utilities import QueueContainer, GlobalCommands
 from .environment.abstract_environment import EnvironmentMetadata
 from .environment.environment_utilities import ControlTypes
-from .environment.time_environment import TimeEnvironment, time_process
+from .hardware.abstract_hardware import HardwareMetadata
 import multiprocessing as mp
 from datetime import datetime
 from typing import List
@@ -13,13 +13,18 @@ class EnvironmentManager:
     """A container class that stores the environment information"""
 
     def __init__(self, queue_container: QueueContainer):
+        self.hardware_metadata = None
         self.queue_names = []  # Static name for dictionary keys, process names, etc
         self.environment_names = {}  # Name of environment for Ui purposes
         self.environment_types = {}
         self.environment_metadata = {}
         self.environment_processes = {}
         self.queue_container = queue_container
-        self.available_queues = list(queue_container.environment_command_queues.keys())
+
+    @property
+    def available_queues(self):
+        all_queue_names = list(self.queue_container.environment_command_queues.keys())
+        return [queue_name for queue_name in all_queue_names if queue_name not in self.queue_names]
 
     @property
     def sysid_environments(self):
@@ -29,6 +34,12 @@ class EnvironmentManager:
     def sysid_names(self):
         sysid_names = [queue_name for queue_name in self.queue_names if self.environment_types[queue_name] in self.sysid_environments]
         return sysid_names
+
+    def initialize_hardware(self, hardware_metadata: HardwareMetadata):
+        for queue_name in self.queue_names:
+            self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata))
+
+        self.hardware_metadata = hardware_metadata
 
     def initialize_environments(self, metadata_list: List[EnvironmentMetadata], acquisition_active, output_active):
         mapped_queue_names = set()
@@ -57,6 +68,7 @@ class EnvironmentManager:
             self.environment_types[queue_name] = environment_type
             self.environment_names[queue_name] = environment_name
             self.environment_metadata[queue_name] = metadata
+            self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, self.hardware_metadata))
             self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata))
 
             mapped_queue_names.add(queue_name)
@@ -102,8 +114,28 @@ class EnvironmentManager:
 
         # Figure out what type of environment to add
         if environment_type == ControlTypes.TIME:
+            from .environment.time_environment import time_process
+
             environment_process = mp.Process(
                 target=time_process,
+                args=(
+                    queue_name,
+                    self.queue_container.environment_command_queues[queue_name],
+                    self.queue_container.gui_update_queue,
+                    self.queue_container.controller_command_queue,
+                    self.queue_container.log_file_queue,
+                    self.queue_container.environment_data_in_queues[queue_name],
+                    self.queue_container.environment_data_out_queues[queue_name],
+                    acquisition_active,
+                    output_active,
+                ),
+            )
+            environment_process.start()
+        elif environment_type == ControlTypes.READ:
+            from .environment.read_environment import read_process
+
+            environment_process = mp.Process(
+                target=read_process,
                 args=(
                     queue_name,
                     self.queue_container.environment_command_queues[queue_name],
@@ -127,6 +159,8 @@ class EnvironmentManager:
         self.environment_processes[queue_name] = environment_process
         metadata.queue_name = queue_name
         self.environment_metadata[queue_name] = metadata
+        self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, self.hardware_metadata))
+        self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata))
 
     def remove_environment(self, queue_name):
         """Removes environment from container"""
@@ -151,12 +185,13 @@ class EnvironmentManager:
         else:
             raise IndexError(f"Invalid control name: {queue_name}. Must be mapped to available queue")
 
-    def close_environments(self):
+    def close_environments(self, close_timeout):
         for queue_name, environment_process in self.environment_processes.items():
             self.queue_container.environment_command_queues[queue_name].put("Environments", (GlobalCommands.QUIT, None))
             self.queue_container.log_file_queue.put("{:}: Joining {:} Process\n".format(datetime.now(), queue_name))
-            environment_process.join(timeout=5)
+            environment_process.join(timeout=close_timeout)
             if environment_process.is_alive():
                 environment_process.terminate()
                 environment_process.join()
-                self.queue_container.environment_command_queues[queue_name].flush("force close")
+                self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing {queue_name} Process\n")
+                self.queue_container.environment_command_queues[queue_name].flush(TASK_NAME)

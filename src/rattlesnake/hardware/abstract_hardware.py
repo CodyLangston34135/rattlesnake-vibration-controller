@@ -37,8 +37,13 @@ class HardwareMetadata(ABC):
         Check if the hardware exists and is reconizable. Return True if everything
         checks out
 
-        Please throw detailed errors while validating. Makes it easier for user to debug
+        Please throw detailed errors while validating. Makes it easier for user to debug.
+        Return super().validate() for this method
         """
+        if len(self.channel_list) != len(set(self.channel_list)):
+            raise ValueError("Duplicate channels found in channel_list")
+
+        return True
 
     @abstractmethod
     def extra_attr_list(self):

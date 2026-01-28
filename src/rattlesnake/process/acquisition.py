@@ -22,7 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 from .abstract_message_process import AbstractMessageProcess
-from .process_utilities import align_signals, correlation_norm_signal_spec_ratio
+from ..math_operations import align_signals, correlation_norm_signal_spec_ratio
 from ..utilities import GlobalCommands, QueueContainer, flush_queue
 from ..hardware.hardware_utilities import HardwareType
 from ..hardware.abstract_hardware import HardwareMetadata
@@ -132,12 +132,85 @@ class AcquisitionProcess(AbstractMessageProcess):
             self._acquisition_active.value = 0
 
     def initialize_hardware(self, metadata: HardwareMetadata):
+        """Sets up the acquisition according to the specified parameters
+
+        Parameters
+        ----------
+        data : tuple
+            A tuple consisting of data acquisition parameters and the channels
+            used by each environment.
+
+        """
+        self.log("Initializing Data Acquisition")
+        # Store pertinent data
+        self.sample_rate = metadata.sample_rate
+        self.read_size = metadata.samples_per_read
+        # Check which type of hardware we have
         if self.hardware is not None:
             self.hardware.close()
-        if metadata.hardware_type == HardwareType.NI_DAQmx:
+        if metadata.hardware_type == HardwareType.NI_DAQMX:
             from ..hardware.nidqaqmx import NIDAQmxAcquisition
 
             self.hardware = NIDAQmxAcquisition(metadata.task_trigger, metadata.output_trigger_generator)
+
+        elif metadata.hardware_type == HardwareType.LAN_XI:
+            # from .lanxi_hardware_multiprocessing import LanXIAcquisition
+
+            # self.hardware = LanXIAcquisition(
+            #     data_acquisition_parameters.extra_parameters[
+            #         "maximum_acquisition_processes"
+            #     ]
+            # )
+            pass
+        elif metadata.hardware_type == HardwareType.DP_QUATTRO:
+            # from .data_physics_hardware import DataPhysicsAcquisition
+
+            # self.hardware = DataPhysicsAcquisition(
+            #     data_acquisition_parameters.hardware_file,
+            #     self.queue_container.single_process_hardware_queue,
+            # )
+            pass
+        elif metadata.hardware_type == HardwareType.DP_900:
+            # from .data_physics_dp900_hardware import DataPhysicsDP900Acquisition
+
+            # self.hardware = DataPhysicsDP900Acquisition(
+            #     data_acquisition_parameters.hardware_file,
+            #     self.queue_container.single_process_hardware_queue,
+            # )
+            pass
+        elif metadata.hardware_type == HardwareType.EXODUS:
+            # from .exodus_modal_solution_hardware import ExodusAcquisition
+
+            # self.hardware = ExodusAcquisition(
+            #     data_acquisition_parameters.hardware_file,
+            #     self.queue_container.single_process_hardware_queue,
+            # )
+            pass
+        elif metadata.hardware_type == HardwareType.STATE_SPACE:
+            # from .state_space_virtual_hardware import StateSpaceAcquisition
+
+            # self.hardware = StateSpaceAcquisition(
+            #     data_acquisition_parameters.hardware_file,
+            #     self.queue_container.single_process_hardware_queue,
+            # )
+            pass
+        elif metadata.hardware_type == HardwareType.SDYNPY_SYSTEM:
+            from ..hardware.sdynpy_system import SDynPySystemAcquisition
+
+            self.hardware = SDynPySystemAcquisition(
+                metadata.hardware_file,
+                self.queue_container.single_process_hardware_queue,
+            )
+        elif metadata.hardware_type == HardwareType.SDYNPY_FRF:
+            # from .sdynpy_frf_virtual_hardware import SDynPyFRFAcquisition
+
+            # self.hardware = SDynPyFRFAcquisition(
+            #     data_acquisition_parameters.hardware_file,
+            #     self.queue_container.single_process_hardware_queue,
+            # )
+            pass
+        else:
+            raise ValueError("Invalid Hardware or Hardware Not Implemented!")
         # Initialize hardware and create channels
         self.hardware.set_up_data_acquisition_parameters_and_channels(metadata)
         # Set up warning and abort limits
