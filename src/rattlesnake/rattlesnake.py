@@ -4,7 +4,7 @@ from .process.acquisition import acquisition_process
 from .process.output import output_process
 from .process.streaming import StreamType, StreamMetadata, streaming_process
 from .hardware.abstract_hardware import HardwareMetadata
-from .environment.abstract_environment import EnvironmentMetadata
+from .environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions
 from .environment_manager import EnvironmentManager
 import multiprocessing as mp
 from enum import Enum
@@ -125,9 +125,14 @@ class Rattlesnake:
 
         self.log("Setting Environment")
 
-        self.environment_metadata_list = self.environment_manager.initialize_environments(
+        environment_metadata_list = self.environment_manager.initialize_environments(
             environment_metadata_list, self.acquisition_active, self.output_active
         )
+
+        self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, environment_metadata_list))
+        self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, environment_metadata_list))
+
+        self.environment_metadata_list = environment_metadata_list
 
     def set_stream(self, stream_metadata: StreamMetadata):
         valid_stream = stream_metadata.validate()
@@ -135,6 +140,18 @@ class Rattlesnake:
             raise TypeError("Rattlesnake.set_stream requires a valid StreamMetadata class")
 
         self.stream_metadata = stream_metadata
+
+    def set_instructions(self, environment_instructions_list: List[EnvironmentInstructions]):
+        self.log("Setting Instructions")
+
+        queue_name_dict = {metadata.environment_name: metadata.queue_name for metadata in self.environment_metadata_list}
+
+        for instruction in environment_instructions_list:
+            try:
+                instruction.queue_name = queue_name_dict[instruction.environment_name]
+            except KeyError:
+                raise KeyError(f"No environment found for {instruction.environment_name}")
+            self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_INSTRUCTION, instruction))
 
     def set_profile(self, profile_metadata):
         pass

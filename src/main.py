@@ -1,9 +1,10 @@
 from rattlesnake.rattlesnake import Rattlesnake
 from rattlesnake.hardware.hardware_utilities import Channel
 from rattlesnake.hardware.nidqaqmx import NIDAQmxMetadata, TaskTrigger
-from rattlesnake.environment.time_environment import TimeMetadata
+from rattlesnake.environment.time_environment import TimeMetadata, TimeInstructions
 from rattlesnake.user_interface.headless_ui import HeadlessUi
 from rattlesnake.process.streaming import StreamType, StreamMetadata
+from rattlesnake.math_operations import db2scale
 import sys
 import numpy as np
 from qtpy import QtWidgets
@@ -43,12 +44,20 @@ def main():
 
     rattlesnake.set_environments(envrionment_metadata_list)
 
-    streaming_metadata = StreamMetadata()
-    streaming_metadata.stream_type = StreamType.NO_STREAM
-    streaming_metadata.stream_file = None
-    streaming_metadata.test_level = None
+    stream_metadata = StreamMetadata()
+    stream_metadata.stream_type = StreamType.NO_STREAM
+    stream_metadata.stream_file = None
+    stream_metadata.test_level = None
 
-    rattlesnake.arm_test(streaming_metadata)
+    rattlesnake.set_stream(stream_metadata)
+
+    instructions = TimeInstructions("Time Environment 1")
+    instructions.current_test_level = db2scale(0)
+    instructions.repeat = True
+
+    rattlesnake.set_instructions([instructions])
+
+    rattlesnake.arm_test()
 
     app = QtWidgets.QApplication(sys.argv)
     _ = HeadlessUi(rattlesnake.queue_container, rattlesnake.environment_metadata_list, "Dark")

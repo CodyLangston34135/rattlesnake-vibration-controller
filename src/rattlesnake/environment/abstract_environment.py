@@ -96,6 +96,45 @@ class EnvironmentMetadata(ABC):
         pass
 
 
+class EnvironmentInstructions(ABC):
+    """Environment Instructions class that defines startup of environment
+
+    This is an class given to the controller as input to the
+    intial start_control function call for that environment. It is
+    used to define aspects such as test_level or repeating_signals that
+    need to be defined quickly without needing to be stored to netcdf4 file.
+
+    If no instructions are given to controller for an environment, the
+    first start_control function call will be given with a None as the
+    datatype.
+
+    If profile events are being used, this will be given to the controller
+    when "Start Profile" button is clicked. If a profile is not being used,
+    you are responsible for sending this to the controller with:
+
+    queue_container.controller_command_queue.put(
+        TASK_NAME,
+        (GlobalCommands.INITIALIZE_INSTRUCTIONS, (EnvironmentInstructions,))
+    )
+
+    when the "Start" button on your run tab is pressed, most likely
+    right before the GlobalCommand.START_ENVIRONMENT for that environment
+    would be called.
+
+    Parameters
+    ---------
+    environment_name : str
+        This is the environment name used in the metadata as it is easier
+        to lookup from existing UI (NOT the queue_name). The queue_name
+        will be looked up from the existing environment_metadata list
+        when this is stored to the controller
+    """
+
+    def __init__(self, environment_name):
+        self.environment_name = environment_name
+        self.queue_name = None
+
+
 class EnvironmentProcess(ABC):
     """Abstract Environment class defining the interface with the controller
 

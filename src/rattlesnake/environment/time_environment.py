@@ -23,7 +23,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-from .abstract_environment import EnvironmentMetadata, EnvironmentProcess
+from .abstract_environment import EnvironmentMetadata, EnvironmentInstructions, EnvironmentProcess
 from .environment_utilities import ControlTypes
 from ..utilities import VerboseMessageQueue, GlobalCommands
 from ..hardware.abstract_hardware import HardwareMetadata
@@ -132,6 +132,13 @@ class TimeMetadata(EnvironmentMetadata):
             output_signal=ui.signal,
             cancel_rampdown_time=ui.definition_widget.cancel_rampdown_selector.value(),
         )
+
+
+class TimeInstructions(EnvironmentInstructions):
+    def __init__(self, environment_name):
+        super().__init__(environment_name)
+        self.current_test_level = 0
+        self.repeat = False
 
 
 class TimeQueues:

@@ -1,5 +1,6 @@
 from .abstract_message_process import AbstractMessageProcess
 from ..utilities import QueueContainer, GlobalCommands
+from ..environment.abstract_environment import EnvironmentInstructions
 
 
 TASK_NAME = "Controller"
@@ -10,7 +11,8 @@ class Controller(AbstractMessageProcess):
 
     This class mainly recieves commands from controller_communication_queue and sends those
     commands to the correct processes that need them. This basically handles profile events
-    so that the main controller can be used to oversee the processes while data is being collected
+    so that the main controller is not caught up in a processing loop while data is being
+    collected.
 
     See AbstractMesssageProcess for inherited class members.
     """
@@ -36,12 +38,15 @@ class Controller(AbstractMessageProcess):
             queue_container.gui_update_queue,
         )
         self.queue_container = queue_container
+        self.environment_instructions = {}
         self.map_command(GlobalCommands.RUN_HARDWARE, self.run_hardware)
         self.map_command(GlobalCommands.STOP_HARDWARE, self.stop_hardware)
+        self.map_command(GlobalCommands.INITIALIZE_ENVIRONMENT, self.initialize_environment)
         self.map_command(GlobalCommands.START_ENVIRONMENT, self.start_environment)
         self.map_command(GlobalCommands.STOP_ENVIRONMENT, self.stop_environment)
         self.map_command(GlobalCommands.START_STREAMING, self.start_streaming)
         self.map_command(GlobalCommands.STOP_STREAMING, self.stop_streaming)
+        self.map_command(GlobalCommands.INITIALIZE_INSTRUCTION, self.set_instruction)
 
     def run_hardware(self, data):
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, data))
@@ -51,8 +56,16 @@ class Controller(AbstractMessageProcess):
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, data))
         self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, data))
 
+    def initialize_environment(self, data):
+        # This just clears the instructions so that you are not starting with problematic queue_names if
+        # the environment order switched around
+        self.environment_instructions = {}
+        for metadata in data:
+            self.environment_instructions[metadata.queue_name] = None
+
     def start_environment(self, data):
         self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.START_ENVIRONMENT, data))
+        self.queue_container.environment_command_queues[data].put(TASK_NAME, (GlobalCommands.START_ENVIRONMENT, self.environment_instructions[data]))
 
     def stop_environment(self, data):
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, data))
@@ -62,6 +75,10 @@ class Controller(AbstractMessageProcess):
 
     def stop_streaming(self, data):
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.STOP_STREAMING, None))
+
+    def set_instruction(self, data):
+        for instruction in data:
+            self.environment_instructions[instruction.queue_name] = instruction
 
 
 def controller_process(queue_container: QueueContainer):
