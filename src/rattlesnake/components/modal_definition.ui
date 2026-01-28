@@ -849,7 +849,7 @@
             <item>
              <widget class="QDoubleSpinBox" name="hysteresis_time_display">
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Hysteresis Time (s)&lt;/span&gt;&lt;br/&gt;Amount of time that the trigger channel must be below the Hysteresis level.  This property is read only and is displayed for the user's convenience.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600;&quot;&gt;Hysteresis Time (s)&lt;/span&gt;&lt;/p&gt;&lt;p&gt;Amount of time that the trigger channel must be below the Hysteresis level. This property is read only and is displayed for the user's convenience.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="readOnly">
                <bool>true</bool>
