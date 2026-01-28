@@ -1,4 +1,4 @@
-from .utilities import GlobalCommands, VerboseMessageQueue, QueueContainer, log_file_task
+from .utilities import GlobalCommands, VerboseMessageQueue, QueueContainer, ProfileTimer, ProfileEvent, log_file_task
 from .process.controller import controller_process
 from .process.acquisition import acquisition_process
 from .process.output import output_process
@@ -98,7 +98,7 @@ class Rattlesnake:
         self.hardware_metadata = None
         self.environment_metadata_list = []
         self.stream_metadata = None
-        self.profile_metadata = None
+        self.profile_event_list = []
 
     def set_hardware(self, hardware_metadata: HardwareMetadata) -> None:
         # Check for valid states
@@ -155,8 +155,21 @@ class Rattlesnake:
                 raise KeyError(f"No environment found for {instruction.environment_name}")
             self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_INSTRUCTION, instruction))
 
-    def set_profile(self, profile_metadata):
-        pass
+    def set_profile(self, profile_event_list):
+        self.log("Settting Profile Event List")
+
+        queue_name_dict = {metadata.environment_name: metadata.queue_name for metadata in self.environment_metadata_list}
+
+        for profile_event in self.profile_event_list:
+            try:
+                profile_event.queue_name = queue_name_dict[profile_event.environment_name]
+            except KeyError:
+                raise KeyError(f"No environment found for {profile_event.environment_name}")
+
+            if profile_event.operation not in self.command_map:
+                pass
+
+        self.profile_event_list = profile_event_list
 
     def start_acquisition(self):
         # Check for basic issues
@@ -189,6 +202,9 @@ class Rattlesnake:
             self.queue_container.environment_command_queues[metadata.queue_name].put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, None))
 
         self.state = RattlesnakeState.ENVIRONMENT_STORE
+
+    def start_profile(self):
+        pass
 
     def shutdown(self):
         # Close out of acquisition, output, streaming process

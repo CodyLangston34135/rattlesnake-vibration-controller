@@ -35,13 +35,33 @@ class EnvironmentManager:
         sysid_names = [queue_name for queue_name in self.queue_names if self.environment_types[queue_name] in self.sysid_environments]
         return sysid_names
 
+    def log(self, message):
+        """Write a message to the log file
+
+        This function puts a message onto the ``log_file_queue`` so it will
+        eventually be written to the log file.
+
+        When written to the log file, the message will include the date and
+        time that the message was queued, the name of the environment, and
+        then the message itself.
+
+        Parameters
+        ----------
+        message : str :
+            A message that will be written to the log file.
+
+        """
+        self.queue_container.log_file_queue.put(f"{datetime.now()}: {TASK_NAME} -- {message}\n")
+
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
+        self.log("Initializing Hardware")
         for queue_name in self.queue_names:
             self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata))
 
         self.hardware_metadata = hardware_metadata
 
     def initialize_environments(self, metadata_list: List[EnvironmentMetadata], acquisition_active, output_active):
+        self.log("Initializing Environments")
         mapped_queue_names = set()
         extra_metadata = []
 
@@ -64,6 +84,7 @@ class EnvironmentManager:
                 extra_metadata.append(metadata)
                 continue
 
+            self.log(f"Assigning {environment_name} to {queue_name} Queue")
             metadata.queue_name = queue_name
             self.environment_types[queue_name] = environment_type
             self.environment_names[queue_name] = environment_name
@@ -153,6 +174,7 @@ class EnvironmentManager:
             return
 
         # Store the environment to the container
+        self.log(f"Assigning {environment_name} to {queue_name} Queue")
         self.queue_names.append(queue_name)
         self.environment_names[queue_name] = environment_name
         self.environment_types[queue_name] = environment_type
@@ -166,6 +188,7 @@ class EnvironmentManager:
         """Removes environment from container"""
         # Check if index corresponds to an existing environment
         if queue_name in self.queue_names:
+            self.log(f"Removing {self.environment_names[queue_name]}, Clearing up {queue_name} Queue")
             self.queue_names.remove[queue_name]
             self.environment_names.pop(queue_name, None)
             self.environment_types.pop(queue_name, None)
