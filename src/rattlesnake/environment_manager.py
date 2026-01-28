@@ -13,7 +13,7 @@ TASK_NAME = "Environment Manager"
 class EnvironmentManager:
     """A container class that stores the environment information"""
 
-    def __init__(self, queue_container: QueueContainer, threading):
+    def __init__(self, queue_container: QueueContainer, threading_bool):
         self.hardware_metadata = None
         self.queue_names = []  # Static name for dictionary keys, process names, etc
         self.environment_names = {}  # Name of environment for Ui purposes
@@ -21,7 +21,11 @@ class EnvironmentManager:
         self.environment_metadata = {}
         self.environment_processes = {}
         self.queue_container = queue_container
-        self._threading = threading
+        self._threading = threading_bool
+        if threading_bool:
+            self.new_process = threading.Thread
+        else:
+            self.new_process = mp.Process
 
     @property
     def available_queues(self):
@@ -148,73 +152,40 @@ class EnvironmentManager:
             from .environment.time_environment import time_process
 
             self.queue_container.environment_command_queues[queue_name].assign_environment(environment_name)
-            if self.threading:
-                environment_process = threading.Thread(
-                    target=time_process,
-                    args=(
-                        environment_name,
-                        queue_name,
-                        self.queue_container.environment_command_queues[queue_name],
-                        self.queue_container.gui_update_queue,
-                        self.queue_container.controller_command_queue,
-                        self.queue_container.log_file_queue,
-                        self.queue_container.environment_data_in_queues[queue_name],
-                        self.queue_container.environment_data_out_queues[queue_name],
-                        acquisition_active,
-                        output_active,
-                    ),
-                )
-            else:
-                environment_process = mp.Process(
-                    target=time_process,
-                    args=(
-                        environment_name,
-                        queue_name,
-                        self.queue_container.environment_command_queues[queue_name],
-                        self.queue_container.gui_update_queue,
-                        self.queue_container.controller_command_queue,
-                        self.queue_container.log_file_queue,
-                        self.queue_container.environment_data_in_queues[queue_name],
-                        self.queue_container.environment_data_out_queues[queue_name],
-                        acquisition_active,
-                        output_active,
-                    ),
-                )
+            environment_process = self.new_process(
+                target=time_process,
+                args=(
+                    environment_name,
+                    queue_name,
+                    self.queue_container.environment_command_queues[queue_name],
+                    self.queue_container.gui_update_queue,
+                    self.queue_container.controller_command_queue,
+                    self.queue_container.log_file_queue,
+                    self.queue_container.environment_data_in_queues[queue_name],
+                    self.queue_container.environment_data_out_queues[queue_name],
+                    acquisition_active,
+                    output_active,
+                ),
+            )
             environment_process.start()
         elif environment_type == ControlTypes.READ:
             from .environment.read_environment import read_process
 
             self.queue_container.environment_command_queues[queue_name].assign_environment(environment_name)
-            if self.threading:
-                environment_process = threading.Thread(
-                    target=read_process,
-                    args=(
-                        queue_name,
-                        self.queue_container.environment_command_queues[queue_name],
-                        self.queue_container.gui_update_queue,
-                        self.queue_container.controller_command_queue,
-                        self.queue_container.log_file_queue,
-                        self.queue_container.environment_data_in_queues[queue_name],
-                        self.queue_container.environment_data_out_queues[queue_name],
-                        acquisition_active,
-                        output_active,
-                    ),
-                )
-            else:
-                environment_process = mp.Process(
-                    target=read_process,
-                    args=(
-                        queue_name,
-                        self.queue_container.environment_command_queues[queue_name],
-                        self.queue_container.gui_update_queue,
-                        self.queue_container.controller_command_queue,
-                        self.queue_container.log_file_queue,
-                        self.queue_container.environment_data_in_queues[queue_name],
-                        self.queue_container.environment_data_out_queues[queue_name],
-                        acquisition_active,
-                        output_active,
-                    ),
-                )
+            environment_process = self.new_process(
+                target=read_process,
+                args=(
+                    queue_name,
+                    self.queue_container.environment_command_queues[queue_name],
+                    self.queue_container.gui_update_queue,
+                    self.queue_container.controller_command_queue,
+                    self.queue_container.log_file_queue,
+                    self.queue_container.environment_data_in_queues[queue_name],
+                    self.queue_container.environment_data_out_queues[queue_name],
+                    acquisition_active,
+                    output_active,
+                ),
+            )
             environment_process.start()
         else:  # If "Select Environment" was chosen
             return

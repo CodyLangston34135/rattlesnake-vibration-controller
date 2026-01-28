@@ -15,7 +15,7 @@ from typing import List
 
 TASK_NAME = "Rattlesnake"
 CLOSE_TIMEOUT = 5
-THREADING = False
+THREADING = True
 
 
 class RattlesnakeState(Enum):
@@ -35,9 +35,73 @@ class Rattlesnake:
         self.output_active = mp.Value("i", 0)
 
         if THREADING:
-            self.threading_startup()
+            new_queue = thqueue.Queue  # threading-safe in-memory queue
+            new_process = threading.Thread  # worker threads
+            new_event = threading.Event  # optional stop flag
         else:
-            self.process_startup()
+            new_queue = mp.Queue  # multiprocessing queue
+            new_process = mp.Process  # worker processes
+            new_event = mp.Event  # optional stop flag
+
+        # Start up log file process
+        log_file_queue = mp.Queue()
+        self.log_file_process = mp.Process(target=log_file_task, args=(log_file_queue,))
+        self.log_file_process.start()
+
+        # Start up command queues and processes
+        self.controller_queue_name_manager = mp.Manager()  # Adds minor overhead which is reasonable for COMMAND queues only
+        controller_command_queue = VerboseMessageQueue(log_file_queue, new_queue(), self.controller_queue_name_manager, "Controller Command Queue")
+        acquisition_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), self.controller_queue_name_manager, "Acquisition Command Queue")
+        output_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), self.controller_queue_name_manager, "Output Command Queue")
+        streaming_command_queue = VerboseMessageQueue(log_file_queue, new_queue(), self.controller_queue_name_manager, "Streaming Command Queue")
+
+        # Set up data queue
+        input_output_sync_queue = new_queue()
+        single_process_hardware_queue = new_queue()
+
+        # Set up environment queues
+        max_environments = 16
+        self.environment_metadata_list = []
+        environment_command_queues = {}
+        environment_data_in_queues = {}
+        environment_data_out_queues = {}
+        for env_idx in range(max_environments):
+            environment_name = "Environment {:}".format(env_idx)
+            environment_command_queues[environment_name] = VerboseMessageQueue(
+                log_file_queue, mp.Queue(), self.controller_queue_name_manager, environment_name + " Command Queue"
+            )
+            environment_data_in_queues[environment_name] = new_queue()
+            environment_data_out_queues[environment_name] = new_queue()
+
+        # Set up output queue
+        gui_update_queue = new_queue()
+
+        # Build queue container
+        self.queue_container = QueueContainer(
+            controller_command_queue,
+            acquisition_command_queue,
+            output_command_queue,
+            streaming_command_queue,
+            log_file_queue,
+            input_output_sync_queue,
+            single_process_hardware_queue,
+            gui_update_queue,
+            environment_command_queues,
+            environment_data_in_queues,
+            environment_data_out_queues,
+        )
+
+        self.controller_proc = new_process(target=controller_process, args=(self.queue_container,))
+        self.controller_proc.start()
+        self.acquisition_proc = new_process(
+            target=acquisition_process,
+            args=(self.queue_container, self.acquisition_active),
+        )
+        self.acquisition_proc.start()
+        self.output_proc = new_process(target=output_process, args=(self.queue_container, self.output_active))
+        self.output_proc.start()
+        self.streaming_proc = new_process(target=streaming_process, args=(self.queue_container,))
+        self.streaming_proc.start()
 
         # Set up environment manager for future environment processes
         self.environment_manager = EnvironmentManager(self.queue_container, THREADING)
@@ -46,131 +110,6 @@ class Rattlesnake:
         self.environment_metadata_list = []
         self.stream_metadata = StreamMetadata()  # Default to no stream
         self.profile_event_list = []
-
-    def process_startup(self):
-        # Start up log file process
-        log_file_queue = mp.Queue()
-        self.log_file_process = mp.Process()
-        self.log_file_process = mp.Process(target=log_file_task, args=(log_file_queue,))
-        self.log_file_process.start()
-
-        # Start up command queues and processes
-        self.controller_queue_name_manager = mp.Manager()  # Adds minor overhead which is reasonable for COMMAND queues only
-        controller_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), self.controller_queue_name_manager, "Controller Command Queue")
-        acquisition_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), self.controller_queue_name_manager, "Acquisition Command Queue")
-        output_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), self.controller_queue_name_manager, "Output Command Queue")
-        streaming_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), self.controller_queue_name_manager, "Streaming Command Queue")
-
-        # Set up data queue
-        input_output_sync_queue = mp.Queue()
-        single_process_hardware_queue = mp.Queue()
-
-        # Set up environment queues
-        max_environments = 16
-        self.environment_metadata_list = []
-        environment_command_queues = {}
-        environment_data_in_queues = {}
-        environment_data_out_queues = {}
-        for env_idx in range(max_environments):
-            environment_name = "Environment {:}".format(env_idx)
-            environment_command_queues[environment_name] = VerboseMessageQueue(
-                log_file_queue, mp.Queue(), self.controller_queue_name_manager, environment_name + " Command Queue"
-            )
-            environment_data_in_queues[environment_name] = mp.Queue()
-            environment_data_out_queues[environment_name] = mp.Queue()
-
-        # Set up output queue
-        gui_update_queue = mp.Queue()
-
-        # Build queue container
-        self.queue_container = QueueContainer(
-            controller_command_queue,
-            acquisition_command_queue,
-            output_command_queue,
-            streaming_command_queue,
-            log_file_queue,
-            input_output_sync_queue,
-            single_process_hardware_queue,
-            gui_update_queue,
-            environment_command_queues,
-            environment_data_in_queues,
-            environment_data_out_queues,
-        )
-
-        self.controller_proc = mp.Process(target=controller_process, args=(self.queue_container,))
-        self.controller_proc.start()
-        self.acquisition_proc = mp.Process(
-            target=acquisition_process,
-            args=(self.queue_container, self.acquisition_active),
-        )
-        self.acquisition_proc.start()
-        self.output_proc = mp.Process(target=output_process, args=(self.queue_container, self.output_active))
-        self.output_proc.start()
-        self.streaming_proc = mp.Process(target=streaming_process, args=(self.queue_container,))
-        self.streaming_proc.start()
-
-    def threading_startup(self):
-        # Start up log file process
-        log_file_queue = mp.Queue()
-        self.log_file_process = mp.Process(target=log_file_task, args=(log_file_queue,))
-        self.log_file_process.start()
-
-        # Start up command queues and processes
-        self.controller_queue_name_manager = mp.Manager()  # Adds minor overhead which is reasonable for COMMAND queues only
-        controller_command_queue = VerboseMessageQueue(
-            log_file_queue, thqueue.Queue(), self.controller_queue_name_manager, "Controller Command Queue"
-        )
-        acquisition_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), self.controller_queue_name_manager, "Acquisition Command Queue")
-        output_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), self.controller_queue_name_manager, "Output Command Queue")
-        streaming_command_queue = VerboseMessageQueue(log_file_queue, thqueue.Queue(), self.controller_queue_name_manager, "Streaming Command Queue")
-
-        # Set up data queue
-        input_output_sync_queue = thqueue.Queue()
-        single_process_hardware_queue = thqueue.Queue()
-
-        # Set up environment queues
-        max_environments = 16
-        self.environment_metadata_list = []
-        environment_command_queues = {}
-        environment_data_in_queues = {}
-        environment_data_out_queues = {}
-        for env_idx in range(max_environments):
-            environment_name = "Environment {:}".format(env_idx)
-            environment_command_queues[environment_name] = VerboseMessageQueue(
-                log_file_queue, mp.Queue(), self.controller_queue_name_manager, environment_name + " Command Queue"
-            )
-            environment_data_in_queues[environment_name] = thqueue.Queue()
-            environment_data_out_queues[environment_name] = thqueue.Queue()
-
-        # Set up output queue
-        gui_update_queue = thqueue.Queue()
-
-        # Build queue container
-        self.queue_container = QueueContainer(
-            controller_command_queue,
-            acquisition_command_queue,
-            output_command_queue,
-            streaming_command_queue,
-            log_file_queue,
-            input_output_sync_queue,
-            single_process_hardware_queue,
-            gui_update_queue,
-            environment_command_queues,
-            environment_data_in_queues,
-            environment_data_out_queues,
-        )
-
-        self.controller_proc = threading.Thread(target=controller_process, args=(self.queue_container,))
-        self.controller_proc.start()
-        self.acquisition_proc = threading.Thread(
-            target=acquisition_process,
-            args=(self.queue_container, self.acquisition_active),
-        )
-        self.acquisition_proc.start()
-        self.output_proc = threading.Thread(target=output_process, args=(self.queue_container, self.output_active))
-        self.output_proc.start()
-        self.streaming_proc = threading.Thread(target=streaming_process, args=(self.queue_container,))
-        self.streaming_proc.start()
 
     def set_hardware(self, hardware_metadata: HardwareMetadata) -> None:
         # Check for valid states
