@@ -55,7 +55,7 @@ def log_file_task(queue: mp.Queue):
 class VerboseMessageQueue:
     """A queue class that contains automatic logging information"""
 
-    def __init__(self, log_queue, name_manager, base_name: str = ""):
+    def __init__(self, log_queue, base_queue, name_manager, base_name: str = ""):
         """
         A queue class that contains automatic logging information
 
@@ -68,7 +68,7 @@ class VerboseMessageQueue:
             The name of the queue that will be included in the logging information
 
         """
-        self.queue = mp.Queue()
+        self.base_queue = base_queue
         self.log_queue = log_queue
         self.base_name = base_name
         self.environment_name = name_manager.Value(str, "")
@@ -110,7 +110,7 @@ class VerboseMessageQueue:
             self.log_queue.put("{:}: {:} put {:} to {:}\n".format(datetime.now(), task_name, message_data_tuple[0].name, self.log_name))
             self.last_put_message = message_data_tuple[0]
             self.last_put_time = put_time
-        self.queue.put(message_data_tuple, *args, **kwargs)
+        self.base_queue.put(message_data_tuple, *args, **kwargs)
 
     def get(self, task_name, *args, **kwargs):
         """Gets data from a verbose queue
@@ -134,7 +134,7 @@ class VerboseMessageQueue:
 
         """
         get_time = time.time()
-        message_data_tuple = self.queue.get(*args, **kwargs)
+        message_data_tuple = self.base_queue.get(*args, **kwargs)
         if self.last_get_message != message_data_tuple[0] or get_time - self.last_get_time > self.time_threshold:
             self.log_queue.put("{:}: {:} got {:} from {:}\n".format(datetime.now(), task_name, message_data_tuple[0].name, self.log_name))
             self.last_get_message = message_data_tuple[0]
@@ -165,22 +165,24 @@ class VerboseMessageQueue:
         data = []
         while True:
             try:
-                data.append(self.queue.get(False))
+                data.append(self.base_queue.get(block=False))
                 self.log_queue.put("{:}: {:} got {:} from {:} during flush\n".format(datetime.now(), task_name, data[-1][0].name, self.log_name))
-            except mp.queues.Empty:
+            except (thqueue.Empty, mpqueue.Empty):
                 return data
 
     def empty(self):
         """Return true if the queue is empty."""
-        return self.queue.empty()
+        return self.base_queue.empty()
 
     def close(self):
         """Closes queue"""
-        self.queue.close()
+        if hasattr(self.base_queue, "close"):
+            self.base_queue.close()
 
     def join_thread(self):
         """Joins thread"""
-        self.queue.join_thread()
+        if hasattr(self.queue, "join_thread"):
+            self.base_queue.join_thread()
 
 
 class QueueContainer:
@@ -254,137 +256,6 @@ class QueueContainer:
         self.environment_command_queues = environment_command_queues
         self.environment_data_in_queues = environment_data_in_queues
         self.environment_data_out_queues = environment_data_out_queues
-
-
-class ThreadVerboseMessageQueue:
-    """A queue class that contains automatic logging information"""
-
-    def __init__(self, log_queue, base_name: str = ""):
-        """
-        A queue class that contains automatic logging information
-
-        Parameters
-        ----------
-        log_queue : mp.queues.Queue :
-            A queue that a logging task will read from where the operations of
-            the queue will be logged.
-        queue_name : str :
-            The name of the queue that will be included in the logging information
-
-        """
-        self.queue = mp.Queue()
-        self.log_queue = log_queue
-        self.base_name = base_name
-        self.environment_name = None
-        self.last_put_message = None
-        self.last_put_time = -float("inf")
-        self.last_get_message = None
-        self.last_get_time = -float("inf")
-        self.last_flush = -float("inf")
-        self.time_threshold = 1.0
-
-    @property
-    def log_name(self):
-        env = self.environment_name
-        return f"{self.base_name} | {env}" if env else self.base_name
-
-    def assign_environment(self, env_name: str):
-        self.environment_name = env_name
-
-    def put(self, task_name, message_data_tuple, *args, **kwargs):
-        """Puts data to a verbose queue
-
-        Parameters
-        ----------
-        task_name : str
-            Task name that is performing the put operation
-        message_data_tuple : Tuple
-            A (message,data) tuple where message is the instruction and data is
-            any optional data to be passed along with the instruction.
-        *args :
-            Additional arguments that will be passed to the mp.queues.Queue.put
-            function
-        **kwargs :
-            Additional arguments that will be passed to the mp.queues.Queue.put
-            function
-
-        """
-        put_time = time.time()
-        if self.last_put_message != message_data_tuple[0] or put_time - self.last_put_time > self.time_threshold:
-            self.log_queue.put("{:}: {:} put {:} to {:}\n".format(datetime.now(), task_name, message_data_tuple[0].name, self.log_name))
-            self.last_put_message = message_data_tuple[0]
-            self.last_put_time = put_time
-        self.queue.put(message_data_tuple, *args, **kwargs)
-
-    def get(self, task_name, *args, **kwargs):
-        """Gets data from a verbose queue
-
-        Parameters
-        ----------
-        task_name : str :
-            Name of the task that is retrieving data from the queue
-        *args :
-            Additional arguments that will be passed to the mp.queues.Queue.get
-            function
-        **kwargs :
-            Additional arguments that will be passed to the mp.queues.Queue.get
-            function
-
-
-        Returns
-        -------
-        message_data_tuple :
-            A (message,data) tuple
-
-        """
-        get_time = time.time()
-        message_data_tuple = self.queue.get(*args, **kwargs)
-        if self.last_get_message != message_data_tuple[0] or get_time - self.last_get_time > self.time_threshold:
-            self.log_queue.put("{:}: {:} got {:} from {:}\n".format(datetime.now(), task_name, message_data_tuple[0].name, self.log_name))
-            self.last_get_message = message_data_tuple[0]
-            self.last_get_time = get_time
-        return message_data_tuple
-
-    def flush(self, task_name):
-        """Flushes a verbose queue getting all data currently in the queue
-
-        After execution the queue should be empty barring race conditions.
-
-        Parameters
-        ----------
-        task_name : str :
-            Name of the task that is flushing the queue
-
-
-        Returns
-        -------
-        data : iterable of message_data_tuples :
-            A list of all (message,data) tuples currently in the queue.
-
-        """
-        flush_time = time.time()
-        if flush_time - self.last_flush > 0.1:
-            self.log_queue.put("{:}: {:} flushed {:}\n".format(datetime.now(), task_name, self.log_name))
-            self.last_flush = flush_time
-        data = []
-        while True:
-            try:
-                data.append(self.queue.get(False))
-                self.log_queue.put("{:}: {:} got {:} from {:} during flush\n".format(datetime.now(), task_name, data[-1][0].name, self.log_name))
-            except (thqueue.Empty, mpqueue.Empty):
-                return data
-
-    def empty(self):
-        """Return true if the queue is empty."""
-        return self.queue.empty()
-
-    def close(self):
-        """Closes queue"""
-        self.queue.close()
-
-    def join_thread(self):
-        """Joins thread"""
-        self.queue.join_thread()
 
 
 def flush_queue(queue, timeout=None):

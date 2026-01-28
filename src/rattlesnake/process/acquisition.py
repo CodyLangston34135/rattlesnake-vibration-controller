@@ -30,7 +30,6 @@ from ..environment.abstract_environment import EnvironmentMetadata
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
-import threading
 import queue as thqueue
 import numpy as np
 import scipy.signal as sig

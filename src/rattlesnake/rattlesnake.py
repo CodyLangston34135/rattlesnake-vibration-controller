@@ -8,14 +8,14 @@ from .environment.abstract_environment import EnvironmentMetadata, EnvironmentIn
 from .environment_manager import EnvironmentManager
 import multiprocessing as mp
 import threading
-import queue
+import queue as thqueue
 from enum import Enum
 from datetime import datetime
 from typing import List
 
 TASK_NAME = "Rattlesnake"
 CLOSE_TIMEOUT = 5
-THREADING = True
+THREADING = False
 
 
 class RattlesnakeState(Enum):
@@ -40,7 +40,7 @@ class Rattlesnake:
             self.process_startup()
 
         # Set up environment manager for future environment processes
-        self.environment_manager = EnvironmentManager(self.queue_container)
+        self.environment_manager = EnvironmentManager(self.queue_container, THREADING)
 
         self.hardware_metadata = None
         self.environment_metadata_list = []
@@ -56,10 +56,10 @@ class Rattlesnake:
 
         # Start up command queues and processes
         self.controller_queue_name_manager = mp.Manager()  # Adds minor overhead which is reasonable for COMMAND queues only
-        controller_command_queue = VerboseMessageQueue(log_file_queue, self.controller_queue_name_manager, "Controller Command Queue")
-        acquisition_command_queue = VerboseMessageQueue(log_file_queue, self.controller_queue_name_manager, "Acquisition Command Queue")
-        output_command_queue = VerboseMessageQueue(log_file_queue, self.controller_queue_name_manager, "Output Command Queue")
-        streaming_command_queue = VerboseMessageQueue(log_file_queue, self.controller_queue_name_manager, "Streaming Command Queue")
+        controller_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), self.controller_queue_name_manager, "Controller Command Queue")
+        acquisition_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), self.controller_queue_name_manager, "Acquisition Command Queue")
+        output_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), self.controller_queue_name_manager, "Output Command Queue")
+        streaming_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), self.controller_queue_name_manager, "Streaming Command Queue")
 
         # Set up data queue
         input_output_sync_queue = mp.Queue()
@@ -74,7 +74,7 @@ class Rattlesnake:
         for env_idx in range(max_environments):
             environment_name = "Environment {:}".format(env_idx)
             environment_command_queues[environment_name] = VerboseMessageQueue(
-                log_file_queue, self.controller_queue_name_manager, environment_name + " Command Queue"
+                log_file_queue, mp.Queue(), self.controller_queue_name_manager, environment_name + " Command Queue"
             )
             environment_data_in_queues[environment_name] = mp.Queue()
             environment_data_out_queues[environment_name] = mp.Queue()
@@ -112,20 +112,21 @@ class Rattlesnake:
     def threading_startup(self):
         # Start up log file process
         log_file_queue = mp.Queue()
-        self.log_file_process = mp.Process()
         self.log_file_process = mp.Process(target=log_file_task, args=(log_file_queue,))
         self.log_file_process.start()
 
         # Start up command queues and processes
         self.controller_queue_name_manager = mp.Manager()  # Adds minor overhead which is reasonable for COMMAND queues only
-        controller_command_queue = VerboseMessageQueue(log_file_queue, self.controller_queue_name_manager, "Controller Command Queue")
-        acquisition_command_queue = VerboseMessageQueue(log_file_queue, self.controller_queue_name_manager, "Acquisition Command Queue")
-        output_command_queue = VerboseMessageQueue(log_file_queue, self.controller_queue_name_manager, "Output Command Queue")
-        streaming_command_queue = VerboseMessageQueue(log_file_queue, self.controller_queue_name_manager, "Streaming Command Queue")
+        controller_command_queue = VerboseMessageQueue(
+            log_file_queue, thqueue.Queue(), self.controller_queue_name_manager, "Controller Command Queue"
+        )
+        acquisition_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), self.controller_queue_name_manager, "Acquisition Command Queue")
+        output_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), self.controller_queue_name_manager, "Output Command Queue")
+        streaming_command_queue = VerboseMessageQueue(log_file_queue, thqueue.Queue(), self.controller_queue_name_manager, "Streaming Command Queue")
 
         # Set up data queue
-        input_output_sync_queue = mp.Queue()
-        single_process_hardware_queue = mp.Queue()
+        input_output_sync_queue = thqueue.Queue()
+        single_process_hardware_queue = thqueue.Queue()
 
         # Set up environment queues
         max_environments = 16
@@ -136,13 +137,13 @@ class Rattlesnake:
         for env_idx in range(max_environments):
             environment_name = "Environment {:}".format(env_idx)
             environment_command_queues[environment_name] = VerboseMessageQueue(
-                log_file_queue, self.controller_queue_name_manager, environment_name + " Command Queue"
+                log_file_queue, mp.Queue(), self.controller_queue_name_manager, environment_name + " Command Queue"
             )
-            environment_data_in_queues[environment_name] = mp.Queue()
-            environment_data_out_queues[environment_name] = mp.Queue()
+            environment_data_in_queues[environment_name] = thqueue.Queue()
+            environment_data_out_queues[environment_name] = thqueue.Queue()
 
         # Set up output queue
-        gui_update_queue = mp.Queue()
+        gui_update_queue = thqueue.Queue()
 
         # Build queue container
         self.queue_container = QueueContainer(

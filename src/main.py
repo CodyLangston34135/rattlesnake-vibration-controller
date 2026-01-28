@@ -12,6 +12,8 @@ import time
 import numpy as np
 from qtpy import QtWidgets
 
+BUFFER_SIZE = 0.01
+
 
 def test_nidaq_metadata():
     channel = Channel()
@@ -30,8 +32,8 @@ def test_nidaq_metadata():
     hardware_metadata = NIDAQmxMetadata()
     hardware_metadata.channel_list = channel_list
     hardware_metadata.sample_rate = 1000
-    hardware_metadata.time_per_read = 0.25
-    hardware_metadata.time_per_write = 0.25
+    hardware_metadata.time_per_read = BUFFER_SIZE
+    hardware_metadata.time_per_write = BUFFER_SIZE
     hardware_metadata.task_trigger = 0
     hardware_metadata.output_trigger_generator = ""
 
@@ -83,8 +85,8 @@ def test_sdynpy_metadata():
     hardware_metadata = SDynPySystemMetadata()
     hardware_metadata.channel_list = channel_list
     hardware_metadata.sample_rate = 1000
-    hardware_metadata.time_per_read = 0.25
-    hardware_metadata.time_per_write = 0.25
+    hardware_metadata.time_per_read = BUFFER_SIZE
+    hardware_metadata.time_per_write = BUFFER_SIZE
     hardware_metadata.hardware_file = "E:/Rattlesnake/SampleData/stiff_plate_system.npz"
 
     return hardware_metadata
