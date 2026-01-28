@@ -11,6 +11,7 @@ class ControlTypes(Enum):
     TIME = 4
     # NONLINEAR = 5
     MODAL = 6
+    READ = 7
     # Add new environment types here
 
 

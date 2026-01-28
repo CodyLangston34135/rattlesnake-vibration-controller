@@ -27,6 +27,10 @@ class TimeUICommands(Enum):
     TIME_DATA = 2
 
 
+class ReadUICommands(Enum):
+    TIME_DATA = 0
+
+
 # Define paths to the User Interface UI Files
 environment_definition_ui_paths = {}
 environment_prediction_ui_paths = {}
@@ -64,6 +68,8 @@ filter_explorer_ui_path = os.path.join(directory, "ui_files", "sine_filter_explo
 environment_definition_ui_paths[ControlTypes.MODAL] = os.path.join(directory, "ui_files", "modal_definition.ui")
 environment_run_ui_paths[ControlTypes.MODAL] = os.path.join(directory, "ui_files", "modal_run.ui")
 modal_mdi_ui_path = os.path.join(directory, "ui_files", "modal_acquisition_window.ui")
+# Read Environment
+environment_run_ui_paths[ControlTypes.READ] = os.path.join(directory, "ui_files", "read_run.ui")
 
 
 class UpdaterSignals(QtCore.QObject):

@@ -31,7 +31,6 @@ from ..user_interface.ui_utilities import TimeUICommands
 import copy
 import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
-from multiprocessing.queues import Queue
 import netCDF4 as nc4
 import numpy as np
 
@@ -421,11 +420,11 @@ class TimeEnvironment(EnvironmentProcess):
 def time_process(
     environment_name: str,
     input_queue: VerboseMessageQueue,
-    gui_update_queue: Queue,
+    gui_update_queue: mp.Queue,
     controller_communication_queue: VerboseMessageQueue,
-    log_file_queue: Queue,
-    data_in_queue: Queue,
-    data_out_queue: Queue,
+    log_file_queue: mp.Queue,
+    data_in_queue: mp.Queue,
+    data_out_queue: mp.Queue,
     acquisition_active: mp.sharedctypes.Synchronized,
     output_active: mp.sharedctypes.Synchronized,
 ):
