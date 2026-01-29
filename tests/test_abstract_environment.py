@@ -8,6 +8,7 @@ import netCDF4 as nc4
 import multiprocessing as mp
 from unittest import mock
 
+# region: Fixtures
 channel_list = mock_channel_list()
 
 
@@ -33,7 +34,7 @@ def environment_process(request):
     return environment_process
 
 
-## Environment Metadata
+# region: Environment Metadata
 def test_environment_metadata_init():
     environment_metadata = MockEnvironmentMetadata()
 
@@ -89,7 +90,7 @@ def test_environment_metadata_functions():
     assert True
 
 
-## Environment Instructions
+# region: Environment Instructinos
 def test_environment_instructions_init():
     environment_instructions = MockEnvironmentInstructions()
 
@@ -98,7 +99,7 @@ def test_environment_instructions_init():
     assert hasattr(environment_instructions, "queue_name")
 
 
-## Environment Process
+# region: Environment Process
 @pytest.mark.parametrize("threading", [True, False])
 def test_environment_process_init(threading):
     queue_container = mock_queue_container(threading)
@@ -201,6 +202,7 @@ def test_environment_process_run(mock_log, mock_get, mock_function, mock_key, en
     mock_log.assert_called_with("Stopping Process")
 
 
+# region: run_process
 @mock.patch("rattlesnake.environment.abstract_environment.EnvironmentProcess")
 @pytest.mark.parametrize("threading", [True, False])
 def test_run_process(mock_process_class, threading):

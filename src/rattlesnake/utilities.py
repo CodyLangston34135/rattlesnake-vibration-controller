@@ -1,8 +1,9 @@
 # DO NOT import from other files in utilities.py
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
-import threading
 import queue as thqueue
+import string
+import random
 import time
 from qtpy import QtCore
 from datetime import datetime
@@ -86,6 +87,10 @@ class VerboseMessageQueue:
     def assign_environment(self, env_name: str):
         self.environment_name.value = env_name
 
+    def generate_message_id(self, size=6, chars=string.ascii_letters + string.digits):
+        """Generates a random identifier for log file messages"""
+        return "".join(random.choice(chars) for _ in range(size))
+
     def put(self, task_name, message_data_tuple, *args, **kwargs):
         """Puts data to a verbose queue
 
@@ -106,10 +111,13 @@ class VerboseMessageQueue:
         """
         put_time = time.time()
         if self.last_put_message != message_data_tuple[0] or put_time - self.last_put_time > self.time_threshold:
-            self.log_queue.put("{:}: {:} put {:} to {:}\n".format(datetime.now(), task_name, message_data_tuple[0].name, self.log_name))
+            message_id = self.generate_message_id(8)
+            self.log_queue.put(f"{datetime.now()}: {task_name} put " f"{message_data_tuple[0].name} ({message_id}) to {self.log_name}\n")
             self.last_put_message = message_data_tuple[0]
             self.last_put_time = put_time
-        self.base_queue.put(message_data_tuple, *args, **kwargs)
+        else:
+            message_id = ""
+        self.base_queue.put((message_id, message_data_tuple), *args, **kwargs)
 
     def get(self, task_name, *args, **kwargs):
         """Gets data from a verbose queue
@@ -132,12 +140,9 @@ class VerboseMessageQueue:
             A (message,data) tuple
 
         """
-        get_time = time.time()
-        message_data_tuple = self.base_queue.get(*args, **kwargs)
-        if self.last_get_message != message_data_tuple[0] or get_time - self.last_get_time > self.time_threshold:
-            self.log_queue.put("{:}: {:} got {:} from {:}\n".format(datetime.now(), task_name, message_data_tuple[0].name, self.log_name))
-            self.last_get_message = message_data_tuple[0]
-            self.last_get_time = get_time
+        (message_id, message_data_tuple) = self.base_queue.get(*args, **kwargs)
+        if message_id != "":
+            self.log_queue.put(f"{datetime.now()}: {task_name} got " f"{message_data_tuple[0].name} ({message_id}) from {self.log_name}\n")
         return message_data_tuple
 
     def flush(self, task_name):
@@ -159,14 +164,20 @@ class VerboseMessageQueue:
         """
         flush_time = time.time()
         if flush_time - self.last_flush > 0.1:
-            self.log_queue.put("{:}: {:} flushed {:}\n".format(datetime.now(), task_name, self.log_name))
+            self.log_queue.put(f"{datetime.now()}: {task_name} flushed {self.log_name}\n")
             self.last_flush = flush_time
         data = []
         while True:
             try:
-                data.append(self.base_queue.get(block=False))
-                self.log_queue.put("{:}: {:} got {:} from {:} during flush\n".format(datetime.now(), task_name, data[-1][0].name, self.log_name))
-            except (thqueue.Empty, mpqueue.Empty):
+                message_id, this_data = self.base_queue.get(False)
+                data.append(this_data)
+                if message_id != "":
+                    self.log_queue.put(
+                        f"{datetime.now()}: {task_name} got {data[-1][0].name} ("
+                        f"{message_id if message_id != '' else 'put not logged'})"
+                        f" from {self.log_name} during flush\n"
+                    )
+            except mp.queues.Empty:
                 return data
 
     def empty(self):
@@ -180,7 +191,7 @@ class VerboseMessageQueue:
 
     def join_thread(self):
         """Joins thread"""
-        if hasattr(self.queue, "join_thread"):
+        if hasattr(self.base_queue, "join_thread"):
             self.base_queue.join_thread()
 
 

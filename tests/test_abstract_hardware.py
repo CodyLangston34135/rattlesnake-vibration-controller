@@ -7,7 +7,7 @@ import numpy as np
 channel_list = mock_channel_list()
 
 
-## Hardware Metadata
+# region: Hardware Metadata
 def test_hardware_metadata_init():
     hardware_metadata = MockHardwareMetadata()
 
@@ -77,7 +77,7 @@ def test_hardware_metadata_extra_attr_list():
     assert attr_list[0] == "extra_attr"
 
 
-## Hardware Acquisition
+# region: Hardware Acquisition
 def test_hardware_acquisition_init():
     hardware_acquistion = MockHardwareAcquisition()
 
@@ -102,7 +102,7 @@ def test_hardware_acquisition_functions():
     assert isinstance(int_1, int)
 
 
-## Hardware Output
+# region: Hardware Output
 def test_hardware_output_init():
     hardware_output = MockHardwareOutput()
 

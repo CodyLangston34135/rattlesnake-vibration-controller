@@ -2,6 +2,7 @@ from rattlesnake.hardware.hardware_utilities import Channel
 from rattlesnake.utilities import QueueContainer, VerboseMessageQueue
 import multiprocessing as mp
 import queue as thqueue
+from unittest import mock
 
 
 def mock_channel_list():
@@ -63,3 +64,29 @@ def mock_queue_container(threading):
 
 def fake_time():
     return "Datetime"
+
+
+def clear_verbose_queue(q, task_name, verbose_array):
+    # Mock the datetime and message_id objects used during the log message in the VerboseQueue.get function
+    with (
+        mock.patch("rattlesnake.utilities.datetime") as mock_time,
+        mock.patch("rattlesnake.utilities.VerboseMessageQueue.generate_message_id") as mock_id,
+    ):
+        mock_time.now = fake_time
+        mock_id.return_value = "1"
+
+        # Clear the queue and store data to verbose_array
+        idx = 0
+        while not q.empty():
+            output_value = q.get(task_name)
+            verbose_array[idx] = output_value[1]
+            idx += 1
+
+
+# Clear the log_file_queue
+def clear_log_queue(q, log_string):
+    # Get string from queue and store it to the log_string bstring
+    while not q.empty():
+        output_string = q.get()
+        output_string = output_string.encode("utf-8")
+        log_string.value = log_string.value + output_string
