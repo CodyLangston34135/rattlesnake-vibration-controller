@@ -184,7 +184,7 @@ class Rattlesnake:
         if not self.state == RattlesnakeState.ENVIRONMENT_STORE or self.state == RattlesnakeState.OUTPUT_START:
             raise RuntimeError(f"Invalid state for starting acquisition: {self.state}")
         if not isinstance(self.stream_metadata, StreamMetadata):
-            raise TypeError(f"Stream metadata must be defined before arming data acquisition")
+            raise TypeError("Stream metadata must be defined before arming data acquisition")
 
         self.log("Arming Test Hardware")
         self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, None))

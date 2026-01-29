@@ -30,7 +30,6 @@ from ..hardware.abstract_hardware import HardwareMetadata
 from ..user_interface.ui_utilities import TimeUICommands
 import copy
 import multiprocessing as mp
-import threading
 import queue
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import netCDF4 as nc4
@@ -255,7 +254,7 @@ class TimeEnvironment(EnvironmentProcess):
         self.log("Initializing Data Acquisition Parameters")
         self.hardware_metadata = hardware_metadata
         self.measurement_channels = [index for index, channel in enumerate(self.hardware_metadata.channel_list) if channel.feedback_device is None]
-        self.output_channels = [index for index, channel in enumerate(self.hardware_metadata.channel_list) if not channel.feedback_device is None]
+        self.output_channels = [index for index, channel in enumerate(self.hardware_metadata.channel_list) if channel.feedback_device is not None]
 
     def initialize_environment(self, metadata: TimeMetadata):
         """
@@ -300,7 +299,7 @@ class TimeEnvironment(EnvironmentProcess):
 
         """
         if self.startup:
-            if not data is None:
+            if data is not None:
                 self.current_test_level = data.current_test_level
                 self.repeat = data.repeat
                 self.log("Test Level set to {:}".format(self.current_test_level))

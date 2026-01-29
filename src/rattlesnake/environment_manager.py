@@ -132,7 +132,7 @@ class EnvironmentManager:
         for queue_name in self.queue_names:
             environment_instructions_dict[queue_name] = None
         for instructions in environment_instructions_list:
-            valid_instructions = self.validate_environment_instructions(instructions)
+            self.validate_environment_instructions(instructions)
             environment_instructions_dict[instructions.queue_name] = instructions
         return environment_instructions_dict
 
@@ -165,7 +165,7 @@ class EnvironmentManager:
                 queue_name = str(queue_name)
                 break
 
-        if queue_name == None:
+        if queue_name is None:
             raise KeyError("Not enough environment command queues. Increase max_environments in rattlesnake.py")
 
         environment_type = metadata.environment_type

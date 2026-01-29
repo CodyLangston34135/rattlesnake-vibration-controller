@@ -27,7 +27,6 @@ from ..hardware.abstract_hardware import HardwareMetadata
 from ..environment.abstract_environment import EnvironmentMetadata
 import netCDF4 as nc
 import numpy as np
-import os
 from pathlib import Path
 from typing import List
 from enum import Enum

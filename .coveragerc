@@ -5,4 +5,5 @@ omit =
     src/rattlesnake/hardware/abstract_hardware.py
     src/rattlesnake/hardware/nidaqmx.py
     src/rattlesnake/cicd/*
+    src/rattlesnake/user_interface/*
     */__init__.py

@@ -33,7 +33,6 @@ import multiprocessing.queues as mpqueue
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import queue as thqueue
 import numpy as np
-import scipy.signal as sig
 from time import time, sleep
 from typing import List
 
@@ -235,7 +234,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.output_indices = [
             index
             for index, channel in enumerate(metadata.channel_list)
-            if not (channel.feedback_device is None) and not (channel.feedback_device.strip() == "")
+            if (channel.feedback_device is not None) and not (channel.feedback_device.strip() == "")
         ]
         self.read_data = np.zeros(
             (

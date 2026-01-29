@@ -1,13 +1,11 @@
-from .abstract_environment import EnvironmentMetadata, EnvironmentInstructions, EnvironmentProcess
+from .abstract_environment import EnvironmentMetadata, EnvironmentProcess
 from .environment_utilities import ControlTypes
 from ..utilities import VerboseMessageQueue, GlobalCommands
 from ..hardware.abstract_hardware import HardwareMetadata
 from ..user_interface.ui_utilities import ReadUICommands
-import copy
 import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import netCDF4 as nc4
-import numpy as np
 
 CONTROL_TYPE = ControlTypes.READ
 
@@ -89,7 +87,7 @@ class ReadEnvironment(EnvironmentProcess):
         self.log("Initializing Data Acquisition Parameters")
         self.hardware_metadata = hardware_metadata
         self.measurement_channels = [index for index, channel in enumerate(self.hardware_metadata.channel_list) if channel.feedback_device is None]
-        self.output_channels = [index for index, channel in enumerate(self.hardware_metadata.channel_list) if not channel.feedback_device is None]
+        self.output_channels = [index for index, channel in enumerate(self.hardware_metadata.channel_list) if channel.feedback_device is not None]
 
     def initialize_environment(self, metadata: ReadMetadata):
         self.log("Initializing Environment Parameters")

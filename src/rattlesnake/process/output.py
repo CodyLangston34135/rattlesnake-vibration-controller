@@ -194,7 +194,7 @@ class OutputProcess(AbstractMessageProcess):
         output_indices = [
             index
             for index, channel in enumerate(metadata.channel_list)
-            if not (channel.feedback_device is None) and not (channel.feedback_device.strip() == "")
+            if (channel.feedback_device is not None) and not (channel.feedback_device.strip() == "")
         ]
         self.num_outputs = len(output_indices)
 
@@ -205,7 +205,7 @@ class OutputProcess(AbstractMessageProcess):
         hardware_output_indices = [
             index
             for index, channel in enumerate(self.hardware_metadata.channel_list)
-            if not (channel.feedback_device is None) and not (channel.feedback_device.strip() == "")
+            if (channel.feedback_device is not None) and not (channel.feedback_device.strip() == "")
         ]
         self.environment_list = []
         self.environment_output_channels = {}

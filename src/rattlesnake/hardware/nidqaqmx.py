@@ -5,7 +5,6 @@ import nidaqmx.constants as nic
 import nidaqmx.stream_readers as ni_read
 import nidaqmx.stream_writers as ni_write
 import numpy as np
-from enum import Enum
 from typing import List
 import time
 
@@ -484,7 +483,7 @@ class NIDAQmxOutput(HardwareOutput):
         task_names = set()
         extra_task_index = 1
         for channel in channel_data:
-            if not (channel.feedback_device is None) and not (channel.feedback_device.strip() == ""):
+            if (channel.feedback_device is not None) and not (channel.feedback_device.strip() == ""):
                 device_name = channel.feedback_device
                 device = ni.system.device.Device(device_name)
                 try:
@@ -508,7 +507,7 @@ class NIDAQmxOutput(HardwareOutput):
         index = 0
         extra_task_index = 1
         for channel in channel_data:
-            if not (channel.feedback_device is None) and not (channel.feedback_device.strip() == ""):
+            if (channel.feedback_device is not None) and not (channel.feedback_device.strip() == ""):
                 device_name = channel.feedback_device
                 device = ni.system.device.Device(device_name)
                 try:

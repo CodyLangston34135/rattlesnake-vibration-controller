@@ -5,7 +5,6 @@ import queue as thqueue
 import string
 import random
 import time
-from qtpy import QtCore
 from datetime import datetime
 from enum import Enum
 from typing import Dict
