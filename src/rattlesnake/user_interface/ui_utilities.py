@@ -19,6 +19,7 @@ class UICommands(Enum):
     ENABLE_TAB = 3
     DISABLE_TAB = 4
     SET_ATTR = 5
+    STOP = 6
 
 
 class TimeUICommands(Enum):

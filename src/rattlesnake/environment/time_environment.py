@@ -144,7 +144,7 @@ class TimeMetadata(EnvironmentMetadata):
 
 class TimeInstructions(EnvironmentInstructions):
     def __init__(self, environment_name):
-        super().__init__(environment_name)
+        super().__init__(CONTROL_TYPE, environment_name)
         self.current_test_level = 0
         self.repeat = False
 

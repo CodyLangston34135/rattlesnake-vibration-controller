@@ -131,8 +131,9 @@ class EnvironmentInstructions(ABC):
         when this is stored to the controller
     """
 
-    def __init__(self, environment_name):
-        self.environment_name = environment_name
+    def __init__(self, environment_type, queue_name):
+        self.environment_type = environment_type
+        self.queue_name = queue_name
 
 
 class EnvironmentProcess(ABC):

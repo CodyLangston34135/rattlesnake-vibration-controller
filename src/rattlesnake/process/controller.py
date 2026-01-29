@@ -1,8 +1,7 @@
 from .abstract_message_process import AbstractMessageProcess
 from ..utilities import QueueContainer, GlobalCommands
-from ..environment.abstract_environment import EnvironmentInstructions, EnvironmentMetadata
+from ..environment.abstract_environment import EnvironmentInstructions
 from .streaming import StreamMetadata, StreamType
-from typing import Dict
 
 
 TASK_NAME = "Controller"

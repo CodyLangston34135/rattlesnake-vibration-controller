@@ -1,5 +1,5 @@
 from .utilities import QueueContainer, GlobalCommands
-from .environment.abstract_environment import EnvironmentMetadata
+from .environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions
 from .environment.environment_utilities import ControlTypes
 from .hardware.abstract_hardware import HardwareMetadata
 import multiprocessing as mp
@@ -126,6 +126,26 @@ class EnvironmentManager:
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata_list))
         self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata_list))
         return metadata_list
+
+    def build_environment_instructions_dict(self, environment_instructions_list: List[EnvironmentInstructions]):
+        environment_instructions_dict = {}
+        for queue_name in self.queue_names:
+            environment_instructions_dict[queue_name] = None
+        for instructions in environment_instructions_list:
+            valid_instructions = self.validate_environment_instructions(instructions)
+            environment_instructions_dict[instructions.queue_name] = instructions
+        return environment_instructions_dict
+
+    def validate_environment_instructions(self, instructions):
+        queue_name = instructions.queue_name
+        try:
+            environment_type = self.environment_types[queue_name]
+            if instructions.environment_type != environment_type:
+                raise TypeError(f"Instructions for {queue_name} is the wrong type for {environment_type}")
+        except KeyError:
+            raise KeyError(f"No environment exists for {queue_name} when initializing instructions")
+
+        return True
 
     def clear_environments(self):
         self.queue_names = []

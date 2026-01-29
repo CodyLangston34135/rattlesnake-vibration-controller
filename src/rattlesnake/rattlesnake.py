@@ -3,6 +3,7 @@ from .process.controller import controller_process
 from .process.acquisition import acquisition_process
 from .process.output import output_process
 from .process.streaming import StreamType, StreamMetadata, streaming_process
+from .profile_manager import ProfileManager, ProfileEvent
 from .hardware.abstract_hardware import HardwareMetadata
 from .environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions
 from .environment_manager import EnvironmentManager
@@ -15,7 +16,7 @@ from typing import List
 
 TASK_NAME = "Rattlesnake"
 CLOSE_TIMEOUT = 5
-THREADING = False
+THREADING = True
 
 
 class RattlesnakeState(Enum):
@@ -33,6 +34,7 @@ class Rattlesnake:
         self.state = RattlesnakeState.INIT
         self.acquisition_active = mp.Value("i", 0)
         self.output_active = mp.Value("i", 0)
+        self.profile_exists = False
 
         if THREADING:
             new_queue = thqueue.Queue  # threading-safe in-memory queue
@@ -117,6 +119,8 @@ class Rattlesnake:
         # Set up environment manager for future environment processes
         self.environment_manager = EnvironmentManager(self.queue_container, THREADING)
 
+        self.profile_manager = ProfileManager(self.queue_container.controller_command_queue)
+
         self.hardware_metadata = None
         self.environment_metadata_list = []
         self.stream_metadata = StreamMetadata()  # Default to no stream
@@ -158,6 +162,8 @@ class Rattlesnake:
         self.environment_metadata_list = environment_metadata_list
         self.state = RattlesnakeState.ENVIRONMENT_STORE
 
+        return environment_metadata_list
+
     def set_stream(self, stream_metadata: StreamMetadata):
         valid_stream = stream_metadata.validate()
         if not valid_stream:
@@ -167,36 +173,12 @@ class Rattlesnake:
         self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_STREAMING, stream_metadata))
         self.stream_metadata = stream_metadata
 
-    def set_instructions(self, environment_instructions_list: List[EnvironmentInstructions]):
-        # This is something that will be called when "Start Test From Profile" is called.
-        # Will mainly validate the list of instructions and map it onto the profile manager
-        # so that it has an initial state for when the profile events change the instructions
-        pass
-        # self.log("Setting Instructions")
-        # queue_names_dict = self.environment_manager.queue_names_dict
-
-        # for instruction in environment_instructions_list:
-        #     try:
-        #         instruction.queue_name = queue_names_dict[instruction.environment_name]
-        #     except KeyError:
-        #         raise KeyError(f"No environment found for {instruction.environment_name}")
-        #     self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_INSTRUCTION, instruction))
-
-    def set_profile(self, profile_event_list):
+    def set_profile(self, profile_event_list: List[ProfileEvent], environment_instructions_list: List[EnvironmentInstructions]):
         self.log("Settting Profile Event List")
 
-        queue_names_dict = self.environment_manager.queue_names_dict
-
-        for profile_event in self.profile_event_list:
-            try:
-                profile_event.queue_name = queue_names_dict[profile_event.environment_name]
-            except KeyError:
-                raise KeyError(f"No environment found for {profile_event.environment_name}")
-
-            if profile_event.operation not in self.command_map:
-                pass
-
-        self.profile_event_list = profile_event_list
+        environment_instructions_dict = self.environment_manager.build_environment_instructions_dict(environment_instructions_list)
+        self.profile_manager.set_instruction(environment_instructions_dict)
+        self.profile_manager.set_profile_list(profile_event_list)
 
     def start_acquisition(self):
         # Check for basic issues
@@ -231,7 +213,19 @@ class Rattlesnake:
         self.state = RattlesnakeState.ENVIRONMENT_STORE
 
     def start_profile(self):
-        pass
+        self.log("Starting Profile")
+        if not self.state == RattlesnakeState.ACQUISITION_START:
+            raise RuntimeError(f"Invalid state to start profile: {self.state}")
+
+        if not self.profile_exists:
+            print("No profile was stored to Rattlesnake. Start_profile aborted")
+            return
+
+        self.profile_manager.start_profile()
+
+    def stop_profile(self):
+        self.log("Stopping Profile")
+        self.profile_manager.stop_profile()
 
     def shutdown(self):
         # Close out of acquisition, output, streaming process

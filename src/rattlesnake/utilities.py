@@ -24,11 +24,10 @@ class GlobalCommands(Enum):
     STREAMING_DATA = 10  # Continue storing data
     STOP_STREAMING = 11  # Acquisition stops sending data to stream process
     FINALIZE_STREAMING = 12  # Close out of stream file
-    INITIALIZE_INSTRUCTION = 13  # Send EnvironmentInstructions to controller
-    INITIALIZE_PROFILE = 15  # Send profile metadata to controller
-    START_PROFILE = 16  # Start test from profile
-    STOP_PROFILE = 17  # Stop test from profile
-    AT_TARGET_LEVEL = 18  # REMOVE LATER
+    INITIALIZE_PROFILE = 13  # Send profile metadata to controller
+    START_PROFILE = 14  # Start test from profile
+    STOP_PROFILE = 15  # Stop test from profile
+    AT_TARGET_LEVEL = 16  # Notifies controller that environment has hit its target level
 
 
 def log_file_task(queue: mp.Queue, shutdown_event):
