@@ -41,12 +41,14 @@ CONTROL_TYPE = ControlTypes.TIME
 TEST_LEVEL_THRESHOLD = 1.01
 
 
+# region: TimeCommands
 class TimeCommands(Enum):
     SET_TEST_LEVEL = 0
     SET_REPEAT = 1
     SET_NO_REPEAT = 2
 
 
+# region: TimeMetadata
 class TimeMetadata(EnvironmentMetadata):
     """Storage container for parameters used by the Time Environment"""
 
@@ -93,8 +95,22 @@ class TimeMetadata(EnvironmentMetadata):
 
     def validate(self):
         # Prevent duplicate entries
+        super().validate()
+
         if len(self.channel_list) != len(set(self.channel_list)):
-            raise ValueError("Duplicate channels found in environment channel_list")
+            raise ValueError(f"Duplicate channels found in {self.environment_name} channel_list")
+
+        if not isinstance(self.cancel_rampdown_time, (int, float)) or self.cancel_rampdown_time <= 0:
+            raise TypeError(f"{self.environment_name} sample_rate must be a number greater than 0")
+
+        if not isinstance(self.sample_rate, (int, float)) or self.sample_rate <= 0:
+            raise TypeError(f"{self.environment_name} sample_rate must be a number greater than 0")
+
+        if not isinstance(self.output_signal, np.ndarray):
+            raise TypeError(f"{self.environment_name} output_singal must be a 2D numpy array")
+
+        if self.output_signal.ndim != 2:
+            raise TypeError(f"{self.environment_name} output_signal must be a 2D numpy array")
 
         return True
 
@@ -119,28 +135,8 @@ class TimeMetadata(EnvironmentMetadata):
         var = netcdf_group_handle.createVariable("output_signal", "f8", ("output_channels", "signal_samples"))
         var[...] = self.output_signal
 
-    @classmethod
-    def from_ui(cls, ui):
-        """Creates a TimeParameters object from the user interface
 
-        Parameters
-        ----------
-        ui : TimeUI
-            A Time User Interface
-
-        Returns
-        -------
-        test_parameters : TimeParameters
-            Parameters corresponding to the data in the user interface.
-
-        """
-        return cls(
-            sample_rate=ui.definition_widget.output_sample_rate_display.value(),
-            output_signal=ui.signal,
-            cancel_rampdown_time=ui.definition_widget.cancel_rampdown_selector.value(),
-        )
-
-
+# region: TimeInstructions
 class TimeInstructions(EnvironmentInstructions):
     def __init__(self, environment_name):
         super().__init__(CONTROL_TYPE, environment_name)
@@ -148,6 +144,7 @@ class TimeInstructions(EnvironmentInstructions):
         self.repeat = False
 
 
+# region: TimeQueues
 class TimeQueues:
     """A set of queues used by the Time environment"""
 
@@ -186,6 +183,7 @@ class TimeQueues:
         self.log_file_queue = log_file_queue
 
 
+# region: TimeEnvironment
 class TimeEnvironment(EnvironmentProcess):
     """Environment defined by a generated time history signal"""
 
@@ -225,7 +223,7 @@ class TimeEnvironment(EnvironmentProcess):
         )
         self.queue_container = queue_container
         # Define command map
-        self.command_map[GlobalCommands.START_ENVIRONMENT] = self.start_environment
+        self.command_map[GlobalCommands.START_ENVIRONMENT] = self.run_environment
         # Persistent data
         self.hardware_metadata = None
         self.metadata = None
@@ -272,7 +270,7 @@ class TimeEnvironment(EnvironmentProcess):
         self.log("Initializing Environment Parameters")
         self.metadata = metadata
 
-    def start_environment(self, data):
+    def run_environment(self, data):
         """Runs the time history environment.
 
         This function handles start up, running, and shutting down the environment
@@ -428,12 +426,13 @@ class TimeEnvironment(EnvironmentProcess):
         self.startup = True
 
 
+# region: time_process
 def time_process(
     environment_name: str,
     queue_name: str,
     input_queue: VerboseMessageQueue,
     gui_update_queue: mp.Queue,
-    controller_communication_queue: VerboseMessageQueue,
+    controller_command_queue: VerboseMessageQueue,
     log_file_queue: mp.Queue,
     data_in_queue: mp.Queue,
     data_out_queue: mp.Queue,
@@ -455,7 +454,7 @@ def time_process(
         Queue containing instructions for the environment
     gui_update_queue : Queue :
         Queue where GUI updates are put
-    controller_communication_queue : Queue :
+    controller_command_queue : Queue :
         Queue for global communications with the controller
     log_file_queue : Queue :
         Queue for writing log file messages
@@ -467,7 +466,7 @@ def time_process(
     """
 
     # Create vibration queues
-    queue_container = TimeQueues(input_queue, gui_update_queue, controller_communication_queue, data_in_queue, data_out_queue, log_file_queue)
+    queue_container = TimeQueues(input_queue, gui_update_queue, controller_command_queue, data_in_queue, data_out_queue, log_file_queue)
 
     process_class = TimeEnvironment(environment_name, queue_name, queue_container, acquisition_active, output_active)
     process_class.run(shutdown_event)

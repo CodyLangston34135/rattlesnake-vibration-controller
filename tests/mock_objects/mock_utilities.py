@@ -34,7 +34,7 @@ def mock_queue_container(use_thread):
     environment_command_queues = {}
     environment_data_in_queues = {}
     environment_data_out_queues = {}
-    for env_idx in range(10):
+    for env_idx in range(4):
         environment_name = "Environment {:}".format(env_idx)
         environment_command_queues[environment_name] = VerboseMessageQueue(
             log_file_queue, mp.Queue(), controller_queue_name_manager, environment_name + " Command Queue"

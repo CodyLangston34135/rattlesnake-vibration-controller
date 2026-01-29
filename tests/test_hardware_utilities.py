@@ -3,6 +3,7 @@ from mock_objects.mock_utilities import mock_channel_list
 import pytest
 
 
+# region: Channel
 # Test Channel initialization
 def test_channel_init():
     channel = Channel(
@@ -40,6 +41,9 @@ def test_channel_attr_list():
 
     for attr in attr_list:
         assert hasattr(channel, attr)
+
+    for attr in vars(channel).keys():
+        assert attr in attr_list
 
 
 @pytest.mark.parametrize("node_number, expected", [(None, True), ("node", False)])

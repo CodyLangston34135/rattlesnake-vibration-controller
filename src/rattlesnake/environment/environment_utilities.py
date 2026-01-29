@@ -21,3 +21,5 @@ environment_long_names[ControlTypes.SINE] = "MIMO Sine Vibration"
 environment_long_names[ControlTypes.TIME] = "Time Signal Generation"
 environment_long_names[ControlTypes.MODAL] = "Modal Testing"
 environment_long_names[ControlTypes.READ] = "Read Signal"
+
+sys_id_environments = [ControlTypes.RANDOM, ControlTypes.TRANSIENT, ControlTypes.SINE]

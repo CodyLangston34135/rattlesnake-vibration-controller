@@ -270,7 +270,7 @@ class Rattlesnake:
                 self.streaming_proc.join()
 
         # Close out of environment processes
-        self.environment_manager.close_environments(CLOSE_TIMEOUT)
+        self.environment_manager.close_environments()
 
         # Close out log file process
         self.queue_container.log_file_queue.put("{:}: Joining Log File Process\n".format(datetime.now()))

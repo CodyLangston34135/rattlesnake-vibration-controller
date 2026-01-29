@@ -1,4 +1,5 @@
 from ..utilities import VerboseMessageQueue, GlobalCommands
+from .environment_utilities import ControlTypes
 from ..hardware.abstract_hardware import HardwareMetadata
 from ..hardware.hardware_utilities import Channel
 from abc import ABC, abstractmethod
@@ -18,6 +19,7 @@ if PICKLE_ON_ERROR:
     import pickle
 
 
+# region: EnvironmentMetadata
 class EnvironmentMetadata(ABC):
     """
     Abstract class for storing metadata for an environment.
@@ -79,7 +81,13 @@ class EnvironmentMetadata(ABC):
         things like duplicate channel_list entries, valid control channels,
         etc.
         """
-        pass
+        if self.environment_type not in ControlTypes:
+            raise TypeError(f"{self.environment_type} is not a valid ControlType")
+
+        if not isinstance(self.environment_name, str):
+            raise TypeError(f"{self.environment_name} must be a string")
+
+        return True
 
     @abstractmethod
     def store_to_netcdf(self, netcdf_group_handle: nc4._netCDF4.Group) -> None:
@@ -105,6 +113,7 @@ class EnvironmentMetadata(ABC):
         pass
 
 
+# region: EnvironmentInstructions
 class EnvironmentInstructions(ABC):
     """Environment Instructions class that defines startup of environment
 
@@ -159,6 +168,7 @@ class EnvironmentInstructions(ABC):
         self.queue_name = queue_name
 
 
+# region: EnvironmentProcess
 class EnvironmentProcess(ABC):
     """Abstract Environment class defining the interface with the controller
 
@@ -439,6 +449,7 @@ class EnvironmentProcess(ABC):
         return True
 
 
+# region: run_process
 def run_process(
     environment_name: str,
     queue_name: str,

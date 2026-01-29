@@ -7,6 +7,11 @@ import numpy as np
 channel_list = mock_channel_list()
 
 
+@pytest.fixture
+def hardware_metadata():
+    return MockHardwareMetadata()
+
+
 # region: Hardware Metadata
 def test_hardware_metadata_init():
     hardware_metadata = MockHardwareMetadata()
@@ -20,34 +25,15 @@ def test_hardware_metadata_init():
     assert hasattr(hardware_metadata, "output_oversample")
 
 
-def test_hardware_metadata_samples_per_read():
-    hardware_metadata = MockHardwareMetadata()
+def hardware_metadata_properties(hardware_metadata):
     hardware_metadata.sample_rate = 1000
     hardware_metadata.time_per_read = 0.25
-
-    assert hardware_metadata.samples_per_read == 250
-
-
-def test_hardware_metadata_samples_per_write():
-    hardware_metadata = MockHardwareMetadata()
-    hardware_metadata.sample_rate = 1000
-    hardware_metadata.time_per_write = 0.25
-
-    assert hardware_metadata.samples_per_write == 250
-
-
-def test_hardware_metadata_nyquist_frequency():
-    hardware_metadata = MockHardwareMetadata()
-    hardware_metadata.sample_rate = 1000
-
-    assert hardware_metadata.nyquist_frequency == 500
-
-
-def test_hardware_metadata_output_sample_rate():
-    hardware_metadata = MockHardwareMetadata()
-    hardware_metadata.sample_rate = 1000
+    hardware_metadata.time_per_write = 0.3
     hardware_metadata.output_oversample = 10
 
+    assert hardware_metadata.samples_per_read == 250
+    assert hardware_metadata.samples_per_write == 300
+    assert hardware_metadata.nyquist_frequency == 500
     assert hardware_metadata.output_sample_rate == 10000
 
 
@@ -58,8 +44,7 @@ def test_hardware_metadata_output_sample_rate():
         (channel_list + [channel_list[0]], ValueError),
     ],
 )
-def test_hardware_metadata_validate(channel_list, expected):
-    hardware_metadata = MockHardwareMetadata()
+def test_hardware_metadata_validate(channel_list, expected, hardware_metadata):
     hardware_metadata.channel_list = channel_list
 
     if expected is ValueError:
@@ -70,8 +55,7 @@ def test_hardware_metadata_validate(channel_list, expected):
         assert valid_hardware == expected
 
 
-def test_hardware_metadata_extra_attr_list():
-    hardware_metadata = MockHardwareMetadata()
+def test_hardware_metadata_extra_attr_list(hardware_metadata):
     attr_list = hardware_metadata.extra_attr_list()
 
     assert attr_list[0] == "extra_attr"
@@ -85,9 +69,8 @@ def test_hardware_acquisition_init():
 
 
 # Just doing all the functions since the abstract class does nothing
-def test_hardware_acquisition_functions():
+def test_hardware_acquisition_functions(hardware_metadata):
     hardware_acquisition = MockHardwareAcquisition()
-    hardware_metadata = MockHardwareMetadata()
 
     hardware_acquisition.initialize_hardware(hardware_metadata)
     hardware_acquisition.start()
@@ -109,9 +92,8 @@ def test_hardware_output_init():
     assert isinstance(hardware_output, HardwareOutput)
 
 
-def test_hardware_output_functions():
+def test_hardware_output_functions(hardware_metadata):
     hardware_output = MockHardwareOutput()
-    hardware_metadata = MockHardwareMetadata()
 
     hardware_output.initialize_hardware(hardware_metadata)
     hardware_output.start()

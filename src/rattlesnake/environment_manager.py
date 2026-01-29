@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import List
 
 TASK_NAME = "Environment Manager"
+CLOSE_TIMEOUT = 5
 
 
 class EnvironmentManager:
@@ -34,15 +35,6 @@ class EnvironmentManager:
     def available_queues(self):
         all_queue_names = list(self.queue_container.environment_command_queues.keys())
         return [queue_name for queue_name in all_queue_names if queue_name not in self.queue_names]
-
-    @property
-    def sysid_environments(self):
-        return [ControlTypes.RANDOM, ControlTypes.TRANSIENT]
-
-    @property
-    def sysid_names(self):
-        sysid_names = [queue_name for queue_name in self.queue_names if self.environment_types[queue_name] in self.sysid_environments]
-        return sysid_names
 
     @property
     def queue_names_dict(self):
@@ -84,6 +76,7 @@ class EnvironmentManager:
 
         # Check if there is an existing process that maps to this environment type
         # If there is, hijack it and give it new metadata
+        environment_name_set = set()
         for metadata in metadata_list:
             valid_environment = metadata.validate()
             if not valid_environment:
@@ -91,6 +84,10 @@ class EnvironmentManager:
 
             environment_type = metadata.environment_type
             environment_name = metadata.environment_name
+
+            if environment_name in environment_name_set:
+                raise ValueError("Environment names must be unique")
+            environment_name_set.add(environment_name)
 
             queue_name = next(
                 (name for name, env_type in self.environment_types.items() if env_type == environment_type and name not in mapped_queue_names),
@@ -170,6 +167,11 @@ class EnvironmentManager:
 
         environment_type = metadata.environment_type
         environment_name = metadata.environment_name
+
+        # Dont let non-unique environment names pass through
+        if environment_name in self.environment_names.values():
+            raise ValueError("Non-unique environment name")
+
         self.queue_container.environment_command_queues[queue_name].assign_environment(environment_name)
         environment_event = self.new_event()
 
@@ -234,18 +236,22 @@ class EnvironmentManager:
         # Check if index corresponds to an existing environment
         if queue_name in self.queue_names:
             self.log(f"Removing {self.environment_names[queue_name]}, Clearing up {queue_name} Queue")
-            self.queue_names.remove[queue_name]
+            self.queue_names.remove(queue_name)
             self.environment_names.pop(queue_name, None)
             self.environment_types.pop(queue_name, None)
             self.environment_metadata.pop(queue_name, None)
 
             # Join environment process
+            self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.QUIT, None))
+            self.queue_container.log_file_queue.put("{:}: Joining {:} Process\n".format(datetime.datetime.now(), queue_name))
             self.environment_processes[queue_name].join(timeout=5)
             if self.environment_processes[queue_name].is_alive():
-                self.queue_container.environment_command_queues[queue_name].put("Environments", (GlobalCommands.QUIT, None))
-                self.queue_container.log_file_queue.put("{:}: Joining {:} Process\n".format(datetime.datetime.now(), queue_name))
+                self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing {queue_name} Process\n")
                 self.environment_events[queue_name].set()
-                self.environment_processes[queue_name].join()
+                self.environment_processes[queue_name].join(timeout=CLOSE_TIMEOUT)
+                if self.environment_processes[queue_name].is_alive() and not self.threading:
+                    self.environment_processes[queue_name].terminate()
+                    self.environment_processes[queue_name].join()
 
             # Remove environment queue and process
             self.environment_processes.pop(queue_name, None)
@@ -254,15 +260,15 @@ class EnvironmentManager:
         else:
             raise IndexError(f"Invalid control name: {queue_name}. Must be mapped to available queue")
 
-    def close_environments(self, close_timeout):
+    def close_environments(self):
         for queue_name, environment_process in self.environment_processes.items():
-            self.queue_container.environment_command_queues[queue_name].put("Environments", (GlobalCommands.QUIT, None))
+            self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.QUIT, None))
             self.queue_container.log_file_queue.put("{:}: Joining {:} Process\n".format(datetime.now(), queue_name))
-            environment_process.join(timeout=close_timeout)
+            environment_process.join(timeout=CLOSE_TIMEOUT)
             if environment_process.is_alive():
                 self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing {queue_name} Process\n")
                 self.environment_events[queue_name].set()
-                environment_process.join(timeout=close_timeout)
+                environment_process.join(timeout=CLOSE_TIMEOUT)
                 if environment_process.is_alive() and not self.threading:
                     environment_process.terminate()
                     environment_process.join()

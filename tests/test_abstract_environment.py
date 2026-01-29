@@ -1,4 +1,5 @@
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions, EnvironmentProcess, run_process
+from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.hardware.hardware_utilities import Channel
 from mock_objects.mock_environment import MockEnvironmentMetadata, MockEnvironmentInstructions, MockEnvironmentProcess
 from mock_objects.mock_hardware import MockHardwareMetadata
@@ -12,12 +13,17 @@ from unittest import mock
 channel_list = mock_channel_list()
 
 
+@pytest.fixture
+def environment_metadata():
+    return MockEnvironmentMetadata()
+
+
 @pytest.fixture(params=[True, False], ids=["threaded", "non_threaded"])
 def environment_process(request):
     use_thread = request.param
-
     queue_container = mock_queue_container(use_thread)
-
+    acquisition_active = mp.Value("i", 0)
+    output_active = mp.Value("i", 0)
     environment_process = MockEnvironmentProcess(
         "Environment Name",
         "Environment 0",
@@ -27,8 +33,8 @@ def environment_process(request):
         queue_container.log_file_queue,
         queue_container.environment_data_in_queues["Environment 0"],
         queue_container.environment_data_out_queues["Environment 0"],
-        mp.Value("i", 0),
-        mp.Value("i", 0),
+        acquisition_active,
+        output_active,
     )
 
     return environment_process
@@ -49,8 +55,7 @@ def test_environment_metadata_init():
     "channel_list, expected",
     [(channel_list, [True, True]), ([channel_list[0]], [True, False]), ([Channel()], ValueError)],
 )
-def test_environment_metadata_channel_bools(channel_list, expected):
-    environment_metadata = MockEnvironmentMetadata()
+def test_environment_metadata_channel_bools(channel_list, expected, environment_metadata):
     environment_metadata.channel_list = channel_list
     hardware_channel_list = mock_channel_list()
 
@@ -66,8 +71,7 @@ def test_environment_metadata_channel_bools(channel_list, expected):
     "channel_list, expected",
     [(channel_list, [0, 1]), ([channel_list[0]], [0]), ([Channel()], ValueError)],
 )
-def test_environment_metadata_channel_indices(channel_list, expected):
-    environment_metadata = MockEnvironmentMetadata()
+def test_environment_metadata_channel_indices(channel_list, expected, environment_metadata):
     environment_metadata.channel_list = channel_list
     hardware_channel_list = mock_channel_list()
 
@@ -79,12 +83,26 @@ def test_environment_metadata_channel_indices(channel_list, expected):
         assert channel_list_bools == expected
 
 
-def test_environment_metadata_functions():
-    environment_metadata = MockEnvironmentMetadata()
+@pytest.mark.parametrize(
+    "environment_name, environment_type, expected",
+    [("Environment Name", ControlTypes.TIME, True), (0, ControlTypes.TIME, TypeError), ("Environment Name", 0, TypeError)],
+)
+def test_environment_metadata_validate(environment_name, environment_type, expected, environment_metadata):
+    environment_metadata.environment_name = environment_name
+    environment_metadata.environment_type = environment_type
+
+    if expected == True:
+        valid_metadata = environment_metadata.validate()
+        assert valid_metadata
+    elif expected == TypeError:
+        with pytest.raises(TypeError):
+            environment_metadata.validate()
+
+
+def test_environment_metadata_store_to_netcdf(environment_metadata):
     dataset = nc4.Dataset("temp.nc", mode="w", diskless=True, persist=False)
     netcdf_group = dataset.createGroup("temp_group")
 
-    environment_metadata.validate()
     environment_metadata.store_to_netcdf(netcdf_group)
 
     assert True
@@ -100,9 +118,11 @@ def test_environment_instructions_init():
 
 
 # region: EnvironmentProcess
-@pytest.mark.parametrize("threading", [True, False])
-def test_environment_process_init(threading):
-    queue_container = mock_queue_container(threading)
+@pytest.mark.parametrize("use_thread", [True, False])
+def test_environment_process_init(use_thread):
+    queue_container = mock_queue_container(use_thread)
+    acquisition_active = mp.Value("i", 0)
+    output_active = mp.Value("i", 0)
     environment_process = MockEnvironmentProcess(
         "environment_name",
         "Environment 0",
@@ -112,8 +132,8 @@ def test_environment_process_init(threading):
         queue_container.log_file_queue,
         queue_container.environment_data_in_queues["Environment 0"],
         queue_container.environment_data_out_queues["Environment 0"],
-        mp.Value("i", 0),
-        mp.Value("i", 0),
+        acquisition_active,
+        output_active,
     )
 
     assert isinstance(environment_process, EnvironmentProcess)
@@ -134,8 +154,7 @@ def test_environment_process_properties(environment_process):
     assert True
 
 
-def test_environment_process_functions(environment_process):
-    environment_metadata = MockEnvironmentMetadata()
+def test_environment_process_functions(environment_process, environment_metadata):
     hardware_metadata = MockHardwareMetadata()
 
     environment_process.initialize_hardware(hardware_metadata)
@@ -204,9 +223,12 @@ def test_environment_process_run(mock_log, mock_get, mock_function, mock_key, en
 
 # region: run_process
 @mock.patch("rattlesnake.environment.abstract_environment.EnvironmentProcess")
-@pytest.mark.parametrize("threading", [True, False])
-def test_run_process(mock_process_class, threading):
-    queue_container = mock_queue_container(threading)
+@pytest.mark.parametrize("use_thread", [True, False])
+def test_run_process(mock_process_class, use_thread):
+    queue_container = mock_queue_container(use_thread)
+    acquisition_active = mp.Value("i", 0)
+    output_active = mp.Value("i", 0)
+    shutdown_event = mp.Event()
     run_process(
         "Environment Name",
         "Environment 0",
@@ -216,9 +238,9 @@ def test_run_process(mock_process_class, threading):
         queue_container.log_file_queue,
         queue_container.environment_data_in_queues["Environment 0"],
         queue_container.environment_data_out_queues["Environment 0"],
-        mp.Value("i", 0),
-        mp.Value("i", 0),
-        mock.MagicMock(),
+        acquisition_active,
+        output_active,
+        shutdown_event,
     )
 
     mock_instance = mock_process_class.return_value
