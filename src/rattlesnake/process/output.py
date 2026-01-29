@@ -45,6 +45,7 @@ if DEBUG:
     ENV_OUTPUT = "debug_data/output_first_data_{:}.npz"
 
 
+# region: OutputProcess
 class OutputProcess(AbstractMessageProcess):
     """Class defining the output behavior of the controller
 
@@ -446,6 +447,7 @@ class OutputProcess(AbstractMessageProcess):
         return True
 
 
+# region: output_process
 def output_process(queue_container: QueueContainer, output_active: mp.sharedctypes.Synchronized, shutdown_event):
     """Function passed to multiprocessing as the output process
 

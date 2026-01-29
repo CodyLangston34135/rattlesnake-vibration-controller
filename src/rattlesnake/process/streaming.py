@@ -32,6 +32,7 @@ from typing import List
 from enum import Enum
 
 
+# region: StreamType
 class StreamType(Enum):
     NO_STREAM = 0
     STREAM_IMMEDIATELY = 1
@@ -40,6 +41,7 @@ class StreamType(Enum):
     MANUAL = 4
 
 
+# region: StreamMetadata
 class StreamMetadata:
     def __init__(self):
         self.stream_type = StreamType.NO_STREAM
@@ -64,6 +66,7 @@ class StreamMetadata:
         return True
 
 
+# region: StreamingProcess
 class StreamingProcess(AbstractMessageProcess):
     """Class containing the functionality to stream data to disk.
 
@@ -247,6 +250,7 @@ class StreamingProcess(AbstractMessageProcess):
         return True
 
 
+# region: streaming_process
 def streaming_process(queue_container: QueueContainer, shutdown_event):
     """Function passed to multiprocessing as the streaming process
 

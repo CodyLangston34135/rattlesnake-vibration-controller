@@ -3,6 +3,7 @@ from typing import List
 import numpy as np
 
 
+# region: HardwareMetadata
 class HardwareMetadata(ABC):
     """
     Abstract class that contains values to fully define how the hardware is setup.
@@ -75,6 +76,7 @@ class HardwareMetadata(ABC):
         return []
 
 
+# region: HardwareAcquisition
 class HardwareAcquisition(ABC):
     """
     Abstract class defining the interface between the controller and acquisition.
@@ -133,6 +135,7 @@ class HardwareAcquisition(ABC):
         actually played out from the device."""
 
 
+# region: HardwareOutput
 class HardwareOutput(ABC):
     """Abstract class defining the interface between the controller and output
 

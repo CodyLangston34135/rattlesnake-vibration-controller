@@ -11,6 +11,7 @@ TASK_NAME = "Environment Manager"
 CLOSE_TIMEOUT = 5
 
 
+# region: EnvironmentManager
 class EnvironmentManager:
     """A container class that stores the environment information"""
 

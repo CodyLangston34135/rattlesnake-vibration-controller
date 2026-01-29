@@ -8,6 +8,7 @@ from datetime import datetime
 TASK_NAME = "Profile Manager"
 
 
+# region: ProfileEvent
 class ProfileEvent:
     def __init__(self, timestamp: float, queue_name: str, command, data=None):
         try:
@@ -19,6 +20,7 @@ class ProfileEvent:
             print(f"Invalid type provided: {e}")
 
 
+# region: ProfileManager
 class ProfileManager:
     def __init__(self, log_file_queue, controller_command_queue):
         self.log_file_queue = log_file_queue

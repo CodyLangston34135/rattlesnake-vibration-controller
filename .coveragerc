@@ -1,12 +1,12 @@
 [run]
 omit =
-    # src/rattlesnake/utilities.py
-    # src/rattlesnake/environment_manager.py
-    # src/rattlesnake/environment/abstract_environment.py
-    # src/rattlesnake/environment/environment_utilities.py
-    # src/rattlesnake/environment/time_environment.py
-    # src/rattlesnake/hardware/abstract_hardware.py
-    # src/rattlesnake/hardware/hardware_utilities.py
+    src/rattlesnake/utilities.py
+    src/rattlesnake/environment_manager.py
+    src/rattlesnake/environment/abstract_environment.py
+    src/rattlesnake/environment/environment_utilities.py
+    src/rattlesnake/environment/time_environment.py
+    src/rattlesnake/hardware/abstract_hardware.py
+    src/rattlesnake/hardware/hardware_utilities.py
     src/rattlesnake/hardware/nidaqmx.py
     src/rattlesnake/environment/read_environment.py
     src/rattlesnake/cicd/*

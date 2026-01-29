@@ -10,6 +10,7 @@ from enum import Enum
 from typing import Dict
 
 
+# region: GlobalCommands
 class GlobalCommands(Enum):
     QUIT = 0  # Stop individual processes
     INITIALIZE_HARDWARE = 1  # Store hardware metadata to processes
@@ -51,6 +52,7 @@ def log_file_task(queue: mp.Queue, shutdown_event):
             f.flush()
 
 
+# region: VerboseMessageQueue
 class VerboseMessageQueue:
     """A queue class that contains automatic logging information"""
 
@@ -194,6 +196,7 @@ class VerboseMessageQueue:
             self.base_queue.join_thread()
 
 
+# region: QueueContainer
 class QueueContainer:
     """A container class for the queues that the controller will manage"""
 

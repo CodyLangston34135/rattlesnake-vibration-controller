@@ -10,6 +10,7 @@ import netCDF4 as nc4
 CONTROL_TYPE = ControlTypes.READ
 
 
+# region: ReadMetadata
 class ReadMetadata(EnvironmentMetadata):
     def __init__(self, environment_name: str = "Read"):
         super().__init__(CONTROL_TYPE, environment_name)
@@ -37,6 +38,7 @@ class ReadMetadata(EnvironmentMetadata):
         """
 
 
+# region: ReadQueues
 class ReadQueues:
     """A set of queues used by the read environment"""
 
@@ -57,6 +59,7 @@ class ReadQueues:
         self.log_file_queue = log_file_queue
 
 
+# region: ReadEnvironment
 class ReadEnvironment(EnvironmentProcess):
     def __init__(
         self,
@@ -107,6 +110,7 @@ class ReadEnvironment(EnvironmentProcess):
         self.queue_container.environment_command_queue.put(self.environment_name, (GlobalCommands.START_ENVIRONMENT, None))
 
 
+# region: read_process
 def read_process(
     environment_name: str,
     input_queue: VerboseMessageQueue,

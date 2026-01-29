@@ -19,6 +19,7 @@ CLOSE_TIMEOUT = 5
 THREADING = False
 
 
+# region: RattlesnakeState
 class RattlesnakeState(Enum):
     # We don't check for stored stream/profiles because they can be left blank
     INIT = 0  # Nothing is stored yet
@@ -28,6 +29,7 @@ class RattlesnakeState(Enum):
     OUTPUT_START = 4  # Profile/Environment output has started
 
 
+# region: Rattlesnake
 class Rattlesnake:
     def __init__(self):
         # Initialize values for checking state

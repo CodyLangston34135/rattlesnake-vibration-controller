@@ -32,6 +32,7 @@ import multiprocessing.queues as mpqueue
 import queue as thqueue
 
 
+# region: AbstractMessageProcess
 class AbstractMessageProcess(ABC):
     """Abstract class for a subprocess of an environment.
 

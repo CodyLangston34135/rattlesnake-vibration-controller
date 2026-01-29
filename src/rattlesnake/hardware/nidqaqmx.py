@@ -12,6 +12,7 @@ HARDWARE_TYPE = HardwareType.NI_DAQMX
 BUFFER_SIZE_FACTOR = 3
 
 
+# region: NIDAQmxMetadata
 class NIDAQmxMetadata(HardwareMetadata):
     def __init__(self):
         super().__init__(HARDWARE_TYPE)
@@ -26,6 +27,7 @@ class NIDAQmxMetadata(HardwareMetadata):
         return ["task_trigger", "output_trigger_generator"]
 
 
+# region: NIDAQmxAcquisition
 class NIDAQmxAcquisition(HardwareAcquisition):
     """Class defining the interface between the controller and NI hardware
 
@@ -422,6 +424,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
         return channel
 
 
+# region: NIDAQmxOutput
 class NIDAQmxOutput(HardwareOutput):
     """Class defining the interface between the controller and NI hardware
 

@@ -45,6 +45,7 @@ if DEBUG:
     FILE_OUTPUT = "debug_data/acquisition_{:}.npz"
 
 
+# region: AcquisitionProcess
 class AcquisitionProcess(AbstractMessageProcess):
     """Class defining the acquisition behavior of the controller
 
@@ -550,6 +551,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         return True
 
 
+# region: acquisition_process
 def acquisition_process(queue_container: QueueContainer, acquisition_active: mp.sharedctypes.Synchronized, shutdown_event):
     """Function passed to multiprocessing as the acquisition process
 

@@ -7,7 +7,8 @@ from .streaming import StreamMetadata, StreamType
 TASK_NAME = "Controller"
 
 
-class Controller(AbstractMessageProcess):
+# region: ControllerProcess
+class ControllerProcess(AbstractMessageProcess):
     """Class defining behavior during the ACQUISITION_START/OUTPUT_START states of Rattlesnake
 
     This class mainly recieves commands from controller_communication_queue and sends those
@@ -83,6 +84,7 @@ class Controller(AbstractMessageProcess):
             self.start_streaming()
 
 
+# region: controller_process
 def controller_process(queue_container: QueueContainer, shutdown_event):
     """Function passed to multiprocessing as the controller process
 
@@ -97,6 +99,6 @@ def controller_process(queue_container: QueueContainer, shutdown_event):
 
     """
 
-    acquisition_instance = Controller(TASK_NAME, queue_container)
+    acquisition_instance = ControllerProcess(TASK_NAME, queue_container)
 
     acquisition_instance.run(shutdown_event)

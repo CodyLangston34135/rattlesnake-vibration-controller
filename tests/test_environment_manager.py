@@ -9,6 +9,7 @@ import multiprocessing as mp
 from unittest import mock
 
 
+# region: Fixtures
 @pytest.fixture(params=[True, False], ids=["threaded", "non_threaded"])
 def environment_manager(request):
     use_thread = request.param
@@ -18,6 +19,7 @@ def environment_manager(request):
     return environment_manager
 
 
+# region: EnvironmentManager
 @pytest.mark.parametrize("use_thread", [True, False])
 def test_environment_manager_init(use_thread):
     queue_container = mock_queue_container(use_thread)

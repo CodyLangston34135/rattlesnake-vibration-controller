@@ -75,6 +75,7 @@ if DEBUG:
     FILE_OUTPUT = "debug_data/sdynpy_hardware_{:}.npz"
 
 
+# region: SDynPySystemMetadata
 class SDynPySystemMetadata(HardwareMetadata):
     def __init__(self):
         super().__init__(HARDWARE_TYPE)
@@ -88,6 +89,7 @@ class SDynPySystemMetadata(HardwareMetadata):
         return ["hardware_file"]
 
 
+# region: SDynPySystemAcquisition
 class SDynPySystemAcquisition(HardwareAcquisition):
     """Class defining the interface between the controller and synthetic acquisition
 
@@ -438,6 +440,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         """Method to close down the hardware"""
 
 
+# region: SDynPySystemOutput
 class SDynPySystemOutput(HardwareOutput):
     """Class defining the interface between the controller and synthetic output
 

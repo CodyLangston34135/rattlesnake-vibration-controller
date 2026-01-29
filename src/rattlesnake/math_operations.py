@@ -5,6 +5,7 @@ from scipy.interpolate import interp1d
 from scipy.io import loadmat
 
 
+# region: math_operations
 def load_time_history(signal_path, sample_rate):
     """Loads a time history from a given file
 

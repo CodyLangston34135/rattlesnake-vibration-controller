@@ -1,6 +1,7 @@
 from enum import Enum
 
 
+# region: HardwareType
 class HardwareType(Enum):
     NI_DAQMX = 0
     LAN_XI = 1
@@ -12,6 +13,7 @@ class HardwareType(Enum):
     SDYNPY_FRF = 7
 
 
+# region: Channel
 class Channel:
     """Property container for a single channel in the controller."""
 
