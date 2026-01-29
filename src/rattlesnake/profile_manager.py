@@ -9,10 +9,10 @@ TASK_NAME = "Profile Manager"
 
 
 class ProfileEvent:
-    def __init__(self, timestamp: float, queue_name: str, command, data):
+    def __init__(self, timestamp: float, queue_name: str, command, data=None):
         try:
             self.timestamp = float(timestamp)
-            self.environment_name = str(queue_name)
+            self.queue_name = str(queue_name)
             self.command = command
             self.data = data
         except ValueError as e:
@@ -46,7 +46,7 @@ class ProfileManager:
     def global_commands(self):
         return self._global_commands
 
-    def set_instruction(self, data: Dict[str:EnvironmentInstructions]):
+    def set_instruction(self, data: Dict[str, EnvironmentInstructions]):
         self.log("Setting Environment Instructions")
         self.environment_instructions = data
 
@@ -60,18 +60,20 @@ class ProfileManager:
 
         self.profile_event_list = profile_event_list
 
-    def validate_profile_list(self, profile_event_list):
+    def validate_profile_list(self, profile_event_list: List[ProfileEvent]):
         for profile_event in profile_event_list:
+            queue_name = profile_event.queue_name
+            command = profile_event.command
+            if command not in self.command_map.keys():
+                raise KeyError(f"No profile event has been implemented for {profile_event.command}")
             # Check if environments are assigned to commands that require them
-            if profile_event.environment_name == "Global":
-                if profile_event.command in self._global_commands:
+            if queue_name == "Global":
+                if command in self._global_commands:
                     continue
                 else:
                     raise KeyError(f"No environment assigned for {profile_event.command.name}")
             # Check if instructions exist for that environment
-            if profile_event.command in self._instruction_commands:
-                command = profile_event.command
-                queue_name = profile_event.queue_name
+            if command in self._instruction_commands:
                 try:
                     instruction = self.environment_instructions[queue_name]
                 except KeyError:
@@ -104,7 +106,7 @@ class ProfileManager:
 
     def stop_hardware(self, queue_name: str = "Global", data: None = None):
         self.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))
-        for queue_name in self.environment_instructions.key():
+        for queue_name in self.environment_instructions.keys():
             self.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, queue_name))
 
     def start_streaming(self, queue_name: str = "Global", data: None = None):

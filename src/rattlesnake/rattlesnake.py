@@ -16,7 +16,7 @@ from typing import List
 
 TASK_NAME = "Rattlesnake"
 CLOSE_TIMEOUT = 5
-THREADING = True
+THREADING = False
 
 
 class RattlesnakeState(Enum):
@@ -34,7 +34,6 @@ class Rattlesnake:
         self.state = RattlesnakeState.INIT
         self.acquisition_active = mp.Value("i", 0)
         self.output_active = mp.Value("i", 0)
-        self.profile_exists = False
 
         if THREADING:
             new_queue = thqueue.Queue  # threading-safe in-memory queue
@@ -119,7 +118,7 @@ class Rattlesnake:
         # Set up environment manager for future environment processes
         self.environment_manager = EnvironmentManager(self.queue_container, THREADING)
 
-        self.profile_manager = ProfileManager(self.queue_container.controller_command_queue)
+        self.profile_manager = ProfileManager(self.queue_container.log_file_queue, self.queue_container.controller_command_queue)
 
         self.hardware_metadata = None
         self.environment_metadata_list = []
@@ -217,8 +216,8 @@ class Rattlesnake:
         if not self.state == RattlesnakeState.ACQUISITION_START:
             raise RuntimeError(f"Invalid state to start profile: {self.state}")
 
-        if not self.profile_exists:
-            print("No profile was stored to Rattlesnake. Start_profile aborted")
+        if not self.profile_manager.profile_event_list:
+            print("No profile has been stored to Rattlesnake. Start_profile aborted")
             return
 
         self.profile_manager.start_profile()

@@ -65,6 +65,7 @@ class Controller(AbstractMessageProcess):
 
     def stop_environment(self, data: str):
         queue_name = data
+        self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, None))
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, queue_name))
 
     def initialize_streaming(self, data: StreamMetadata):

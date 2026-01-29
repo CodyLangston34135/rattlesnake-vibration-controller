@@ -261,7 +261,7 @@ class EnvironmentManager:
             environment_process.join(timeout=close_timeout)
             if environment_process.is_alive():
                 self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing {queue_name} Process\n")
-                self.environment_event[queue_name].set()
+                self.environment_events[queue_name].set()
                 environment_process.join(timeout=close_timeout)
                 if environment_process.is_alive() and not self.threading:
                     environment_process.terminate()
