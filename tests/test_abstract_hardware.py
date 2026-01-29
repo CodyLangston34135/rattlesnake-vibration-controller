@@ -1,4 +1,4 @@
-from rattlesnake.mock_objects. import MockHardwareMetadata, MockHardwareAcquisition, MockHardwareOutput
+from rattlesnake.mock_objects.mock_hardware import MockHardwareMetadata, MockHardwareAcquisition, MockHardwareOutput
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata, HardwareAcquisition, HardwareOutput
 
 

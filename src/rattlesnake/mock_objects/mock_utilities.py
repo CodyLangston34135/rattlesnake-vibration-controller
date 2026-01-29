@@ -1,4 +1,4 @@
-from ...src.rattlesnake.hardware.hardware_utilities import Channel
+from ..hardware.hardware_utilities import Channel
 
 
 def mock_channel_list():

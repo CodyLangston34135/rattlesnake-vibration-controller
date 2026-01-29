@@ -1,4 +1,4 @@
-from ...src.rattlesnake.environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions, EnvironmentProcess
+from ..environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions, EnvironmentProcess
 from .mock_utilities import mock_channel_list
 from unittest import mock
 from enum import Enum
