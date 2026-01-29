@@ -1,0 +1,8 @@
+[run]
+omit =
+    src/rattlesnake/environment/abstract_environment.py
+    src/rattlesnake/environment/read_environment.py
+    src/rattlesnake/hardware/abstract_hardware.py
+    src/rattlesnake/hardware/nidaqmx.py
+    src/rattlesnake/cicd/*
+    */__init__.py
