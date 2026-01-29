@@ -131,12 +131,12 @@ def build_profile_event_list(environment_queue_name):
     command = GlobalCommands.STOP_STREAMING
     profile_event_4 = ProfileEvent(timestamp, queue_name, command)
 
-    timestamp = 8
-    queue_name = "Global"
-    command = GlobalCommands.STOP_HARDWARE
-    profile_event_5 = ProfileEvent(timestamp, queue_name, command)
+    # timestamp = 8
+    # queue_name = "Global"
+    # command = GlobalCommands.STOP_HARDWARE
+    # profile_event_5 = ProfileEvent(timestamp, queue_name, command)
 
-    profile_event_list = [profile_event_1, profile_event_2, profile_event_3, profile_event_4, profile_event_5]
+    profile_event_list = [profile_event_1, profile_event_2, profile_event_3, profile_event_4]
     return profile_event_list
 
 

@@ -20,9 +20,11 @@ class MockHardwareMetadata(HardwareMetadata):
         self.extra_attr = "attr"
 
     def validate(self):
+        super().validate()
         return True
 
     def extra_attr_list(self):
+        super().extra_attr_list()
         return ["extra_attr"]
 
 
@@ -31,21 +33,31 @@ class MockHardwareAcquisition(HardwareAcquisition):
         super().__init__()
 
     def initialize_hardware(self, metadata):
+        super().initialize_hardware(metadata)
         return None
 
     def start(self):
+        super().start()
         return None
 
     def read(self):
+        super().read()
         return np.zeros(2, 100)
 
     def read_remaining(self):
+        super().read_remaining()
         return np.zeros(2, 100)
 
     def stop(self):
+        super().stop()
+        return None
+
+    def close(self):
+        super().close()
         return None
 
     def get_acquisition_delay(self):
+        super().get_acquisition_delay()
         return 0
 
 
@@ -54,19 +66,25 @@ class MockHardwareOutput(HardwareOutput):
         super().__init__()
 
     def initialize_hardware(self, metadata):
+        super().initialize_hardware(metadata)
         return None
 
     def start(self):
+        super().start()
         return None
 
     def write(self, data):
+        super().write(data)
         return None
 
     def stop(self):
+        super().stop()
         return None
 
     def close(self):
+        super().close()
         return None
 
     def ready_for_new_output(self):
+        super().ready_for_new_output()
         return True

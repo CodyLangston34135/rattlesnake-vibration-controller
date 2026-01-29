@@ -16,17 +16,9 @@ class HardwareMetadata(ABC):
         """
         Initializes the hardware metadata with default values and stores hardware_type
 
-        The hardware_type should be specified from a global variable and should not
-        be required as an input to specific hardware metadata (ie: NIDAQmxMetadata).
-
-        Parameters
-        ----------
-        hardware_type : HardwareType :
-            An Enum in hardware_utilities that contains each available hardware type.
-
-        Returns
-        -------
-        None.
+        The hardware_type should be specified from a HardwareType enum in hardware_utilities
+        and should not be required as an input to specific hardware metadata. Just force that
+        enum as a input to super().__init__() when you define the specific hardware.
         """
         self.hardware_type = hardware_type
         self.channel_list = []

@@ -1,5 +1,6 @@
 from ..utilities import VerboseMessageQueue, GlobalCommands
 from ..hardware.abstract_hardware import HardwareMetadata
+from ..hardware.hardware_utilities import Channel
 from abc import ABC, abstractmethod
 import traceback
 import os
@@ -9,6 +10,7 @@ import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import multiprocessing.queues as mpqueue
 import queue as thqueue
 from datetime import datetime
+from typing import List
 
 PICKLE_ON_ERROR = False
 
@@ -17,31 +19,42 @@ if PICKLE_ON_ERROR:
 
 
 class EnvironmentMetadata(ABC):
-    """Abstract class for storing metadata for an environment.
+    """
+    Abstract class for storing metadata for an environment.
 
     This class is used as a storage container for parameters used by an
-    environment.  It is returned by the environment UI's
-    ``collect_environment_definition_parameters`` function as well as its
-    ``initialize_environment`` function.  Various parts of the controller and
-    environment will query the class's data members for parameter values.
-
-    Classes inheriting from EnvironmentMetadata must define:
-      1. store_to_netcdf - A function defining the way the parameters are
-         stored to a netCDF file saved during streaming operations.
+    environment.  It is built by Environment UI's and passed to the main
+    Rattlesnake process. The class is used to initialize environment data
+    for the acquisition, output, and streaming process. Must fully define
+    environment and be able to rebuild full UI based off the data in this
+    class.
     """
 
     def __init__(self, environment_type, environment_name):
+        """
+        Initializes the environment metadata class with all attributes
+        required to fully define environment.
+
+        The environment_type should be specified from a EnvironmentType
+        enum in environment_utilities and should not be required as an
+        input to the specified environment instructions. Just force it
+        as an input to super().__init__() when you define the specific
+        EnvironmentMetadata class.
+        """
         self.environment_type = environment_type
-        self.environment_name = environment_name
-        self.queue_name = None  # Name used to assign environment to queues
+        self.environment_name = environment_name  # Name used for logging TASK_NAMES, UI, etc.
+        self.queue_name = None  # Unique name used to track specific environment. Used for queues.
         self.channel_list = []
 
-    def map_channel_bools(self, hardware_channel_list):
-        # Prevent non-existing channels
+    def map_channel_bools(self, hardware_channel_list: List[Channel]):
+        """Method to check environment_channel_list against hardware_channel_list
+        and return a list of True/False based on whether or not the hardware channel
+        was in the environment_channel_list."""
+        # Check for channels that are not in the hardware_channel_list
         hardware_channel_set = set(hardware_channel_list)
         missing_channels = set(self.channel_list) - hardware_channel_set
         if missing_channels:
-            raise ValueError(f"channel_list contains channels not in hardware_channel_list: " f"{missing_channels}")
+            raise ValueError(f"{self.environment_name} channel_list contains channels not in hardware_channel_list: " f"{missing_channels}")
 
         # Create boolean map
         channel_set = set(self.channel_list)
@@ -50,22 +63,17 @@ class EnvironmentMetadata(ABC):
         return channel_list_bools
 
     def map_channel_indices(self, hardware_channel_list):
-        # Prevent non-existing channels
-        hardware_channel_set = set(hardware_channel_list)
-        missing_channels = set(self.channel_list) - hardware_channel_set
-        if missing_channels:
-            raise ValueError(f"channel_list contains channels not in hardware_channel_list: " f"{missing_channels}")
-
-        # Create boolean map
-        channel_set = set(self.channel_list)
-        channel_bools = [channel in channel_set for channel in hardware_channel_list]
+        """Method to return the row indices of the hardware_channel_list that
+        contains channels in the environment_channel_list"""
+        channel_bools = self.map_channel_bools(hardware_channel_list)
 
         channel_indices = [index for index, environment_bool in enumerate(channel_bools) if environment_bool]
         return channel_indices
 
     @abstractmethod
-    def validate(self):
-        """Validate whether the metadata will work for that environment. Return True if valid
+    def validate(self) -> True:
+        """
+        Validate whether the metadata will work for that environment. Return True if valid
 
         Throw errors if metadata is invalid. This should contain checks for
         things like duplicate channel_list entries, valid control channels,
@@ -74,8 +82,9 @@ class EnvironmentMetadata(ABC):
         pass
 
     @abstractmethod
-    def store_to_netcdf(self, netcdf_group_handle: nc4._netCDF4.Group):
-        """Store parameters to a group in a netCDF streaming file.
+    def store_to_netcdf(self, netcdf_group_handle: nc4._netCDF4.Group) -> None:
+        """
+        Store parameters to a group in a netCDF streaming file.
 
         This function stores parameters from the environment into the netCDF
         file in a group with the environment's name as its name.  The function
@@ -92,7 +101,6 @@ class EnvironmentMetadata(ABC):
         netcdf_group_handle : nc4._netCDF4.Group
             A reference to the Group within the netCDF dataset where the
             environment's metadata is stored.
-
         """
         pass
 
@@ -100,10 +108,10 @@ class EnvironmentMetadata(ABC):
 class EnvironmentInstructions(ABC):
     """Environment Instructions class that defines startup of environment
 
-    This is an class given to the controller as input to the
-    intial start_control function call for that environment. It is
-    used to define aspects such as test_level or repeating_signals that
-    need to be defined quickly without needing to be stored to netcdf4 file.
+    This is an class given to the controller as input to the intial
+    start_control function call for that environment. It is used to
+    define aspects such as test_level or repeating_signals that need
+    to be defined quickly without needing to be stored to netcdf4 file.
 
     If no instructions are given to controller for an environment, the
     first start_control function call will be given with a None as the
@@ -124,14 +132,29 @@ class EnvironmentInstructions(ABC):
 
     Parameters
     ---------
-    environment_name : str
-        This is the environment name used in the metadata as it is easier
-        to lookup from existing UI (NOT the queue_name). The queue_name
-        will be looked up from the existing environment_metadata list
-        when this is stored to the controller
+    queue_name : str
+        This is the queue_name which is the key corresponding to all the
+        dicts that store information about the environment. This name is
+        forced to be unique and is used to track the environment. The
+        queue_name is known in the EnvironmentManager, EnvironmentUI, and
+        EnvironmentProcess
     """
 
     def __init__(self, environment_type, queue_name):
+        """
+        Initializes the environment instructions class with attributes
+        that will be defined to the run tab of the environment ui. These
+        are attributes that dont need to be stored during
+        initialize_environment and can instead be passed to the
+        EnvironmentProcess.start_control function.
+
+        The environment_type should be specified from a EnvironmentType
+        enum in environment_utilities and should not be required as an
+        input to the specified environment instructions. Just force it
+        as an input to super().__init__() when you define the specific
+        EnvironmentInstructions class. The environment_type is validated
+        so that the instructions class is passed to the correct environment.
+        """
         self.environment_type = environment_type
         self.queue_name = queue_name
 
@@ -192,6 +215,13 @@ class EnvironmentProcess(ABC):
         acquisition_active: mp.sharedctypes.Synchronized,
         output_active: mp.sharedctypes.Synchronized,
     ):
+        """
+        Initializes the environment process and maps the global commands to functions.
+
+        You can set more commands to the command_map with self.map_command(). These commands
+        are recieved from the environment_command_queue and will mostly recieve None types as
+        the data package. It is recommended to have a START_ENVIRONMENT command.
+        """
         self.environment_name = environment_name  # Used for TASK_NAME/logging purposes, can change adaptively
         self._queue_name = queue_name  # Used whenever you need a unique id for the environment, stays the same
         self._command_queue = command_queue
@@ -211,32 +241,33 @@ class EnvironmentProcess(ABC):
 
     @property
     def acquisition_active(self):
-        """Flag to check if acquisition is active"""
+        """Flag to check if acquisition is active."""
         # print('Checking if Acquisition Active: {:}'.format(bool(self._acquisition_active.value)))
         return bool(self._acquisition_active.value)
 
     @property
     def output_active(self):
-        """Flag to check if output is active"""
+        """Flag to check if output is active."""
         # print('Checking if Output Active: {:}'.format(bool(self._output_active.value)))
         return bool(self._output_active.value)
 
     @abstractmethod
-    def initialize_hardware(self, hardware_metadata: HardwareMetadata):
-        """Initialize the data acquisition parameters in the environment.
+    def initialize_hardware(self, hardware_metadata: HardwareMetadata) -> None:
+        """Initialize the hardware parameters in the environment.
 
-        The environment will receive the global data acquisition parameters from
+        The environment will receive the hardware parameters from
         the controller, and must set itself up accordingly.
 
         Parameters
         ----------
-        data_acquisition_parameters : DataAcquisitionParameters :
-            A container containing data acquisition parameters, including
-            channels active in the environment as well as sampling parameters.
+        hardware_metadata : HardwareMetadata :
+            A specific metadata class containing information about
+            specific hardware metadata. Assume you are only getting
+            the attributes in the base HardwareMetadata class.
         """
 
     @abstractmethod
-    def initialize_environment(self, environment_metadata: EnvironmentMetadata):
+    def initialize_environment(self, environment_metadata: EnvironmentMetadata) -> None:
         """
         Initialize the environment parameters specific to this environment
 
@@ -245,14 +276,13 @@ class EnvironmentProcess(ABC):
 
         Parameters
         ----------
-        environment_parameters : AbstractMetadata
-            A container containing the parameters defining the environment
-
+        environment_metadata : EnvironmentMetadata
+            A container containing the parameters defining the environment.
         """
 
     @abstractmethod
-    def stop_environment(self, data):
-        """Stop the environment gracefully
+    def stop_environment(self, data) -> None:
+        """Stop the environment gracefully.
 
         This function defines the operations to shut down the environment
         gracefully so there is no hard stop that might damage test equipment
@@ -263,8 +293,7 @@ class EnvironmentProcess(ABC):
         data : Ignored
             This parameter is not used by the function but must be present
             due to the calling signature of functions called through the
-            ``command_map``
-
+            ``command_map``.
         """
 
     @property
@@ -274,31 +303,31 @@ class EnvironmentProcess(ABC):
 
     @property
     def data_in_queue(self) -> mp.Queue:
-        """The queue from which data is delivered to the environment"""
+        """The queue from which data is delivered to the environment."""
         return self._data_in_queue
 
     @property
     def data_out_queue(self) -> mp.Queue:
-        """The queue to which data is written that will be output to exciters"""
+        """The queue to which data is written that will be output to exciters."""
         return self._data_out_queue
 
     @property
     def gui_update_queue(self) -> mp.Queue:
-        """The queue that GUI update instructions are written to"""
+        """The queue that GUI update instructions are written to."""
         return self._gui_update_queue
 
     @property
     def controller_communication_queue(self) -> mp.Queue:
-        """The queue that global controller updates are written to"""
+        """The queue that global controller updates are written to."""
         return self._controller_communication_queue
 
     @property
     def log_file_queue(self) -> mp.Queue:
-        """The queue that log file messages are written to"""
+        """The queue that log file messages are written to."""
         return self._log_file_queue
 
     def log(self, message: str):
-        """Write a message to the log file
+        """Write a message to the log file.
 
         This function puts a message onto the ``log_file_queue`` so it will
         eventually be written to the log file.
@@ -316,31 +345,30 @@ class EnvironmentProcess(ABC):
 
     @property
     def queue_name(self) -> str:
-        """A string defining the queue name asigned to the environment"""
+        """A string defining the queue name asigned to the environment."""
         return self._queue_name
 
     @property
     def command_map(self) -> dict:
-        """A dictionary that maps commands received by the ``command_queue`` to functions in the class"""
+        """A dictionary that maps commands received by the ``command_queue`` to functions in the class."""
         return self._command_map
 
     def map_command(self, key, function):
-        """A function that maps an instruction to a function in the ``command_map``
+        """A function that maps an instruction to a function in the ``command_map``.
 
         Parameters
         ----------
         key :
-            The instruction that will be pulled from the ``command_queue``
+            The instruction that will be pulled from the ``command_queue``.
 
         function :
             A reference to the function that will be called when the ``key``
             message is received.
-
         """
         self._command_map[key] = function
 
     def run(self, shutdown_event):
-        """The main function that is run by the environment's process
+        """The main function that is run by the environment's process.
 
         A function that is called by the environment's process function that
         sits in a while loop waiting for instructions on the command queue.
@@ -351,8 +379,6 @@ class EnvironmentProcess(ABC):
         the ``data`` is passed to that function as the argument.  If the
         function returns a truthy value, it signals to the ``run`` function
         that it is time to stop the loop and exit.
-
-
         """
         self.log(f"Starting Process with PID {os.getpid()}")
         while not shutdown_event.is_set():
@@ -395,21 +421,20 @@ class EnvironmentProcess(ABC):
                 break
 
     def quit(self, data):  # pylint: disable=unused-argument
-        """Returns True to stop the ``run`` while loop and exit the process
+        """Returns True to stop the ``run`` while loop and exit the process.
 
         Parameters
         ----------
         data : Ignored
             This parameter is not used by the function but must be present
             due to the calling signature of functions called through the
-            ``command_map``
+            ``command_map``.
 
         Returns
         -------
         True :
             This function returns True to signal to the ``run`` while loop
             that it is time to close down the environment.
-
         """
         return True
 

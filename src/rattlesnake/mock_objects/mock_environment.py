@@ -13,3 +13,51 @@ class MockEnvironmentMetadata(EnvironmentMetadata):
         super().__init__(MockEnvironmentType.ENVIRONMENT, "Mock Environment")
         self.queue_name = "Environment 0"
         self.channel_list = mock_channel_list()
+
+    def validate(self):
+        return True
+
+    def store_to_netcdf(self, netcdf_group_handle):
+        return None
+
+
+class MockEnvironmentInstructions(EnvironmentInstructions):
+    def __init__(self):
+        super().__init__(MockEnvironmentType.ENVIRONMENT, "Environment 0")
+
+
+class MockEnvironmentProcess(EnvironmentProcess):
+    def __init__(
+        self,
+        environment_name,
+        queue_name,
+        command_queue,
+        gui_update_queue,
+        controller_communication_queue,
+        log_file_queue,
+        data_in_queue,
+        data_out_queue,
+        acquisition_active,
+        output_active,
+    ):
+        super().__init__(
+            environment_name,
+            queue_name,
+            command_queue,
+            gui_update_queue,
+            controller_communication_queue,
+            log_file_queue,
+            data_in_queue,
+            data_out_queue,
+            acquisition_active,
+            output_active,
+        )
+
+    def initialize_hardware(self, hardware_metadata):
+        return None
+
+    def initialize_environment(self, environment_metadata):
+        return None
+
+    def stop_environment(self, data):
+        return None
