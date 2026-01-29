@@ -208,7 +208,7 @@ class EnvironmentProcess(ABC):
         queue_name: str,
         command_queue: VerboseMessageQueue,
         gui_update_queue: mp.Queue,
-        controller_communication_queue: VerboseMessageQueue,
+        controller_command_queue: VerboseMessageQueue,
         log_file_queue: mp.Queue,
         data_in_queue: mp.Queue,
         data_out_queue: mp.Queue,
@@ -226,7 +226,7 @@ class EnvironmentProcess(ABC):
         self._queue_name = queue_name  # Used whenever you need a unique id for the environment, stays the same
         self._command_queue = command_queue
         self._gui_update_queue = gui_update_queue
-        self._controller_communication_queue = controller_communication_queue
+        self._controller_command_queue = controller_command_queue
         self._log_file_queue = log_file_queue
         self._data_in_queue = data_in_queue
         self._data_out_queue = data_out_queue
@@ -317,9 +317,9 @@ class EnvironmentProcess(ABC):
         return self._gui_update_queue
 
     @property
-    def controller_communication_queue(self) -> mp.Queue:
+    def controller_command_queue(self) -> mp.Queue:
         """The queue that global controller updates are written to."""
-        return self._controller_communication_queue
+        return self._controller_command_queue
 
     @property
     def log_file_queue(self) -> mp.Queue:
@@ -441,9 +441,10 @@ class EnvironmentProcess(ABC):
 
 def run_process(
     environment_name: str,
+    queue_name: str,
     input_queue: VerboseMessageQueue,
     gui_update_queue: mp.Queue,
-    controller_communication_queue: VerboseMessageQueue,
+    controller_command_queue: VerboseMessageQueue,
     log_file_queue: mp.Queue,
     data_in_queue: mp.Queue,
     data_out_queue: mp.Queue,
@@ -484,9 +485,10 @@ def run_process(
     """
     process_class = EnvironmentProcess(
         environment_name,
+        queue_name,
         input_queue,
         gui_update_queue,
-        controller_communication_queue,
+        controller_command_queue,
         log_file_queue,
         data_in_queue,
         data_out_queue,

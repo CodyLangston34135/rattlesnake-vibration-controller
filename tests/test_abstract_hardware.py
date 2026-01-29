@@ -1,7 +1,8 @@
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata, HardwareAcquisition, HardwareOutput
-from rattlesnake.mock_objects.mock_hardware import MockHardwareMetadata, MockHardwareAcquisition, MockHardwareOutput
-from rattlesnake.mock_objects.mock_utilities import mock_channel_list
+from mock_objects.mock_hardware import MockHardwareMetadata, MockHardwareAcquisition, MockHardwareOutput
+from mock_objects.mock_utilities import mock_channel_list
 import pytest
+import numpy as np
 
 channel_list = mock_channel_list()
 
@@ -51,22 +52,22 @@ def test_hardware_metadata_output_sample_rate():
 
 
 @pytest.mark.parametrize(
-    "channel_list, error_type",
+    "channel_list, expected",
     [
-        (channel_list, "None"),
-        (channel_list + [channel_list[0]], "ValueError"),
+        (channel_list, True),
+        (channel_list + [channel_list[0]], ValueError),
     ],
 )
-def test_hardware_metadata_validate(channel_list, error_type):
+def test_hardware_metadata_validate(channel_list, expected):
     hardware_metadata = MockHardwareMetadata()
     hardware_metadata.channel_list = channel_list
 
-    if error_type == "ValueError":
+    if expected is ValueError:
         with pytest.raises(ValueError):
             valid_hardware = hardware_metadata.validate()
-    elif error_type == "None":
+    else:
         valid_hardware = hardware_metadata.validate()
-        assert valid_hardware == True
+        assert valid_hardware == expected
 
 
 def test_hardware_metadata_extra_attr_list():
@@ -76,13 +77,47 @@ def test_hardware_metadata_extra_attr_list():
     assert attr_list[0] == "extra_attr"
 
 
+## Hardware Acquisition
 def test_hardware_acquisition_init():
     hardware_acquistion = MockHardwareAcquisition()
 
     assert isinstance(hardware_acquistion, HardwareAcquisition)
 
 
+# Just doing all the functions since the abstract class does nothing
+def test_hardware_acquisition_functions():
+    hardware_acquisition = MockHardwareAcquisition()
+    hardware_metadata = MockHardwareMetadata()
+
+    hardware_acquisition.initialize_hardware(hardware_metadata)
+    hardware_acquisition.start()
+    array_1 = hardware_acquisition.read()
+    array_2 = hardware_acquisition.read_remaining()
+    hardware_acquisition.stop()
+    hardware_acquisition.close()
+    int_1 = hardware_acquisition.get_acquisition_delay()
+
+    assert isinstance(array_1, np.ndarray)
+    assert isinstance(array_2, np.ndarray)
+    assert isinstance(int_1, int)
+
+
+## Hardware Output
 def test_hardware_output_init():
     hardware_output = MockHardwareOutput()
 
     assert isinstance(hardware_output, HardwareOutput)
+
+
+def test_hardware_output_functions():
+    hardware_output = MockHardwareOutput()
+    hardware_metadata = MockHardwareMetadata()
+
+    hardware_output.initialize_hardware(hardware_metadata)
+    hardware_output.start()
+    hardware_output.write(np.zeros((1, 100)))
+    hardware_output.stop()
+    hardware_output.close()
+    hardware_output.ready_for_new_output()
+
+    assert True

@@ -1,4 +1,4 @@
-from ..hardware.abstract_hardware import HardwareMetadata, HardwareAcquisition, HardwareOutput
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata, HardwareAcquisition, HardwareOutput
 from .mock_utilities import mock_channel_list
 import numpy as np
 from unittest import mock
@@ -42,11 +42,11 @@ class MockHardwareAcquisition(HardwareAcquisition):
 
     def read(self):
         super().read()
-        return np.zeros(2, 100)
+        return np.zeros((2, 100))
 
     def read_remaining(self):
         super().read_remaining()
-        return np.zeros(2, 100)
+        return np.zeros((2, 100))
 
     def stop(self):
         super().stop()

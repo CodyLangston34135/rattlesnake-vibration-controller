@@ -164,7 +164,14 @@ class HardwareOutput(ABC):
 
     @abstractmethod
     def write(self, data) -> None:
-        """Method to write a np.ndarray with a frame of data to the hardware"""
+        """
+        Method to write a np.ndarray with a frame of data to the hardware
+
+        Parameters
+        ----------
+        data : np.ndarray :
+        num_channels x buffer_size array to write to the output hardware
+        """
         pass
 
     @abstractmethod

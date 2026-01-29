@@ -1,4 +1,4 @@
-from ..environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions, EnvironmentProcess
+from rattlesnake.environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions, EnvironmentProcess
 from .mock_utilities import mock_channel_list
 from unittest import mock
 from enum import Enum
@@ -15,9 +15,11 @@ class MockEnvironmentMetadata(EnvironmentMetadata):
         self.channel_list = mock_channel_list()
 
     def validate(self):
+        super().validate()
         return True
 
     def store_to_netcdf(self, netcdf_group_handle):
+        super().store_to_netcdf(netcdf_group_handle)
         return None
 
 
@@ -54,10 +56,13 @@ class MockEnvironmentProcess(EnvironmentProcess):
         )
 
     def initialize_hardware(self, hardware_metadata):
+        super().initialize_hardware(hardware_metadata)
         return None
 
     def initialize_environment(self, environment_metadata):
+        super().initialize_environment(environment_metadata)
         return None
 
     def stop_environment(self, data):
+        super().stop_environment(data)
         return None
