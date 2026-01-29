@@ -142,7 +142,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         # Create a dictionary of channels for faster lookup
         self.channel_indices = {tuple([abs(v) for v in val]): index for index, val in enumerate(self.sdynpy_system_data["coordinate"])}
 
-    def set_up_data_acquisition_parameters_and_channels(self, test_data: HardwareMetadata):
+    def initialize_hardware(self, test_data: HardwareMetadata):
         """
         Initialize the hardware and set up channels and sampling properties
 
@@ -458,7 +458,7 @@ class SDynPySystemOutput(HardwareOutput):
         """
         self.queue = queue
 
-    def set_up_data_output_parameters_and_channels(self, test_data: HardwareMetadata):
+    def initialize_hardware(self, test_data: HardwareMetadata):
         """
         Initialize the hardware and set up sources and sampling properties
 

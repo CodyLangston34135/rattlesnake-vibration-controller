@@ -189,7 +189,7 @@ class OutputProcess(AbstractMessageProcess):
         else:
             raise ValueError("Invalid Hardware or Hardware Not Implemented!")
         # Initialize hardware and create channels
-        self.hardware.set_up_data_output_parameters_and_channels(metadata)
+        self.hardware.initialize_hardware(metadata)
         # Get the environment output channels in reference to all the output channels
         output_indices = [
             index

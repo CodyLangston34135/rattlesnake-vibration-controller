@@ -52,7 +52,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
         self.trigger_output_task = None
         self.test_data = None
 
-    def set_up_data_acquisition_parameters_and_channels(self, metadata: NIDAQmxMetadata):
+    def initialize_hardware(self, metadata: NIDAQmxMetadata):
         """
         Initialize the hardware and set up channels and sampling properties
 

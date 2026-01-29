@@ -1,11 +1,33 @@
-from .hardware_utilities import Channel, HardwareType
 from abc import ABC, abstractmethod
 from typing import List
 import numpy as np
 
 
 class HardwareMetadata(ABC):
+    """
+    Abstract class that contains values to fully define how the hardware is setup.
+
+    This class contains attributes required to run acquisition, output, and streaming
+    processes. The class should also contain extra attributes required for the
+    HardwareAcquisition and HardwareOutput class specific to that HardwareType.
+    """
+
     def __init__(self, hardware_type):
+        """
+        Initializes the hardware metadata with default values and stores hardware_type
+
+        The hardware_type should be specified from a global variable and should not
+        be required as an input to specific hardware metadata (ie: NIDAQmxMetadata).
+
+        Parameters
+        ----------
+        hardware_type : HardwareType :
+            An Enum in hardware_utilities that contains each available hardware type.
+
+        Returns
+        -------
+        None.
+        """
         self.hardware_type = hardware_type
         self.channel_list = []
         self.sample_rate = 1000
@@ -15,10 +37,12 @@ class HardwareMetadata(ABC):
 
     @property
     def samples_per_read(self):
+        """Property returning the number of samples per read frame."""
         return round(self.sample_rate * self.time_per_read)
 
     @property
     def samples_per_write(self):
+        """Property returning the number of samples per write frame."""
         return round(self.sample_rate * self.time_per_write * self.output_oversample)
 
     @property
@@ -28,17 +52,21 @@ class HardwareMetadata(ABC):
 
     @property
     def output_sample_rate(self):
-        """Property returning the output sample rate"""
+        """Property returning the output sample rate."""
         return self.sample_rate * self.output_oversample
 
     @abstractmethod
-    def validate(self):
+    def validate(self) -> True:
         """
-        Check if the hardware exists and is reconizable. Return True if everything
-        checks out
+        Method to check if the metadata object fully defines the hardware and is valid
+        for that machine
 
-        Please throw detailed errors while validating. Makes it easier for user to debug.
-        Return super().validate() for this method
+        If possible should check which devices are connected to the machine at a given
+        time and make sure that they are valid inputs to the initialize_hardware function
+        of the HardwareAcquisition and HardwareOutput classes.
+
+        Throw detailed errors while validating, these errors will show up in log files for
+        debugging and will not stop the main process from running.
         """
         if len(self.channel_list) != len(set(self.channel_list)):
             raise ValueError("Duplicate channels found in channel_list")
@@ -46,68 +74,65 @@ class HardwareMetadata(ABC):
         return True
 
     @abstractmethod
-    def extra_attr_list(self):
-        """Return a list of attributes unique to this hardware
-
-        Required for netcdf5 metadata handling.
+    def extra_attr_list(self) -> List[str]:
         """
+        Method that returns a list of extra attributes that should be stored to the
+        netcdf4 output file so that the hardware can be defined when loading Rattlesnake
+        from a file.
+        """
+        return []
 
 
 class HardwareAcquisition(ABC):
-    """Abstract class defining the interface between the controller and acquisition
+    """
+    Abstract class defining the interface between the controller and acquisition.
 
     This class defines the interfaces between the controller and the
     data acquisition portion of the hardware.  It is run by the Acquisition
     process, and must define how to get data from the test hardware into the
-    controller."""
+    controller.
+    """
 
     @abstractmethod
-    def set_up_data_acquisition_parameters_and_channels(self, metadata: HardwareMetadata):
+    def initialize_hardware(self, metadata: HardwareMetadata) -> None:
         """
-        Initialize the hardware and set up channels and sampling properties
+        Initialize the hardware and set up channels and sampling properties.
 
         The function must create channels on the hardware corresponding to
         the channels in the test.  It must also set the sampling rates.
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
-            A container containing the data acquisition parameters for the
-            controller set by the user.
-        channel_data : List[Channel] :
-            A list of ``Channel`` objects defining the channels in the test
-
-        Returns
-        -------
-        None.
-
+        metadata : HardwareMetadata
+            Hardware specific metadata class containing the sampling properties
+            and channel list to store to the HardwareAcquisition.
         """
 
     @abstractmethod
-    def start(self):
-        """Method to start acquiring data from the hardware"""
+    def start(self) -> None:
+        """Method to start acquiring data from the hardware."""
 
     @abstractmethod
     def read(self) -> np.ndarray:
         """Method to read a frame of data from the hardware that returns
-        an appropriately sized np.ndarray"""
+        an appropriately sized np.ndarray."""
 
     @abstractmethod
     def read_remaining(self) -> np.ndarray:
         """Method to read the rest of the data on the acquisition from the hardware
-        that returns an appropriately sized np.ndarray"""
+        that returns an appropriately sized np.ndarray."""
 
     @abstractmethod
-    def stop(self):
-        """Method to stop the acquisition"""
+    def stop(self) -> None:
+        """Method to stop the acquisition."""
 
     @abstractmethod
-    def close(self):
-        """Method to close down the hardware"""
+    def close(self) -> None:
+        """Method to close down the hardware."""
 
     @abstractmethod
     def get_acquisition_delay(self) -> int:
-        """Get the number of samples between output and acquisition
+        """Get the number of samples between output and acquisition.
 
         This function is designed to handle buffering done in the output
         hardware, ensuring that all data written to the output is read by the
@@ -125,7 +150,7 @@ class HardwareOutput(ABC):
     control system"""
 
     @abstractmethod
-    def set_up_data_output_parameters_and_channels(self, metadata: HardwareMetadata):
+    def initialize_hardware(self, metadata: HardwareMetadata) -> None:
         """
         Initialize the hardware and set up sources and sampling properties
 
@@ -134,36 +159,29 @@ class HardwareOutput(ABC):
 
         Parameters
         ----------
-        test_data : DataAcquisitionParameters :
-            A container containing the data acquisition parameters for the
-            controller set by the user.
-        channel_data : List[Channel] :
-            A list of ``Channel`` objects defining the channels in the test
-
-        Returns
-        -------
-        None.
-
+        metadata : HardwareMetadata :
+            Hardware specific metdata class that defines the sampling properties
+            and channel list for a given hardware.
         """
         pass
 
     @abstractmethod
-    def start(self):
+    def start(self) -> None:
         """Method to start outputting data to the hardware"""
         pass
 
     @abstractmethod
-    def write(self, data):
+    def write(self, data) -> None:
         """Method to write a np.ndarray with a frame of data to the hardware"""
         pass
 
     @abstractmethod
-    def stop(self):
+    def stop(self) -> None:
         """Method to stop the output"""
         pass
 
     @abstractmethod
-    def close(self):
+    def close(self) -> None:
         """Method to close down the hardware"""
         pass
 
