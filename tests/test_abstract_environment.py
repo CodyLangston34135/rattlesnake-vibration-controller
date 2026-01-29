@@ -14,9 +14,9 @@ channel_list = mock_channel_list()
 
 @pytest.fixture(params=[True, False], ids=["threaded", "non_threaded"])
 def environment_process(request):
-    threading = request.param
+    use_thread = request.param
 
-    queue_container = mock_queue_container(threading)
+    queue_container = mock_queue_container(use_thread)
 
     environment_process = MockEnvironmentProcess(
         "Environment Name",
@@ -34,7 +34,7 @@ def environment_process(request):
     return environment_process
 
 
-# region: Environment Metadata
+# region: EnvironmentMetadata
 def test_environment_metadata_init():
     environment_metadata = MockEnvironmentMetadata()
 
@@ -90,7 +90,7 @@ def test_environment_metadata_functions():
     assert True
 
 
-# region: Environment Instructinos
+# region: EnvironmentInstructinos
 def test_environment_instructions_init():
     environment_instructions = MockEnvironmentInstructions()
 
@@ -99,7 +99,7 @@ def test_environment_instructions_init():
     assert hasattr(environment_instructions, "queue_name")
 
 
-# region: Environment Process
+# region: EnvironmentProcess
 @pytest.mark.parametrize("threading", [True, False])
 def test_environment_process_init(threading):
     queue_container = mock_queue_container(threading)

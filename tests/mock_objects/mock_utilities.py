@@ -19,8 +19,8 @@ def mock_channel_list():
     return [response_channel, excitation_channel]
 
 
-def mock_queue_container(threading):
-    if threading:
+def mock_queue_container(use_thread):
+    if use_thread:
         new_queue = thqueue.Queue
     else:
         new_queue = mp.Queue
