@@ -161,8 +161,8 @@ def main():
 
     envrionment_metadata_list = [time_metadata]
 
-    envrionment_metadata_list = rattlesnake.set_environments(envrionment_metadata_list)
-    environment_queue_name = envrionment_metadata_list[0].queue_name
+    rattlesnake.set_environments(envrionment_metadata_list)
+    environment_queue_name = "Environment 0"
 
     stream_metadata = StreamMetadata()
     stream_metadata.stream_type = StreamType.NO_STREAM
@@ -185,7 +185,7 @@ def main():
     rattlesnake.start_profile()
 
     app = QtWidgets.QApplication(sys.argv)
-    _ = HeadlessUI(rattlesnake.queue_container, rattlesnake.hardware_metadata, rattlesnake.environment_metadata_list, "Dark", True)
+    _ = HeadlessUI(rattlesnake.queue_container, rattlesnake.hardware_metadata, rattlesnake.environment_metadata_dict, "Dark", True)
     app.exec_()
     # time.sleep(12)
 

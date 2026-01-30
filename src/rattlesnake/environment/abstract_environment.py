@@ -232,8 +232,10 @@ class EnvironmentProcess(ABC):
         are recieved from the environment_command_queue and will mostly recieve None types as
         the data package. It is recommended to have a START_ENVIRONMENT command.
         """
-        self.environment_name = environment_name  # Used for TASK_NAME/logging purposes, can change adaptively
-        self._queue_name = queue_name  # Used whenever you need a unique id for the environment, stays the same
+        self.environment_name = (
+            environment_name  # Used for UI/Metadata/Instructions. Must be unique, can change adaptively. Converted to queue_name in Rattlesnake()
+        )
+        self._queue_name = queue_name  # Internal ID mapping initialized queues to this environment.
         self._command_queue = command_queue
         self._gui_update_queue = gui_update_queue
         self._controller_command_queue = controller_command_queue

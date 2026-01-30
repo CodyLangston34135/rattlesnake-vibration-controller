@@ -5,7 +5,7 @@ from ..hardware.abstract_hardware import HardwareMetadata
 from ..environment.abstract_environment import EnvironmentMetadata
 import os
 from qtpy import QtCore, QtWidgets, uic
-from typing import List
+from typing import Dict
 
 directory = os.path.split(__file__)[0]
 QtCore.QDir.addSearchPath("images", os.path.join(directory, "themes", "images"))
@@ -18,7 +18,7 @@ class HeadlessUI(QtWidgets.QMainWindow):
         self,
         queue_container: QueueContainer,
         hardware_metadata: HardwareMetadata,
-        environment_metadata_list: List[EnvironmentMetadata],
+        environment_metadata_dict: Dict[str, EnvironmentMetadata],
         theme: str = "Light",
         debug: bool = False,
     ):
@@ -31,9 +31,8 @@ class HeadlessUI(QtWidgets.QMainWindow):
         if debug:
             uic.loadUi(debug_ui_path, self)
             # Build environment ui
-            for metadata in environment_metadata_list:
+            for queue_name, metadata in environment_metadata_dict.items():
                 environment_name = metadata.environment_name
-                queue_name = metadata.queue_name
                 self.environment_queues.append(queue_name)
                 environment_ui = environment_uis[metadata.environment_type]
                 self.environment_uis[queue_name] = environment_ui(
@@ -54,9 +53,8 @@ class HeadlessUI(QtWidgets.QMainWindow):
             self._dummy_definition_tabs = QtWidgets.QTabWidget()
             self._dummy_system_tabs = QtWidgets.QTabWidget()
             self._dummy_prediction_tabs = QtWidgets.QTabWidget()
-            for metadata in environment_metadata_list:
+            for queue_name, metadata in environment_metadata_dict.items():
                 environment_name = metadata.environment_name
-                queue_name = metadata.queue_name
                 self.environment_queues.append(queue_name)
                 environment_ui = environment_uis[metadata.environment_type]
                 self.environment_uis[queue_name] = environment_ui(

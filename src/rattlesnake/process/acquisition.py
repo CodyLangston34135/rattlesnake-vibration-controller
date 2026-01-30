@@ -34,7 +34,7 @@ import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import queue as thqueue
 import numpy as np
 from time import time, sleep
-from typing import List
+from typing import Dict
 
 TASK_NAME = "Acquisition"
 
@@ -252,7 +252,7 @@ class AcquisitionProcess(AbstractMessageProcess):
 
         self.hardware_metadata = metadata
 
-    def initialize_environment(self, metadata_list: List[EnvironmentMetadata]):
+    def initialize_environment(self, metadata_dict: Dict[str, EnvironmentMetadata]):
         self.log("Initializing Environment")
         self.environment_list = []
         self.environment_acquisition_channels = {}
@@ -260,14 +260,13 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.environment_last_data = {}
         self.environment_samples_remaining_to_read = {}
         self.environment_first_data = {}
-        for metadata in metadata_list:
-            environment = metadata.queue_name
-            self.environment_list.append(environment)
-            self.environment_acquisition_channels[environment] = metadata.map_channel_indices(self.hardware_metadata.channel_list)
-            self.environment_active_flags[environment] = False
-            self.environment_last_data[environment] = False
-            self.environment_samples_remaining_to_read[environment] = 0
-            self.environment_first_data[environment] = None
+        for queue_name, metadata in metadata_dict.items():
+            self.environment_list.append(queue_name)
+            self.environment_acquisition_channels[queue_name] = metadata.map_channel_indices(self.hardware_metadata.channel_list)
+            self.environment_active_flags[queue_name] = False
+            self.environment_last_data[queue_name] = False
+            self.environment_samples_remaining_to_read[queue_name] = 0
+            self.environment_first_data[queue_name] = None
 
     def stop_environment(self, data):
         """Sets flags stating that the specified environment will be ending.

@@ -100,7 +100,6 @@ class EnvironmentManager:
                 continue
 
             self.log(f"Assigning {environment_name} to {queue_name} Queue")
-            metadata.queue_name = queue_name
             self.environment_types[queue_name] = environment_type
             self.environment_names[queue_name] = environment_name
             self.environment_metadata[queue_name] = metadata
@@ -120,10 +119,8 @@ class EnvironmentManager:
             self.add_environment(metadata, acquisition_active, output_active)
 
         # Send metadata information to associated processes
-        metadata_list = list(self.environment_metadata.values())
-        self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata_list))
-        self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata_list))
-        return metadata_list
+        self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_metadata))
+        self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_metadata))
 
     def build_environment_instructions_dict(self, environment_instructions_list: List[EnvironmentInstructions]):
         environment_instructions_dict = {}
@@ -227,7 +224,6 @@ class EnvironmentManager:
         self.environment_types[queue_name] = environment_type
         self.environment_processes[queue_name] = environment_process
         self.environment_events[queue_name] = environment_event
-        metadata.queue_name = queue_name
         self.environment_metadata[queue_name] = metadata
         self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, self.hardware_metadata))
         self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata))

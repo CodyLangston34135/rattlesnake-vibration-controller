@@ -16,7 +16,7 @@ from typing import List
 
 TASK_NAME = "Rattlesnake"
 CLOSE_TIMEOUT = 5
-THREADING = False
+THREADING = True
 
 
 # region: RattlesnakeState
@@ -68,7 +68,6 @@ class Rattlesnake:
 
         # Set up environment queues
         max_environments = 16
-        self.environment_metadata_list = []
         environment_command_queues = {}
         environment_data_in_queues = {}
         environment_data_out_queues = {}
@@ -122,10 +121,28 @@ class Rattlesnake:
 
         self.profile_manager = ProfileManager(self.queue_container.log_file_queue, self.queue_container.controller_command_queue)
 
-        self.hardware_metadata = None
-        self.environment_metadata_list = []
-        self.stream_metadata = StreamMetadata()  # Default to no stream
-        self.profile_event_list = []
+        self._hardware_metadata = None
+        self._stream_metadata = StreamMetadata()  # Default to no stream
+
+    @property
+    def hardware_metadata(self):
+        return self._hardware_metadata
+
+    @property
+    def environment_metadata_dict(self):
+        return self.environment_manager.environment_metadata
+
+    @property
+    def stream_metadata(self):
+        return self._stream_metadata
+
+    @property
+    def environment_instructions_list(self):
+        return self.profile_manager.environment_instructions
+
+    @property
+    def profile_event_list(self):
+        return self.profile_manager.profile_event_list
 
     def set_hardware(self, hardware_metadata: HardwareMetadata) -> None:
         # Check for valid states
@@ -137,7 +154,7 @@ class Rattlesnake:
             raise TypeError("Rattlesnake.set_hardware requires a valid HardwareMetadata class")
 
         self.log("Setting Hardware")
-        self.hardware_metadata = hardware_metadata
+        self._hardware_metadata = hardware_metadata
 
         self.environment_manager.initialize_hardware(hardware_metadata)
 
@@ -153,17 +170,13 @@ class Rattlesnake:
 
         self.log("Setting Environment")
 
-        environment_metadata_list = self.environment_manager.initialize_environments(
-            environment_metadata_list, self.acquisition_active, self.output_active
-        )
+        self.environment_manager.initialize_environments(environment_metadata_list, self.acquisition_active, self.output_active)
 
-        self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, environment_metadata_list))
-        self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, environment_metadata_list))
-
-        self.environment_metadata_list = environment_metadata_list
-        self.state = RattlesnakeState.ENVIRONMENT_STORE
-
-        return environment_metadata_list
+        # If removed all environments
+        if not self.environment_metadata_dict:
+            self.state = RattlesnakeState.HARDWARE_STORE
+        else:
+            self.state = RattlesnakeState.ENVIRONMENT_STORE
 
     def set_stream(self, stream_metadata: StreamMetadata):
         valid_stream = stream_metadata.validate()
@@ -172,7 +185,7 @@ class Rattlesnake:
 
         self.log("Setting Stream Metadata")
         self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_STREAMING, stream_metadata))
-        self.stream_metadata = stream_metadata
+        self._stream_metadata = stream_metadata
 
     def set_profile(self, profile_event_list: List[ProfileEvent], environment_instructions_list: List[EnvironmentInstructions]):
         self.log("Settting Profile Event List")
@@ -194,7 +207,7 @@ class Rattlesnake:
         if self.stream_metadata.stream_type != StreamType.NO_STREAM:
             self.queue_container.streaming_command_queue.put(
                 TASK_NAME,
-                (GlobalCommands.INITIALIZE_STREAMING, (self.stream_metadata.stream_file, self.hardware_metadata, self.environment_metadata_list)),
+                (GlobalCommands.INITIALIZE_STREAMING, (self.stream_metadata.stream_file, self.hardware_metadata, self.environment_metadata_dict)),
             )
 
         if self.stream_metadata.stream_type == StreamType.STREAM_IMMEDIATELY:
@@ -208,8 +221,8 @@ class Rattlesnake:
 
         self.log("Disarming Test Hardware")
         self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))
-        for metadata in self.environment_metadata_list:
-            self.queue_container.environment_command_queues[metadata.queue_name].put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, None))
+        for queue_name in self.environment_metadata_dict.keys():
+            self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, None))
 
         self.state = RattlesnakeState.ENVIRONMENT_STORE
 

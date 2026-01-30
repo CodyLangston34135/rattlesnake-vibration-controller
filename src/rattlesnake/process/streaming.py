@@ -28,7 +28,7 @@ from ..environment.abstract_environment import EnvironmentMetadata
 import netCDF4 as nc
 import numpy as np
 from pathlib import Path
-from typing import List
+from typing import Dict
 from enum import Enum
 
 
@@ -120,8 +120,8 @@ class StreamingProcess(AbstractMessageProcess):
         """
         filename: str
         hardware_metadata: HardwareMetadata
-        environment_metadata_list: List[EnvironmentMetadata]
-        filename, hardware_metadata, environment_metadata_list = data
+        environment_metadata_dict: Dict[str, EnvironmentMetadata]
+        filename, hardware_metadata, environment_metadata_dict = data
         self.stream_variable = "time_data"
         self.stream_dimension = "time_samples"
         self.stream_index = 0
@@ -133,7 +133,7 @@ class StreamingProcess(AbstractMessageProcess):
             len([channel for channel in hardware_metadata.channel_list if channel.feedback_device is not None]),
         )
         self.netcdf_handle.createDimension(self.stream_dimension, None)
-        self.netcdf_handle.createDimension("num_environments", len(environment_metadata_list))
+        self.netcdf_handle.createDimension("num_environments", len(environment_metadata_dict))
         # Create attributes
         self.netcdf_handle.file_version = "3.0.0"
         self.netcdf_handle.sample_rate = hardware_metadata.sample_rate
@@ -148,7 +148,7 @@ class StreamingProcess(AbstractMessageProcess):
         self.netcdf_handle.createVariable(self.stream_variable, "f8", ("response_channels", self.stream_dimension))
         var = self.netcdf_handle.createVariable("environment_names", str, ("num_environments",))
         environment_booleans = []
-        for i, metadata in enumerate(environment_metadata_list):
+        for i, metadata in enumerate(environment_metadata_dict.values()):
             var[i] = metadata.environment_name
             environment_booleans.append(metadata.map_channel_bools(hardware_metadata.channel_list))
         var = self.netcdf_handle.createVariable(
@@ -192,7 +192,7 @@ class StreamingProcess(AbstractMessageProcess):
             for i, cd in enumerate(channel_data):
                 var[i] = cd
         # Now write all the environment data to the netCDF file
-        for environment_metadata in environment_metadata_list:
+        for environment_metadata in environment_metadata_dict.values():
             group_handle = self.netcdf_handle.createGroup(environment_metadata.environment_name)
             environment_metadata.store_to_netcdf(group_handle)
 

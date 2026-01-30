@@ -11,8 +11,8 @@ omit =
     # src/rattlesnake/environment/abstract_environment.py
     # src/rattlesnake/environment/environment_utilities.py
     # src/rattlesnake/environment/time_environment.py
+    # src/rattlesnake/cicd/*
     src/rattlesnake/hardware/nidaqmx.py
     src/rattlesnake/environment/read_environment.py
-    src/rattlesnake/cicd/*
     src/rattlesnake/user_interface/*
     */__init__.py

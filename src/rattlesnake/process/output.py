@@ -33,7 +33,7 @@ import multiprocessing.queues as mpqueue
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import queue as thqueue
 import numpy as np
-from typing import List
+from typing import Dict
 
 TASK_NAME = "Output"
 
@@ -201,7 +201,7 @@ class OutputProcess(AbstractMessageProcess):
 
         self.hardware_metadata = metadata
 
-    def initialize_environment(self, metadata_list: List[EnvironmentMetadata]):
+    def initialize_environment(self, metadata_dict: Dict[str, EnvironmentMetadata]):
         self.log("Initializing Environment")
 
         hardware_output_indices = [
@@ -216,20 +216,19 @@ class OutputProcess(AbstractMessageProcess):
         self.environment_shutting_down_flags = {}
         self.environment_data_out_remainders = {}
         self.environment_first_data = {}
-        for metadata in metadata_list:
+        for queue_name, metadata in metadata_dict.items():
             # Initialize environment dicts
-            environment = metadata.queue_name
-            self.environment_list.append(environment)
-            self.environment_active_flags[environment] = False
-            self.environment_starting_up_flags[environment] = False
-            self.environment_shutting_down_flags[environment] = False
-            self.environment_first_data[environment] = False
+            self.environment_list.append(queue_name)
+            self.environment_active_flags[queue_name] = False
+            self.environment_starting_up_flags[queue_name] = False
+            self.environment_shutting_down_flags[queue_name] = False
+            self.environment_first_data[queue_name] = False
 
             # Build output mapping dicts
             environment_channel_indices = metadata.map_channel_indices(self.hardware_metadata.channel_list)
             common_indices, out_inds, _ = np.intersect1d(hardware_output_indices, environment_channel_indices, return_indices=True)
-            self.environment_output_channels[environment] = out_inds
-            self.environment_data_out_remainders[environment] = np.zeros((len(common_indices), 0))
+            self.environment_output_channels[queue_name] = out_inds
+            self.environment_data_out_remainders[queue_name] = np.zeros((len(common_indices), 0))
 
     def output_signal(self, data):  # pylint: disable=unused-argument
         """The main output loop of the controller.
