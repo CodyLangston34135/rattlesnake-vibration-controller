@@ -144,7 +144,7 @@ class AcquisitionProcess(AbstractMessageProcess):
             used by each environment.
 
         """
-        self.log("Initializing Data Acquisition")
+        self.log("Initializing Hardware")
         # Store pertinent data
         self.sample_rate = metadata.sample_rate
         self.read_size = metadata.samples_per_read

@@ -135,7 +135,7 @@ class OutputProcess(AbstractMessageProcess):
             used by each environment.
 
         """
-        self.log("Initializing Data Acquisition")
+        self.log("Initializing Hardware")
         # Pull out invormation from the queue
         # Store pertinent data
         self.sample_rate = metadata.sample_rate
@@ -145,7 +145,7 @@ class OutputProcess(AbstractMessageProcess):
         if self.hardware is not None:
             self.hardware.close()
         if metadata.hardware_type == HardwareType.NI_DAQMX:
-            from ..hardware.nidqaqmx import NIDAQmxOutput
+            from ..hardware.nidaqmx import NIDAQmxOutput
 
             self.hardware = NIDAQmxOutput(
                 metadata.task_trigger,
@@ -202,6 +202,7 @@ class OutputProcess(AbstractMessageProcess):
         self.hardware_metadata = metadata
 
     def initialize_environment(self, metadata_list: List[EnvironmentMetadata]):
+        self.log("Initializing Environment")
 
         hardware_output_indices = [
             index

@@ -1,8 +1,9 @@
 from rattlesnake.process.acquisition import AcquisitionProcess, acquisition_process
+from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.utilities import GlobalCommands
-from mock_objects.mock_hardware import MockHardwareMetadata, hardware_dict, metadata_attr_dict
+from mock_objects.mock_hardware import MockHardwareMetadata, acquisition_dict, metadata_attr_dict
 from mock_objects.mock_environment import MockEnvironmentMetadata
 from mock_objects.mock_utilities import mock_queue_container
 import pytest
@@ -21,7 +22,7 @@ def acquisition(request):
     return acquisition
 
 
-# region: AdquisitionProcess
+# region: AcquisitionProcess
 # Test AcquisitonProcess initialization
 @pytest.mark.parametrize("use_thread", [True, False])
 def test_acquisition_init(use_thread):
@@ -31,6 +32,7 @@ def test_acquisition_init(use_thread):
 
     # Make sure it is the correct class
     assert isinstance(acquisition, AcquisitionProcess)
+    assert isinstance(acquisition, AbstractMessageProcess)
 
 
 def test_acquisition_properties(acquisition):
@@ -45,7 +47,7 @@ def test_acquisition_properties(acquisition):
 @mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.log")
 def test_acquisition_process_initialize_hardware(mock_log, hardware_type, acquisition):
     hardware_metadata = MockHardwareMetadata()
-    hardware_lookup = hardware_dict()
+    hardware_lookup = acquisition_dict()
     attr_lookup = metadata_attr_dict()
     hardware_metadata.hardware_type = hardware_type
 
@@ -56,7 +58,7 @@ def test_acquisition_process_initialize_hardware(mock_log, hardware_type, acquis
         acquisition.initialize_hardware(hardware_metadata)
         mock_hardware().initialize_hardware.assert_called()
 
-    mock_log.assert_called_with("Initializing Data Acquisition")
+    mock_log.assert_called_with("Initializing Hardware")
     # Test if output indices were stored
     assert acquisition.output_indices[0] == 1
     # Test if warning limit was stored
@@ -123,9 +125,6 @@ def test_acquisition_process_stop_streaming(acquisition):
 @mock.patch("rattlesnake.process.acquisition.align_signals")
 @mock.patch("rattlesnake.process.acquisition.AcquisitionProcess.add_data_to_buffer")
 @mock.patch("rattlesnake.process.acquisition.AcquisitionProcess.get_first_output_data")
-# @mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
-# @mock.patch("rattlesnake.process.acquisition.mp.queues.Queue.put")
-# @mock.patch("rattlesnake.process.acquisition.mp.queues.Queue.get_nowait")
 @mock.patch("rattlesnake.process.acquisition.time")
 @mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.log")
 def test_acquisition_acquire_signal(
@@ -196,6 +195,14 @@ def test_acquisition_acquire_signal(
     np.testing.assert_array_equal(mock_add.call_args_list[0][0], np.ones((1, 2, 100)))
 
 
+def test_add_data_to_buffer(acquisition):
+    data = np.zeros((1, 100))
+    acquisition.read_data = np.zeros((1, 100))
+    acquisition.add_data_to_buffer(data)
+
+    np.testing.assert_array_equal(acquisition.read_data, data)
+
+
 @mock.patch("rattlesnake.process.acquisition.flush_queue")
 @mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.log")
 def test_acquisition_process_get_first_output_data(mock_log, mock_flush, acquisition):
@@ -233,7 +240,7 @@ def test_acquisition_process_quit(mock_log, mock_flush, acquisition):
     mock_hardware.close.assert_called()
 
 
-# Test the acquisition_process function
+# region: acquisition_process
 # Prevent the run while loop from starting
 @pytest.mark.parametrize("use_thread", [True, False])
 @mock.patch("rattlesnake.process.acquisition.AcquisitionProcess")

@@ -8,8 +8,8 @@ from enum import Enum
 
 
 # region: Import Locations
-def hardware_dict():
-    hardware_dict = {
+def acquisition_dict():
+    acquisition_dict = {
         HardwareType.NI_DAQMX: "rattlesnake.hardware.nidaqmx.NIDAQmxAcquisition",
         HardwareType.LAN_XI: "rattlesnake.hardware.lanxi_hardware_multiprocessing.LanXIAcquisition",
         HardwareType.DP_QUATTRO: "rattlesnake.hardware.data_physics_hardware.DataPhysicsAcquisition",
@@ -19,7 +19,21 @@ def hardware_dict():
         HardwareType.SDYNPY_SYSTEM: "rattlesnake.hardware.sdynpy_system.SDynPySystemAcquisition",
         HardwareType.SDYNPY_FRF: "rattlesnake.hardware.sdynpy_frf_virtual_hardware.SDynPyFRFAcquisition",
     }
-    return hardware_dict
+    return acquisition_dict
+
+
+def output_dict():
+    output_dict = {
+        HardwareType.NI_DAQMX: "rattlesnake.hardware.nidaqmx.NIDAQmxOutput",
+        HardwareType.LAN_XI: "rattlesnake.hardware.lanxi_hardware_multiprocessing.LanXIOutput",
+        HardwareType.DP_QUATTRO: "rattlesnake.hardware.data_physics_hardware.DataPhysicsOutput",
+        HardwareType.DP_900: "rattlesnake.hardware.data_physics_dp900_hardware.DataPhysicsDP900Output",
+        HardwareType.EXODUS: "rattlesnake.hardwaare.exodus_modal_solution_hardware.ExodusOutput",
+        HardwareType.STATE_SPACE: "rattlesnake.hardware.state_space_virtual_hardware.StateSpaceOutput",
+        HardwareType.SDYNPY_SYSTEM: "rattlesnake.hardware.sdynpy_system.SDynPySystemOutput",
+        HardwareType.SDYNPY_FRF: "rattlesnake.hardware.sdynpy_frf_virtual_hardware.SDynPyFRFOutput",
+    }
+    return output_dict
 
 
 def metadata_attr_dict():
