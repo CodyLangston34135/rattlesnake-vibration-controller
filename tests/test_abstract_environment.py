@@ -222,8 +222,8 @@ def test_environment_process_run(mock_log, mock_get, mock_function, mock_key, en
 
 
 # region: run_process
-@mock.patch("rattlesnake.environment.abstract_environment.EnvironmentProcess")
 @pytest.mark.parametrize("use_thread", [True, False])
+@mock.patch("rattlesnake.environment.abstract_environment.EnvironmentProcess")
 def test_run_process(mock_process_class, use_thread):
     queue_container = mock_queue_container(use_thread)
     acquisition_active = mp.Value("i", 0)

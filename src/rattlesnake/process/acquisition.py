@@ -152,7 +152,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         if self.hardware is not None:
             self.hardware.close()
         if metadata.hardware_type == HardwareType.NI_DAQMX:
-            from ..hardware.nidqaqmx import NIDAQmxAcquisition
+            from ..hardware.nidaqmx import NIDAQmxAcquisition
 
             self.hardware = NIDAQmxAcquisition(metadata.task_trigger, metadata.output_trigger_generator)
 
@@ -253,6 +253,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.hardware_metadata = metadata
 
     def initialize_environment(self, metadata_list: List[EnvironmentMetadata]):
+        self.log("Initializing Environment")
         self.environment_list = []
         self.environment_acquisition_channels = {}
         self.environment_active_flags = {}

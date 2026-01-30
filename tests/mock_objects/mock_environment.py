@@ -4,10 +4,12 @@ from unittest import mock
 from enum import Enum
 
 
+# region: MockEnvironmentType
 class MockEnvironmentType(Enum):
     ENVIRONMENT = 0
 
 
+# region: MockEnvironmentMetadata
 class MockEnvironmentMetadata(EnvironmentMetadata):
     def __init__(self):
         super().__init__(MockEnvironmentType.ENVIRONMENT, "Mock Environment")
@@ -23,11 +25,13 @@ class MockEnvironmentMetadata(EnvironmentMetadata):
         return None
 
 
+# region: MockEnvironmentInstructions
 class MockEnvironmentInstructions(EnvironmentInstructions):
     def __init__(self):
         super().__init__(MockEnvironmentType.ENVIRONMENT, "Environment 0")
 
 
+# region: MockEnvironmentProcess
 class MockEnvironmentProcess(EnvironmentProcess):
     def __init__(
         self,

@@ -1,7 +1,7 @@
 from rattlesnake.rattlesnake import Rattlesnake
 from rattlesnake.utilities import GlobalCommands
 from rattlesnake.hardware.hardware_utilities import Channel
-from rattlesnake.hardware.nidqaqmx import NIDAQmxMetadata
+from rattlesnake.hardware.nidaqmx import NIDAQmxMetadata
 from rattlesnake.hardware.sdynpy_system import SDynPySystemMetadata
 from rattlesnake.environment.time_environment import TimeMetadata, TimeInstructions
 from rattlesnake.environment.read_environment import ReadMetadata

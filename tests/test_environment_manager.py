@@ -227,8 +227,8 @@ def test_environment_manager_remove_environment(mock_time, is_alive, environment
         mock_event.set.assert_called()
 
 
-@mock.patch("rattlesnake.environment_manager.datetime")
 @pytest.mark.parametrize("is_alive", [True, False])
+@mock.patch("rattlesnake.environment_manager.datetime")
 def test_environment_mananger_close_environment(mock_time, is_alive, environment_manager):
     environment_manager.queue_names = ["Environment 0"]
     environment_manager.environment_names = {"Environment 0": "Environment Name"}

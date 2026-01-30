@@ -1,14 +1,47 @@
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata, HardwareAcquisition, HardwareOutput
+from rattlesnake.hardware.hardware_utilities import HardwareType
+from rattlesnake.hardware.sdynpy_system import SDynPySystemMetadata
 from .mock_utilities import mock_channel_list
 import numpy as np
 from unittest import mock
 from enum import Enum
 
 
+# region: Import Locations
+def hardware_dict():
+    hardware_dict = {
+        HardwareType.NI_DAQMX: "rattlesnake.hardware.nidaqmx.NIDAQmxAcquisition",
+        HardwareType.LAN_XI: "rattlesnake.hardware.lanxi_hardware_multiprocessing.LanXIAcquisition",
+        HardwareType.DP_QUATTRO: "rattlesnake.hardware.data_physics_hardware.DataPhysicsAcquisition",
+        HardwareType.DP_900: "rattlesnake.hardware.data_physics_dp900_hardware.DataPhysicsDP900Acquisition",
+        HardwareType.EXODUS: "rattlesnake.hardwaare.exodus_modal_solution_hardware.ExodusAcquisition",
+        HardwareType.STATE_SPACE: "rattlesnake.hardware.state_space_virtual_hardware.StateSpaceAcquisition",
+        HardwareType.SDYNPY_SYSTEM: "rattlesnake.hardware.sdynpy_system.SDynPySystemAcquisition",
+        HardwareType.SDYNPY_FRF: "rattlesnake.hardware.sdynpy_frf_virtual_hardware.SDynPyFRFAcquisition",
+    }
+    return hardware_dict
+
+
+def metadata_attr_dict():
+    metadata_dict = {
+        HardwareType.NI_DAQMX: "",
+        HardwareType.LAN_XI: "",
+        HardwareType.DP_QUATTRO: "",
+        HardwareType.DP_900: "",
+        HardwareType.EXODUS: "",
+        HardwareType.STATE_SPACE: "",
+        HardwareType.SDYNPY_SYSTEM: SDynPySystemMetadata().extra_attr_list,
+        HardwareType.SDYNPY_FRF: "",
+    }
+    return metadata_dict
+
+
+# region: MockHardwareType
 class MockHardwareType(Enum):
     HARDWARE = 0
 
 
+# region: MockHardwareMetadata
 class MockHardwareMetadata(HardwareMetadata):
     def __init__(self):
         super().__init__(MockHardwareType.HARDWARE)
@@ -28,6 +61,7 @@ class MockHardwareMetadata(HardwareMetadata):
         return ["extra_attr"]
 
 
+# region: MockHardwareAcquisition
 class MockHardwareAcquisition(HardwareAcquisition):
     def __init__(self):
         super().__init__()
@@ -61,6 +95,7 @@ class MockHardwareAcquisition(HardwareAcquisition):
         return 0
 
 
+# region: MockHardwareOutput
 class MockHardwareOutput(HardwareOutput):
     def __init__(self):
         super().__init__()
