@@ -129,7 +129,7 @@ class Rattlesnake:
 
     def set_hardware(self, hardware_metadata: HardwareMetadata) -> None:
         # Check for valid states
-        if not self.state == RattlesnakeState.INIT or self.state == RattlesnakeState.ENVIRONMENT_STORE:
+        if self.state not in (RattlesnakeState.INIT, RattlesnakeState.HARDWARE_STORE, RattlesnakeState.ENVIRONMENT_STORE):
             raise RuntimeError(f"Invalid state for this setting hardware: {self.state}")
 
         valid_hardware = hardware_metadata.validate()
@@ -148,7 +148,7 @@ class Rattlesnake:
 
     def set_environments(self, environment_metadata_list: List[EnvironmentMetadata]):
         # Check for valid states
-        if not self.state == RattlesnakeState.HARDWARE_STORE or self.state == RattlesnakeState.ENVIRONMENT_STORE:
+        if self.state not in (RattlesnakeState.HARDWARE_STORE, RattlesnakeState.ENVIRONMENT_STORE):
             raise RuntimeError(f"Invalid state for setting environment: {self.state}")
 
         self.log("Setting Environment")
@@ -183,7 +183,7 @@ class Rattlesnake:
 
     def start_acquisition(self):
         # Check for basic issues
-        if not self.state == RattlesnakeState.ENVIRONMENT_STORE or self.state == RattlesnakeState.OUTPUT_START:
+        if self.state != RattlesnakeState.ENVIRONMENT_STORE:
             raise RuntimeError(f"Invalid state for starting acquisition: {self.state}")
         if not isinstance(self.stream_metadata, StreamMetadata):
             raise TypeError("Stream metadata must be defined before arming data acquisition")
@@ -203,7 +203,7 @@ class Rattlesnake:
         self.state = RattlesnakeState.ACQUISITION_START
 
     def stop_acquisition(self):
-        if not self.state == RattlesnakeState.ACQUISITION_START or self.state == RattlesnakeState.OUTPUT_START:
+        if self.state not in (RattlesnakeState.ACQUISITION_START, RattlesnakeState.OUTPUT_START):
             raise RuntimeError(f"Invalid state for stopping acquisition: {self.state}")
 
         self.log("Disarming Test Hardware")
@@ -215,7 +215,7 @@ class Rattlesnake:
 
     def start_profile(self):
         self.log("Starting Profile")
-        if not self.state == RattlesnakeState.ACQUISITION_START:
+        if self.state != RattlesnakeState.ACQUISITION_START:
             raise RuntimeError(f"Invalid state to start profile: {self.state}")
 
         if not self.profile_manager.profile_event_list:
