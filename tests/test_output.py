@@ -68,7 +68,7 @@ def test_output_process_initialize_environment(mock_log, output):
     hardware_metadata = MockHardwareMetadata()
     output.hardware_metadata = hardware_metadata
     environment_metadata = MockEnvironmentMetadata()
-    output.initialize_environment([environment_metadata])
+    output.initialize_environment({"Environment 0": environment_metadata})
 
     mock_log.assert_called_with("Initializing Environment")
     assert output.environment_list == ["Environment 0"]

@@ -35,7 +35,7 @@ def test_stream_metadata_init():
         (StreamType.MANUAL, None, None, True, ValueError),
         (StreamType.MANUAL, "filepath", None, False, ValueError),
         (StreamType.NO_STREAM, None, None, False, True),
-        (StreamType.STREAM_IMMEDIATELY, "filepath", None, True, True),
+        (StreamType.IMMEDIATELY, "filepath", None, True, True),
         (StreamType.TEST_LEVEL, "filepath", "Environment 0", True, True),
         (StreamType.TEST_LEVEL, "filepath", None, True, ValueError),
     ],
@@ -70,28 +70,43 @@ def test_streaming_init(use_thread):
     assert isinstance(streaming_process, AbstractMessageProcess)
 
 
+@pytest.mark.parametrize(
+    "stream_type",
+    [
+        StreamType.NO_STREAM,
+        StreamType.IMMEDIATELY,
+        StreamType.PROFILE_INSTRUCTION,
+        StreamType.TEST_LEVEL,
+        StreamType.MANUAL,
+    ],
+)
 @mock.patch("rattlesnake.process.streaming.nc.Dataset")
-def test_streaming_process_initialize(mock_dataset, streaming):
+def test_streaming_process_initialize(mock_dataset, stream_type, streaming):
     mock_dataset.return_value.createGroup.return_value = "Group Handle"
-    filename = "filename"
+    stream_metadata = StreamMetadata()
+    stream_metadata.stream_file = "filename"
+    stream_metadata.stream_type = stream_type
     hardware_metadata = MockHardwareMetadata()
     environment_metadata = MockEnvironmentMetadata()
     mock_store = mock.MagicMock()
     environment_metadata.store_to_netcdf = mock_store
-    environment_metadata_list = [environment_metadata]
-    data = (filename, hardware_metadata, environment_metadata_list)
+    environment_metadata_dict = {"Environment 0": environment_metadata}
+    data = (stream_metadata, hardware_metadata, environment_metadata_dict)
 
     streaming.initialize(data)
 
-    dimension_calls = [
-        mock.call("response_channels", 2),
-        mock.call("output_channels", 1),
-        mock.call("time_samples", None),
-        mock.call("num_environments", 1),
-    ]
-    mock_dataset.return_value.createDimension.assert_has_calls(dimension_calls)
-    assert streaming.netcdf_handle.sample_rate == 1000
-    mock_store.assert_called_once_with("Group Handle")
+    if stream_type == StreamType.NO_STREAM:
+        mock_dataset.return_value.createDimension.assert_not_called()
+    else:
+        dimension_calls = [
+            mock.call("response_channels", 2),
+            mock.call("output_channels", 1),
+            mock.call("time_samples", None),
+            mock.call("num_environments", 1),
+        ]
+        mock_dataset.return_value.createDimension.assert_has_calls(dimension_calls)
+        assert streaming.netcdf_handle.sample_rate == 1000
+        mock_store.assert_called_once_with("Group Handle")
 
 
 def test_streaming_process_write_data(streaming):

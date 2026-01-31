@@ -114,7 +114,14 @@ def test_environment_instructions_init():
 
     assert isinstance(environment_instructions, EnvironmentInstructions)
     assert hasattr(environment_instructions, "environment_type")
-    assert hasattr(environment_instructions, "queue_name")
+    assert hasattr(environment_instructions, "environment_name")
+
+
+def test_environment_instructions_validate():
+    environment_instructions = MockEnvironmentInstructions()
+
+    valid_instructions = environment_instructions.validate()
+    assert valid_instructions
 
 
 # region: EnvironmentProcess

@@ -3,8 +3,7 @@ from .environment.abstract_environment import EnvironmentInstructions
 from .environment.environment_utilities import ControlTypes
 from .environment.time_environment import TimeCommands
 import threading
-from enum import Enum
-from typing import List, Dict, Set
+from typing import List, Dict
 from datetime import datetime
 
 TASK_NAME = "Profile Manager"

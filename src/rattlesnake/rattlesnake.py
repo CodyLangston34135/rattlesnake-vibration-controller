@@ -84,7 +84,7 @@ class Rattlesnake:
         for env_idx in range(max_environments):
             environment_name = "Environment {:}".format(env_idx)
             environment_close_events[environment_name] = new_event()
-            environment_ready_events = new_event()
+            environment_ready_events[environment_name] = new_event()
             environment_command_queues[environment_name] = VerboseMessageQueue(
                 log_file_queue, mp.Queue(), self.controller_queue_name_manager, environment_name + " Command Queue"
             )

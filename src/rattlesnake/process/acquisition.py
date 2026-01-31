@@ -31,7 +31,7 @@ from ..user_interface.ui_utilities import UICommands
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
-from multiprocessing.synchronize import Event  # pylint: disable=unused-import
+import multiprocessing.synchronize  # pylint: disable=unused-import
 import queue as thqueue
 import numpy as np
 from time import time, sleep

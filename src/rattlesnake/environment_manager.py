@@ -4,7 +4,7 @@ from .environment.abstract_environment import EnvironmentMetadata, EnvironmentIn
 from .environment.environment_utilities import ControlTypes
 from .hardware.abstract_hardware import HardwareMetadata
 import multiprocessing as mp
-from multiprocessing.synchronize import Event  # pylint: disable=unused-import
+import multiprocessing.synchronize  # pylint: disable=unused-import
 import threading
 from datetime import datetime
 from typing import List, Dict

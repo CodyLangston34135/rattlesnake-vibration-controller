@@ -3,7 +3,7 @@ from ..utilities import QueueContainer, GlobalCommands
 from ..environment.abstract_environment import EnvironmentInstructions
 from .streaming import StreamMetadata, StreamType
 import multiprocessing as mp
-from multiprocessing.synchronize import Event  # pylint: disable=unused-import
+import multiprocessing.synchronize  # pylint: disable=unused-import
 
 
 TASK_NAME = "Controller"
@@ -59,7 +59,7 @@ class ControllerProcess(AbstractMessageProcess):
     def run_hardware(self, data: None):
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, None))
         self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, None))
-        if self.stream_metadata.stream_type == StreamType.STREAM_IMMEDIATELY:
+        if self.stream_metadata.stream_type == StreamType.IMMEDIATELY:
             self.start_streaming(None)
 
     def stop_hardware(self, data: None):

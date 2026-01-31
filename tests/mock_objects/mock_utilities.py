@@ -1,8 +1,11 @@
 from rattlesnake.hardware.hardware_utilities import Channel
-from rattlesnake.utilities import QueueContainer, VerboseMessageQueue
+from rattlesnake.utilities import QueueContainer, EventContainer, VerboseMessageQueue
 import multiprocessing as mp
+import threading
 import queue as thqueue
 from unittest import mock
+
+MAX_ENVIRONMENTS = 4
 
 
 def mock_channel_list():
@@ -28,13 +31,13 @@ def mock_queue_container(use_thread):
     controller_queue_name_manager = mp.Manager()
     log_file_queue = mp.Queue()
     controller_command_queue = VerboseMessageQueue(log_file_queue, new_queue(), controller_queue_name_manager, "Controller Command Queue")
-    acquisition_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), controller_queue_name_manager, "Acquisition Command Queue")
+    acquisition_command_queue = VerboseMessageQueue(log_file_queue, new_queue(), controller_queue_name_manager, "Acquisition Command Queue")
     output_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), controller_queue_name_manager, "Output Command Queue")
     streaming_command_queue = VerboseMessageQueue(log_file_queue, new_queue(), controller_queue_name_manager, "Streaming Command Queue")
     environment_command_queues = {}
     environment_data_in_queues = {}
     environment_data_out_queues = {}
-    for env_idx in range(4):
+    for env_idx in range(MAX_ENVIRONMENTS):
         environment_name = "Environment {:}".format(env_idx)
         environment_command_queues[environment_name] = VerboseMessageQueue(
             log_file_queue, mp.Queue(), controller_queue_name_manager, environment_name + " Command Queue"
@@ -60,6 +63,46 @@ def mock_queue_container(use_thread):
     )
 
     return queue_container
+
+
+def mock_event_container(use_thread):
+    if use_thread:
+        new_event = threading.Event
+    else:
+        new_event = mp.Event
+
+    log_close_event = mp.Event()
+    controller_close_event = new_event()
+    controller_ready_event = new_event()
+    acquisition_close_event = new_event()
+    acquisition_ready_event = new_event()
+    output_close_event = new_event()
+    output_ready_event = new_event()
+    streaming_close_event = new_event()
+    streaming_ready_event = new_event()
+
+    environment_close_events = {}
+    environment_ready_events = {}
+    for env_idx in range(MAX_ENVIRONMENTS):
+        environment_name = "Environment {:}".format(env_idx)
+        environment_close_events[environment_name] = new_event()
+        environment_ready_events[environment_name] = new_event()
+
+    event_container = EventContainer(
+        log_close_event,
+        controller_close_event,
+        acquisition_close_event,
+        output_close_event,
+        streaming_close_event,
+        environment_close_events,
+        controller_ready_event,
+        acquisition_ready_event,
+        output_ready_event,
+        streaming_ready_event,
+        environment_ready_events,
+    )
+
+    return event_container
 
 
 def fake_time():

@@ -29,7 +29,7 @@ from abc import ABC
 from datetime import datetime
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
-from multiprocessing.synchronize import Event  # pylint: disable=unused-import
+import multiprocessing.synchronize  # pylint: disable=unused-import
 import queue as thqueue
 
 

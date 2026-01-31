@@ -3,7 +3,7 @@ from rattlesnake.utilities import GlobalCommands
 from rattlesnake.environment.environment_utilities import ControlTypes
 from mock_objects.mock_hardware import MockHardwareMetadata
 from mock_objects.mock_environment import MockEnvironmentType, MockEnvironmentMetadata, MockEnvironmentInstructions
-from mock_objects.mock_utilities import mock_queue_container, fake_time
+from mock_objects.mock_utilities import mock_queue_container, mock_event_container, fake_time
 import pytest
 import multiprocessing as mp
 from unittest import mock
@@ -14,7 +14,10 @@ from unittest import mock
 def environment_manager(request):
     use_thread = request.param
     queue_container = mock_queue_container(use_thread)
-    environment_manager = EnvironmentManager(queue_container, use_thread)
+    event_container = mock_event_container(use_thread)
+    environment_manager = EnvironmentManager(
+        queue_container, event_container.environment_ready_events, event_container.environment_close_events, use_thread
+    )
 
     return environment_manager
 
@@ -23,7 +26,10 @@ def environment_manager(request):
 @pytest.mark.parametrize("use_thread", [True, False])
 def test_environment_manager_init(use_thread):
     queue_container = mock_queue_container(use_thread)
-    environment_manager = EnvironmentManager(queue_container, use_thread)
+    event_container = mock_event_container(use_thread)
+    environment_manager = EnvironmentManager(
+        queue_container, event_container.environment_ready_events, event_container.environment_close_events, use_thread
+    )
 
     assert isinstance(environment_manager, EnvironmentManager)
     assert environment_manager.threading == use_thread
@@ -95,11 +101,7 @@ def test_environment_manager_initialize_environment(existing_metadata, valid_met
     environment_manager.environment_metadata = metadata_dict
 
     mock_command_queue = mock.MagicMock()
-    mock_acquisition_queue = mock.MagicMock()
-    mock_output_queue = mock.MagicMock()
     environment_manager.queue_container.environment_command_queues["Environment 0"] = mock_command_queue
-    environment_manager.queue_container.acquisition_command_queue = mock_acquisition_queue
-    environment_manager.queue_container.output_command_queue = mock_output_queue
 
     environment_manager.add_environment = mock.MagicMock()
     environment_manager.remove_environment = mock.MagicMock()
@@ -120,34 +122,33 @@ def test_environment_manager_initialize_environment(existing_metadata, valid_met
         elif expected == "Remove":
             environment_manager.remove_environment.assert_called_with("Environment 1")
 
-        mock_acquisition_queue.put.assert_called()
-        mock_output_queue.put.assert_called()
-
 
 @pytest.mark.parametrize(
-    "queue_name, environment_type, expected",
+    "environment_name, environment_type, expected",
     [
-        ("Environment 0", MockEnvironmentType.ENVIRONMENT, True),
-        ("Environment 1", MockEnvironmentType.ENVIRONMENT, KeyError),
-        ("Environment 0", None, TypeError),
+        ("Mock Environment", MockEnvironmentType.ENVIRONMENT, True),
+        ("Wrong Name", MockEnvironmentType.ENVIRONMENT, KeyError),
+        ("Mock Environment", None, TypeError),
     ],
 )
-def test_environment_manager_validate_instructions(queue_name, environment_type, expected, environment_manager):
+def test_environment_manager_validate_instructions(environment_name, environment_type, expected, environment_manager):
     environment_instructions = MockEnvironmentInstructions()
-    environment_instructions.queue_name = queue_name
+    environment_instructions.environment_name = environment_name
     environment_instructions.environment_type = environment_type
+    environment_instructions_list = [environment_instructions]
     environment_manager.queue_names = ["Environment 0"]
+    environment_manager.environment_names = {"Environment 0": "Mock Environment"}
     environment_manager.environment_types = {"Environment 0": MockEnvironmentType.ENVIRONMENT}
 
     if expected is True:
-        valid_instruction = environment_manager.validate_environment_instructions(environment_instructions)
+        valid_instruction = environment_manager.validate_environment_instructions(environment_instructions_list)
         assert valid_instruction
     elif expected is KeyError:
         with pytest.raises(KeyError):
-            environment_manager.validate_environment_instructions(environment_instructions)
+            environment_manager.validate_environment_instructions(environment_instructions_list)
     elif expected is TypeError:
         with pytest.raises(TypeError):
-            environment_manager.validate_environment_instructions(environment_instructions)
+            environment_manager.validate_environment_instructions(environment_instructions_list)
 
 
 def test_environment_manager_clear_environment(environment_manager):
@@ -190,7 +191,7 @@ def test_environment_manager_add_environment(environment_type, environment_manag
         assert environment_manager.environment_names["Environment 0"] == "Mock Environment"
         assert environment_manager.environment_types["Environment 0"] == environment_type
         assert environment_manager.environment_processes["Environment 0"] == mock_process
-        assert environment_manager.environment_events["Environment 0"] == mock_event
+        assert not environment_manager.environment_close_events["Environment 0"].is_set()
         assert environment_manager.environment_metadata["Environment 0"] == metadata
         assert metadata.queue_name == "Environment 0"
 
@@ -211,7 +212,7 @@ def test_environment_manager_remove_environment(mock_time, is_alive, environment
     environment_manager.queue_container.log_file_queue = mock_log_file_queue
     environment_manager.queue_container.environment_command_queues["Environment 0"] = mock_command_queue
     environment_manager.environment_processes = {"Environment 0": mock_process}
-    environment_manager.environment_events = {"Environment 0": mock_event}
+    environment_manager.environment_close_events = {"Environment 0": mock_event}
     mock_time.now = fake_time
 
     environment_manager.remove_environment("Environment 0")
@@ -243,7 +244,7 @@ def test_environment_mananger_close_environment(mock_time, is_alive, environment
     environment_manager.queue_container.log_file_queue = mock_log_file_queue
     environment_manager.queue_container.environment_command_queues["Environment 0"] = mock_command_queue
     environment_manager.environment_processes = {"Environment 0": mock_process}
-    environment_manager.environment_events = {"Environment 0": mock_event}
+    environment_manager.environment_close_events = {"Environment 0": mock_event}
     mock_time.now = fake_time
 
     environment_manager.close_environments()

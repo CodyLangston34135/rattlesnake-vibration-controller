@@ -74,7 +74,7 @@ def test_acquisition_process_initialize_environment(mock_log, acquisition):
     hardware_metadata = MockHardwareMetadata()
     acquisition.hardware_metadata = hardware_metadata
     environment_metadata = MockEnvironmentMetadata()
-    acquisition.initialize_environment([environment_metadata])
+    acquisition.initialize_environment({"Environment 0": environment_metadata})
 
     mock_log.assert_called_with("Initializing Environment")
     assert acquisition.environment_list == ["Environment 0"]

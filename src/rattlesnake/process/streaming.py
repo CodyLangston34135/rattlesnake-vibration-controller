@@ -31,13 +31,13 @@ import numpy as np
 from pathlib import Path
 from typing import Dict
 from enum import Enum
-from multiprocessing.synchronize import Event  # pylint: disable=unused-import
+import multiprocessing.synchronize  # pylint: disable=unused-import
 
 
 # region: StreamType
 class StreamType(Enum):
     NO_STREAM = 0
-    STREAM_IMMEDIATELY = 1
+    IMMEDIATELY = 1
     PROFILE_INSTRUCTION = 2
     TEST_LEVEL = 3
     MANUAL = 4
@@ -133,7 +133,7 @@ class StreamingProcess(AbstractMessageProcess):
         self.stream_variable = "time_data"
         self.stream_dimension = "time_samples"
         self.stream_index = 0
-        self.netcdf_handle = nc.Dataset(stream_metadata.filename, "w", format="NETCDF4", clobber=True)  # pylint: disable=no-member
+        self.netcdf_handle = nc.Dataset(stream_metadata.stream_file, "w", format="NETCDF4", clobber=True)  # pylint: disable=no-member
         # Create dimensions
         self.netcdf_handle.createDimension("response_channels", len(hardware_metadata.channel_list))
         self.netcdf_handle.createDimension(

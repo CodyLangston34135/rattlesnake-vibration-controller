@@ -8,7 +8,7 @@ import os
 import netCDF4 as nc4
 import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
-from multiprocessing.synchronize import Event  # pylint: disable=unused-import
+import multiprocessing.synchronize  # pylint: disable=unused-import
 import multiprocessing.queues as mpqueue
 import queue as thqueue
 from datetime import datetime
