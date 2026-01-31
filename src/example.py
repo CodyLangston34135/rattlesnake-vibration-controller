@@ -112,9 +112,8 @@ def create_sdynpy_signal():
 
 def build_profile_event_list(environment_queue_name):
     timestamp = 1
-    queue_name = environment_queue_name
     command = GlobalCommands.START_STREAMING
-    profile_event_1 = ProfileEvent(timestamp, queue_name, command)
+    profile_event_1 = ProfileEvent(timestamp, "Global", command)
 
     timestamp = 2
     queue_name = environment_queue_name
@@ -127,29 +126,23 @@ def build_profile_event_list(environment_queue_name):
     profile_event_3 = ProfileEvent(timestamp, queue_name, command)
 
     timestamp = 8
-    queue_name = "Global"
     command = GlobalCommands.STOP_STREAMING
-    profile_event_4 = ProfileEvent(timestamp, queue_name, command)
+    profile_event_4 = ProfileEvent(timestamp, "Global", command)
 
     # timestamp = 8
-    # queue_name = "Global"
     # command = GlobalCommands.STOP_HARDWARE
-    # profile_event_5 = ProfileEvent(timestamp, queue_name, command)
+    # profile_event_5 = ProfileEvent(timestamp, "Global", command)
 
     profile_event_list = [profile_event_1, profile_event_2, profile_event_3, profile_event_4]
     return profile_event_list
 
 
 def main():
-    rattlesnake = Rattlesnake()
-
+    # HARDWARE METADATA
     # hardware_metadata = test_nidaq_metadata()
     hardware_metadata = test_sdynpy_metadata()
 
-    rattlesnake.set_hardware(hardware_metadata)
-    # time.sleep(2)
-
-    # Time Environment
+    # ENVIRONMENT METADATA LIST
     time_metadata = TimeMetadata("Time Environment 1")
     time_metadata.channel_list = hardware_metadata.channel_list
     time_metadata.sample_rate = 1000
@@ -161,28 +154,27 @@ def main():
 
     envrionment_metadata_list = [time_metadata]
 
-    rattlesnake.set_environments(envrionment_metadata_list)
-    environment_queue_name = "Environment 0"
-
+    # STREAM METADATA
     stream_metadata = StreamMetadata()
     stream_metadata.stream_type = StreamType.NO_STREAM
     stream_metadata.stream_file = None
     stream_metadata.test_level_environment_name = None
 
-    rattlesnake.set_stream(stream_metadata)
-
-    time_instructions = TimeInstructions(environment_queue_name)
+    # ENVIRONMENT INSTRUCTIONS LIST
+    time_instructions = TimeInstructions(time_metadata.environment_name)
     time_instructions.current_test_level = db2scale(0)
     time_instructions.repeat = False
     environment_instruction_list = [time_instructions]
 
-    profile_event_list = build_profile_event_list(environment_queue_name)
+    # PROFILE EVENT LIST
+    profile_event_list = build_profile_event_list(time_metadata.environment_name)
 
-    rattlesnake.set_profile(profile_event_list, environment_instruction_list)
-
-    rattlesnake.start_acquisition()
-
-    rattlesnake.start_profile()
+    # RATTLESNAKE CONTROLLER
+    rattlesnake = Rattlesnake()
+    rattlesnake.set_hardware(hardware_metadata)
+    rattlesnake.set_environments(envrionment_metadata_list)
+    rattlesnake.start_acquisition(stream_metadata)
+    rattlesnake.start_profile(profile_event_list, environment_instruction_list)
 
     app = QtWidgets.QApplication(sys.argv)
     _ = HeadlessUI(rattlesnake.queue_container, rattlesnake.hardware_metadata, rattlesnake.environment_metadata_dict, "Dark", True)
@@ -190,7 +182,6 @@ def main():
     # time.sleep(12)
 
     rattlesnake.stop_acquisition()
-
     rattlesnake.shutdown()
 
 

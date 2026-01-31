@@ -97,9 +97,6 @@ class TimeMetadata(EnvironmentMetadata):
         # Prevent duplicate entries
         super().validate()
 
-        if len(self.channel_list) != len(set(self.channel_list)):
-            raise ValueError(f"Duplicate channels found in {self.environment_name} channel_list")
-
         if not isinstance(self.cancel_rampdown_time, (int, float)) or self.cancel_rampdown_time <= 0:
             raise TypeError(f"{self.environment_name} sample_rate must be a number greater than 0")
 

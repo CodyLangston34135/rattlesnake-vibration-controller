@@ -1,23 +1,68 @@
 from .utilities import GlobalCommands
 from .environment.abstract_environment import EnvironmentInstructions
+from .environment.environment_utilities import ControlTypes
 from .environment.time_environment import TimeCommands
 import threading
-from typing import List, Dict
+from enum import Enum
+from typing import List, Dict, Set
 from datetime import datetime
 
 TASK_NAME = "Profile Manager"
+VALID_COMMANDS = {
+    "Global": (GlobalCommands.STOP_HARDWARE, GlobalCommands.START_STREAMING, GlobalCommands.STOP_STREAMING),
+    ControlTypes.TIME: (
+        GlobalCommands.START_ENVIRONMENT,
+        GlobalCommands.STOP_ENVIRONMENT,
+        TimeCommands.SET_TEST_LEVEL,
+        TimeCommands.SET_REPEAT,
+        TimeCommands.SET_NO_REPEAT,
+    ),
+}
+VALID_DATA = {TimeCommands.SET_TEST_LEVEL: (int, float)}
+REQUIRES_INSTRUCTIONS = [TimeCommands.SET_TEST_LEVEL, TimeCommands.SET_REPEAT, TimeCommands.SET_NO_REPEAT]
 
 
 # region: ProfileEvent
 class ProfileEvent:
-    def __init__(self, timestamp: float, queue_name: str, command, data=None):
-        try:
-            self.timestamp = float(timestamp)
-            self.queue_name = str(queue_name)
-            self.command = command
-            self.data = data
-        except ValueError as e:
-            print(f"Invalid type provided: {e}")
+    def __init__(self, timestamp: float, environment_name: str, command, data=None):
+        self.timestamp = timestamp
+        self.environment_name = environment_name
+        self.command = command
+        self.data = data
+        self._environment_type = None
+        self._queue_name = None
+
+    @property
+    def environment_type(self):
+        return self._environment_type
+
+    @property
+    def queue_name(self):
+        return self._queue_name
+
+    def validate(self):
+        # Check if environment_name is a string
+        if not isinstance(self.environment_name, str):
+            raise ValueError(f"{self.environment_name} is not a valid environment_name for a profile event")
+        # Check if timestamp is a number
+        if not isinstance(self.timestamp, (int, float)):
+            raise ValueError(f"{self.environment_name} profile event was not given a timestamp")
+        # Check if a valid environment_type was given
+        if self.environment_type not in VALID_COMMANDS.keys():
+            raise TypeError(f"{self.environment_name} not given a valid environment type: {self.environment_type}")
+        # Check if the environment_type has logic for that given command
+        if self.command not in VALID_COMMANDS[self.environment_type]:
+            raise TypeError(f"{self.command} is not a valid command for {self.environment_name}")
+        # Check if the environment_manager assigned a queue_name to the event yet
+        if not self.queue_name:
+            raise ValueError(f"{self.environment_name} was not given a valid queue_name before assignment")
+        # Validate data type going into command
+        if self.command in VALID_DATA.keys():
+            valid_data_type = VALID_DATA[self.command]
+            if not isinstance(self.data, valid_data_type):
+                raise TypeError(f"{self.command} profile event was provided {type(self.data)}, but requires {valid_data_type}.")
+
+        return True
 
 
 # region: ProfileManager
@@ -41,52 +86,36 @@ class ProfileManager:
         self.command_map[TimeCommands.SET_REPEAT] = self.set_repeat
         self.command_map[TimeCommands.SET_NO_REPEAT] = self.set_norepeat
 
-        self._global_commands = [GlobalCommands.STOP_HARDWARE, GlobalCommands.START_STREAMING, GlobalCommands.STOP_STREAMING]
-        self._instruction_commands = [TimeCommands.SET_TEST_LEVEL, TimeCommands.SET_REPEAT, TimeCommands.SET_NO_REPEAT]
+    def validate_profile_list(self, profile_event_list: List[ProfileEvent], environment_instructions_dict: Dict[str, EnvironmentInstructions]):
+        """Validate list of profile events. Since each event needs"""
 
-    @property
-    def global_commands(self):
-        return self._global_commands
-
-    def set_instruction(self, data: Dict[str, EnvironmentInstructions]):
-        self.log("Setting Environment Instructions")
-        self.environment_instructions = data
-
-    def set_profile_list(self, data: List[ProfileEvent]):
-        self.log("Setting Profile List")
-        profile_event_list = data
-        valid_profile = self.validate_profile_list(profile_event_list)
-
-        if not valid_profile:
-            raise TypeError("Rattlesnake.set_profile requires a valid list of ProfileEvents")
-
-        self.profile_event_list = profile_event_list
-
-    def validate_profile_list(self, profile_event_list: List[ProfileEvent]):
         for profile_event in profile_event_list:
+            # Validate profile event
+            valid_profile = profile_event.validate()
+            if not valid_profile:
+                raise TypeError("Rattlesnake.set_profile requires a valid list of ProfileEvents")
+
+            # Validate command has been implemented in profile_manager
+            environment_name = profile_event.environment_name
             queue_name = profile_event.queue_name
             command = profile_event.command
             if command not in self.command_map.keys():
                 raise KeyError(f"No profile event has been implemented for {profile_event.command}")
-            # Check if environments are assigned to commands that require them
-            if queue_name == "Global":
-                if command in self._global_commands:
-                    continue
-                else:
-                    raise KeyError(f"No environment assigned for {profile_event.command.name}")
-            # Check if instructions exist for that environment
-            if command in self._instruction_commands:
+            # Validate that instructions exist if command requires instructions
+            if command in REQUIRES_INSTRUCTIONS:
                 try:
-                    instruction = self.environment_instructions[queue_name]
+                    instruction = environment_instructions_dict[queue_name]
                 except KeyError:
-                    raise KeyError(f"There are no instructions for {queue_name} environment")
+                    raise KeyError(f"There are no instructions for {queue_name} environment. How did you get here?")
                 if instruction is None:
-                    raise TypeError(f"Invalid instructions for {queue_name} to complete {command} command.")
+                    raise TypeError(f"{command} requires an existing instructions for {environment_name}")
 
         return True
 
-    def start_profile(self):
+    def start_profile(self, profile_event_list: List[ProfileEvent], environment_instructions_dict: Dict[str, EnvironmentInstructions]):
         self.log("Starting Profile")
+        self.profile_event_list = profile_event_list
+        self.environment_instructions = environment_instructions_dict
         self.profile_timers = []
         for profile_event in self.profile_event_list:
             timestamp = profile_event.timestamp

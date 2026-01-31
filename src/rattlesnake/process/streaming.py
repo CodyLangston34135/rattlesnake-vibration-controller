@@ -57,7 +57,7 @@ class StreamMetadata:
             if not parent_dir.exists():
                 raise ValueError(f"The directory for the stream file does not exist: {parent_dir}")
 
-        # I do not check whether the environment_name corresponds to a valid environment. If it isn't,
+        # Does not check whether the environment_name corresponds to a valid environment. If it isn't,
         # the stream just wont start which isn't critical enough to warrant a restructure
         if self.stream_type == StreamType.TEST_LEVEL:
             if self.test_level_environment_name is None or not isinstance(self.test_level_environment_name, str):
@@ -68,13 +68,15 @@ class StreamMetadata:
 
 # region: StreamingProcess
 class StreamingProcess(AbstractMessageProcess):
-    """Class containing the functionality to stream data to disk.
+    """
+    Class containing the functionality to stream data to disk.
 
     This class will handle receiving data from the acquisition and saving it
     to a netCDF file."""
 
     def __init__(self, process_name: str, queue_container: QueueContainer):
-        """Constructor for the StreamingProcess class
+        """
+        Constructor for the StreamingProcess class
 
         Sets up the ``command_map`` and initializes all data members.
 
@@ -85,7 +87,6 @@ class StreamingProcess(AbstractMessageProcess):
         queue_container : QueueContainer
             A container containing the queues used to communicate between
             controller processes
-
         """
         super().__init__(
             process_name,
@@ -104,7 +105,8 @@ class StreamingProcess(AbstractMessageProcess):
         self.stream_index = 0
 
     def initialize(self, data):
-        """Creates a file with all metadata from the controller
+        """
+        Creates a file with all metadata from the controller
 
         Creates a netCDF4 dataset and stores all the global data acquisition
         parameters as well as the parameters from each environment.
@@ -112,20 +114,24 @@ class StreamingProcess(AbstractMessageProcess):
         Parameters
         ----------
         data : tuple
-            Tuple containing a string filename, global DataAcquisitionParameters
+            Tuple containing a StreamMetadata, HardwareMetadata, and EnviornmentMetadata
             defining the controller settings, and a dictionary containing the
             environment names as keys and the environment metadata (inheriting
             from AbstractMetadata) as values for each environment.
-
         """
-        filename: str
+        stream_metadata: StreamMetadata
         hardware_metadata: HardwareMetadata
         environment_metadata_dict: Dict[str, EnvironmentMetadata]
-        filename, hardware_metadata, environment_metadata_dict = data
+        stream_metadata, hardware_metadata, environment_metadata_dict = data
+
+        # Dont create file/filename is not guaranteed to exist
+        if stream_metadata.stream_type == StreamType.NO_STREAM:
+            return
+
         self.stream_variable = "time_data"
         self.stream_dimension = "time_samples"
         self.stream_index = 0
-        self.netcdf_handle = nc.Dataset(filename, "w", format="NETCDF4", clobber=True)  # pylint: disable=no-member
+        self.netcdf_handle = nc.Dataset(stream_metadata.filename, "w", format="NETCDF4", clobber=True)  # pylint: disable=no-member
         # Create dimensions
         self.netcdf_handle.createDimension("response_channels", len(hardware_metadata.channel_list))
         self.netcdf_handle.createDimension(
@@ -197,14 +203,13 @@ class StreamingProcess(AbstractMessageProcess):
             environment_metadata.store_to_netcdf(group_handle)
 
     def write_data(self, data):
-        """Writes data to an initialized netCDF file
+        """
+        Writes data to an initialized netCDF file
 
         Parameters
         ----------
         data : np.ndarray
             Data to be written to the netCDF file
-
-
         """
         if self.netcdf_handle is None:
             return
@@ -223,7 +228,8 @@ class StreamingProcess(AbstractMessageProcess):
         self.netcdf_handle.createVariable(self.stream_variable, "f8", ("response_channels", self.stream_dimension))
 
     def finalize(self, data):  # pylint: disable=unused-argument
-        """Closes the netCDF file when data writing is complete
+        """
+        Closes the netCDF file when data writing is complete
 
         Parameters
         ----------
@@ -237,7 +243,8 @@ class StreamingProcess(AbstractMessageProcess):
             self.netcdf_handle = None
 
     def quit(self, data):
-        """Stops the process.
+        """
+        Stops the process.
 
         Parameters
         ----------
@@ -252,7 +259,8 @@ class StreamingProcess(AbstractMessageProcess):
 
 # region: streaming_process
 def streaming_process(queue_container: QueueContainer, shutdown_event):
-    """Function passed to multiprocessing as the streaming process
+    """
+    Function passed to multiprocessing as the streaming process
 
     This process creates the ``StreamingProcess`` object and calls the ``run``
     command.
@@ -262,7 +270,6 @@ def streaming_process(queue_container: QueueContainer, shutdown_event):
     queue_container : QueueContainer
         A container containing the queues used to communicate between
         controller processes
-
     """
 
     streaming_instance = StreamingProcess("Streaming", queue_container)

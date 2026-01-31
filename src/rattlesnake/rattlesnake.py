@@ -97,36 +97,40 @@ class Rattlesnake:
             environment_data_out_queues,
         )
 
+        # Controller
         self.controller_event = new_event()
         self.controller_proc = new_process(
             target=controller_process,
             args=(self.queue_container, self.controller_event),
         )
         self.controller_proc.start()
+        # Acquisition
         self.acquisition_event = new_event()
         self.acquisition_proc = new_process(
             target=acquisition_process,
             args=(self.queue_container, self.acquisition_active, self.acquisition_event),
         )
         self.acquisition_proc.start()
+        # Output
         self.output_event = new_event()
         self.output_proc = new_process(target=output_process, args=(self.queue_container, self.output_active, self.output_event))
         self.output_proc.start()
+        # Streaming
         self.streaming_event = new_event()
         self.streaming_proc = new_process(target=streaming_process, args=(self.queue_container, self.streaming_event))
         self.streaming_proc.start()
 
-        # Set up environment manager for future environment processes
-        self.environment_manager = EnvironmentManager(self.queue_container, THREADING)
-
-        self.profile_manager = ProfileManager(self.queue_container.log_file_queue, self.queue_container.controller_command_queue)
-
-        self._hardware_metadata = None
+        # Set up managers that will setup processes and store metadata
+        self.environment_manager = EnvironmentManager(self.queue_container, THREADING)  # Contains hardware/environment metadata
         self._stream_metadata = StreamMetadata()  # Default to no stream
+        self.profile_manager = ProfileManager(
+            self.queue_container.log_file_queue, self.queue_container.controller_command_queue
+        )  # Contains instructions/profile events
 
+    # Metadata properties
     @property
     def hardware_metadata(self):
-        return self._hardware_metadata
+        return self.environment_manager.hardware_metadata
 
     @property
     def environment_metadata_dict(self):
@@ -145,77 +149,74 @@ class Rattlesnake:
         return self.profile_manager.profile_event_list
 
     def set_hardware(self, hardware_metadata: HardwareMetadata) -> None:
-        # Check for valid states
+        """Validates hardware_metadata and sends data to relevant processes"""
+        # Validate Rattlesnake State
         if self.state not in (RattlesnakeState.INIT, RattlesnakeState.HARDWARE_STORE, RattlesnakeState.ENVIRONMENT_STORE):
             raise RuntimeError(f"Invalid state for this setting hardware: {self.state}")
-
+        # Validate hardware
+        if not isinstance(hardware_metadata, HardwareMetadata):
+            raise TypeError("Rattlesnake.set_hardware requires a valid HardwareMetadata class")
         valid_hardware = hardware_metadata.validate()
         if not valid_hardware:
             raise TypeError("Rattlesnake.set_hardware requires a valid HardwareMetadata class")
 
+        # Send hardware metadata to the correct processes
         self.log("Setting Hardware")
-        self._hardware_metadata = hardware_metadata
-
         self.environment_manager.initialize_hardware(hardware_metadata)
-
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata))
         self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata))
 
         self.state = RattlesnakeState.HARDWARE_STORE
 
     def set_environments(self, environment_metadata_list: List[EnvironmentMetadata]):
-        # Check for valid states
+        """Validates environment_metadata, starts up environment processes, assigns queues,
+        and sends data to relevant processes"""
+        # Validate Rattlesnake State
         if self.state not in (RattlesnakeState.HARDWARE_STORE, RattlesnakeState.ENVIRONMENT_STORE):
             raise RuntimeError(f"Invalid state for setting environment: {self.state}")
+        # Validate environment metadata list
+        self.environment_manager.validate_environment_metadata(environment_metadata_list)
 
+        # Send environment meetadata to correct processes
         self.log("Setting Environment")
-
         self.environment_manager.initialize_environments(environment_metadata_list, self.acquisition_active, self.output_active)
+        self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_metadata_dict))
+        self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_metadata_dict))
 
-        # If removed all environments
+        # Check if this removed all the environmetns or not
         if not self.environment_metadata_dict:
             self.state = RattlesnakeState.HARDWARE_STORE
         else:
             self.state = RattlesnakeState.ENVIRONMENT_STORE
 
-    def set_stream(self, stream_metadata: StreamMetadata):
+    def start_acquisition(self, stream_metadata: StreamMetadata):
+        # Validate Rattlesnake State
+        if self.state != RattlesnakeState.ENVIRONMENT_STORE:
+            raise RuntimeError(f"Invalid state for starting acquisition: {self.state}")
+        # Validate stream metadata
+        if not isinstance(self.stream_metadata, StreamMetadata):
+            raise TypeError("Rattlesnake.set_stream requires a valid StreamMetadata class")
         valid_stream = stream_metadata.validate()
         if not valid_stream:
             raise TypeError("Rattlesnake.set_stream requires a valid StreamMetadata class")
 
+        # Store streaming metadata to controller (side note: ControllerProcess decides when/why to stream not StreamingProcess)
         self.log("Setting Stream Metadata")
         self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_STREAMING, stream_metadata))
+        self.queue_container.streaming_command_queue.put(
+            TASK_NAME,
+            (GlobalCommands.INITIALIZE_STREAMING, (self.stream_metadata, self.hardware_metadata, self.environment_metadata_dict)),
+        )
         self._stream_metadata = stream_metadata
 
-    def set_profile(self, profile_event_list: List[ProfileEvent], environment_instructions_list: List[EnvironmentInstructions]):
-        self.log("Settting Profile Event List")
-
-        environment_instructions_dict = self.environment_manager.build_environment_instructions_dict(environment_instructions_list)
-        self.profile_manager.set_instruction(environment_instructions_dict)
-        self.profile_manager.set_profile_list(profile_event_list)
-
-    def start_acquisition(self):
-        # Check for basic issues
-        if self.state != RattlesnakeState.ENVIRONMENT_STORE:
-            raise RuntimeError(f"Invalid state for starting acquisition: {self.state}")
-        if not isinstance(self.stream_metadata, StreamMetadata):
-            raise TypeError("Stream metadata must be defined before arming data acquisition")
-
+        # Tell controller to start up the hardware, controller takes over logic from here
         self.log("Arming Test Hardware")
         self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, None))
-
-        if self.stream_metadata.stream_type != StreamType.NO_STREAM:
-            self.queue_container.streaming_command_queue.put(
-                TASK_NAME,
-                (GlobalCommands.INITIALIZE_STREAMING, (self.stream_metadata.stream_file, self.hardware_metadata, self.environment_metadata_dict)),
-            )
-
-        if self.stream_metadata.stream_type == StreamType.STREAM_IMMEDIATELY:
-            self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.START_STREAMING, None))
 
         self.state = RattlesnakeState.ACQUISITION_START
 
     def stop_acquisition(self):
+        # Validate rattlesnake state (rattlesnake was acquiring data)
         if self.state not in (RattlesnakeState.ACQUISITION_START, RattlesnakeState.OUTPUT_START):
             raise RuntimeError(f"Invalid state for stopping acquisition: {self.state}")
 
@@ -226,16 +227,19 @@ class Rattlesnake:
 
         self.state = RattlesnakeState.ENVIRONMENT_STORE
 
-    def start_profile(self):
-        self.log("Starting Profile")
+    def start_profile(self, profile_event_list: List[ProfileEvent], environment_instructions_list: List[EnvironmentInstructions]):
+        self.log("Settting Profile Event List")
         if self.state != RattlesnakeState.ACQUISITION_START:
             raise RuntimeError(f"Invalid state to start profile: {self.state}")
 
-        if not self.profile_manager.profile_event_list:
-            print("No profile has been stored to Rattlesnake. Start_profile aborted")
-            return
+        # Validate and assign queue_names to events and instructions
+        environment_instructions_dict = self.environment_manager.validate_environment_instructions(environment_instructions_list)
+        self.environment_manager.validate_profile_events(profile_event_list)
+        self.profile_manager.validate_profile_list(profile_event_list, environment_instructions_dict)
 
-        self.profile_manager.start_profile()
+        # Start profile
+        self.log("Starting Profile")
+        self.profile_manager.start_profile(profile_event_list, environment_instructions_dict)
 
     def stop_profile(self):
         self.log("Stopping Profile")

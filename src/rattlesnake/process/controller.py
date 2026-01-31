@@ -9,12 +9,15 @@ TASK_NAME = "Controller"
 
 # region: ControllerProcess
 class ControllerProcess(AbstractMessageProcess):
-    """Class defining behavior during the ACQUISITION_START/OUTPUT_START states of Rattlesnake
+    """Class defining behavior during the OUTPUT_START states of Rattlesnake.
 
-    This class mainly recieves commands from controller_communication_queue and sends those
-    commands to the correct processes that need them. This basically handles profile events
-    so that the main controller is not caught up in a processing loop while data is being
-    collected.
+    This class recieves commands from controller_command_queue and sends those
+    commands to the correct processes that need them. These commands should be
+    sent from the Rattlesnake() class or ProfileManager() class to avoid
+    confusion. The main goal for this class is to automatically perform tasks
+    that the user would usually do in the UI.
+
+    This class is also in charge of the stream_process
 
     See AbstractMesssageProcess for inherited class members.
     """
@@ -54,6 +57,8 @@ class ControllerProcess(AbstractMessageProcess):
     def run_hardware(self, data: None):
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, None))
         self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, None))
+        if self.stream_metadata.stream_type == StreamType.STREAM_IMMEDIATELY:
+            self.start_streaming(None)
 
     def stop_hardware(self, data: None):
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))

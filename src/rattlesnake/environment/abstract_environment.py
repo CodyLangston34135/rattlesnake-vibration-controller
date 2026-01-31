@@ -87,6 +87,9 @@ class EnvironmentMetadata(ABC):
         if not isinstance(self.environment_name, str):
             raise TypeError(f"{self.environment_name} must be a string")
 
+        if len(self.channel_list) != len(set(self.channel_list)):
+            raise ValueError(f"Duplicate channels found in {self.environment_name} channel_list")
+
         return True
 
     @abstractmethod
@@ -149,7 +152,7 @@ class EnvironmentInstructions(ABC):
         EnvironmentProcess
     """
 
-    def __init__(self, environment_type, queue_name):
+    def __init__(self, environment_type, environment_name):
         """
         Initializes the environment instructions class with attributes
         that will be defined to the run tab of the environment ui. These
@@ -165,7 +168,16 @@ class EnvironmentInstructions(ABC):
         so that the instructions class is passed to the correct environment.
         """
         self.environment_type = environment_type
-        self.queue_name = queue_name
+        self.environment_name = environment_name
+
+    def validate(self) -> True:
+        """
+        Validates the instruction to make sure that it will work with a
+        given environment. Should throw errors describing why that
+        instruction is invalid. Returns True which is enforced by the
+        EnvironmentManager
+        """
+        return True
 
 
 # region: EnvironmentProcess
