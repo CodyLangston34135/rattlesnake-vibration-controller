@@ -98,7 +98,7 @@ def create_sdynpy_signal():
     num_rows = 3
     num_samples = 10000
     sample_rate = 1000  # Hz
-    frequency = 5  # Hz sine wave
+    frequency = 2  # Hz sine wave
 
     # Create time vector
     t = np.arange(num_samples) / sample_rate

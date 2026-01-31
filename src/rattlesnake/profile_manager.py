@@ -88,7 +88,6 @@ class ProfileManager:
 
     def validate_profile_list(self, profile_event_list: List[ProfileEvent], environment_instructions_dict: Dict[str, EnvironmentInstructions]):
         """Validate list of profile events. Since each event needs"""
-
         for profile_event in profile_event_list:
             # Validate profile event
             valid_profile = profile_event.validate()
@@ -110,6 +109,9 @@ class ProfileManager:
                 if instruction is None:
                     raise TypeError(f"{command} requires an existing instructions for {environment_name}")
 
+        # Sort profile_event_list by timestamp
+        profile_event_list.sort(key=lambda event: event.timestamp)
+
         return True
 
     def start_profile(self, profile_event_list: List[ProfileEvent], environment_instructions_dict: Dict[str, EnvironmentInstructions]):
@@ -118,10 +120,13 @@ class ProfileManager:
         self.environment_instructions = environment_instructions_dict
         self.profile_timers = []
         for profile_event in self.profile_event_list:
+            # Expand data
             timestamp = profile_event.timestamp
             queue_name = profile_event.queue_name
             command = profile_event.command
             data = profile_event.data
+
+            # Fire event
             timer = threading.Timer(timestamp, self.fire_profile_event, args=(queue_name, command, data))
             timer.start()
             self.profile_timers.append(timer)
