@@ -89,17 +89,17 @@ def mock_event_container(use_thread):
         environment_ready_events[environment_name] = new_event()
 
     event_container = EventContainer(
+        controller_ready_event,
+        acquisition_ready_event,
+        output_ready_event,
+        streaming_ready_event,
+        environment_ready_events,
         log_close_event,
         controller_close_event,
         acquisition_close_event,
         output_close_event,
         streaming_close_event,
         environment_close_events,
-        controller_ready_event,
-        acquisition_ready_event,
-        output_ready_event,
-        streaming_ready_event,
-        environment_ready_events,
     )
 
     return event_container

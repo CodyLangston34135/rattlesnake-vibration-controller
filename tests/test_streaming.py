@@ -2,7 +2,7 @@ from rattlesnake.process.streaming import StreamType, StreamMetadata, StreamingP
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from mock_objects.mock_hardware import MockHardwareMetadata
 from mock_objects.mock_environment import MockEnvironmentMetadata
-from mock_objects.mock_utilities import mock_queue_container
+from mock_objects.mock_utilities import mock_queue_container, mock_event_container
 import pytest
 import numpy as np
 import multiprocessing as mp
@@ -14,7 +14,8 @@ from unittest import mock
 def streaming(request):
     use_thread = request.param
     queue_container = mock_queue_container(use_thread)
-    streaming_process = StreamingProcess("Process Name", queue_container)
+    event_container = mock_event_container(use_thread)
+    streaming_process = StreamingProcess("Process Name", queue_container, event_container.streaming_ready_event)
     return streaming_process
 
 
@@ -63,7 +64,8 @@ def test_stream_metadata_validate(mock_path, stream_type, stream_file, test_leve
 @pytest.mark.parametrize("use_thread", [True, False])
 def test_streaming_init(use_thread):
     queue_container = mock_queue_container(use_thread)
-    streaming_process = StreamingProcess("Process Name", queue_container)
+    event_container = mock_event_container(use_thread)
+    streaming_process = StreamingProcess("Process Name", queue_container, event_container.streaming_ready_event)
 
     # Test if object is the correct class
     assert isinstance(streaming_process, StreamingProcess)
@@ -184,8 +186,8 @@ def test_streaming_process_quit(mock_finalize, streaming):
 @mock.patch("rattlesnake.process.streaming.StreamingProcess")
 def test_output_process_func(mock_stream, use_thread):
     queue_container = mock_queue_container(use_thread)
-    shutdown_event = mp.Event()
-    streaming_process(queue_container, shutdown_event)
+    event_container = mock_event_container(use_thread)
+    streaming_process(queue_container, event_container.streaming_ready_event, event_container.streaming_close_event)
 
     mock_instance = mock_stream.return_value
     mock_instance.run.assert_called()

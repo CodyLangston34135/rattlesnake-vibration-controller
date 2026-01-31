@@ -60,6 +60,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         self,
         process_name: str,
         queue_container: QueueContainer,
+        ready_event: mp.synchronize.Event,
         acquisition_active: mp.sharedctypes.Synchronized,
     ):
         """
@@ -85,6 +86,7 @@ class AcquisitionProcess(AbstractMessageProcess):
             queue_container.log_file_queue,
             queue_container.acquisition_command_queue,
             queue_container.gui_update_queue,
+            ready_event,
         )
         self.map_command(GlobalCommands.INITIALIZE_HARDWARE, self.initialize_hardware)
         self.map_command(GlobalCommands.RUN_HARDWARE, self.acquire_signal)
@@ -553,7 +555,12 @@ class AcquisitionProcess(AbstractMessageProcess):
 
 
 # region: acquisition_process
-def acquisition_process(queue_container: QueueContainer, acquisition_active: mp.sharedctypes.Synchronized, shutdown_event: mp.synchronize.Event):
+def acquisition_process(
+    queue_container: QueueContainer,
+    acquisition_active: mp.sharedctypes.Synchronized,
+    ready_event: mp.synchronize.Event,
+    shutdown_event: mp.synchronize.Event,
+):
     """Function passed to multiprocessing as the acquisition process
 
     This process creates the ``AcquisitionProcess`` object and calls the ``run``
@@ -567,6 +574,6 @@ def acquisition_process(queue_container: QueueContainer, acquisition_active: mp.
 
     """
 
-    acquisition_instance = AcquisitionProcess(TASK_NAME, queue_container, acquisition_active)
+    acquisition_instance = AcquisitionProcess(TASK_NAME, queue_container, ready_event, acquisition_active)
 
     acquisition_instance.run(shutdown_event)

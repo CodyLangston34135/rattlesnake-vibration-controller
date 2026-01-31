@@ -109,39 +109,61 @@ class Rattlesnake:
             environment_data_out_queues,
         )
         self.event_container = EventContainer(
+            controller_ready_event,
+            acquisition_ready_event,
+            output_ready_event,
+            streaming_ready_event,
+            environment_ready_events,
             log_close_event,
             controller_close_event,
             acquisition_close_event,
             output_close_event,
             streaming_close_event,
             environment_close_events,
-            controller_ready_event,
-            acquisition_ready_event,
-            output_ready_event,
-            streaming_ready_event,
-            environment_ready_events,
         )
 
         # Controller
         self.controller_proc = new_process(
             target=controller_process,
-            args=(self.queue_container, self.event_container.controller_close_event),
+            args=(
+                self.queue_container,
+                self.event_container.controller_ready_event,
+                self.event_container.controller_close_event,
+            ),
         )
         self.controller_proc.start()
         # Acquisition
         self.acquisition_proc = new_process(
             target=acquisition_process,
-            args=(self.queue_container, self.acquisition_active, self.event_container.acquisition_close_event),
+            args=(
+                self.queue_container,
+                self.acquisition_active,
+                self.event_container.acquisition_ready_event,
+                self.event_container.acquisition_close_event,
+            ),
         )
         self.acquisition_proc.start()
         # Output
 
         self.output_proc = new_process(
-            target=output_process, args=(self.queue_container, self.output_active, self.event_container.output_close_event)
+            target=output_process,
+            args=(
+                self.queue_container,
+                self.output_active,
+                self.event_container.output_ready_event,
+                self.event_container.output_close_event,
+            ),
         )
         self.output_proc.start()
         # Streaming
-        self.streaming_proc = new_process(target=streaming_process, args=(self.queue_container, self.event_container.streaming_close_event))
+        self.streaming_proc = new_process(
+            target=streaming_process,
+            args=(
+                self.queue_container,
+                self.event_container.streaming_ready_event,
+                self.event_container.streaming_close_event,
+            ),
+        )
         self.streaming_proc.start()
 
         # Set up managers that will setup processes and store metadata

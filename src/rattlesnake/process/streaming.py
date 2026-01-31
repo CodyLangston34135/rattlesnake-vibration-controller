@@ -76,7 +76,12 @@ class StreamingProcess(AbstractMessageProcess):
     This class will handle receiving data from the acquisition and saving it
     to a netCDF file."""
 
-    def __init__(self, process_name: str, queue_container: QueueContainer):
+    def __init__(
+        self,
+        process_name: str,
+        queue_container: QueueContainer,
+        ready_event: mp.synchronize.Event,
+    ):
         """
         Constructor for the StreamingProcess class
 
@@ -95,6 +100,7 @@ class StreamingProcess(AbstractMessageProcess):
             queue_container.log_file_queue,
             queue_container.streaming_command_queue,
             queue_container.gui_update_queue,
+            ready_event,
         )
         self.map_command(GlobalCommands.INITIALIZE_STREAMING, self.initialize)
         self.map_command(GlobalCommands.STREAMING_DATA, self.write_data)
@@ -260,7 +266,11 @@ class StreamingProcess(AbstractMessageProcess):
 
 
 # region: streaming_process
-def streaming_process(queue_container: QueueContainer, shutdown_event: mp.synchronize.Event):
+def streaming_process(
+    queue_container: QueueContainer,
+    ready_event: mp.synchronize.Event,
+    shutdown_event: mp.synchronize.Event,
+):
     """
     Function passed to multiprocessing as the streaming process
 
@@ -274,6 +284,6 @@ def streaming_process(queue_container: QueueContainer, shutdown_event: mp.synchr
         controller processes
     """
 
-    streaming_instance = StreamingProcess("Streaming", queue_container)
+    streaming_instance = StreamingProcess("Streaming", queue_container, ready_event)
 
     streaming_instance.run(shutdown_event)

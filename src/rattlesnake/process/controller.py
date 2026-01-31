@@ -24,7 +24,12 @@ class ControllerProcess(AbstractMessageProcess):
     See AbstractMesssageProcess for inherited class members.
     """
 
-    def __init__(self, process_name: str, queue_container: QueueContainer):
+    def __init__(
+        self,
+        process_name: str,
+        queue_container: QueueContainer,
+        ready_event: mp.synchronize.Event,
+    ):
         """Constructor for the Controller class
 
         Sets up the ``command_map`` and initializes all data members.
@@ -43,6 +48,7 @@ class ControllerProcess(AbstractMessageProcess):
             queue_container.log_file_queue,
             queue_container.controller_command_queue,
             queue_container.gui_update_queue,
+            ready_event,
         )
         self.queue_container = queue_container
         self.environment_instructions = {}
@@ -91,7 +97,11 @@ class ControllerProcess(AbstractMessageProcess):
 
 
 # region: controller_process
-def controller_process(queue_container: QueueContainer, shutdown_event: mp.synchronize.Event):
+def controller_process(
+    queue_container: QueueContainer,
+    ready_event: mp.synchronize.Event,
+    shutdown_event: mp.synchronize.Event,
+):
     """Function passed to multiprocessing as the controller process
 
     This process creates the ``Controller`` object and calls the ``run``
@@ -105,6 +115,6 @@ def controller_process(queue_container: QueueContainer, shutdown_event: mp.synch
 
     """
 
-    acquisition_instance = ControllerProcess(TASK_NAME, queue_container)
+    acquisition_instance = ControllerProcess(TASK_NAME, queue_container, ready_event)
 
     acquisition_instance.run(shutdown_event)

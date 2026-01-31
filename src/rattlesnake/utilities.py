@@ -274,18 +274,24 @@ class QueueContainer:
 class EventContainer:
     def __init__(
         self,
+        controller_ready_event: mp.synchronize.Event,
+        acquisition_ready_event: mp.synchronize.Event,
+        output_ready_event: mp.synchronize.Event,
+        streaming_ready_event: mp.synchronize.Event,
+        environment_ready_events: Dict[str, mp.synchronize.Event],
         log_close_event: mp.synchronize.Event,
         controller_close_event: mp.synchronize.Event,
         acquisition_close_event: mp.synchronize.Event,
         output_close_event: mp.synchronize.Event,
         streaming_close_event: mp.synchronize.Event,
         environment_close_events: Dict[str, mp.synchronize.Event],
-        controller_ready_event: mp.synchronize.Event,
-        acquisition_ready_event: mp.synchronize.Event,
-        output_ready_event: mp.synchronize.Event,
-        streaming_ready_event: mp.synchronize.Event,
-        environment_ready_events: Dict[str, mp.synchronize.Event],
     ):
+        # Ready Events
+        self.controller_ready_event = controller_ready_event
+        self.acquisition_ready_event = acquisition_ready_event
+        self.output_ready_event = output_ready_event
+        self.streaming_ready_event = streaming_ready_event
+        self.environment_ready_events = environment_ready_events
         # Close Events
         self.log_close_event = log_close_event
         self.controller_close_event = controller_close_event
@@ -293,12 +299,6 @@ class EventContainer:
         self.output_close_event = output_close_event
         self.streaming_close_event = streaming_close_event
         self.environment_close_events = environment_close_events
-        # Ready Events
-        self.controller_ready_event = controller_ready_event
-        self.acquisition_ready_event = acquisition_ready_event
-        self.output_ready_event = output_ready_event
-        self.streaming_ready_event = streaming_ready_event
-        self.environment_ready_events = environment_ready_events
 
 
 def flush_queue(queue, timeout=None):

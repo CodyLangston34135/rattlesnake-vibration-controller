@@ -1,6 +1,6 @@
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.utilities import GlobalCommands
-from mock_objects.mock_utilities import mock_queue_container, fake_time
+from mock_objects.mock_utilities import mock_queue_container, mock_event_container, fake_time
 import pytest
 import multiprocessing as mp
 from unittest import mock
@@ -11,8 +11,13 @@ from unittest import mock
 def abstract_message_process(request):
     use_thread = request.param
     queue_container = mock_queue_container(use_thread)
+    event_container = mock_event_container(use_thread)
     abstract_message_process = AbstractMessageProcess(
-        "Process Name", queue_container.log_file_queue, queue_container.controller_command_queue, queue_container.gui_update_queue
+        "Process Name",
+        queue_container.log_file_queue,
+        queue_container.controller_command_queue,
+        queue_container.gui_update_queue,
+        event_container.controller_ready_event,
     )
     return abstract_message_process
 
@@ -21,8 +26,13 @@ def abstract_message_process(request):
 @pytest.mark.parametrize("use_thread", [True, False])
 def test_message_process_init(use_thread):
     queue_container = mock_queue_container(use_thread)
+    event_container = mock_event_container(use_thread)
     abstract_message_process = AbstractMessageProcess(
-        "Process Name", queue_container.log_file_queue, queue_container.controller_command_queue, queue_container.gui_update_queue
+        "Process Name",
+        queue_container.log_file_queue,
+        queue_container.controller_command_queue,
+        queue_container.gui_update_queue,
+        event_container.controller_ready_event,
     )
 
     assert isinstance(abstract_message_process, AbstractMessageProcess)

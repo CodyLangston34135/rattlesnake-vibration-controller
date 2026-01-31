@@ -4,7 +4,7 @@ from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.utilities import GlobalCommands
 from mock_objects.mock_hardware import MockHardwareMetadata, output_dict, metadata_attr_dict, UNIMPLEMENTED_HARDWARE
 from mock_objects.mock_environment import MockEnvironmentMetadata
-from mock_objects.mock_utilities import mock_queue_container
+from mock_objects.mock_utilities import mock_queue_container, mock_event_container
 import pytest
 import multiprocessing as mp
 import numpy as np
@@ -19,8 +19,9 @@ IMPLEMENTED_HARDWARE = [hardware for hardware in HardwareType if hardware not in
 def output(request):
     use_thread = request.param
     queue_container = mock_queue_container(use_thread)
+    event_container = mock_event_container(use_thread)
     output_active = mp.Value("i", 0)
-    output = OutputProcess("Process Name", queue_container, output_active)
+    output = OutputProcess("Process Name", queue_container, event_container.output_ready_event, output_active)
     return output
 
 
@@ -29,8 +30,9 @@ def output(request):
 @pytest.mark.parametrize("use_thread", [True, False])
 def test_output_init(use_thread):
     queue_container = mock_queue_container(use_thread)
+    event_container = mock_event_container(use_thread)
     output_active = mp.Value("i", 0)
-    output = OutputProcess("Process Name", queue_container, output_active)
+    output = OutputProcess("Process Name", queue_container, event_container.output_ready_event, output_active)
 
     # Make sure it is the correct class
     assert isinstance(output, OutputProcess)
@@ -126,9 +128,9 @@ def test_output_process_quit(mock_log, mock_flush, output):
 @mock.patch("rattlesnake.process.output.OutputProcess")
 def test_output_process_func(mock_output, use_thread):
     queue_container = mock_queue_container(use_thread)
+    event_container = mock_event_container(use_thread)
     output_active = mp.Value("i", 0)
-    shutdown_event = mp.Event()
-    output_process(queue_container, output_active, shutdown_event)
+    output_process(queue_container, output_active, event_container.output_ready_event, event_container.output_close_event)
 
     mock_instance = mock_output.return_value
     mock_instance.run.assert_called()

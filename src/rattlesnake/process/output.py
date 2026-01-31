@@ -60,6 +60,7 @@ class OutputProcess(AbstractMessageProcess):
         self,
         process_name: str,
         queue_container: QueueContainer,
+        ready_event: mp.synchronize.Event,
         output_active: mp.sharedctypes.Synchronized,
     ):
         """
@@ -80,6 +81,7 @@ class OutputProcess(AbstractMessageProcess):
             queue_container.log_file_queue,
             queue_container.output_command_queue,
             queue_container.gui_update_queue,
+            ready_event,
         )
         self.map_command(GlobalCommands.INITIALIZE_HARDWARE, self.initialize_hardware)
         self.map_command(GlobalCommands.RUN_HARDWARE, self.output_signal)
@@ -449,7 +451,12 @@ class OutputProcess(AbstractMessageProcess):
 
 
 # region: output_process
-def output_process(queue_container: QueueContainer, output_active: mp.sharedctypes.Synchronized, shutdown_event: mp.synchronize.Event):
+def output_process(
+    queue_container: QueueContainer,
+    output_active: mp.sharedctypes.Synchronized,
+    ready_event: mp.synchronize.Event,
+    shutdown_event: mp.synchronize.Event,
+):
     """Function passed to multiprocessing as the output process
 
     This process creates the ``OutputProcess`` object and calls the ``run``
@@ -466,6 +473,6 @@ def output_process(queue_container: QueueContainer, output_active: mp.sharedctyp
 
     """
 
-    output_instance = OutputProcess(TASK_NAME, queue_container, output_active)
+    output_instance = OutputProcess(TASK_NAME, queue_container, ready_event, output_active)
 
     output_instance.run(shutdown_event)

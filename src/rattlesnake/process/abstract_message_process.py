@@ -48,6 +48,7 @@ class AbstractMessageProcess(ABC):
         log_file_queue: mp.Queue,
         command_queue: VerboseMessageQueue,
         gui_update_queue: mp.Queue,
+        ready_event: mp.synchronize.Event,
     ):
         """
         Constructor for the AbstractMessageProcess class.
@@ -71,6 +72,8 @@ class AbstractMessageProcess(ABC):
         self._log_file_queue = log_file_queue
         self._gui_update_queue = gui_update_queue
         self._command_queue = command_queue
+        self._ready_event = ready_event
+        self.set_ready()
         self._command_map = {GlobalCommands.QUIT: self.quit}
 
     def log(self, message):
@@ -105,6 +108,12 @@ class AbstractMessageProcess(ABC):
     def gui_update_queue(self) -> mp.Queue:
         """Queue to which GUI update instructions will be written."""
         return self._gui_update_queue
+
+    def set_ready(self):
+        self._ready_event.set()
+
+    def clear_ready(self):
+        self._ready_event.clear()
 
     def map_command(self, key, function):
         """Maps commands to instructions

@@ -5,7 +5,7 @@ from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.utilities import GlobalCommands
 from mock_objects.mock_hardware import MockHardwareMetadata, acquisition_dict, metadata_attr_dict, UNIMPLEMENTED_HARDWARE
 from mock_objects.mock_environment import MockEnvironmentMetadata
-from mock_objects.mock_utilities import mock_queue_container
+from mock_objects.mock_utilities import mock_queue_container, mock_event_container
 import pytest
 import multiprocessing as mp
 import numpy as np
@@ -20,8 +20,14 @@ IMPLEMENTED_HARDWARE = [hardware for hardware in HardwareType if hardware not in
 def acquisition(request):
     use_thread = request.param
     queue_container = mock_queue_container(use_thread)
+    event_container = mock_event_container(use_thread)
     acquisition_active = mp.Value("i", 0)
-    acquisition = AcquisitionProcess("Process Name", queue_container, acquisition_active)
+    acquisition = AcquisitionProcess(
+        "Process Name",
+        queue_container,
+        event_container.acquisition_ready_event,
+        acquisition_active,
+    )
     return acquisition
 
 
@@ -30,8 +36,9 @@ def acquisition(request):
 @pytest.mark.parametrize("use_thread", [True, False])
 def test_acquisition_init(use_thread):
     queue_container = mock_queue_container(use_thread)
+    event_container = mock_event_container(use_thread)
     acquisition_active = mp.Value("i", 0)
-    acquisition = AcquisitionProcess("Process Name", queue_container, acquisition_active)
+    acquisition = AcquisitionProcess("Process Name", queue_container, event_container.acquisition_ready_event, acquisition_active)
 
     # Make sure it is the correct class
     assert isinstance(acquisition, AcquisitionProcess)
@@ -249,9 +256,9 @@ def test_acquisition_process_quit(mock_log, mock_flush, acquisition):
 @mock.patch("rattlesnake.process.acquisition.AcquisitionProcess")
 def test_acquisition_process_func(mock_acquisition, use_thread):
     queue_container = mock_queue_container(use_thread)
+    event_container = mock_event_container(use_thread)
     acquisition_active = mp.Value("i", 0)
-    shutdown_event = mp.Event()
-    acquisition_process(queue_container, acquisition_active, shutdown_event)
+    acquisition_process(queue_container, acquisition_active, event_container.acquisition_ready_event, event_container.acquisition_close_event)
 
     mock_instance = mock_acquisition.return_value
     mock_instance.run.assert_called()
