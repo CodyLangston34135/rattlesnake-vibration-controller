@@ -60,8 +60,8 @@ class AcquisitionProcess(AbstractMessageProcess):
         self,
         process_name: str,
         queue_container: QueueContainer,
-        ready_event: mp.synchronize.Event,
         acquisition_active: mp.sharedctypes.Synchronized,
+        ready_event: mp.synchronize.Event,
     ):
         """
         Constructor for the AcquisitionProcess class
@@ -574,6 +574,6 @@ def acquisition_process(
 
     """
 
-    acquisition_instance = AcquisitionProcess(TASK_NAME, queue_container, ready_event, acquisition_active)
+    acquisition_instance = AcquisitionProcess(TASK_NAME, queue_container, acquisition_active, ready_event)
 
     acquisition_instance.run(shutdown_event)

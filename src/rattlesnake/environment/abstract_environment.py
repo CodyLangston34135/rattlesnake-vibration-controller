@@ -237,6 +237,7 @@ class EnvironmentProcess(ABC):
         data_out_queue: mp.Queue,
         acquisition_active: mp.sharedctypes.Synchronized,
         output_active: mp.sharedctypes.Synchronized,
+        ready_event: mp.synchronize.Event,
     ):
         """
         Initializes the environment process and maps the global commands to functions.
@@ -255,6 +256,7 @@ class EnvironmentProcess(ABC):
         self._log_file_queue = log_file_queue
         self._data_in_queue = data_in_queue
         self._data_out_queue = data_out_queue
+        self._ready_event = ready_event
         self._command_map = {
             GlobalCommands.QUIT: self.quit,
             GlobalCommands.INITIALIZE_HARDWARE: self.initialize_hardware,
@@ -263,6 +265,7 @@ class EnvironmentProcess(ABC):
         }
         self._acquisition_active = acquisition_active
         self._output_active = output_active
+        self.set_ready()
 
     @property
     def acquisition_active(self):
@@ -378,6 +381,12 @@ class EnvironmentProcess(ABC):
         """A dictionary that maps commands received by the ``command_queue`` to functions in the class."""
         return self._command_map
 
+    def set_ready(self):
+        self._ready_event.set()
+
+    def clear_ready(self):
+        self._ready_event.clear()
+
     def map_command(self, key, function):
         """A function that maps an instruction to a function in the ``command_map``.
 
@@ -476,6 +485,7 @@ def run_process(
     data_out_queue: mp.Queue,
     acquisition_active: mp.sharedctypes.Synchronized,
     output_active: mp.sharedctypes.Synchronized,
+    ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
 ):
     """A function called by ``multiprocessing.Process`` to start the environment
@@ -520,5 +530,6 @@ def run_process(
         data_out_queue,
         acquisition_active,
         output_active,
+        ready_event,
     )
     process_class.run(shutdown_event)

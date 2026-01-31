@@ -4,7 +4,7 @@ from rattlesnake.hardware.hardware_utilities import Channel
 from rattlesnake.utilities import GlobalCommands
 from rattlesnake.user_interface.ui_utilities import TimeUICommands
 from mock_objects.mock_hardware import MockHardwareMetadata
-from mock_objects.mock_utilities import mock_channel_list, mock_queue_container
+from mock_objects.mock_utilities import mock_channel_list, mock_queue_container, mock_event_container
 import multiprocessing as mp
 import numpy as np
 import pytest
@@ -31,6 +31,7 @@ def time_metadata():
 def time_environment(request):
     use_thread = request.param
     queue_container = mock_queue_container(use_thread)
+    event_container = mock_event_container(use_thread)
     time_queues = TimeQueues(
         queue_container.environment_command_queues["Environment 0"],
         queue_container.gui_update_queue,
@@ -41,7 +42,14 @@ def time_environment(request):
     )
     acquisition_active = mp.Value("i", 0)
     output_active = mp.Value("i", 0)
-    time_environment = TimeEnvironment("Time Environment", "Environment 0", time_queues, acquisition_active, output_active)
+    time_environment = TimeEnvironment(
+        "Time Environment",
+        "Environment 0",
+        time_queues,
+        acquisition_active,
+        output_active,
+        event_container.environment_ready_events["Environment 0"],
+    )
     return time_environment
 
 
@@ -126,6 +134,7 @@ def test_time_queues_init(use_thread):
 @pytest.mark.parametrize("use_thread", [True, False])
 def test_time_environment_init(use_thread):
     queue_container = mock_queue_container(use_thread)
+    event_container = mock_event_container(use_thread)
     time_queues = TimeQueues(
         queue_container.environment_command_queues["Environment 0"],
         queue_container.gui_update_queue,
@@ -136,10 +145,16 @@ def test_time_environment_init(use_thread):
     )
     acquisition_active = mp.Value("i", 0)
     output_active = mp.Value("i", 0)
-    time_process = TimeEnvironment("Time Environment", "Environment 0", time_queues, acquisition_active, output_active)
-
-    assert isinstance(time_process, TimeEnvironment)
-    assert isinstance(time_process, EnvironmentProcess)
+    time_environment = TimeEnvironment(
+        "Time Environment",
+        "Environment 0",
+        time_queues,
+        acquisition_active,
+        output_active,
+        event_container.environment_ready_events["Environment 0"],
+    )
+    assert isinstance(time_environment, TimeEnvironment)
+    assert isinstance(time_environment, EnvironmentProcess)
 
 
 def test_time_environment_initialize_hardware(time_environment):
@@ -279,9 +294,9 @@ def test_time_environment_shutdown(mock_log, time_environment):
 @pytest.mark.parametrize("use_thread", [True, False])
 def test_time_process(mock_process_class, use_thread):
     queue_container = mock_queue_container(use_thread)
+    event_container = mock_event_container(use_thread)
     acquisition_active = mp.Value("i", 0)
     output_active = mp.Value("i", 0)
-    shutdown_event = mp.Event()
     time_process(
         "Environment Name",
         "Environment 0",
@@ -293,7 +308,8 @@ def test_time_process(mock_process_class, use_thread):
         queue_container.environment_data_out_queues["Environment 0"],
         acquisition_active,
         output_active,
-        shutdown_event,
+        event_container.environment_ready_events["Environment 0"],
+        event_container.environment_close_events["Environment 0"],
     )
 
     mock_instance = mock_process_class.return_value

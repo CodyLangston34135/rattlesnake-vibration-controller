@@ -255,6 +255,7 @@ class EnvironmentManager:
                     self.queue_container.environment_data_out_queues[queue_name],
                     acquisition_active,
                     output_active,
+                    self.environment_ready_events[queue_name],
                     self.environment_close_events[queue_name],
                 ),
             )
@@ -274,6 +275,7 @@ class EnvironmentManager:
                     self.queue_container.environment_data_out_queues[queue_name],
                     acquisition_active,
                     output_active,
+                    self.environment_ready_events[queue_name],
                     self.environment_close_events[queue_name],
                 ),
             )

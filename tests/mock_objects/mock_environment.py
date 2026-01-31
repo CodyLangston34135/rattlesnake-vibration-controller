@@ -54,6 +54,7 @@ class MockEnvironmentProcess(EnvironmentProcess):
         data_out_queue,
         acquisition_active,
         output_active,
+        ready_event,
     ):
         super().__init__(
             environment_name,
@@ -66,6 +67,7 @@ class MockEnvironmentProcess(EnvironmentProcess):
             data_out_queue,
             acquisition_active,
             output_active,
+            ready_event,
         )
 
     def initialize_hardware(self, hardware_metadata):

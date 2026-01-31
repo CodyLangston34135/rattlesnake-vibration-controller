@@ -21,7 +21,12 @@ def output(request):
     queue_container = mock_queue_container(use_thread)
     event_container = mock_event_container(use_thread)
     output_active = mp.Value("i", 0)
-    output = OutputProcess("Process Name", queue_container, event_container.output_ready_event, output_active)
+    output = OutputProcess(
+        "Process Name",
+        queue_container,
+        output_active,
+        event_container.output_ready_event,
+    )
     return output
 
 
@@ -32,7 +37,12 @@ def test_output_init(use_thread):
     queue_container = mock_queue_container(use_thread)
     event_container = mock_event_container(use_thread)
     output_active = mp.Value("i", 0)
-    output = OutputProcess("Process Name", queue_container, event_container.output_ready_event, output_active)
+    output = OutputProcess(
+        "Process Name",
+        queue_container,
+        output_active,
+        event_container.output_ready_event,
+    )
 
     # Make sure it is the correct class
     assert isinstance(output, OutputProcess)
@@ -130,7 +140,12 @@ def test_output_process_func(mock_output, use_thread):
     queue_container = mock_queue_container(use_thread)
     event_container = mock_event_container(use_thread)
     output_active = mp.Value("i", 0)
-    output_process(queue_container, output_active, event_container.output_ready_event, event_container.output_close_event)
+    output_process(
+        queue_container,
+        output_active,
+        event_container.output_ready_event,
+        event_container.output_close_event,
+    )
 
     mock_instance = mock_output.return_value
     mock_instance.run.assert_called()

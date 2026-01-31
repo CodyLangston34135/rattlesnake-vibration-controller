@@ -3,7 +3,7 @@ from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.hardware.hardware_utilities import Channel
 from mock_objects.mock_environment import MockEnvironmentMetadata, MockEnvironmentInstructions, MockEnvironmentProcess
 from mock_objects.mock_hardware import MockHardwareMetadata
-from mock_objects.mock_utilities import mock_channel_list, mock_queue_container, fake_time
+from mock_objects.mock_utilities import mock_channel_list, mock_queue_container, mock_event_container, fake_time
 import pytest
 import netCDF4 as nc4
 import multiprocessing as mp
@@ -22,6 +22,7 @@ def environment_metadata():
 def environment_process(request):
     use_thread = request.param
     queue_container = mock_queue_container(use_thread)
+    event_container = mock_event_container(use_thread)
     acquisition_active = mp.Value("i", 0)
     output_active = mp.Value("i", 0)
     environment_process = MockEnvironmentProcess(
@@ -35,6 +36,7 @@ def environment_process(request):
         queue_container.environment_data_out_queues["Environment 0"],
         acquisition_active,
         output_active,
+        event_container.environment_ready_events["Environment 0"],
     )
 
     return environment_process
@@ -128,6 +130,7 @@ def test_environment_instructions_validate():
 @pytest.mark.parametrize("use_thread", [True, False])
 def test_environment_process_init(use_thread):
     queue_container = mock_queue_container(use_thread)
+    event_container = mock_event_container(use_thread)
     acquisition_active = mp.Value("i", 0)
     output_active = mp.Value("i", 0)
     environment_process = MockEnvironmentProcess(
@@ -141,6 +144,7 @@ def test_environment_process_init(use_thread):
         queue_container.environment_data_out_queues["Environment 0"],
         acquisition_active,
         output_active,
+        event_container.environment_ready_events["Environment 0"],
     )
 
     assert isinstance(environment_process, EnvironmentProcess)
@@ -233,9 +237,9 @@ def test_environment_process_run(mock_log, mock_get, mock_function, mock_key, en
 @mock.patch("rattlesnake.environment.abstract_environment.EnvironmentProcess")
 def test_run_process(mock_process_class, use_thread):
     queue_container = mock_queue_container(use_thread)
+    event_container = mock_event_container(use_thread)
     acquisition_active = mp.Value("i", 0)
     output_active = mp.Value("i", 0)
-    shutdown_event = mp.Event()
     run_process(
         "Environment Name",
         "Environment 0",
@@ -247,7 +251,8 @@ def test_run_process(mock_process_class, use_thread):
         queue_container.environment_data_out_queues["Environment 0"],
         acquisition_active,
         output_active,
-        shutdown_event,
+        event_container.environment_ready_events["Environment 0"],
+        event_container.environment_close_events["Environment 0"],
     )
 
     mock_instance = mock_process_class.return_value

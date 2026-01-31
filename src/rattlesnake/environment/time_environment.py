@@ -32,6 +32,7 @@ import copy
 import multiprocessing as mp
 import queue
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
+import multiprocessing.synchronize  # pylint: disable=unused-import
 import netCDF4 as nc4
 import numpy as np
 from enum import Enum
@@ -191,6 +192,7 @@ class TimeEnvironment(EnvironmentProcess):
         queue_container: TimeQueues,
         acquisition_active: mp.sharedctypes.Synchronized,
         output_active: mp.sharedctypes.Synchronized,
+        ready_event: mp.synchronize.Event,
     ):
         """
         Time History Generation Environment Constructor
@@ -217,6 +219,7 @@ class TimeEnvironment(EnvironmentProcess):
             queue_container.data_out_queue,
             acquisition_active,
             output_active,
+            ready_event,
         )
         self.queue_container = queue_container
         # Define command map
@@ -435,7 +438,8 @@ def time_process(
     data_out_queue: mp.Queue,
     acquisition_active: mp.sharedctypes.Synchronized,
     output_active: mp.sharedctypes.Synchronized,
-    shutdown_event,
+    ready_event: mp.synchronize.Event,
+    shutdown_event: mp.synchronize.Event,
 ):
     """Time signal generation environment process function called by multiprocessing
 
@@ -465,5 +469,5 @@ def time_process(
     # Create vibration queues
     queue_container = TimeQueues(input_queue, gui_update_queue, controller_command_queue, data_in_queue, data_out_queue, log_file_queue)
 
-    process_class = TimeEnvironment(environment_name, queue_name, queue_container, acquisition_active, output_active)
+    process_class = TimeEnvironment(environment_name, queue_name, queue_container, acquisition_active, output_active, ready_event)
     process_class.run(shutdown_event)

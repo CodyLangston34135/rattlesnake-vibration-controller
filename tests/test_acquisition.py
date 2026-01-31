@@ -25,8 +25,8 @@ def acquisition(request):
     acquisition = AcquisitionProcess(
         "Process Name",
         queue_container,
-        event_container.acquisition_ready_event,
         acquisition_active,
+        event_container.acquisition_ready_event,
     )
     return acquisition
 
@@ -38,7 +38,12 @@ def test_acquisition_init(use_thread):
     queue_container = mock_queue_container(use_thread)
     event_container = mock_event_container(use_thread)
     acquisition_active = mp.Value("i", 0)
-    acquisition = AcquisitionProcess("Process Name", queue_container, event_container.acquisition_ready_event, acquisition_active)
+    acquisition = AcquisitionProcess(
+        "Process Name",
+        queue_container,
+        acquisition_active,
+        event_container.acquisition_ready_event,
+    )
 
     # Make sure it is the correct class
     assert isinstance(acquisition, AcquisitionProcess)
@@ -258,7 +263,12 @@ def test_acquisition_process_func(mock_acquisition, use_thread):
     queue_container = mock_queue_container(use_thread)
     event_container = mock_event_container(use_thread)
     acquisition_active = mp.Value("i", 0)
-    acquisition_process(queue_container, acquisition_active, event_container.acquisition_ready_event, event_container.acquisition_close_event)
+    acquisition_process(
+        queue_container,
+        acquisition_active,
+        event_container.acquisition_ready_event,
+        event_container.acquisition_close_event,
+    )
 
     mock_instance = mock_acquisition.return_value
     mock_instance.run.assert_called()

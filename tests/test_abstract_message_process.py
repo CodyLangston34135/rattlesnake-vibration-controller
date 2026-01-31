@@ -57,6 +57,20 @@ def test_message_process_log(mock_time, abstract_message_process):
     mock_log_file_queue.put.assert_called_once_with("Datetime: Process Name -- Test Message\n")
 
 
+def test_message_process_set_ready(abstract_message_process):
+    abstract_message_process._ready_event.clear()
+    abstract_message_process.set_ready()
+
+    assert abstract_message_process._ready_event.is_set()
+
+
+def test_message_process_clear_ready(abstract_message_process):
+    abstract_message_process._ready_event.set()
+    abstract_message_process.clear_ready()
+
+    assert not abstract_message_process._ready_event.is_set()
+
+
 # Test the map_command function
 def test_abstract_message_process_map_command(abstract_message_process):
     # Create custom key and function

@@ -60,8 +60,8 @@ class OutputProcess(AbstractMessageProcess):
         self,
         process_name: str,
         queue_container: QueueContainer,
-        ready_event: mp.synchronize.Event,
         output_active: mp.sharedctypes.Synchronized,
+        ready_event: mp.synchronize.Event,
     ):
         """
         Constructor for the OutputProcess Class
@@ -473,6 +473,6 @@ def output_process(
 
     """
 
-    output_instance = OutputProcess(TASK_NAME, queue_container, ready_event, output_active)
+    output_instance = OutputProcess(TASK_NAME, queue_container, output_active, ready_event)
 
     output_instance.run(shutdown_event)

@@ -16,7 +16,7 @@ from typing import List
 
 TASK_NAME = "Rattlesnake"
 CLOSE_TIMEOUT = 5
-THREADING = True
+THREADING = False
 
 
 # region: RattlesnakeState
