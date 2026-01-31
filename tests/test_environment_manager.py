@@ -2,7 +2,7 @@ from rattlesnake.environment_manager import EnvironmentManager
 from rattlesnake.utilities import GlobalCommands
 from rattlesnake.environment.environment_utilities import ControlTypes
 from mock_objects.mock_hardware import MockHardwareMetadata
-from mock_objects.mock_environment import MockEnvironmentType, MockEnvironmentMetadata, MockEnvironmentInstructions
+from mock_objects.mock_environment import MockEnvironmentType, MockEnvironmentMetadata, MockEnvironmentInstructions, UNIMPLEMENTED_ENVIRONMENT
 from mock_objects.mock_utilities import mock_queue_container, mock_event_container, fake_time
 import pytest
 import multiprocessing as mp
@@ -10,6 +10,9 @@ from unittest import mock
 
 
 # region: Fixtures
+IMPLEMENTED_ENVIRONMENT = [environment for environment in ControlTypes if environment not in UNIMPLEMENTED_ENVIRONMENT]
+
+
 @pytest.fixture(params=[True, False], ids=["threaded", "non_threaded"])
 def environment_manager(request):
     use_thread = request.param
@@ -170,7 +173,7 @@ def test_environment_manager_clear_environment(environment_manager):
     mock_close_process.assert_called()
 
 
-@pytest.mark.parametrize("environment_type", [None, ControlTypes.TIME, ControlTypes.READ])
+@pytest.mark.parametrize("environment_type", [None, *IMPLEMENTED_ENVIRONMENT])
 def test_environment_manager_add_environment(environment_type, environment_manager):
     metadata = MockEnvironmentMetadata()
     metadata.environment_type = environment_type

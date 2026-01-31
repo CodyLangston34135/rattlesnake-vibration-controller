@@ -1,7 +1,16 @@
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions, EnvironmentProcess
+from rattlesnake.environment.environment_utilities import ControlTypes
 from .mock_utilities import mock_channel_list
 from unittest import mock
 from enum import Enum
+
+UNIMPLEMENTED_ENVIRONMENT = {
+    ControlTypes.MODAL,
+    ControlTypes.RANDOM,
+    ControlTypes.READ,
+    ControlTypes.SINE,
+    ControlTypes.TRANSIENT,
+}
 
 
 # region: MockEnvironmentType

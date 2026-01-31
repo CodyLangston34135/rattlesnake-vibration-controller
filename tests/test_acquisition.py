@@ -3,7 +3,7 @@ from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.utilities import GlobalCommands
-from mock_objects.mock_hardware import MockHardwareMetadata, acquisition_dict, metadata_attr_dict
+from mock_objects.mock_hardware import MockHardwareMetadata, acquisition_dict, metadata_attr_dict, UNIMPLEMENTED_HARDWARE
 from mock_objects.mock_environment import MockEnvironmentMetadata
 from mock_objects.mock_utilities import mock_queue_container
 import pytest
@@ -13,6 +13,9 @@ from unittest import mock
 
 
 # region: Fixtures
+IMPLEMENTED_HARDWARE = [hardware for hardware in HardwareType if hardware not in UNIMPLEMENTED_HARDWARE]
+
+
 @pytest.fixture(params=[True, False], ids=["threaded", "non_threaded"])
 def acquisition(request):
     use_thread = request.param
@@ -43,7 +46,7 @@ def test_acquisition_properties(acquisition):
     assert acquisition.acquisition_active == True
 
 
-@pytest.mark.parametrize("hardware_type", [HardwareType.SDYNPY_SYSTEM])
+@pytest.mark.parametrize("hardware_type", [*IMPLEMENTED_HARDWARE])
 @mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.log")
 def test_acquisition_process_initialize_hardware(mock_log, hardware_type, acquisition):
     hardware_metadata = MockHardwareMetadata()

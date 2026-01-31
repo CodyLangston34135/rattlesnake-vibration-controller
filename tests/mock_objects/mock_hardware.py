@@ -6,6 +6,16 @@ import numpy as np
 from unittest import mock
 from enum import Enum
 
+UNIMPLEMENTED_HARDWARE = {
+    HardwareType.NI_DAQMX,
+    HardwareType.LAN_XI,
+    HardwareType.DP_QUATTRO,
+    HardwareType.DP_900,
+    HardwareType.EXODUS,
+    HardwareType.STATE_SPACE,
+    HardwareType.SDYNPY_FRF,
+}
+
 
 # region: Import Locations
 def acquisition_dict():

@@ -2,7 +2,7 @@ from rattlesnake.process.output import OutputProcess, output_process
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.utilities import GlobalCommands
-from mock_objects.mock_hardware import MockHardwareMetadata, output_dict, metadata_attr_dict
+from mock_objects.mock_hardware import MockHardwareMetadata, output_dict, metadata_attr_dict, UNIMPLEMENTED_HARDWARE
 from mock_objects.mock_environment import MockEnvironmentMetadata
 from mock_objects.mock_utilities import mock_queue_container
 import pytest
@@ -12,6 +12,9 @@ from unittest import mock
 
 
 # region: Fixtures
+IMPLEMENTED_HARDWARE = [hardware for hardware in HardwareType if hardware not in UNIMPLEMENTED_HARDWARE]
+
+
 @pytest.fixture(params=[True, False], ids=["threaded", "non_threaded"])
 def output(request):
     use_thread = request.param
@@ -44,7 +47,7 @@ def test_output_properties(output):
     assert output.output_active == True
 
 
-@pytest.mark.parametrize("hardware_type", [HardwareType.SDYNPY_SYSTEM])
+@pytest.mark.parametrize("hardware_type", [*IMPLEMENTED_HARDWARE])
 @mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.log")
 def test_output_process_initialize_hardware(mock_log, hardware_type, output):
     hardware_metadata = MockHardwareMetadata()

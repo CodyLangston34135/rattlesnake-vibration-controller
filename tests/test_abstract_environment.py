@@ -85,7 +85,7 @@ def test_environment_metadata_channel_indices(channel_list, expected, environmen
 
 @pytest.mark.parametrize(
     "environment_name, environment_type, expected",
-    [("Environment Name", ControlTypes.TIME, True), (0, ControlTypes.TIME, TypeError), ("Environment Name", 0, TypeError)],
+    [("Environment Name", ControlTypes.READ, True), (0, ControlTypes.READ, TypeError), ("Environment Name", 0, TypeError)],
 )
 def test_environment_metadata_validate(environment_name, environment_type, expected, environment_metadata):
     environment_metadata.environment_name = environment_name
