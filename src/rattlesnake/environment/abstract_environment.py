@@ -8,6 +8,7 @@ import os
 import netCDF4 as nc4
 import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
+from multiprocessing.synchronize import Event  # pylint: disable=unused-import
 import multiprocessing.queues as mpqueue
 import queue as thqueue
 from datetime import datetime
@@ -391,7 +392,7 @@ class EnvironmentProcess(ABC):
         """
         self._command_map[key] = function
 
-    def run(self, shutdown_event):
+    def run(self, shutdown_event: mp.synchronize.Event):
         """The main function that is run by the environment's process.
 
         A function that is called by the environment's process function that
@@ -475,7 +476,7 @@ def run_process(
     data_out_queue: mp.Queue,
     acquisition_active: mp.sharedctypes.Synchronized,
     output_active: mp.sharedctypes.Synchronized,
-    shutdown_event,
+    shutdown_event: mp.synchronize.Event,
 ):
     """A function called by ``multiprocessing.Process`` to start the environment
 

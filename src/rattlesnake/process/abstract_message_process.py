@@ -29,6 +29,7 @@ from abc import ABC
 from datetime import datetime
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
+from multiprocessing.synchronize import Event  # pylint: disable=unused-import
 import queue as thqueue
 
 
@@ -134,7 +135,7 @@ class AbstractMessageProcess(ABC):
         """Queue to which log file messages should be written."""
         return self._log_file_queue
 
-    def run(self, shutdown_event):
+    def run(self, shutdown_event: mp.synchronize.Event):
         """The main function that is run by the process
 
         A function that is called by the process function that

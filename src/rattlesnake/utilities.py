@@ -1,6 +1,7 @@
 # DO NOT import from other files in utilities.py
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
+from multiprocessing.synchronize import Event  # pylint: disable=unused-import
 import queue as thqueue
 import string
 import random
@@ -268,6 +269,36 @@ class QueueContainer:
         self.environment_command_queues = environment_command_queues
         self.environment_data_in_queues = environment_data_in_queues
         self.environment_data_out_queues = environment_data_out_queues
+
+
+class EventContainer:
+    def __init__(
+        self,
+        log_close_event: mp.synchronize.Event,
+        controller_close_event: mp.synchronize.Event,
+        acquisition_close_event: mp.synchronize.Event,
+        output_close_event: mp.synchronize.Event,
+        streaming_close_event: mp.synchronize.Event,
+        environment_close_events: Dict[str, mp.synchronize.Event],
+        controller_ready_event: mp.synchronize.Event,
+        acquisition_ready_event: mp.synchronize.Event,
+        output_ready_event: mp.synchronize.Event,
+        streaming_ready_event: mp.synchronize.Event,
+        environment_ready_events: Dict[str, mp.synchronize.Event],
+    ):
+        # Close Events
+        self.log_close_event = log_close_event
+        self.controller_close_event = controller_close_event
+        self.acquisition_close_event = acquisition_close_event
+        self.output_close_event = output_close_event
+        self.streaming_close_event = streaming_close_event
+        self.environment_close_events = environment_close_events
+        # Ready Events
+        self.controller_ready_event = controller_ready_event
+        self.acquisition_ready_event = acquisition_ready_event
+        self.output_ready_event = output_ready_event
+        self.streaming_ready_event = streaming_ready_event
+        self.environment_ready_events = environment_ready_events
 
 
 def flush_queue(queue, timeout=None):

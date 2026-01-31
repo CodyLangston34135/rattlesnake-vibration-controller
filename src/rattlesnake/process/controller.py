@@ -2,6 +2,8 @@ from .abstract_message_process import AbstractMessageProcess
 from ..utilities import QueueContainer, GlobalCommands
 from ..environment.abstract_environment import EnvironmentInstructions
 from .streaming import StreamMetadata, StreamType
+import multiprocessing as mp
+from multiprocessing.synchronize import Event  # pylint: disable=unused-import
 
 
 TASK_NAME = "Controller"
@@ -89,7 +91,7 @@ class ControllerProcess(AbstractMessageProcess):
 
 
 # region: controller_process
-def controller_process(queue_container: QueueContainer, shutdown_event):
+def controller_process(queue_container: QueueContainer, shutdown_event: mp.synchronize.Event):
     """Function passed to multiprocessing as the controller process
 
     This process creates the ``Controller`` object and calls the ``run``

@@ -31,6 +31,7 @@ from ..environment.abstract_environment import EnvironmentMetadata
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
+from multiprocessing.synchronize import Event  # pylint: disable=unused-import
 import queue as thqueue
 import numpy as np
 from typing import Dict
@@ -448,7 +449,7 @@ class OutputProcess(AbstractMessageProcess):
 
 
 # region: output_process
-def output_process(queue_container: QueueContainer, output_active: mp.sharedctypes.Synchronized, shutdown_event):
+def output_process(queue_container: QueueContainer, output_active: mp.sharedctypes.Synchronized, shutdown_event: mp.synchronize.Event):
     """Function passed to multiprocessing as the output process
 
     This process creates the ``OutputProcess`` object and calls the ``run``

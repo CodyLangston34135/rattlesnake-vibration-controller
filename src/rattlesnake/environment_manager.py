@@ -4,9 +4,10 @@ from .environment.abstract_environment import EnvironmentMetadata, EnvironmentIn
 from .environment.environment_utilities import ControlTypes
 from .hardware.abstract_hardware import HardwareMetadata
 import multiprocessing as mp
+from multiprocessing.synchronize import Event  # pylint: disable=unused-import
 import threading
 from datetime import datetime
-from typing import List
+from typing import List, Dict
 
 TASK_NAME = "Environment Manager"
 CLOSE_TIMEOUT = 5
@@ -24,15 +25,22 @@ class EnvironmentManager:
     with the other queues.
     """
 
-    def __init__(self, queue_container: QueueContainer, threading_bool):
+    def __init__(
+        self,
+        queue_container: QueueContainer,
+        environment_ready_events: Dict[str, mp.synchronize.Event],
+        environment_close_events: Dict[str, mp.synchronize.Event],
+        threading_bool: bool,
+    ):
         self.hardware_metadata = None
         self.queue_names = []  # Static name for dictionary keys, process names, etc
         self.environment_names = {}  # Name of environment for Ui purposes
         self.environment_types = {}
         self.environment_metadata = {}
         self.environment_processes = {}
-        self.environment_events = {}
         self.queue_container = queue_container
+        self.environment_ready_events = environment_ready_events
+        self.environment_close_events = environment_close_events
         self._threading = threading_bool
         if threading_bool:
             self.new_process = threading.Thread
@@ -210,7 +218,6 @@ class EnvironmentManager:
         self.environment_metadata = {}
         self.close_environments()
         self.environment_processes = {}
-        self.environment_events = {}
 
     def add_environment(self, metadata: EnvironmentMetadata, acquisition_active, output_active):
         """Adds environment to container with unique name"""
@@ -228,7 +235,7 @@ class EnvironmentManager:
         environment_name = metadata.environment_name
 
         self.queue_container.environment_command_queues[queue_name].assign_environment(environment_name)
-        environment_event = self.new_event()
+        self.environment_close_events[queue_name].clear()
 
         # Figure out what type of environment to add
         if environment_type == ControlTypes.TIME:
@@ -248,7 +255,7 @@ class EnvironmentManager:
                     self.queue_container.environment_data_out_queues[queue_name],
                     acquisition_active,
                     output_active,
-                    environment_event,
+                    self.environment_close_events[queue_name],
                 ),
             )
             environment_process.start()
@@ -267,7 +274,7 @@ class EnvironmentManager:
                     self.queue_container.environment_data_out_queues[queue_name],
                     acquisition_active,
                     output_active,
-                    environment_event,
+                    self.environment_close_events[queue_name],
                 ),
             )
             environment_process.start()
@@ -280,7 +287,6 @@ class EnvironmentManager:
         self.environment_names[queue_name] = environment_name
         self.environment_types[queue_name] = environment_type
         self.environment_processes[queue_name] = environment_process
-        self.environment_events[queue_name] = environment_event
         self.environment_metadata[queue_name] = metadata
         self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, self.hardware_metadata))
         self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata))
@@ -301,7 +307,7 @@ class EnvironmentManager:
             self.environment_processes[queue_name].join(timeout=5)
             if self.environment_processes[queue_name].is_alive():
                 self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing {queue_name} Process\n")
-                self.environment_events[queue_name].set()
+                self.environment_close_events[queue_name].set()
                 self.environment_processes[queue_name].join(timeout=CLOSE_TIMEOUT)
                 if self.environment_processes[queue_name].is_alive() and not self.threading:
                     self.environment_processes[queue_name].terminate()
@@ -309,8 +315,6 @@ class EnvironmentManager:
 
             # Remove environment queue and process
             self.environment_processes.pop(queue_name, None)
-            self.environment_events.pop(queue_name, None)
-
         else:
             raise IndexError(f"Invalid control name: {queue_name}. Must be mapped to available queue")
 
@@ -321,7 +325,7 @@ class EnvironmentManager:
             environment_process.join(timeout=CLOSE_TIMEOUT)
             if environment_process.is_alive():
                 self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing {queue_name} Process\n")
-                self.environment_events[queue_name].set()
+                self.environment_close_events[queue_name].set()
                 environment_process.join(timeout=CLOSE_TIMEOUT)
                 if environment_process.is_alive() and not self.threading:
                     environment_process.terminate()

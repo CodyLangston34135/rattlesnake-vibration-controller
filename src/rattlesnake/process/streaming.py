@@ -25,11 +25,13 @@ from .abstract_message_process import AbstractMessageProcess
 from ..utilities import GlobalCommands, QueueContainer
 from ..hardware.abstract_hardware import HardwareMetadata
 from ..environment.abstract_environment import EnvironmentMetadata
+import multiprocessing as mp
 import netCDF4 as nc
 import numpy as np
 from pathlib import Path
 from typing import Dict
 from enum import Enum
+from multiprocessing.synchronize import Event  # pylint: disable=unused-import
 
 
 # region: StreamType
@@ -258,7 +260,7 @@ class StreamingProcess(AbstractMessageProcess):
 
 
 # region: streaming_process
-def streaming_process(queue_container: QueueContainer, shutdown_event):
+def streaming_process(queue_container: QueueContainer, shutdown_event: mp.synchronize.Event):
     """
     Function passed to multiprocessing as the streaming process
 

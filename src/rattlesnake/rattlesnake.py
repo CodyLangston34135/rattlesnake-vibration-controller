@@ -1,8 +1,8 @@
-from .utilities import GlobalCommands, VerboseMessageQueue, QueueContainer, log_file_task
+from .utilities import GlobalCommands, VerboseMessageQueue, QueueContainer, EventContainer, log_file_task
 from .process.controller import controller_process
 from .process.acquisition import acquisition_process
 from .process.output import output_process
-from .process.streaming import StreamType, StreamMetadata, streaming_process
+from .process.streaming import StreamMetadata, streaming_process
 from .profile_manager import ProfileManager, ProfileEvent
 from .hardware.abstract_hardware import HardwareMetadata
 from .environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions
@@ -48,18 +48,26 @@ class Rattlesnake:
 
         # Start up log file process
         log_file_queue = mp.Queue()
-        self.log_file_event = mp.Event()
+        log_close_event = mp.Event()
         self.log_file_process = mp.Process(
             target=log_file_task,
-            args=(log_file_queue, self.log_file_event),
+            args=(log_file_queue, log_close_event),
         )
         self.log_file_process.start()
 
         # Start up command queues and processes
         self.controller_queue_name_manager = mp.Manager()  # Adds minor overhead which is reasonable for COMMAND queues only
+        controller_close_event = new_event()
+        controller_ready_event = new_event()
         controller_command_queue = VerboseMessageQueue(log_file_queue, new_queue(), self.controller_queue_name_manager, "Controller Command Queue")
+        acquisition_close_event = new_event()
+        acquisition_ready_event = new_event()
         acquisition_command_queue = VerboseMessageQueue(log_file_queue, new_queue(), self.controller_queue_name_manager, "Acquisition Command Queue")
+        output_close_event = new_event()
+        output_ready_event = new_event()
         output_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), self.controller_queue_name_manager, "Output Command Queue")
+        streaming_close_event = new_event()
+        streaming_ready_event = new_event()
         streaming_command_queue = VerboseMessageQueue(log_file_queue, new_queue(), self.controller_queue_name_manager, "Streaming Command Queue")
 
         # Set up data queue
@@ -68,11 +76,15 @@ class Rattlesnake:
 
         # Set up environment queues
         max_environments = 16
+        environment_close_events = {}
+        environment_ready_events = {}
         environment_command_queues = {}
         environment_data_in_queues = {}
         environment_data_out_queues = {}
         for env_idx in range(max_environments):
             environment_name = "Environment {:}".format(env_idx)
+            environment_close_events[environment_name] = new_event()
+            environment_ready_events = new_event()
             environment_command_queues[environment_name] = VerboseMessageQueue(
                 log_file_queue, mp.Queue(), self.controller_queue_name_manager, environment_name + " Command Queue"
             )
@@ -96,36 +108,50 @@ class Rattlesnake:
             environment_data_in_queues,
             environment_data_out_queues,
         )
+        self.event_container = EventContainer(
+            log_close_event,
+            controller_close_event,
+            acquisition_close_event,
+            output_close_event,
+            streaming_close_event,
+            environment_close_events,
+            controller_ready_event,
+            acquisition_ready_event,
+            output_ready_event,
+            streaming_ready_event,
+            environment_ready_events,
+        )
 
         # Controller
-        self.controller_event = new_event()
         self.controller_proc = new_process(
             target=controller_process,
-            args=(self.queue_container, self.controller_event),
+            args=(self.queue_container, self.event_container.controller_close_event),
         )
         self.controller_proc.start()
         # Acquisition
-        self.acquisition_event = new_event()
         self.acquisition_proc = new_process(
             target=acquisition_process,
-            args=(self.queue_container, self.acquisition_active, self.acquisition_event),
+            args=(self.queue_container, self.acquisition_active, self.event_container.acquisition_close_event),
         )
         self.acquisition_proc.start()
         # Output
-        self.output_event = new_event()
-        self.output_proc = new_process(target=output_process, args=(self.queue_container, self.output_active, self.output_event))
+
+        self.output_proc = new_process(
+            target=output_process, args=(self.queue_container, self.output_active, self.event_container.output_close_event)
+        )
         self.output_proc.start()
         # Streaming
-        self.streaming_event = new_event()
-        self.streaming_proc = new_process(target=streaming_process, args=(self.queue_container, self.streaming_event))
+        self.streaming_proc = new_process(target=streaming_process, args=(self.queue_container, self.event_container.streaming_close_event))
         self.streaming_proc.start()
 
         # Set up managers that will setup processes and store metadata
-        self.environment_manager = EnvironmentManager(self.queue_container, THREADING)  # Contains hardware/environment metadata
-        self._stream_metadata = StreamMetadata()  # Default to no stream
-        self.profile_manager = ProfileManager(
+        self.environment_manager = EnvironmentManager(  # Contains hardware/environment metadata
+            self.queue_container, self.event_container.environment_ready_events, self.event_container.environment_close_events, THREADING
+        )
+        self._stream_metadata = StreamMetadata()  # Default to StreamType.NO_STREAM
+        self.profile_manager = ProfileManager(  # Contains instructions/profile events
             self.queue_container.log_file_queue, self.queue_container.controller_command_queue
-        )  # Contains instructions/profile events
+        )
 
     # Metadata properties
     @property
@@ -252,7 +278,7 @@ class Rattlesnake:
         self.controller_proc.join(timeout=CLOSE_TIMEOUT)
         if self.controller_proc.is_alive():
             self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Controller Process\n")
-            self.controller_event.set()
+            self.event_container.controller_close_event.set()
             self.controller_proc.join(timeout=CLOSE_TIMEOUT)
             if self.controller_proc.is_alive() and not THREADING:
                 self.controller_proc.terminate()
@@ -262,7 +288,7 @@ class Rattlesnake:
         self.acquisition_proc.join(timeout=CLOSE_TIMEOUT)
         if self.acquisition_proc.is_alive():
             self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Acquisition Process\n")
-            self.acquisition_event.set()
+            self.event_container.acquisition_close_event.set()
             self.acquisition_proc.join(timeout=CLOSE_TIMEOUT)
             if self.acquisition_proc.is_alive() and not THREADING:
                 self.acquisition_proc.terminate()
@@ -272,7 +298,7 @@ class Rattlesnake:
         self.output_proc.join(timeout=CLOSE_TIMEOUT)
         if self.output_proc.is_alive():
             self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Output Process\n")
-            self.output_event.set()
+            self.event_container.output_close_event.set()
             self.output_proc.join(timeout=CLOSE_TIMEOUT)
             if self.output_proc.is_alive() and not THREADING:
                 self.output_proc.terminate()
@@ -282,7 +308,7 @@ class Rattlesnake:
         self.streaming_proc.join(timeout=CLOSE_TIMEOUT)
         if self.streaming_proc.is_alive():
             self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Streaming Process\n")
-            self.streaming_event.set()
+            self.event_container.streaming_close_event.set()
             self.streaming_proc.join(timeout=CLOSE_TIMEOUT)
             if self.streaming_proc.is_alive() and not THREADING:
                 self.streaming_proc.terminate()

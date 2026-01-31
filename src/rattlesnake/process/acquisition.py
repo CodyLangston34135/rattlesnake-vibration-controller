@@ -31,6 +31,7 @@ from ..user_interface.ui_utilities import UICommands
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
+from multiprocessing.synchronize import Event  # pylint: disable=unused-import
 import queue as thqueue
 import numpy as np
 from time import time, sleep
@@ -552,7 +553,7 @@ class AcquisitionProcess(AbstractMessageProcess):
 
 
 # region: acquisition_process
-def acquisition_process(queue_container: QueueContainer, acquisition_active: mp.sharedctypes.Synchronized, shutdown_event):
+def acquisition_process(queue_container: QueueContainer, acquisition_active: mp.sharedctypes.Synchronized, shutdown_event: mp.synchronize.Event):
     """Function passed to multiprocessing as the acquisition process
 
     This process creates the ``AcquisitionProcess`` object and calls the ``run``
