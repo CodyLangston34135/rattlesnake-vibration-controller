@@ -95,8 +95,10 @@ def test_streaming_process_initialize(mock_dataset, stream_type, streaming):
     environment_metadata_dict = {"Environment 0": environment_metadata}
     data = (stream_metadata, hardware_metadata, environment_metadata_dict)
 
+    streaming.clear_ready()
     streaming.initialize(data)
 
+    assert streaming.ready_event.is_set()
     if stream_type == StreamType.NO_STREAM:
         mock_dataset.return_value.createDimension.assert_not_called()
     else:

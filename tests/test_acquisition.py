@@ -3,7 +3,7 @@ from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.utilities import GlobalCommands
-from mock_objects.mock_hardware import MockHardwareMetadata, acquisition_dict, metadata_attr_dict, UNIMPLEMENTED_HARDWARE
+from mock_objects.mock_hardware import MockHardwareMetadata, acquisition_dict, metadata_attr_dict, IMPLEMENTED_HARDWARE
 from mock_objects.mock_environment import MockEnvironmentMetadata
 from mock_objects.mock_utilities import mock_queue_container, mock_event_container
 import pytest
@@ -13,9 +13,6 @@ from unittest import mock
 
 
 # region: Fixtures
-IMPLEMENTED_HARDWARE = [hardware for hardware in HardwareType if hardware not in UNIMPLEMENTED_HARDWARE]
-
-
 @pytest.fixture(params=[True, False], ids=["threaded", "non_threaded"])
 def acquisition(request):
     use_thread = request.param
@@ -70,6 +67,7 @@ def test_acquisition_process_initialize_hardware(mock_log, hardware_type, acquis
         for attr in attr_lookup[hardware_type]:
             setattr(hardware_metadata, attr, 0)
 
+        acquisition.clear_ready()
         acquisition.initialize_hardware(hardware_metadata)
         mock_hardware().initialize_hardware.assert_called()
 
@@ -82,6 +80,8 @@ def test_acquisition_process_initialize_hardware(mock_log, hardware_type, acquis
     np.testing.assert_array_almost_equal(acquisition.abort_limits, [float("inf"), float("inf")])
     # Test if data array was initialized
     np.testing.assert_array_almost_equal(acquisition.read_data, np.zeros((2, 1000)))
+    # Test if acquisition was set to ready
+    assert acquisition.ready_event.is_set()
 
 
 @mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.log")
@@ -89,6 +89,7 @@ def test_acquisition_process_initialize_environment(mock_log, acquisition):
     hardware_metadata = MockHardwareMetadata()
     acquisition.hardware_metadata = hardware_metadata
     environment_metadata = MockEnvironmentMetadata()
+    acquisition.clear_ready()
     acquisition.initialize_environment({"Environment 0": environment_metadata})
 
     mock_log.assert_called_with("Initializing Environment")
@@ -98,6 +99,7 @@ def test_acquisition_process_initialize_environment(mock_log, acquisition):
     assert acquisition.environment_last_data["Environment 0"] == False
     assert acquisition.environment_samples_remaining_to_read["Environment 0"] == 0
     assert acquisition.environment_first_data["Environment 0"] == None
+    assert acquisition.ready_event.is_set()
 
 
 @mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.log")

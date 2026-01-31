@@ -109,6 +109,10 @@ class AbstractMessageProcess(ABC):
         """Queue to which GUI update instructions will be written."""
         return self._gui_update_queue
 
+    @property
+    def ready_event(self):
+        return self._ready_event
+
     def set_ready(self):
         self._ready_event.set()
 

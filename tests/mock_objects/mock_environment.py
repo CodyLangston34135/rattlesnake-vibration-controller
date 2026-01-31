@@ -1,16 +1,42 @@
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions, EnvironmentProcess
 from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.time_environment import TimeEnvironment, TimeMetadata
 from .mock_utilities import mock_channel_list
 from unittest import mock
 from enum import Enum
 
 UNIMPLEMENTED_ENVIRONMENT = {
-    ControlTypes.MODAL,
     ControlTypes.RANDOM,
-    ControlTypes.READ,
-    ControlTypes.SINE,
     ControlTypes.TRANSIENT,
+    ControlTypes.SINE,
+    ControlTypes.MODAL,
+    ControlTypes.READ,
 }
+IMPLEMENTED_ENVIRONMENT = [environment for environment in ControlTypes if environment not in UNIMPLEMENTED_ENVIRONMENT]
+
+
+def environment_metadata_dict():
+    environment_metadata_dict = {
+        ControlTypes.RANDOM: "",
+        ControlTypes.TRANSIENT: "",
+        ControlTypes.SINE: "",
+        ControlTypes.TIME: TimeMetadata,
+        ControlTypes.MODAL: "",
+        ControlTypes.READ: "",
+    }
+    return environment_metadata_dict
+
+
+def environment_dict():
+    environment_dict = {
+        ControlTypes.RANDOM: "",
+        ControlTypes.TRANSIENT: "",
+        ControlTypes.SINE: "",
+        ControlTypes.TIME: TimeEnvironment,
+        ControlTypes.MODAL: "",
+        ControlTypes.READ: "",
+    }
+    return environment_dict
 
 
 # region: MockEnvironmentType

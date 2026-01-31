@@ -384,6 +384,10 @@ class EnvironmentProcess(ABC):
         """A dictionary that maps commands received by the ``command_queue`` to functions in the class."""
         return self._command_map
 
+    @property
+    def ready_event(self):
+        return self._ready_event
+
     def set_ready(self):
         self._ready_event.set()
 

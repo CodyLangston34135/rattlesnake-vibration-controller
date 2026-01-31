@@ -71,11 +71,13 @@ def test_output_process_initialize_hardware(mock_log, hardware_type, output):
         for attr in attr_lookup[hardware_type]:
             setattr(hardware_metadata, attr, 0)
 
+        output.clear_ready()
         output.initialize_hardware(hardware_metadata)
         mock_hardware().initialize_hardware.assert_called()
 
     mock_log.assert_called_with("Initializing Hardware")
     assert output.hardware_metadata == hardware_metadata
+    assert output.ready_event.is_set()
 
 
 @mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.log")
@@ -83,6 +85,7 @@ def test_output_process_initialize_environment(mock_log, output):
     hardware_metadata = MockHardwareMetadata()
     output.hardware_metadata = hardware_metadata
     environment_metadata = MockEnvironmentMetadata()
+    output.clear_ready()
     output.initialize_environment({"Environment 0": environment_metadata})
 
     mock_log.assert_called_with("Initializing Environment")
@@ -93,6 +96,7 @@ def test_output_process_initialize_environment(mock_log, output):
     assert output.environment_first_data["Environment 0"] == False
     assert output.environment_output_channels["Environment 0"] == [0]
     np.testing.assert_array_equal(output.environment_data_out_remainders["Environment 0"], np.zeros((1, 0)))
+    assert output.ready_event.is_set()
 
 
 @mock.patch("rattlesnake.process.output.OutputProcess.log")

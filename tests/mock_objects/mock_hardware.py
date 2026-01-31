@@ -15,6 +15,7 @@ UNIMPLEMENTED_HARDWARE = {
     HardwareType.STATE_SPACE,
     HardwareType.SDYNPY_FRF,
 }
+IMPLEMENTED_HARDWARE = [hardware for hardware in HardwareType if hardware not in UNIMPLEMENTED_HARDWARE]
 
 
 # region: Import Locations

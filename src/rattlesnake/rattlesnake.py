@@ -376,7 +376,12 @@ class Rattlesnake:
 
     def stop_profile(self):
         self.log("Stopping Profile")
+        self.event_container.controller_ready_event.clear()
         self.profile_manager.stop_profile()
+
+        if self.blocking:
+            event_list = [self.event_container.controller_ready_event]
+            self.wait_for_ready_events(event_list)
 
     def shutdown(self):
         # Close out of acquisition, output, streaming process

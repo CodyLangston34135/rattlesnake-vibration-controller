@@ -1,7 +1,14 @@
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions, EnvironmentProcess, run_process
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.hardware.hardware_utilities import Channel
-from mock_objects.mock_environment import MockEnvironmentMetadata, MockEnvironmentInstructions, MockEnvironmentProcess
+from mock_objects.mock_environment import (
+    MockEnvironmentMetadata,
+    MockEnvironmentInstructions,
+    MockEnvironmentProcess,
+    environment_dict,
+    environment_metadata_dict,
+    IMPLEMENTED_ENVIRONMENT,
+)
 from mock_objects.mock_hardware import MockHardwareMetadata
 from mock_objects.mock_utilities import mock_channel_list, mock_queue_container, mock_event_container, fake_time
 import pytest
@@ -257,3 +264,107 @@ def test_run_process(mock_process_class, use_thread):
 
     mock_instance = mock_process_class.return_value
     mock_instance.run.assert_called()
+
+
+# region: Ready Checks
+@pytest.mark.parametrize("environment_type", [*IMPLEMENTED_ENVIRONMENT])
+@pytest.mark.parametrize("use_thread", [True, False])
+def test_environment_init(environment_type, use_thread):
+    environment_lookup = environment_dict()
+    mock_queues = mock.MagicMock()
+    event_container = mock_event_container(use_thread)
+    acquisition_active = mp.Value("i", 0)
+    output_active = mp.Value("i", 0)
+    new_environment = environment_lookup[environment_type]
+
+    event_container.environment_ready_events["Environment 0"].clear()
+    environment = new_environment(
+        "Environment Name",
+        "Queue Name",
+        mock_queues,
+        acquisition_active,
+        output_active,
+        event_container.environment_ready_events["Environment 0"],
+    )
+    assert event_container.environment_ready_events["Environment 0"].is_set()
+
+
+@pytest.mark.parametrize("environment_type", [*IMPLEMENTED_ENVIRONMENT])
+@pytest.mark.parametrize("use_thread", [True, False])
+def test_environment_initialize_hardware(environment_type, use_thread):
+    environment_lookup = environment_dict()
+    mock_queues = mock.MagicMock()
+    event_container = mock_event_container(use_thread)
+    acquisition_active = mp.Value("i", 0)
+    output_active = mp.Value("i", 0)
+    new_environment = environment_lookup[environment_type]
+    environment = new_environment(
+        "Environment Name",
+        "Queue Name",
+        mock_queues,
+        acquisition_active,
+        output_active,
+        event_container.environment_ready_events["Environment 0"],
+    )
+
+    hardware_metadata = MockHardwareMetadata()
+    event_container.environment_ready_events["Environment 0"].clear()
+    environment.initialize_hardware(hardware_metadata)
+
+    assert event_container.environment_ready_events["Environment 0"].is_set()
+
+
+@pytest.mark.parametrize("environment_type", [*IMPLEMENTED_ENVIRONMENT])
+@pytest.mark.parametrize("use_thread", [True, False])
+def test_environment_initialize_environment(environment_type, use_thread):
+    environment_lookup = environment_dict()
+    mock_queues = mock.MagicMock()
+    event_container = mock_event_container(use_thread)
+    acquisition_active = mp.Value("i", 0)
+    output_active = mp.Value("i", 0)
+    new_environment = environment_lookup[environment_type]
+    environment = new_environment(
+        "Environment Name",
+        "Queue Name",
+        mock_queues,
+        acquisition_active,
+        output_active,
+        event_container.environment_ready_events["Environment 0"],
+    )
+    hardware_metadata = MockHardwareMetadata()
+    environment.initialize_hardware(hardware_metadata)
+
+    mock_environment_metadata = mock.MagicMock()
+    event_container.environment_ready_events["Environment 0"].clear()
+    environment.initialize_environment(mock_environment_metadata)
+
+    assert event_container.environment_ready_events["Environment 0"].is_set()
+
+
+@pytest.mark.parametrize("environment_type", [*IMPLEMENTED_ENVIRONMENT])
+@pytest.mark.parametrize("use_thread", [True, False])
+def test_environment_stop_environment(environment_type, use_thread):
+    environment_lookup = environment_dict()
+    mock_queues = mock.MagicMock()
+    event_container = mock_event_container(use_thread)
+    acquisition_active = mp.Value("i", 0)
+    output_active = mp.Value("i", 0)
+    new_environment = environment_lookup[environment_type]
+    environment = new_environment(
+        "Environment Name",
+        "Queue Name",
+        mock_queues,
+        acquisition_active,
+        output_active,
+        event_container.environment_ready_events["Environment 0"],
+    )
+    hardware_metadata = MockHardwareMetadata()
+    environment.initialize_hardware(hardware_metadata)
+    mock_environment_metadata = mock.MagicMock()
+    environment.initialize_environment(mock_environment_metadata)
+
+    mock_data = mock.MagicMock()
+    event_container.environment_ready_events["Environment 0"].clear()
+    environment.stop_environment(mock_data)
+
+    assert event_container.environment_ready_events["Environment 0"].is_set()
