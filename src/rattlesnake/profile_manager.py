@@ -6,6 +6,7 @@ import threading
 from typing import List, Dict
 from datetime import datetime
 
+EXTRA_CLOSEOUT_TIME = 0.5  # Adds seconds to let the last profile event happen
 TASK_NAME = "Profile Manager"
 VALID_COMMANDS = {
     "Global": (GlobalCommands.STOP_HARDWARE, GlobalCommands.START_STREAMING, GlobalCommands.STOP_STREAMING),
@@ -118,6 +119,7 @@ class ProfileManager:
         self.profile_event_list = profile_event_list
         self.environment_instructions = environment_instructions_dict
         self.profile_timers = []
+        max_timestamp = 0
         for profile_event in self.profile_event_list:
             # Expand data
             timestamp = profile_event.timestamp
@@ -130,6 +132,14 @@ class ProfileManager:
             timer.start()
             self.profile_timers.append(timer)
 
+            if timestamp > max_timestamp:
+                max_timestamp = timestamp
+
+        # Fire a last profile event to tell Rattlesnake it is good to stop_acquisition
+        timer = threading.Timer(max_timestamp + EXTRA_CLOSEOUT_TIME, self.fire_closeout_event)
+        timer.start()
+        self.profile_timers.append(timer)
+
     def fire_profile_event(self, queue_name, command, data):
         self.log(f"Profile Firing Event {queue_name} {command} {data}")
         self.command_map[command](queue_name, data)
@@ -138,6 +148,11 @@ class ProfileManager:
         self.log("Stopping Profile")
         for timer in self.profile_timers:
             timer.cancel()
+
+        # Add closeout event
+        timer = threading.Timer(EXTRA_CLOSEOUT_TIME, self.fire_closeout_event)
+        timer.start()
+        self.profile_timers.append(timer)
 
     def stop_hardware(self, queue_name: str = "Global", data: None = None):
         self.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))
@@ -190,6 +205,9 @@ class ProfileManager:
         """
         if hasattr(self.environment_instructions[queue_name], "repeat"):
             self.environment_instructions[queue_name].repeat = False
+
+    def fire_closeout_event(self):
+        self.controller_command_queue.put(TASK_NAME, (GlobalCommands.PROFILE_CLOSEOUT, None))
 
     def log(self, message):
         """Write a message to the log file

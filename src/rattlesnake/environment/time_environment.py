@@ -253,6 +253,7 @@ class TimeEnvironment(EnvironmentProcess):
         self.hardware_metadata = hardware_metadata
         self.measurement_channels = [index for index, channel in enumerate(self.hardware_metadata.channel_list) if channel.feedback_device is None]
         self.output_channels = [index for index, channel in enumerate(self.hardware_metadata.channel_list) if channel.feedback_device is not None]
+        self.set_ready()
 
     def initialize_environment(self, metadata: TimeMetadata):
         """
@@ -269,6 +270,7 @@ class TimeEnvironment(EnvironmentProcess):
         """
         self.log("Initializing Environment Parameters")
         self.metadata = metadata
+        self.set_ready()
 
     def run_environment(self, data):
         """Runs the time history environment.
@@ -387,6 +389,7 @@ class TimeEnvironment(EnvironmentProcess):
 
         """
         self.adjust_test_level(0.0)
+        self.set_ready()
 
     def adjust_test_level(self, data):
         """Adjusts the test level of the signal

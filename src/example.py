@@ -170,14 +170,14 @@ def main():
     profile_event_list = build_profile_event_list(time_metadata.environment_name)
 
     # RATTLESNAKE CONTROLLER
-    rattlesnake = Rattlesnake()
+    rattlesnake = Rattlesnake(timeout=60)
     rattlesnake.set_hardware(hardware_metadata)
     rattlesnake.set_environments(envrionment_metadata_list)
     rattlesnake.start_acquisition(stream_metadata)
-    rattlesnake.start_profile(profile_event_list, environment_instruction_list)
+    rattlesnake.start_profile(profile_event_list, environment_instruction_list, blocking=False)
 
     app = QtWidgets.QApplication(sys.argv)
-    _ = HeadlessUI(rattlesnake.queue_container, rattlesnake.hardware_metadata, rattlesnake.environment_metadata_dict, "Dark", True)
+    _ = HeadlessUI(rattlesnake.queue_container, rattlesnake.hardware_metadata, rattlesnake.environment_metadata_dict, theme="Dark", debug=False)
     app.exec_()
     # time.sleep(12)
 

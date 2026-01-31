@@ -203,6 +203,7 @@ class OutputProcess(AbstractMessageProcess):
         self.num_outputs = len(output_indices)
 
         self.hardware_metadata = metadata
+        self.set_ready()
 
     def initialize_environment(self, metadata_dict: Dict[str, EnvironmentMetadata]):
         self.log("Initializing Environment")
@@ -232,6 +233,7 @@ class OutputProcess(AbstractMessageProcess):
             common_indices, out_inds, _ = np.intersect1d(hardware_output_indices, environment_channel_indices, return_indices=True)
             self.environment_output_channels[queue_name] = out_inds
             self.environment_data_out_remainders[queue_name] = np.zeros((len(common_indices), 0))
+        self.set_ready()
 
     def output_signal(self, data):  # pylint: disable=unused-argument
         """The main output loop of the controller.
@@ -378,6 +380,7 @@ class OutputProcess(AbstractMessageProcess):
                 self.startup = False
                 self.output_active = True
                 # print('started output')
+                self.set_ready()
         # Now check if we need to shut down.
         if (
             self.shutdown_flag  # Time to shut down
@@ -394,6 +397,7 @@ class OutputProcess(AbstractMessageProcess):
             self.shutdown_flag = False
             flush_queue(self.queue_container.input_output_sync_queue)
             self.output_active = False
+            self.set_ready()  # Alert that output has shutdown
         else:
             # Otherwise keep going
             self.queue_container.output_command_queue.put(self.process_name, (GlobalCommands.RUN_HARDWARE, None))

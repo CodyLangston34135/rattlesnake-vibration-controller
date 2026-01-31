@@ -254,6 +254,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         )
 
         self.hardware_metadata = metadata
+        self.set_ready()
 
     def initialize_environment(self, metadata_dict: Dict[str, EnvironmentMetadata]):
         self.log("Initializing Environment")
@@ -270,6 +271,7 @@ class AcquisitionProcess(AbstractMessageProcess):
             self.environment_last_data[queue_name] = False
             self.environment_samples_remaining_to_read[queue_name] = 0
             self.environment_first_data[queue_name] = None
+        self.set_ready()
 
     def stop_environment(self, data):
         """Sets flags stating that the specified environment will be ending.
@@ -369,6 +371,7 @@ class AcquisitionProcess(AbstractMessageProcess):
             self.hardware.start()
             self.startup = False
             self.acquisition_active = True
+            self.set_ready()
             # print('started acquisition')
         self.get_first_output_data()
         if (
@@ -406,6 +409,7 @@ class AcquisitionProcess(AbstractMessageProcess):
                 self.has_streamed = False
             self.acquisition_active = False
             self.log("Acquisition Shut Down")
+            self.set_ready()  # Alert that acquisition has shutdown
         else:
             aquiring_environments = [name for name, flag in self.environment_active_flags.items() if flag]
             self.log(f"Acquiring Data for {aquiring_environments} environments")

@@ -134,6 +134,7 @@ class StreamingProcess(AbstractMessageProcess):
 
         # Dont create file/filename is not guaranteed to exist
         if stream_metadata.stream_type == StreamType.NO_STREAM:
+            self.set_ready()
             return
 
         self.stream_variable = "time_data"
@@ -209,6 +210,8 @@ class StreamingProcess(AbstractMessageProcess):
         for environment_metadata in environment_metadata_dict.values():
             group_handle = self.netcdf_handle.createGroup(environment_metadata.environment_name)
             environment_metadata.store_to_netcdf(group_handle)
+
+        self.set_ready()
 
     def write_data(self, data):
         """

@@ -19,6 +19,7 @@ class HeadlessUI(QtWidgets.QMainWindow):
         queue_container: QueueContainer,
         hardware_metadata: HardwareMetadata,
         environment_metadata_dict: Dict[str, EnvironmentMetadata],
+        *,
         theme: str = "Light",
         debug: bool = False,
     ):

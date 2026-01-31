@@ -57,12 +57,13 @@ class ControllerProcess(AbstractMessageProcess):
         self.map_command(GlobalCommands.STOP_HARDWARE, self.stop_hardware)
         self.map_command(GlobalCommands.START_ENVIRONMENT, self.start_environment)
         self.map_command(GlobalCommands.STOP_ENVIRONMENT, self.stop_environment)
-        self.map_command(GlobalCommands.INITIALIZE_STREAMING, self.initialize_streaming)
         self.map_command(GlobalCommands.START_STREAMING, self.start_streaming)
         self.map_command(GlobalCommands.STOP_STREAMING, self.stop_streaming)
         self.map_command(GlobalCommands.AT_TARGET_LEVEL, self.at_target_level)
+        self.map_command(GlobalCommands.PROFILE_CLOSEOUT, self.profile_closeout)
 
-    def run_hardware(self, data: None):
+    def run_hardware(self, data: StreamMetadata):
+        self.stream_metadata = data
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, None))
         self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, None))
         if self.stream_metadata.stream_type == StreamType.IMMEDIATELY:
@@ -81,9 +82,6 @@ class ControllerProcess(AbstractMessageProcess):
         queue_name = data
         self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, None))
 
-    def initialize_streaming(self, data: StreamMetadata):
-        self.stream_metadata = data
-
     def start_streaming(self, data: None):
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.START_STREAMING, None))
 
@@ -94,6 +92,9 @@ class ControllerProcess(AbstractMessageProcess):
         environment_name = data
         if self.stream_metadata.stream_type == StreamType.TEST_LEVEL and self.stream_metadata.test_level_environment_name == environment_name:
             self.start_streaming()
+
+    def profile_closeout(self, data: None):
+        self.set_ready()
 
 
 # region: controller_process

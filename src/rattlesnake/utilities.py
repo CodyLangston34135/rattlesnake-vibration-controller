@@ -29,7 +29,8 @@ class GlobalCommands(Enum):
     INITIALIZE_PROFILE = 13  # Send profile metadata to controller
     START_PROFILE = 14  # Start test from profile
     STOP_PROFILE = 15  # Stop test from profile
-    AT_TARGET_LEVEL = 16  # Notifies controller that environment has hit its target level
+    PROFILE_CLOSEOUT = 16  # Tells controller the profile events are over
+    AT_TARGET_LEVEL = 17  # Notifies controller that environment has hit its target level
 
 
 def log_file_task(queue: mp.Queue, shutdown_event):

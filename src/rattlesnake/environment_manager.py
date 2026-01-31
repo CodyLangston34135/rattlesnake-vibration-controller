@@ -66,6 +66,20 @@ class EnvironmentManager:
     def threading(self):
         return self._threading
 
+    @property
+    def ready_event_list(self):
+        ready_event_list = [self.environment_ready_events[queue_name] for queue_name in self.queue_names]
+        return ready_event_list
+
+    def set_ready_events(self):
+        """This is used by the main process to ready the events if a timeout
+        has been reached. I purposefully didnt add a clear_ready_events function
+        as the events will have to be cleared in the EnvironmentManager or else
+        ever init of a new environment will set the event. Also, the mapped queue_names
+        are unknown before initialize_environment has been called."""
+        for event in self.ready_event_list:
+            event.set()
+
     def log(self, message):
         """Write a message to the log file
 
@@ -87,6 +101,7 @@ class EnvironmentManager:
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         self.log("Initializing Hardware")
         for queue_name in self.queue_names:
+            self.environment_ready_events[queue_name].clear()
             self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata))
 
         self.hardware_metadata = hardware_metadata
@@ -120,6 +135,7 @@ class EnvironmentManager:
             self.environment_names[queue_name] = environment_name
             self.environment_metadata[queue_name] = metadata
             self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, self.hardware_metadata))
+            self.environment_ready_events[queue_name].clear()
             self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata))
 
             mapped_queue_names.add(queue_name)
@@ -291,6 +307,7 @@ class EnvironmentManager:
         self.environment_processes[queue_name] = environment_process
         self.environment_metadata[queue_name] = metadata
         self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, self.hardware_metadata))
+        self.environment_ready_events[queue_name].clear()
         self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata))
 
     def remove_environment(self, queue_name):

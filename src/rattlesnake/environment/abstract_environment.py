@@ -293,6 +293,7 @@ class EnvironmentProcess(ABC):
             specific hardware metadata. Assume you are only getting
             the attributes in the base HardwareMetadata class.
         """
+        self.set_ready()
 
     @abstractmethod
     def initialize_environment(self, environment_metadata: EnvironmentMetadata) -> None:
@@ -307,6 +308,7 @@ class EnvironmentProcess(ABC):
         environment_metadata : EnvironmentMetadata
             A container containing the parameters defining the environment.
         """
+        self.set_ready()
 
     @abstractmethod
     def stop_environment(self, data) -> None:
@@ -323,6 +325,7 @@ class EnvironmentProcess(ABC):
             due to the calling signature of functions called through the
             ``command_map``.
         """
+        self.set_ready()
 
     @property
     def environment_command_queue(self) -> VerboseMessageQueue:
