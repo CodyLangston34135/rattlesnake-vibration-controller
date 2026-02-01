@@ -65,6 +65,20 @@ _direction_map = {
     "": 0,
     None: 0,
 }
+_direction_inv_map = {
+    1: "X+",
+    2: "Y+",
+    3: "Z+",
+    4: "RX+",
+    5: "RY+",
+    6: "RZ+",
+    -1: "X-",
+    -2: "Y-",
+    -3: "Z-",
+    -4: "RX-",
+    -5: "RY-",
+    -6: "RZ-",
+}
 
 HARDWARE_TYPE = HardwareType.SDYNPY_SYSTEM
 DEBUG = False
@@ -83,6 +97,9 @@ class SDynPySystemMetadata(HardwareMetadata):
 
     def validate(self):
         return super().validate()
+
+    def valid_channel_dict(self, channel):
+        pass
 
     @property
     def extra_attr_list(self):

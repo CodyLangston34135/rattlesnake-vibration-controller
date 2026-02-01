@@ -156,7 +156,7 @@ class StreamingProcess(AbstractMessageProcess):
         self.netcdf_handle.time_per_read = hardware_metadata.samples_per_read / hardware_metadata.sample_rate
         self.netcdf_handle.hardware = hardware_metadata.hardware_type.value
         self.netcdf_handle.output_oversample = hardware_metadata.output_oversample
-        for attr_name in hardware_metadata.extra_attr_list():
+        for attr_name in hardware_metadata.extra_attr_list:
             value = getattr(hardware_metadata, attr_name)
             setattr(self.netcdf_handle, attr_name, value)
         # Create Variables
@@ -205,7 +205,7 @@ class StreamingProcess(AbstractMessageProcess):
             else:
                 channel_data = ["" if val is None else val for val in channel_data]
             for i, cd in enumerate(channel_data):
-                var[i] = cd
+                var[i] = str(cd)
         # Now write all the environment data to the netCDF file
         for environment_metadata in environment_metadata_dict.values():
             group_handle = self.netcdf_handle.createGroup(environment_metadata.environment_name)

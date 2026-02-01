@@ -297,7 +297,7 @@ class Rattlesnake:
         if self.state != RattlesnakeState.ENVIRONMENT_STORE:
             raise RuntimeError(f"Invalid state for starting acquisition: {self.state}")
         # Validate stream metadata
-        if not isinstance(self.stream_metadata, StreamMetadata):
+        if not isinstance(stream_metadata, StreamMetadata):
             raise TypeError("Rattlesnake.set_stream requires a valid StreamMetadata class")
         valid_stream = stream_metadata.validate()
         if not valid_stream:
@@ -308,7 +308,7 @@ class Rattlesnake:
         self.event_container.streaming_ready_event.clear()
         self.queue_container.streaming_command_queue.put(
             TASK_NAME,
-            (GlobalCommands.INITIALIZE_STREAMING, (self.stream_metadata, self.hardware_metadata, self.environment_metadata_dict)),
+            (GlobalCommands.INITIALIZE_STREAMING, (stream_metadata, self.hardware_metadata, self.environment_metadata_dict)),
         )
 
         # Tell controller to start up the hardware, controller takes over logic from here

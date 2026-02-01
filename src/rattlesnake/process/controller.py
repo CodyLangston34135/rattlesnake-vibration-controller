@@ -67,7 +67,7 @@ class ControllerProcess(AbstractMessageProcess):
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, None))
         self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, None))
         if self.stream_metadata.stream_type == StreamType.IMMEDIATELY:
-            self.start_streaming(None)
+            self.start_streaming(True)
 
     def stop_hardware(self, data: None):
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))
@@ -82,8 +82,15 @@ class ControllerProcess(AbstractMessageProcess):
         queue_name = data
         self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, None))
 
-    def start_streaming(self, data: None):
-        self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.START_STREAMING, None))
+    def start_streaming(self, data: bool = False):
+        # This is a pain because it needs to be ignored if stream_type is not Profile Instruction
+        # but other processes also go through the controller to start stream logic so I put in
+        # an override for those processes
+        override = data
+        if override:
+            self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.START_STREAMING, None))
+        if self.stream_metadata.stream_type == StreamType.PROFILE_INSTRUCTION:
+            self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.START_STREAMING, None))
 
     def stop_streaming(self, data: None):
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.STOP_STREAMING, None))
@@ -91,7 +98,7 @@ class ControllerProcess(AbstractMessageProcess):
     def at_target_level(self, data: str):
         environment_name = data
         if self.stream_metadata.stream_type == StreamType.TEST_LEVEL and self.stream_metadata.test_level_environment_name == environment_name:
-            self.start_streaming()
+            self.start_streaming(True)
 
     def profile_closeout(self, data: None):
         self.set_ready()

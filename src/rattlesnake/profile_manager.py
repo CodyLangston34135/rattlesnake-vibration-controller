@@ -160,7 +160,7 @@ class ProfileManager:
             self.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, queue_name))
 
     def start_streaming(self, queue_name: str = "Global", data: None = None):
-        self.controller_command_queue.put(TASK_NAME, (GlobalCommands.START_STREAMING, None))
+        self.controller_command_queue.put(TASK_NAME, (GlobalCommands.START_STREAMING, False))
 
     def stop_streaming(self, queue_name: str = "Global", data: None = None):
         self.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_STREAMING, None))

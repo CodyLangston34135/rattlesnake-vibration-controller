@@ -156,8 +156,8 @@ def main():
 
     # STREAM METADATA
     stream_metadata = StreamMetadata()
-    stream_metadata.stream_type = StreamType.NO_STREAM
-    stream_metadata.stream_file = None
+    stream_metadata.stream_type = StreamType.IMMEDIATELY
+    stream_metadata.stream_file = "E:/Rattlesnake/SampleData/streaming2.nc4"
     stream_metadata.test_level_environment_name = None
 
     # ENVIRONMENT INSTRUCTIONS LIST
