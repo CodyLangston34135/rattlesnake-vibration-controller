@@ -87,9 +87,10 @@ class ControllerProcess(AbstractMessageProcess):
         # but other processes also go through the controller to start stream logic so I put in
         # an override for those processes
         override = data
+        # I split these up for debugging purposes
         if override:
             self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.START_STREAMING, None))
-        if self.stream_metadata.stream_type == StreamType.PROFILE_INSTRUCTION:
+        elif self.stream_metadata.stream_type == StreamType.PROFILE_INSTRUCTION:
             self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.START_STREAMING, None))
 
     def stop_streaming(self, data: None):

@@ -2,7 +2,9 @@
 omit =
     src/rattlesnake/utilities.py
     src/rattlesnake/environment_manager.py
+    src/rattlesnake/profile_manager.py
     src/rattlesnake/process/abstract_message_process.py
+    src/rattlesnake/process/controller.py
     src/rattlesnake/process/acquisition.py
     src/rattlesnake/process/output.py
     src/rattlesnake/process/streaming.py

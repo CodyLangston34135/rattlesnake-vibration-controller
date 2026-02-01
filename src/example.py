@@ -152,7 +152,7 @@ def main():
 
     # STREAM METADATA
     stream_metadata = StreamMetadata()
-    stream_metadata.stream_type = StreamType.TEST_LEVEL
+    stream_metadata.stream_type = StreamType.NO_STREAM
     stream_metadata.stream_file = "E:/Rattlesnake/SampleData/streaming4.nc4"
     stream_metadata.test_level_environment_name = "Time Environment 1"
 

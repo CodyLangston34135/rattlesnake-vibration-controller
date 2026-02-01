@@ -16,7 +16,7 @@ from datetime import datetime
 from typing import List
 
 TASK_NAME = "Rattlesnake"
-CLOSE_TIMEOUT = 5
+CLOSE_TIMEOUT = 5  # Number of seconds to wait for process to join
 THREADING = True
 
 
@@ -32,15 +32,16 @@ class RattlesnakeState(Enum):
 
 # region: Rattlesnake
 class Rattlesnake:
-    def __init__(self, *, blocking: bool = True, timeout: float = 100):
+    def __init__(self, *, threaded: bool = THREADING, blocking: bool = True, timeout: float = 100):
         # Initialize values for checking state
         self.state = RattlesnakeState.INIT
+        self._threaded = threaded
+        self._blocking = blocking  # Wait for ready events?, True for IDE, False for UI
+        self._timeout = timeout  # Timeout while waiting for ready_events
         self.acquisition_active = mp.Value("i", 0)
         self.output_active = mp.Value("i", 0)
-        self._blocking = blocking  # Wait for ready events?, True for IDE, False for UI
-        self._timeout = timeout
 
-        if THREADING:
+        if self.threaded:
             new_queue = thqueue.Queue  # threading-safe in-memory queue
             new_process = threading.Thread  # worker threads
             new_event = threading.Event  # optional stop flag
@@ -173,7 +174,7 @@ class Rattlesnake:
             self.queue_container,
             self.event_container.environment_ready_events,
             self.event_container.environment_close_events,
-            THREADING,
+            self.threaded,
         )
         self._stream_metadata = StreamMetadata()  # Default to StreamType.NO_STREAM
         self.profile_manager = ProfileManager(  # Contains instructions/profile events
@@ -189,6 +190,10 @@ class Rattlesnake:
                 *self.environment_manager.ready_event_list,
             ]
             self.wait_for_ready_events(event_list)
+
+    @property
+    def threaded(self):
+        return self._threaded
 
     @property
     def blocking(self):
@@ -212,7 +217,7 @@ class Rattlesnake:
         return self._stream_metadata
 
     @property
-    def environment_instructions_list(self):
+    def environment_instructions_dict(self):
         return self.profile_manager.environment_instructions
 
     @property
@@ -239,9 +244,7 @@ class Rattlesnake:
         # Validate hardware
         if not isinstance(hardware_metadata, HardwareMetadata):
             raise TypeError("Rattlesnake.set_hardware requires a valid HardwareMetadata class")
-        valid_hardware = hardware_metadata.validate()
-        if not valid_hardware:
-            raise TypeError("Rattlesnake.set_hardware requires a valid HardwareMetadata class")
+        hardware_metadata.validate()
 
         # Send hardware metadata to the correct processes
         self.log("Setting Hardware")
@@ -299,9 +302,7 @@ class Rattlesnake:
         # Validate stream metadata
         if not isinstance(stream_metadata, StreamMetadata):
             raise TypeError("Rattlesnake.set_stream requires a valid StreamMetadata class")
-        valid_stream = stream_metadata.validate()
-        if not valid_stream:
-            raise TypeError("Rattlesnake.set_stream requires a valid StreamMetadata class")
+        stream_metadata.validate()
 
         # Store streaming metadata to controller (side note: ControllerProcess decides when/why to stream not StreamingProcess)
         self.log("Setting Stream Metadata")
@@ -395,7 +396,7 @@ class Rattlesnake:
             self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Controller Process\n")
             self.event_container.controller_close_event.set()
             self.controller_proc.join(timeout=CLOSE_TIMEOUT)
-            if self.controller_proc.is_alive() and not THREADING:
+            if self.controller_proc.is_alive() and not self.threaded:
                 self.controller_proc.terminate()
                 self.controller_proc.join()
         self.queue_container.log_file_queue.put(f"{datetime.now()}: Joining Acquisition Process\n")
@@ -405,7 +406,7 @@ class Rattlesnake:
             self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Acquisition Process\n")
             self.event_container.acquisition_close_event.set()
             self.acquisition_proc.join(timeout=CLOSE_TIMEOUT)
-            if self.acquisition_proc.is_alive() and not THREADING:
+            if self.acquisition_proc.is_alive() and not self.threaded:
                 self.acquisition_proc.terminate()
                 self.acquisition_proc.join()
         self.queue_container.log_file_queue.put(f"{datetime.now()}: Joining Output Process\n")
@@ -415,7 +416,7 @@ class Rattlesnake:
             self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Output Process\n")
             self.event_container.output_close_event.set()
             self.output_proc.join(timeout=CLOSE_TIMEOUT)
-            if self.output_proc.is_alive() and not THREADING:
+            if self.output_proc.is_alive() and not self.threaded:
                 self.output_proc.terminate()
                 self.output_proc.join()
         self.queue_container.log_file_queue.put(f"{datetime.now()}: Joining Streaming Process\n")
@@ -425,7 +426,7 @@ class Rattlesnake:
             self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing Streaming Process\n")
             self.event_container.streaming_close_event.set()
             self.streaming_proc.join(timeout=CLOSE_TIMEOUT)
-            if self.streaming_proc.is_alive() and not THREADING:
+            if self.streaming_proc.is_alive() and not self.threaded:
                 self.streaming_proc.terminate()
                 self.streaming_proc.join()
 

@@ -43,10 +43,10 @@ class ProfileEvent:
     def validate(self):
         # Check if environment_name is a string
         if not isinstance(self.environment_name, str):
-            raise ValueError(f"{self.environment_name} is not a valid environment_name for a profile event")
+            raise TypeError(f"{self.environment_name} is not a valid environment_name for a profile event")
         # Check if timestamp is a number
-        if not isinstance(self.timestamp, (int, float)):
-            raise ValueError(f"{self.environment_name} profile event was not given a timestamp")
+        if not isinstance(self.timestamp, (int, float)) or self.timestamp < 0:
+            raise ValueError(f"{self.environment_name} profile event was not given a valid timestamp")
         # Check if a valid environment_type was given
         if self.environment_type not in VALID_COMMANDS.keys():
             raise TypeError(f"{self.environment_name} not given a valid environment type: {self.environment_type}")
@@ -68,8 +68,8 @@ class ProfileEvent:
 # region: ProfileManager
 class ProfileManager:
     def __init__(self, log_file_queue, controller_command_queue):
-        self.log_file_queue = log_file_queue
-        self.controller_command_queue = controller_command_queue
+        self._log_file_queue = log_file_queue
+        self._controller_command_queue = controller_command_queue
 
         self.environment_instructions = {}
         self.profile_event_list = []
@@ -86,13 +86,23 @@ class ProfileManager:
         self.command_map[TimeCommands.SET_REPEAT] = self.set_repeat
         self.command_map[TimeCommands.SET_NO_REPEAT] = self.set_norepeat
 
+    @property
+    def log_file_queue(self):
+        return self._log_file_queue
+
+    @property
+    def controller_command_queue(self):
+        return self._controller_command_queue
+
     def validate_profile_list(self, profile_event_list: List[ProfileEvent], environment_instructions_dict: Dict[str, EnvironmentInstructions]):
         """Validate list of profile events. Since each event needs"""
         for profile_event in profile_event_list:
+            if not isinstance(profile_event, ProfileEvent):
+                raise TypeError("Profile event list contains invalid type")
             # Validate profile event
             valid_profile = profile_event.validate()
             if not valid_profile:
-                raise TypeError("Rattlesnake.set_profile requires a valid list of ProfileEvents")
+                raise ValueError("Rattlesnake.set_profile requires a valid list of ProfileEvents")
 
             # Validate command has been implemented in profile_manager
             environment_name = profile_event.environment_name
