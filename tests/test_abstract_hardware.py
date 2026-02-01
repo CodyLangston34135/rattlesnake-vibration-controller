@@ -56,7 +56,7 @@ def test_hardware_metadata_validate(channel_list, expected, hardware_metadata):
 
 
 def test_hardware_metadata_extra_attr_list(hardware_metadata):
-    attr_list = hardware_metadata.extra_attr_list()
+    attr_list = hardware_metadata.extra_attr_list
 
     assert attr_list[0] == "extra_attr"
 

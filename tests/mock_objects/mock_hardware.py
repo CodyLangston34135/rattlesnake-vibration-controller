@@ -81,8 +81,9 @@ class MockHardwareMetadata(HardwareMetadata):
         super().validate()
         return True
 
+    @property
     def extra_attr_list(self):
-        super().extra_attr_list()
+        super().extra_attr_list
         return ["extra_attr"]
 
 

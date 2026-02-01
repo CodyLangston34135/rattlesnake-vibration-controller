@@ -2,7 +2,7 @@
 omit =
     # src/rattlesnake/utilities.py
     # src/rattlesnake/environment_manager.py
-    # src/rattlesnake/process/abstract_message_process.py
+    src/rattlesnake/process/abstract_message_process.py
     # src/rattlesnake/process/acquisition.py
     # src/rattlesnake/process/output.py
     # src/rattlesnake/process/streaming.py
@@ -11,7 +11,7 @@ omit =
     # src/rattlesnake/environment/abstract_environment.py
     # src/rattlesnake/environment/environment_utilities.py
     # src/rattlesnake/environment/time_environment.py
-    # src/rattlesnake/cicd/*
+    src/rattlesnake/cicd/*
     src/rattlesnake/hardware/nidaqmx.py
     src/rattlesnake/environment/read_environment.py
     src/rattlesnake/user_interface/*

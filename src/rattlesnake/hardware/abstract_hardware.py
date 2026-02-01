@@ -66,6 +66,7 @@ class HardwareMetadata(ABC):
 
         return True
 
+    @property
     @abstractmethod
     def extra_attr_list(self) -> List[str]:
         """
