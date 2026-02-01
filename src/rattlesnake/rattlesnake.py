@@ -1,4 +1,4 @@
-from .utilities import GlobalCommands, VerboseMessageQueue, QueueContainer, EventContainer, log_file_task
+from .utilities import GlobalCommands, VerboseMessageQueue, QueueContainer, EventContainer, log_file_task, flush_queue
 from .process.controller import controller_process
 from .process.acquisition import acquisition_process
 from .process.output import output_process
@@ -352,7 +352,9 @@ class Rattlesnake:
 
         self.state = RattlesnakeState.ENVIRONMENT_STORE
 
-    def start_profile(self, profile_event_list: List[ProfileEvent], environment_instructions_list: List[EnvironmentInstructions], *, blocking=None):
+    def start_profile(
+        self, profile_event_list: List[ProfileEvent], environment_instructions_list: List[EnvironmentInstructions], *, blocking: bool | None = None
+    ):
         self.log("Settting Profile Event List")
         if self.state != RattlesnakeState.ACQUISITION_START:
             raise RuntimeError(f"Invalid state to start profile: {self.state}")
@@ -386,6 +388,7 @@ class Rattlesnake:
     def shutdown(self):
         # Close out of acquisition, output, streaming process
         self.queue_container.log_file_queue.put(f"{datetime.now()}: Joining Controller Process\n")
+        flush_queue(self.queue_container.gui_update_queue, timeout=CLOSE_TIMEOUT)
         self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.QUIT, None))
         self.controller_proc.join(timeout=CLOSE_TIMEOUT)
         if self.controller_proc.is_alive():

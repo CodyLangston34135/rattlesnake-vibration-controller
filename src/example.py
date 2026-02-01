@@ -111,7 +111,7 @@ def create_sdynpy_signal():
 
 
 def build_profile_event_list(environment_queue_name):
-    timestamp = 1
+    timestamp = 0
     command = GlobalCommands.START_STREAMING
     profile_event_1 = ProfileEvent(timestamp, "Global", command)
 
@@ -128,10 +128,6 @@ def build_profile_event_list(environment_queue_name):
     timestamp = 8
     command = GlobalCommands.STOP_STREAMING
     profile_event_4 = ProfileEvent(timestamp, "Global", command)
-
-    # timestamp = 8
-    # command = GlobalCommands.STOP_HARDWARE
-    # profile_event_5 = ProfileEvent(timestamp, "Global", command)
 
     profile_event_list = [profile_event_1, profile_event_2, profile_event_3, profile_event_4]
     return profile_event_list
@@ -179,7 +175,6 @@ def main():
     app = QtWidgets.QApplication(sys.argv)
     _ = HeadlessUI(rattlesnake.queue_container, rattlesnake.hardware_metadata, rattlesnake.environment_metadata_dict, theme="Dark", debug=False)
     app.exec_()
-    # time.sleep(12)
 
     rattlesnake.stop_acquisition()
     rattlesnake.shutdown()
