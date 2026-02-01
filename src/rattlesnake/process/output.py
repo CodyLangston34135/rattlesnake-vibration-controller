@@ -191,7 +191,7 @@ class OutputProcess(AbstractMessageProcess):
             # self.hardware = SDynPyFRFOutput(self.queue_container.single_process_hardware_queue)
             pass
         else:
-            raise ValueError("Invalid Hardware or Hardware Not Implemented!")
+            raise TypeError("Invalid Hardware or Hardware Not Implemented!")
         # Initialize hardware and create channels
         self.hardware.initialize_hardware(metadata)
         # Get the environment output channels in reference to all the output channels

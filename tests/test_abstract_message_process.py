@@ -4,6 +4,7 @@ from mock_objects.mock_utilities import mock_queue_container, mock_event_contain
 import pytest
 import multiprocessing as mp
 from unittest import mock
+from queue import Empty as QueueEmpty
 
 
 # region: Fixtures
@@ -108,7 +109,7 @@ def test_abstract_message_process_run(mock_log, mock_get, mock_function, mock_ke
     }
 
     # Give command_queue.get a "Test Key" then "Quit Key"
-    mock_get.side_effect = [("Test Key", None), ("Quit Key", None)]
+    mock_get.side_effect = [(QueueEmpty), ("Test Key", None), ("Quit Key", None)]
     shutdown_event = mp.Event()
     abstract_message_process.run(shutdown_event)
 

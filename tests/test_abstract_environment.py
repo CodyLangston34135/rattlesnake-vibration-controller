@@ -15,6 +15,7 @@ import pytest
 import netCDF4 as nc4
 import multiprocessing as mp
 from unittest import mock
+from queue import Empty as QueueEmpty
 
 # region: Fixtures
 channel_list = mock_channel_list()
@@ -168,8 +169,23 @@ def test_environment_process_properties(environment_process):
     environment_process.log_file_queue
     environment_process.queue_name
     environment_process.command_map
+    environment_process.ready_event
 
     assert True
+
+
+def test_environment_process_set_ready(environment_process):
+    environment_process._ready_event.clear()
+    environment_process.set_ready()
+
+    assert environment_process.ready_event.is_set()
+
+
+def test_environment_process_clear_ready(environment_process):
+    environment_process._ready_event.set()
+    environment_process.clear_ready()
+
+    assert not environment_process.ready_event.is_set()
 
 
 def test_environment_process_functions(environment_process, environment_metadata):
@@ -226,7 +242,7 @@ def test_environment_process_run(mock_log, mock_get, mock_function, mock_key, en
     }
 
     # Make the get command return "Test Key", then "Quit Key"
-    mock_get.side_effect = [("Test Key", None), ("Quit Key", None)]
+    mock_get.side_effect = [(QueueEmpty), ("Test Key", None), ("Quit Key", None)]
     mock_shutdown = mock.MagicMock()
     mock_shutdown.is_set.return_value = False
 

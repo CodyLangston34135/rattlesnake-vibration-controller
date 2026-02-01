@@ -105,10 +105,10 @@ class TimeMetadata(EnvironmentMetadata):
         super().validate()
 
         if not isinstance(self.cancel_rampdown_time, (int, float)) or self.cancel_rampdown_time <= 0:
-            raise TypeError(f"{self.environment_name} sample_rate must be a number greater than 0")
+            raise ValueError(f"{self.environment_name} cancel_rampdown_time must be a number greater than 0")
 
         if not isinstance(self.sample_rate, (int, float)) or self.sample_rate <= 0:
-            raise TypeError(f"{self.environment_name} sample_rate must be a number greater than 0")
+            raise ValueError(f"{self.environment_name} sample_rate must be a number greater than 0")
 
         if not isinstance(self.output_signal, np.ndarray):
             raise TypeError(f"{self.environment_name} output_singal must be a 2D numpy array")

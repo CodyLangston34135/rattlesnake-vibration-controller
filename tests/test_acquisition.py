@@ -53,6 +53,8 @@ def test_acquisition_properties(acquisition):
     # Test the acquisiton_active setter
     acquisition.acquisition_active = True
     assert acquisition.acquisition_active == True
+    acquisition.acquisition_active = False
+    assert acquisition.acquisition_active == False
 
 
 @pytest.mark.parametrize("hardware_type", [*IMPLEMENTED_HARDWARE])
@@ -62,6 +64,8 @@ def test_acquisition_process_initialize_hardware(mock_log, hardware_type, acquis
     hardware_lookup = acquisition_dict()
     attr_lookup = metadata_attr_dict()
     hardware_metadata.hardware_type = hardware_type
+    mock_existing_hardware = mock.MagicMock()
+    acquisition.hardware = mock_existing_hardware
 
     with mock.patch(hardware_lookup[hardware_type]) as mock_hardware:
         for attr in attr_lookup[hardware_type]:
@@ -82,6 +86,15 @@ def test_acquisition_process_initialize_hardware(mock_log, hardware_type, acquis
     np.testing.assert_array_almost_equal(acquisition.read_data, np.zeros((2, 1000)))
     # Test if acquisition was set to ready
     assert acquisition.ready_event.is_set()
+    mock_existing_hardware.close.assert_called_once()
+
+
+@mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.log")
+def test_acquisition_process_initialize_hardware_value_error(mock_log, acquisition):
+    hardware_metadata = MockHardwareMetadata()
+
+    with pytest.raises(TypeError):
+        acquisition.initialize_hardware(hardware_metadata)
 
 
 @mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.log")

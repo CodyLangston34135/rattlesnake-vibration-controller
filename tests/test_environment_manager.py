@@ -1,6 +1,7 @@
 from rattlesnake.environment_manager import EnvironmentManager
 from rattlesnake.utilities import GlobalCommands
-from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.profile_manager import ProfileEvent
+from rattlesnake.environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions
 from mock_objects.mock_hardware import MockHardwareMetadata
 from mock_objects.mock_environment import MockEnvironmentType, MockEnvironmentMetadata, MockEnvironmentInstructions, IMPLEMENTED_ENVIRONMENT
 from mock_objects.mock_utilities import mock_queue_container, mock_event_container, fake_time
@@ -36,16 +37,17 @@ def test_environment_manager_init(use_thread):
 
 
 @pytest.mark.parametrize(
-    "queue_names, expected",
+    "queue_names, available_queues",
     [
         (["Environment 0", "Environment 1"], ["Environment 2", "Environment 3"]),
         ([], ["Environment 0", "Environment 1", "Environment 2", "Environment 3"]),
     ],
 )
-def test_environment_manager_available_queues(queue_names, expected, environment_manager):
+def test_environment_manager_available_queues(queue_names, available_queues, environment_manager):
     environment_manager.queue_names = queue_names
 
-    assert environment_manager.available_queues == expected
+    assert environment_manager.available_queues == available_queues
+    assert environment_manager.num_queues == 4
 
 
 def test_environment_manager_queue_names_dict(environment_manager):
@@ -54,6 +56,24 @@ def test_environment_manager_queue_names_dict(environment_manager):
 
     queue_names_dict = environment_manager.queue_names_dict
     assert queue_names_dict["Environment Name"] == "Environment 0"
+
+
+def test_environment_manager_ready_event_list(environment_manager):
+    environment_manager.queue_names = ["Environment 0", "Environment 1"]
+    ready_event_list = [
+        environment_manager.environment_ready_events["Environment 0"],
+        environment_manager.environment_ready_events["Environment 1"],
+    ]
+
+    assert environment_manager.ready_event_list == ready_event_list
+
+
+def test_environment_manager_set_ready_events(environment_manager):
+    environment_manager.queue_names = ["Environment 0"]
+    environment_manager.environment_ready_events["Environment 0"].clear()
+    environment_manager.set_ready_events()
+
+    assert environment_manager.environment_ready_events["Environment 0"].is_set()
 
 
 def test_environment_manager_initialize_hardware(environment_manager):
@@ -124,17 +144,63 @@ def test_environment_manager_initialize_environment(existing_metadata, valid_met
 
 
 @pytest.mark.parametrize(
-    "environment_name, environment_type, expected",
+    "environment_name_list, validate_list, instance_list, expected",
     [
-        ("Mock Environment", MockEnvironmentType.ENVIRONMENT, True),
-        ("Wrong Name", MockEnvironmentType.ENVIRONMENT, KeyError),
-        ("Mock Environment", None, TypeError),
+        (["Environment 0", "Environment 1"], [True, True], [EnvironmentMetadata, EnvironmentMetadata], True),
+        (["Environment 0", "Environment 1"], [True, True], [None, EnvironmentMetadata], TypeError),
+        (["Environment 0", "Environment 0"], [True, True], [EnvironmentMetadata, EnvironmentMetadata], ValueError),
+        (["Environment Name"], [False], [EnvironmentMetadata], ValueError),
+        (
+            ["0", "1", "2", "3", "4"],
+            [True, True, True, True, True],
+            [EnvironmentMetadata, EnvironmentMetadata, EnvironmentMetadata, EnvironmentMetadata, EnvironmentMetadata],
+            IndexError,
+        ),
     ],
 )
-def test_environment_manager_validate_instructions(environment_name, environment_type, expected, environment_manager):
-    environment_instructions = MockEnvironmentInstructions()
+def test_environment_manager_validate_environment_metadata(environment_name_list, validate_list, instance_list, expected, environment_manager):
+    environment_manager.queue_names = ["Environment 0", "Environment 1"]
+    metadata_list = []
+
+    for environment_name, validate, instance in zip(
+        environment_name_list,
+        validate_list,
+        instance_list,
+    ):
+        mock_metadata = mock.MagicMock(spec=instance)
+        mock_metadata.environment_name = environment_name
+        mock_metadata.validate.return_value = validate
+        metadata_list.append(mock_metadata)
+
+    if expected is TypeError:
+        with pytest.raises(TypeError):
+            environment_manager.validate_environment_metadata(metadata_list)
+    elif expected is ValueError:
+        with pytest.raises(ValueError):
+            environment_manager.validate_environment_metadata(metadata_list)
+    elif expected is IndexError:
+        with pytest.raises(IndexError):
+            environment_manager.validate_environment_metadata(metadata_list)
+    elif expected:
+        valid_metadata_list = environment_manager.validate_environment_metadata(metadata_list)
+        assert valid_metadata_list
+
+
+@pytest.mark.parametrize(
+    "environment_name, environment_type, validate, instance, expected",
+    [
+        ("Mock Environment", MockEnvironmentType.ENVIRONMENT, True, EnvironmentInstructions, True),
+        ("Wrong Name", MockEnvironmentType.ENVIRONMENT, True, EnvironmentInstructions, KeyError),
+        ("Mock Environment", None, True, EnvironmentInstructions, TypeError),
+        ("Mock Environment", MockEnvironmentType.ENVIRONMENT, True, None, TypeError),
+        ("Mock Environment", MockEnvironmentType.ENVIRONMENT, False, EnvironmentInstructions, ValueError),
+    ],
+)
+def test_environment_manager_validate_instructions(environment_name, environment_type, validate, instance, expected, environment_manager):
+    environment_instructions = mock.MagicMock(spec=instance)
     environment_instructions.environment_name = environment_name
     environment_instructions.environment_type = environment_type
+    environment_instructions.validate.return_value = validate
     environment_instructions_list = [environment_instructions]
     environment_manager.queue_names = ["Environment 0"]
     environment_manager.environment_names = {"Environment 0": "Mock Environment"}
@@ -149,6 +215,47 @@ def test_environment_manager_validate_instructions(environment_name, environment
     elif expected is TypeError:
         with pytest.raises(TypeError):
             environment_manager.validate_environment_instructions(environment_instructions_list)
+    elif expected is ValueError:
+        with pytest.raises(ValueError):
+            environment_manager.validate_environment_instructions(environment_instructions_list)
+
+
+@pytest.mark.parametrize(
+    "environment_name, instance, expected",
+    [
+        ("Environment Name", ProfileEvent, True),
+        ("Invalid Name", ProfileEvent, KeyError),
+        ("Environment Name", None, TypeError),
+        ("Global", ProfileEvent, "Global"),
+    ],
+)
+def test_environment_mananger_validate_profile_events(environment_name, instance, expected, environment_manager):
+    environment_manager.queue_names = ["Environment 0"]
+    environment_manager.environment_names["Environment 0"] = "Environment Name"
+    environment_manager.environment_types["Environment 0"] = "Environment Type"
+
+    profile_event = mock.MagicMock(spec=instance)
+    profile_event.environment_name = environment_name
+    profile_event_list = [profile_event]
+
+    if expected is TypeError:
+        with pytest.raises(TypeError):
+            environment_manager.validate_profile_events(profile_event_list)
+    elif expected is KeyError:
+        with pytest.raises(KeyError):
+            environment_manager.validate_profile_events(profile_event_list)
+    elif expected == "Global":
+        valid_profile = environment_manager.validate_profile_events(profile_event_list)
+        profile_event = profile_event_list[0]
+        assert valid_profile
+        assert profile_event._queue_name == "Global"
+        assert profile_event._environment_type == "Global"
+    elif expected:
+        valid_profile = environment_manager.validate_profile_events(profile_event_list)
+        profile_event = profile_event_list[0]
+        assert valid_profile
+        assert profile_event._queue_name == "Environment 0"
+        assert profile_event._environment_type == "Environment Type"
 
 
 def test_environment_manager_clear_environment(environment_manager):
@@ -183,7 +290,6 @@ def test_environment_manager_add_environment(environment_type, environment_manag
     environment_manager.new_event = mock.MagicMock(return_value=mock_event)
 
     environment_manager.add_environment(metadata, acquisition_active, output_active)
-
     if environment_type == None:
         assert True
     else:
@@ -194,6 +300,23 @@ def test_environment_manager_add_environment(environment_type, environment_manag
         assert not environment_manager.environment_close_events["Environment 0"].is_set()
         assert environment_manager.environment_metadata["Environment 0"] == metadata
         assert metadata.queue_name == "Environment 0"
+
+
+@pytest.mark.parametrize("queue_names, expected", [([], True), (["Environment 0", "Environment 1", "Environment 2", "Environment 3"], KeyError)])
+def test_environment_mananger_add_environment_key_error(queue_names, expected, environment_manager):
+    metadata = MockEnvironmentMetadata()
+    metadata.environment_type = None
+    acquisition_active = mp.Value("i", 0)
+    output_active = mp.Value("i", 0)
+
+    environment_manager.queue_names = queue_names
+
+    if expected is KeyError:
+        with pytest.raises(KeyError):
+            environment_manager.add_environment(metadata, acquisition_active, output_active)
+    elif expected:
+        environment_manager.add_environment(metadata, acquisition_active, output_active)
+        assert True
 
 
 @mock.patch("rattlesnake.environment_manager.datetime")
@@ -226,6 +349,13 @@ def test_environment_manager_remove_environment(mock_time, is_alive, environment
     mock_process.join.assert_called()
     if is_alive:
         mock_event.set.assert_called()
+
+
+def test_environment_manager_remove_environment_invalid_queue_name(environment_manager):
+    environment_manager.queue_names = ["Environment 0"]
+
+    with pytest.raises(KeyError):
+        environment_manager.remove_environment("Invalid Queue Name")
 
 
 @pytest.mark.parametrize("is_alive", [True, False])

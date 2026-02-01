@@ -72,10 +72,12 @@ def test_time_metadata_properties(time_metadata):
     "channel_list, sample_rate, cancel_rampdown_time, output_signal, expected",
     [
         (channel_list + [Channel()], 1000, 0.5, np.zeros((1, 2000)), True),
-        (channel_list + channel_list, 1000, None, np.zeros((1, 2000)), ValueError),
-        (channel_list, None, 0.5, np.zeros((1, 2000)), TypeError),
+        (channel_list, -10, 0.5, np.zeros((1, 2000)), ValueError),
+        (channel_list, 1000, None, np.zeros((1, 2000)), ValueError),
+        (channel_list, None, 0.5, np.zeros((1, 2000)), ValueError),
         (channel_list, 1000, 0.5, None, TypeError),
         (channel_list, 1000, 0.5, np.zeros((1, 2000, 3)), TypeError),
+        (channel_list, 1000, 0.5, np.zeros((0, 2000)), ValueError),
     ],
 )
 def test_time_metadata_validate(channel_list, sample_rate, cancel_rampdown_time, output_signal, expected, time_metadata):

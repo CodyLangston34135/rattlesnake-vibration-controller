@@ -155,6 +155,14 @@ def test_streaming_process_write_data(streaming):
     mock_dataset.variables["time_data"].__setitem__.assert_called_with((slice(None, None, None), slice(2, None, None)), data)
 
 
+def test_streaming_process_write_data_no_init(streaming):
+    data = "data"
+    streaming.netcdf_handle = None
+    result = streaming.write_data(data)
+
+    assert result is None
+
+
 def test_streaming_process_create_new_stream(streaming):
     mock_dataset = mock.MagicMock()
     streaming.netcdf_handle = mock_dataset

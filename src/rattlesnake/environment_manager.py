@@ -171,6 +171,8 @@ class EnvironmentManager:
             if not valid_metadata:
                 raise ValueError(f"Invalid metadata for {environment_name}")
 
+        return True
+
     def validate_environment_instructions(self, environment_instructions_list: List[EnvironmentInstructions]):
         """Since the instructions will come from the UI/Termina which has
         no idea which queue was assigned to an environment, the validation of
@@ -223,9 +225,11 @@ class EnvironmentManager:
                 try:
                     queue_name = self.queue_names_dict[environment_name]
                 except KeyError:
-                    raise KeyError(f"No environments exist for {environment_name} instruction")
+                    raise KeyError(f"No environments exist for {environment_name} when validating instruction")
                 profile_event._queue_name = queue_name
                 profile_event._environment_type = self.environment_types[queue_name]
+
+        return True
 
     def clear_environments(self):
         self.queue_names = []
@@ -335,7 +339,7 @@ class EnvironmentManager:
             # Remove environment queue and process
             self.environment_processes.pop(queue_name, None)
         else:
-            raise IndexError(f"Invalid control name: {queue_name}. Must be mapped to available queue")
+            raise KeyError(f"Invalid control name: {queue_name}. Must be mapped to available queue")
 
     def close_environments(self):
         for queue_name, environment_process in self.environment_processes.items():

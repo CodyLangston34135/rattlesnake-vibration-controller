@@ -55,7 +55,8 @@ def test_channel_is_empty(node_number, expected):
 
 
 @pytest.mark.parametrize(
-    "node_number_1, node_number_2, expected", [(None, None, True), ("node_number", None, False), ("node_number", "node_number", True)]
+    "node_number_1, node_number_2, expected",
+    [(None, None, True), ("node_number", None, False), ("node_number", "node_number", True)],
 )
 def test_channel_eq(node_number_1, node_number_2, expected):
     channel_1 = Channel()
@@ -64,3 +65,8 @@ def test_channel_eq(node_number_1, node_number_2, expected):
     channel_2.node_number = node_number_2
 
     assert (channel_1 == channel_2) == expected
+
+
+def test_channel_eq_foreign_type():
+    channel = Channel()
+    assert (channel == 0) is False

@@ -216,7 +216,7 @@ class AcquisitionProcess(AbstractMessageProcess):
             # )
             pass
         else:
-            raise ValueError("Invalid Hardware or Hardware Not Implemented!")
+            raise TypeError("Invalid Hardware or Hardware Not Implemented!")
         # Initialize hardware and create channels
         self.hardware.initialize_hardware(metadata)
         # Set up warning and abort limits

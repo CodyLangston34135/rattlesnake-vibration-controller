@@ -25,14 +25,14 @@ def test_hardware_metadata_init():
     assert hasattr(hardware_metadata, "output_oversample")
 
 
-def hardware_metadata_properties(hardware_metadata):
+def test_hardware_metadata_properties(hardware_metadata):
     hardware_metadata.sample_rate = 1000
     hardware_metadata.time_per_read = 0.25
     hardware_metadata.time_per_write = 0.3
     hardware_metadata.output_oversample = 10
 
     assert hardware_metadata.samples_per_read == 250
-    assert hardware_metadata.samples_per_write == 300
+    assert hardware_metadata.samples_per_write == 3000
     assert hardware_metadata.nyquist_frequency == 500
     assert hardware_metadata.output_sample_rate == 10000
 
