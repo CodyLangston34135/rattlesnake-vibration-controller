@@ -324,9 +324,7 @@ class Rattlesnake:
 
         # Send environment meetadata to correct processes
         self.log("Setting Environment")
-        self.environment_manager.initialize_environments(
-            environment_metadata_list, self.event_container.acquisition_active_event, self.event_container.output_active_event
-        )
+        self.environment_manager.initialize_environments(environment_metadata_list)
         self.event_container.acquisition_ready_event.clear()
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_metadata_dict))
         self.event_container.output_ready_event.clear()
