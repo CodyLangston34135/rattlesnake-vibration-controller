@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>2277</width>
-    <height>667</height>
+    <width>1527</width>
+    <height>703</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -31,9 +31,65 @@
         <item>
          <widget class="QGroupBox" name="channel_table_groupbox">
           <property name="title">
-           <string>Channel Table</string>
+           <string/>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_3">
+           <item>
+            <layout class="QHBoxLayout" name="channel_table_title_layout">
+             <property name="spacing">
+              <number>30</number>
+             </property>
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="channel_table_title_label">
+               <property name="text">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:10pt;&quot;&gt;Channel Table&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="assist_channel_table_checkbox">
+               <property name="text">
+                <string>Assist</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="channel_table_title_spacer">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QPushButton" name="initialize_data_acquisition_button">
+               <property name="text">
+                <string>Initialize Data Acqusition</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
            <item>
             <layout class="QHBoxLayout" name="table_layout">
              <item>
@@ -865,7 +921,7 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
               </widget>
              </item>
              <item>
-              <widget class="QTableWidget" name="environment_channels_table">
+              <widget class="QTableWidget" name="environment_channel_table">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
                  <horstretch>0</horstretch>
@@ -888,10 +944,10 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
                 <number>1</number>
                </property>
                <attribute name="horizontalHeaderVisible">
-                <bool>true</bool>
+                <bool>false</bool>
                </attribute>
                <attribute name="verticalHeaderVisible">
-                <bool>true</bool>
+                <bool>false</bool>
                </attribute>
                <row/>
                <row/>
@@ -1450,6 +1506,28 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
                </property>
               </spacer>
              </item>
+             <item>
+              <widget class="QPushButton" name="remove_environment_button">
+               <property name="text">
+                <string>Remove Environment</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="add_environment_combobox">
+               <property name="iconSize">
+                <size>
+                 <width>30</width>
+                 <height>16</height>
+                </size>
+               </property>
+               <item>
+                <property name="text">
+                 <string>Add Environment</string>
+                </property>
+               </item>
+              </widget>
+             </item>
             </layout>
            </item>
           </layout>
@@ -1489,6 +1567,11 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
                </property>
                <item>
                 <property name="text">
+                 <string>Select Hardware</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
                  <string>NI DAQmx</string>
                 </property>
                </item>
@@ -1522,15 +1605,10 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
                  <string>SDynPy System Integration...</string>
                 </property>
                </item>
-               <item>
-                <property name="text">
-                 <string>SDynPy FRF Convolution...</string>
-                </property>
-               </item>
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="ip_lookup_button">
+              <widget class="QPushButton" name="lanxi_ip_address_button">
                <property name="text">
                 <string>IP Address Lookup</string>
                </property>
@@ -1609,42 +1687,16 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
               </widget>
              </item>
              <item>
-              <widget class="QLabel" name="time_per_read_label">
+              <widget class="QLabel" name="buffer_size_label">
                <property name="text">
-                <string>Time per Read</string>
+                <string>Buffer Size</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QDoubleSpinBox" name="time_per_read_selector">
+              <widget class="QDoubleSpinBox" name="buffer_size_selector">
                <property name="toolTip">
                 <string>Specify the time between reads from the data acquisition system.  Communications with hardware are computationally expensive, so we can't pull every sample off as it arrives.  We therefore allow samples to accumulate on the data acquisition system's buffer and then read every so often.  Larger values will result in the controller not falling behind, but smaller values will allow the controller to be more responsive.  Values such as 0.25 or 0.5 are typical.</string>
-               </property>
-               <property name="minimum">
-                <double>0.010000000000000</double>
-               </property>
-               <property name="maximum">
-                <double>10.000000000000000</double>
-               </property>
-               <property name="singleStep">
-                <double>0.100000000000000</double>
-               </property>
-               <property name="value">
-                <double>0.250000000000000</double>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLabel" name="time_per_write_label">
-               <property name="text">
-                <string>Time per Write</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QDoubleSpinBox" name="time_per_write_selector">
-               <property name="toolTip">
-                <string>Specify the time between writes to the data acquisition system.  Communications with hardware are computationally expensive, so we can't write every sample to the data acquisition as it is calculated or we would miss the next sample as it would take to long.  We therefore write samples to the data acquisition system buffer in chunks.  Larger values will result in the controller not falling behind, but smaller values will allow the controller to be more responsive.  Values such as 0.25 or 0.5 are typical.</string>
                </property>
                <property name="minimum">
                 <double>0.010000000000000</double>
@@ -1704,6 +1756,16 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
               </widget>
              </item>
              <item>
+              <widget class="QLabel" name="damping_ratio_label">
+               <property name="text">
+                <string>Damping Ratio</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QDoubleSpinBox" name="damping_ratio_selector"/>
+             </item>
+             <item>
               <widget class="QLabel" name="task_trigger_label">
                <property name="text">
                 <string>Task Trigger</string>
@@ -1747,6 +1809,13 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
              <item>
               <widget class="QLineEdit" name="task_trigger_output_selector"/>
              </item>
+             <item>
+              <widget class="QPushButton" name="select_file_button">
+               <property name="text">
+                <string>Select File</string>
+               </property>
+              </widget>
+             </item>
             </layout>
            </widget>
           </item>
@@ -1763,16 +1832,6 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
             </property>
            </spacer>
           </item>
-          <item>
-           <widget class="QPushButton" name="initialize_data_acquisition_button">
-            <property name="toolTip">
-             <string>Stores the specified data acquisition settings to the controller, initializes the hardware, and advances the software to the next tab.</string>
-            </property>
-            <property name="text">
-             <string>Initialize Data Acquisition</string>
-            </property>
-           </widget>
-          </item>
          </layout>
         </item>
        </layout>
@@ -1782,6 +1841,33 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
         <string>Environment Definition</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_4">
+        <item>
+         <layout class="QHBoxLayout" name="initialize_environment">
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <spacer name="initialize_environment_spacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QPushButton" name="initialize_environment_parameters_button">
+            <property name="text">
+             <string>Initialize Environment Parameters</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
         <item>
          <widget class="QTabWidget" name="environment_definition_environment_tabs">
           <property name="tabPosition">
@@ -1797,33 +1883,6 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
            <enum>Qt::ElideNone</enum>
           </property>
          </widget>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="initialize_environment_layout">
-          <item>
-           <spacer name="initialize_environment_spacer">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
-           <widget class="QPushButton" name="initialize_environments_button">
-            <property name="toolTip">
-             <string>Stores all environment information specified on this tab to the controller and proceeds to the next part of the controller.</string>
-            </property>
-            <property name="text">
-             <string>Initialize Environments</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
         </item>
        </layout>
       </widget>
@@ -1863,6 +1922,33 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
         <string>Test Profile</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_9">
+        <item>
+         <layout class="QHBoxLayout" name="initialize_profile_layout">
+          <item>
+           <spacer name="initialize_profile_spacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QPushButton" name="initialize_profile_button">
+            <property name="toolTip">
+             <string>Stores the test timeline information to the controller and proceeds to the next tab.</string>
+            </property>
+            <property name="text">
+             <string>Initialize Profile</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
         <item>
          <layout class="QHBoxLayout" name="profile_definition_layout">
           <item>
@@ -1962,32 +2048,24 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
            </layout>
           </item>
           <item>
-           <widget class="PlotWidget" name="profile_timeline_plot"/>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="initialize_profile_layout">
-          <item>
-           <spacer name="initialize_profile_spacer">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
+           <widget class="PlotWidget" name="profile_timeline_plot">
+            <property name="backgroundBrush">
+             <brush brushstyle="NoBrush">
+              <color alpha="255">
+               <red>255</red>
+               <green>255</green>
+               <blue>255</blue>
+              </color>
+             </brush>
             </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>40</width>
-              <height>20</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
-           <widget class="QPushButton" name="initialize_profile_button">
-            <property name="toolTip">
-             <string>Stores the test timeline information to the controller and proceeds to the next tab.</string>
-            </property>
-            <property name="text">
-             <string>Initialize Profile</string>
+            <property name="foregroundBrush">
+             <brush brushstyle="NoBrush">
+              <color alpha="255">
+               <red>0</red>
+               <green>0</green>
+               <blue>0</blue>
+              </color>
+             </brush>
             </property>
            </widget>
           </item>
@@ -2409,16 +2487,6 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="signal_monitor_button">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="text">
-         <string>Signal Monitor</string>
-        </property>
-       </widget>
-      </item>
-      <item>
        <widget class="QLabel" name="color_theme_label">
         <property name="text">
          <string>Theme:</string>
@@ -2453,54 +2521,9 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
        </spacer>
       </item>
       <item>
-       <widget class="QPushButton" name="stop_program_button">
-        <property name="palette">
-         <palette>
-          <active>
-           <colorrole role="ButtonText">
-            <brush brushstyle="SolidPattern">
-             <color alpha="255">
-              <red>255</red>
-              <green>0</green>
-              <blue>0</blue>
-             </color>
-            </brush>
-           </colorrole>
-          </active>
-          <inactive>
-           <colorrole role="ButtonText">
-            <brush brushstyle="SolidPattern">
-             <color alpha="255">
-              <red>255</red>
-              <green>0</green>
-              <blue>0</blue>
-             </color>
-            </brush>
-           </colorrole>
-          </inactive>
-          <disabled>
-           <colorrole role="ButtonText">
-            <brush brushstyle="SolidPattern">
-             <color alpha="255">
-              <red>120</red>
-              <green>120</green>
-              <blue>120</blue>
-             </color>
-            </brush>
-           </colorrole>
-          </disabled>
-         </palette>
-        </property>
-        <property name="font">
-         <font>
-          <pointsize>16</pointsize>
-         </font>
-        </property>
-        <property name="toolTip">
-         <string>Stop the program</string>
-        </property>
+       <widget class="QPushButton" name="refresh_acqusition_processes_button">
         <property name="text">
-         <string>Stop Program</string>
+         <string>Recover Crashed Process</string>
         </property>
        </widget>
       </item>
@@ -2513,8 +2536,8 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>2277</width>
-     <height>21</height>
+     <width>1527</width>
+     <height>22</height>
     </rect>
    </property>
   </widget>
