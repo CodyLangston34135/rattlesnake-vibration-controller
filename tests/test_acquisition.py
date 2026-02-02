@@ -18,11 +18,10 @@ def acquisition(request):
     use_thread = request.param
     queue_container = mock_queue_container(use_thread)
     event_container = mock_event_container(use_thread)
-    acquisition_active = mp.Value("i", 0)
     acquisition = AcquisitionProcess(
         "Process Name",
         queue_container,
-        acquisition_active,
+        event_container.acquisition_active_event,
         event_container.acquisition_ready_event,
     )
     return acquisition
@@ -34,11 +33,10 @@ def acquisition(request):
 def test_acquisition_init(use_thread):
     queue_container = mock_queue_container(use_thread)
     event_container = mock_event_container(use_thread)
-    acquisition_active = mp.Value("i", 0)
     acquisition = AcquisitionProcess(
         "Process Name",
         queue_container,
-        acquisition_active,
+        event_container.acquisition_active_event,
         event_container.acquisition_ready_event,
     )
 
@@ -51,9 +49,9 @@ def test_acquisition_properties(acquisition):
     # Test the acquisition_active property
     assert acquisition.acquisition_active == False
     # Test the acquisiton_active setter
-    acquisition.acquisition_active = True
+    acquisition.set_active()
     assert acquisition.acquisition_active == True
-    acquisition.acquisition_active = False
+    acquisition.clear_active()
     assert acquisition.acquisition_active == False
 
 

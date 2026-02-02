@@ -13,7 +13,7 @@ from unittest import mock
 def profile_manager(request):
     use_thread = request.param
     queue_container = mock_queue_container(use_thread)
-    profile_manager = ProfileManager(queue_container.log_file_queue, queue_container.controller_command_queue)
+    profile_manager = ProfileManager(queue_container)
     return profile_manager
 
 
@@ -75,7 +75,7 @@ def test_profile_event_validate(timestamp, environment_name, command, environmen
 @pytest.mark.parametrize("use_thread", [True, False])
 def test_profile_manager_init(use_thread):
     queue_container = mock_queue_container(use_thread)
-    profile_manager = ProfileManager(queue_container.log_file_queue, queue_container.controller_command_queue)
+    profile_manager = ProfileManager(queue_container)
 
     assert isinstance(profile_manager, ProfileManager)
 
@@ -243,12 +243,7 @@ def test_profile_manager_stop_hardware(profile_manager):
     profile_manager._controller_command_queue = mock_controller
     profile_manager.stop_hardware()
 
-    expected_calls = [
-        mock.call("Profile Manager", (GlobalCommands.STOP_HARDWARE, None)),
-        mock.call("Profile Manager", (GlobalCommands.STOP_ENVIRONMENT, "Environment 0")),
-    ]
-
-    mock_controller.put.assert_has_calls(expected_calls)
+    mock_controller.put.assert_called_with("Profile Manager", (GlobalCommands.STOP_HARDWARE, None))
 
 
 def test_profile_manager_start_streaming(profile_manager):

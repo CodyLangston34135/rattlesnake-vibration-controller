@@ -82,10 +82,10 @@ class ControllerProcess(AbstractMessageProcess):
 
     def run_hardware(self, data: StreamMetadata):
         self.stream_metadata = data
-        if not self.acquisition_active:
+        if self.acquisition_active:
             raise RuntimeError("Tried to start hardware while acquisition is still running")
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, None))
-        if not self.output_active:
+        if self.output_active:
             raise RuntimeError("Tried to start hardware while output is still running")
         self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, None))
         if self.stream_metadata.stream_type == StreamType.IMMEDIATELY:
@@ -118,9 +118,9 @@ class ControllerProcess(AbstractMessageProcess):
         self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, None))
 
     def start_streaming(self, data: bool = False):
-        # This is a pain because it needs to be ignored if stream_type is not Profile Instruction
-        # but other processes also go through the controller to start stream logic so I put in
-        # an override for those processes
+        # This function has an override so that the controller
+        # can still start streaming through this even if the stream_type
+        # is not STREAM_TYPE.PROFILE_INSTRUCTION
         override = data
         # I split these up for debugging purposes
         if override:

@@ -78,8 +78,9 @@ class MockEnvironmentProcess(EnvironmentProcess):
         log_file_queue,
         data_in_queue,
         data_out_queue,
-        acquisition_active,
-        output_active,
+        acquisition_active_event,
+        output_active_event,
+        active_event,
         ready_event,
     ):
         super().__init__(
@@ -91,8 +92,9 @@ class MockEnvironmentProcess(EnvironmentProcess):
             log_file_queue,
             data_in_queue,
             data_out_queue,
-            acquisition_active,
-            output_active,
+            acquisition_active_event,
+            output_active_event,
+            active_event,
             ready_event,
         )
 

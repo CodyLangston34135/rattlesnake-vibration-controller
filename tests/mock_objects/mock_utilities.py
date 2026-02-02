@@ -76,17 +76,24 @@ def mock_event_container(use_thread):
     controller_ready_event = new_event()
     acquisition_close_event = new_event()
     acquisition_ready_event = new_event()
+    acquisition_active_event = new_event()
+    acquisition_active_event.clear()
     output_close_event = new_event()
     output_ready_event = new_event()
+    output_active_event = new_event()
+    output_active_event.clear()
     streaming_close_event = new_event()
     streaming_ready_event = new_event()
 
     environment_close_events = {}
     environment_ready_events = {}
+    environment_active_events = {}
     for env_idx in range(MAX_ENVIRONMENTS):
         environment_name = "Environment {:}".format(env_idx)
         environment_close_events[environment_name] = new_event()
         environment_ready_events[environment_name] = new_event()
+        environment_active_events[environment_name] = new_event()
+        environment_active_events[environment_name].clear()
 
     event_container = EventContainer(
         controller_ready_event,
@@ -100,6 +107,9 @@ def mock_event_container(use_thread):
         output_close_event,
         streaming_close_event,
         environment_close_events,
+        acquisition_active_event,
+        output_active_event,
+        environment_active_events,
     )
 
     return event_container

@@ -38,6 +38,7 @@ class EnvironmentManager:
         self.environment_metadata = {}
         self.environment_processes = {}
         self.queue_container = queue_container
+        self.event_container = event_container
         self.environment_active_events = event_container.environment_active_events
         self.environment_ready_events = event_container.environment_ready_events
         self.environment_close_events = event_container.environment_close_events
@@ -111,9 +112,7 @@ class EnvironmentManager:
 
         self.hardware_metadata = hardware_metadata
 
-    def initialize_environments(
-        self, metadata_list: List[EnvironmentMetadata], acquisition_active: mp.synchronize.Event, output_active: mp.synchronize.Event
-    ):
+    def initialize_environments(self, metadata_list: List[EnvironmentMetadata]):
         self.log("Initializing Environments")
         mapped_queue_names = set()
         extra_metadata = []
@@ -155,7 +154,7 @@ class EnvironmentManager:
         # Add process for metadata that needs a new process. Could do this in loop above
         # but I want to clear up queue_names before assigning new ones
         for metadata in extra_metadata:
-            self.add_environment(metadata, acquisition_active, output_active)
+            self.add_environment(metadata)
 
     def validate_environment_metadata(self, metadata_list: List[EnvironmentMetadata]):
         # Check if there are available queues
@@ -246,7 +245,7 @@ class EnvironmentManager:
         self.close_environments()
         self.environment_processes = {}
 
-    def add_environment(self, metadata: EnvironmentMetadata, acquisition_active, output_active):
+    def add_environment(self, metadata: EnvironmentMetadata):
         """Adds environment to container with unique name"""
         # Find the first available queue for the environment
         queue_name = None
@@ -280,8 +279,8 @@ class EnvironmentManager:
                     self.queue_container.log_file_queue,
                     self.queue_container.environment_data_in_queues[queue_name],
                     self.queue_container.environment_data_out_queues[queue_name],
-                    acquisition_active,
-                    output_active,
+                    self.event_container.acquisition_active_event,
+                    self.event_container.output_active_event,
                     self.environment_active_events[queue_name],
                     self.environment_ready_events[queue_name],
                     self.environment_close_events[queue_name],
@@ -301,8 +300,8 @@ class EnvironmentManager:
                     self.queue_container.log_file_queue,
                     self.queue_container.environment_data_in_queues[queue_name],
                     self.queue_container.environment_data_out_queues[queue_name],
-                    acquisition_active,
-                    output_active,
+                    self.event_container.acquisition_active_event,
+                    self.event_container.output_active_event,
                     self.environment_active_events[queue_name],
                     self.environment_ready_events[queue_name],
                     self.environment_close_events[queue_name],

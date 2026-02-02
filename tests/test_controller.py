@@ -17,6 +17,9 @@ def controller(request):
     controller = ControllerProcess(
         "Process Name",
         queue_container,
+        event_container.acquisition_active_event,
+        event_container.output_active_event,
+        event_container.environment_active_events,
         event_container.controller_ready_event,
     )
     return controller
@@ -31,6 +34,9 @@ def test_controller_init(use_thread):
     controller = ControllerProcess(
         "Process Name",
         queue_container,
+        event_container.acquisition_active_event,
+        event_container.output_active_event,
+        event_container.environment_active_events,
         event_container.controller_ready_event,
     )
 
@@ -41,36 +47,99 @@ def test_controller_init(use_thread):
 
 @pytest.mark.parametrize("stream_type", [*StreamType])
 def test_controller_run_hardware(stream_type, controller):
+    # Mock active acquistion
+    mock_acquisition_active = mock.MagicMock()
+    mock_acquisition_active.is_set.return_value = False
+    mock_output_active = mock.MagicMock()
+    mock_output_active.is_set.return_value = False
+    controller._acquisition_active_event = mock_acquisition_active
+    controller._output_active_event = mock_output_active
+    # Mock command queues
     mock_acquisition = mock.MagicMock()
     mock_output = mock.MagicMock()
     controller.queue_container.acquisition_command_queue = mock_acquisition
     controller.queue_container.output_command_queue = mock_output
     controller.start_streaming = mock.MagicMock()
+    # Build stream metadata
     stream_metadata = StreamMetadata()
     stream_metadata.stream_type = stream_type
     controller.run_hardware(stream_metadata)
 
     mock_acquisition.put.assert_called_once_with("Controller", (GlobalCommands.RUN_HARDWARE, None))
     mock_output.put.assert_called_once_with("Controller", (GlobalCommands.RUN_HARDWARE, None))
-
     if stream_type == StreamType.IMMEDIATELY:
         controller.start_streaming.assert_called_once_with(True)
     else:
         controller.start_streaming.assert_not_called()
 
 
-def test_controller_stop_hardware(controller):
+@pytest.mark.parametrize(
+    "acquisition_active, output_active, expected",
+    [(False, False, True), (False, True, RuntimeError), (True, False, RuntimeError), (True, True, RuntimeError)],
+)
+def test_controller_run_hardware_error(acquisition_active, output_active, expected, controller):
+    # Mock active acqusition
+    mock_acquisition_active = mock.MagicMock()
+    mock_acquisition_active.is_set.return_value = acquisition_active
+    mock_output_active = mock.MagicMock()
+    mock_output_active.is_set.return_value = output_active
+    controller._acquisition_active_event = mock_acquisition_active
+    controller._output_active_event = mock_output_active
+    # Mock command queues
     mock_acquisition = mock.MagicMock()
     mock_output = mock.MagicMock()
     controller.queue_container.acquisition_command_queue = mock_acquisition
     controller.queue_container.output_command_queue = mock_output
-    controller.stop_hardware(None)
+    controller.start_streaming = mock.MagicMock()
+    # Build stream metadata
+    stream_metadata = StreamMetadata()
+    stream_metadata.stream_type = StreamType.NO_STREAM
 
-    mock_acquisition.put.assert_called_once_with("Controller", (GlobalCommands.STOP_HARDWARE, None))
-    mock_output.put.assert_called_once_with("Controller", (GlobalCommands.STOP_HARDWARE, None))
+    if expected is RuntimeError:
+        with pytest.raises(RuntimeError):
+            controller.run_hardware(stream_metadata)
+    else:
+        controller.run_hardware(stream_metadata)
+        mock_acquisition.put.assert_called_once_with("Controller", (GlobalCommands.RUN_HARDWARE, None))
+        mock_output.put.assert_called_once_with("Controller", (GlobalCommands.RUN_HARDWARE, None))
+        controller.start_streaming.assert_not_called()
 
 
-def test_controller_start_environment(controller):
+@pytest.mark.parametrize(
+    "acquisition_active, output_active, expected",
+    [(False, False, RuntimeError), (False, True, RuntimeError), (True, False, RuntimeError), (True, True, True)],
+)
+def test_controller_stop_hardware(acquisition_active, output_active, expected, controller):
+    mock_acquisition_active = mock.MagicMock()
+    mock_acquisition_active.is_set.return_value = acquisition_active
+    mock_output_active = mock.MagicMock()
+    mock_output_active.is_set.return_value = output_active
+    controller._acquisition_active_event = mock_acquisition_active
+    controller._output_active_event = mock_output_active
+
+    mock_acquisition = mock.MagicMock()
+    mock_output = mock.MagicMock()
+    controller.queue_container.acquisition_command_queue = mock_acquisition
+    controller.queue_container.output_command_queue = mock_output
+
+    if expected is RuntimeError:
+        with pytest.raises(RuntimeError):
+            controller.stop_hardware(None)
+    else:
+        controller.stop_hardware(None)
+        mock_acquisition.put.assert_called_once_with("Controller", (GlobalCommands.STOP_HARDWARE, None))
+        mock_output.put.assert_called_once_with("Controller", (GlobalCommands.STOP_HARDWARE, None))
+
+
+@pytest.mark.parametrize(
+    "environment_active, expected",
+    [(False, True), (True, RuntimeError)],
+)
+def test_controller_start_environment(environment_active, expected, controller):
+    mock_environment_active = mock.MagicMock()
+    mock_environment_active.is_set.return_value = environment_active
+    controller._environment_active_event["Environment 0"] = mock_environment_active
+
     queue_name = "Environment 0"
     mock_instruction = mock.MagicMock()
     mock_acquisition = mock.MagicMock()
@@ -79,19 +148,35 @@ def test_controller_start_environment(controller):
     controller.queue_container.acquisition_command_queue = mock_acquisition
     controller.queue_container.output_command_queue = mock_output
     controller.queue_container.environment_command_queues = {queue_name: mock_environment}
-    controller.start_environment((queue_name, mock_instruction))
 
-    mock_output.put.assert_called_once_with("Controller", (GlobalCommands.START_ENVIRONMENT, queue_name))
-    mock_environment.put.assert_called_once_with("Controller", (GlobalCommands.START_ENVIRONMENT, mock_instruction))
+    if expected is RuntimeError:
+        with pytest.raises(RuntimeError):
+            controller.start_environment((queue_name, mock_instruction))
+    else:
+        controller.start_environment((queue_name, mock_instruction))
+        mock_output.put.assert_called_once_with("Controller", (GlobalCommands.START_ENVIRONMENT, queue_name))
+        mock_environment.put.assert_called_once_with("Controller", (GlobalCommands.START_ENVIRONMENT, mock_instruction))
 
 
-def test_controller_stop_environment(controller):
+@pytest.mark.parametrize(
+    "environment_active, expected",
+    [(False, RuntimeError), (True, True)],
+)
+def test_controller_stop_environment(environment_active, expected, controller):
+    mock_environment_active = mock.MagicMock()
+    mock_environment_active.is_set.return_value = environment_active
+    controller._environment_active_event["Environment 0"] = mock_environment_active
+
     queue_name = "Environment 0"
     mock_environment = mock.MagicMock()
     controller.queue_container.environment_command_queues = {queue_name: mock_environment}
-    controller.stop_environment(queue_name)
 
-    mock_environment.put.assert_called_once_with("Controller", (GlobalCommands.STOP_ENVIRONMENT, None))
+    if expected is RuntimeError:
+        with pytest.raises(RuntimeError):
+            controller.stop_environment(queue_name)
+    else:
+        controller.stop_environment(queue_name)
+        mock_environment.put.assert_called_once_with("Controller", (GlobalCommands.STOP_ENVIRONMENT, None))
 
 
 @pytest.mark.parametrize("stream_type", [*StreamType])
@@ -148,8 +233,11 @@ def test_controller_process_func(mock_controller, use_thread):
     event_container = mock_event_container(use_thread)
     controller_process(
         queue_container,
-        event_container.acquisition_ready_event,
-        event_container.acquisition_close_event,
+        event_container.acquisition_active_event,
+        event_container.output_active_event,
+        event_container.environment_active_events,
+        event_container.controller_ready_event,
+        event_container.controller_close_event,
     )
 
     mock_instance = mock_controller.return_value

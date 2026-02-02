@@ -442,6 +442,8 @@ class Rattlesnake:
             self.wait_for_events(ready_event_list, active_event_list)
 
     def shutdown(self):
+        if self.state in (RattlesnakeState.HARDWARE_ACTIVE, RattlesnakeState.ENVIRONMENT_ACTIVE):
+            self.stop_acquisition()
         # Close out of acquisition, output, streaming process
         self.queue_container.log_file_queue.put(f"{datetime.now()}: Joining Controller Process\n")
         flush_queue(self.queue_container.gui_update_queue, timeout=CLOSE_TIMEOUT)

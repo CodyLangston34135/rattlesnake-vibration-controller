@@ -46,8 +46,9 @@ def time_environment(request):
         "Time Environment",
         "Environment 0",
         time_queues,
-        acquisition_active,
-        output_active,
+        event_container.acquisition_active_event,
+        event_container.output_active_event,
+        event_container.environment_active_events["Environment 0"],
         event_container.environment_ready_events["Environment 0"],
     )
     return time_environment
@@ -151,8 +152,9 @@ def test_time_environment_init(use_thread):
         "Time Environment",
         "Environment 0",
         time_queues,
-        acquisition_active,
-        output_active,
+        event_container.acquisition_active_event,
+        event_container.output_active_event,
+        event_container.environment_active_events["Environment 0"],
         event_container.environment_ready_events["Environment 0"],
     )
     assert isinstance(time_environment, TimeEnvironment)
@@ -297,8 +299,6 @@ def test_time_environment_shutdown(mock_log, time_environment):
 def test_time_process(mock_process_class, use_thread):
     queue_container = mock_queue_container(use_thread)
     event_container = mock_event_container(use_thread)
-    acquisition_active = mp.Value("i", 0)
-    output_active = mp.Value("i", 0)
     time_process(
         "Environment Name",
         "Environment 0",
@@ -308,8 +308,9 @@ def test_time_process(mock_process_class, use_thread):
         queue_container.log_file_queue,
         queue_container.environment_data_in_queues["Environment 0"],
         queue_container.environment_data_out_queues["Environment 0"],
-        acquisition_active,
-        output_active,
+        event_container.acquisition_active_event,
+        event_container.output_active_event,
+        event_container.environment_active_events["Environment 0"],
         event_container.environment_ready_events["Environment 0"],
         event_container.environment_close_events["Environment 0"],
     )

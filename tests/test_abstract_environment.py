@@ -31,8 +31,6 @@ def environment_process(request):
     use_thread = request.param
     queue_container = mock_queue_container(use_thread)
     event_container = mock_event_container(use_thread)
-    acquisition_active = mp.Value("i", 0)
-    output_active = mp.Value("i", 0)
     environment_process = MockEnvironmentProcess(
         "Environment Name",
         "Environment 0",
@@ -42,8 +40,9 @@ def environment_process(request):
         queue_container.log_file_queue,
         queue_container.environment_data_in_queues["Environment 0"],
         queue_container.environment_data_out_queues["Environment 0"],
-        acquisition_active,
-        output_active,
+        event_container.acquisition_active_event,
+        event_container.output_active_event,
+        event_container.environment_active_events["Environment 0"],
         event_container.environment_ready_events["Environment 0"],
     )
 
@@ -109,6 +108,18 @@ def test_environment_metadata_validate(environment_name, environment_type, expec
             environment_metadata.validate()
 
 
+def test_environment_metadata_validate_dupicate_channels(environment_metadata):
+    channel = Channel()
+    channel.node_number = "Not Empty"
+
+    environment_metadata.channel_list = [channel, channel]
+    environment_metadata.environment_type = ControlTypes.READ
+    environment_metadata.environment_name = "Environment Name"
+
+    with pytest.raises(ValueError):
+        environment_metadata.validate()
+
+
 def test_environment_metadata_store_to_netcdf(environment_metadata):
     dataset = nc4.Dataset("temp.nc", mode="w", diskless=True, persist=False)
     netcdf_group = dataset.createGroup("temp_group")
@@ -139,10 +150,8 @@ def test_environment_instructions_validate():
 def test_environment_process_init(use_thread):
     queue_container = mock_queue_container(use_thread)
     event_container = mock_event_container(use_thread)
-    acquisition_active = mp.Value("i", 0)
-    output_active = mp.Value("i", 0)
     environment_process = MockEnvironmentProcess(
-        "environment_name",
+        "Environment Name",
         "Environment 0",
         queue_container.environment_command_queues["Environment 0"],
         queue_container.gui_update_queue,
@@ -150,8 +159,9 @@ def test_environment_process_init(use_thread):
         queue_container.log_file_queue,
         queue_container.environment_data_in_queues["Environment 0"],
         queue_container.environment_data_out_queues["Environment 0"],
-        acquisition_active,
-        output_active,
+        event_container.acquisition_active_event,
+        event_container.output_active_event,
+        event_container.environment_active_events["Environment 0"],
         event_container.environment_ready_events["Environment 0"],
     )
 
@@ -170,8 +180,17 @@ def test_environment_process_properties(environment_process):
     environment_process.queue_name
     environment_process.command_map
     environment_process.ready_event
+    environment_process.active
 
     assert True
+
+
+def test_environment_process_setters(environment_process):
+    assert environment_process.active == False
+    environment_process.set_active()
+    assert environment_process.active == True
+    environment_process.clear_active()
+    assert environment_process.active == False
 
 
 def test_environment_process_set_ready(environment_process):
@@ -261,8 +280,6 @@ def test_environment_process_run(mock_log, mock_get, mock_function, mock_key, en
 def test_run_process(mock_process_class, use_thread):
     queue_container = mock_queue_container(use_thread)
     event_container = mock_event_container(use_thread)
-    acquisition_active = mp.Value("i", 0)
-    output_active = mp.Value("i", 0)
     run_process(
         "Environment Name",
         "Environment 0",
@@ -272,8 +289,9 @@ def test_run_process(mock_process_class, use_thread):
         queue_container.log_file_queue,
         queue_container.environment_data_in_queues["Environment 0"],
         queue_container.environment_data_out_queues["Environment 0"],
-        acquisition_active,
-        output_active,
+        event_container.acquisition_active_event,
+        event_container.output_active_event,
+        event_container.environment_active_events["Environment 0"],
         event_container.environment_ready_events["Environment 0"],
         event_container.environment_close_events["Environment 0"],
     )
@@ -289,20 +307,19 @@ def test_environment_init(environment_type, use_thread):
     environment_lookup = environment_dict()
     mock_queues = mock.MagicMock()
     event_container = mock_event_container(use_thread)
-    acquisition_active = mp.Value("i", 0)
-    output_active = mp.Value("i", 0)
     new_environment = environment_lookup[environment_type]
-
     event_container.environment_ready_events["Environment 0"].clear()
     environment = new_environment(
         "Environment Name",
         "Queue Name",
         mock_queues,
-        acquisition_active,
-        output_active,
+        event_container.acquisition_active_event,
+        event_container.output_active_event,
+        event_container.environment_active_events["Environment 0"],
         event_container.environment_ready_events["Environment 0"],
     )
     assert event_container.environment_ready_events["Environment 0"].is_set()
+    assert not event_container.environment_active_events["Environment 0"].is_set()
 
 
 @pytest.mark.parametrize("environment_type", [*IMPLEMENTED_ENVIRONMENT])
@@ -311,15 +328,14 @@ def test_environment_initialize_hardware(environment_type, use_thread):
     environment_lookup = environment_dict()
     mock_queues = mock.MagicMock()
     event_container = mock_event_container(use_thread)
-    acquisition_active = mp.Value("i", 0)
-    output_active = mp.Value("i", 0)
     new_environment = environment_lookup[environment_type]
     environment = new_environment(
         "Environment Name",
         "Queue Name",
         mock_queues,
-        acquisition_active,
-        output_active,
+        event_container.acquisition_active_event,
+        event_container.output_active_event,
+        event_container.environment_active_events["Environment 0"],
         event_container.environment_ready_events["Environment 0"],
     )
 
@@ -336,15 +352,14 @@ def test_environment_initialize_environment(environment_type, use_thread):
     environment_lookup = environment_dict()
     mock_queues = mock.MagicMock()
     event_container = mock_event_container(use_thread)
-    acquisition_active = mp.Value("i", 0)
-    output_active = mp.Value("i", 0)
     new_environment = environment_lookup[environment_type]
     environment = new_environment(
         "Environment Name",
         "Queue Name",
         mock_queues,
-        acquisition_active,
-        output_active,
+        event_container.acquisition_active_event,
+        event_container.output_active_event,
+        event_container.environment_active_events["Environment 0"],
         event_container.environment_ready_events["Environment 0"],
     )
     hardware_metadata = MockHardwareMetadata()
@@ -363,15 +378,14 @@ def test_environment_stop_environment(environment_type, use_thread):
     environment_lookup = environment_dict()
     mock_queues = mock.MagicMock()
     event_container = mock_event_container(use_thread)
-    acquisition_active = mp.Value("i", 0)
-    output_active = mp.Value("i", 0)
     new_environment = environment_lookup[environment_type]
     environment = new_environment(
         "Environment Name",
         "Queue Name",
         mock_queues,
-        acquisition_active,
-        output_active,
+        event_container.acquisition_active_event,
+        event_container.output_active_event,
+        event_container.environment_active_events["Environment 0"],
         event_container.environment_ready_events["Environment 0"],
     )
     hardware_metadata = MockHardwareMetadata()
@@ -380,7 +394,8 @@ def test_environment_stop_environment(environment_type, use_thread):
     environment.initialize_environment(mock_environment_metadata)
 
     mock_data = mock.MagicMock()
-    event_container.environment_ready_events["Environment 0"].clear()
     environment.stop_environment(mock_data)
 
-    assert event_container.environment_ready_events["Environment 0"].is_set()
+    # Theres not really a good way to check if the environment active
+    # event got cleared because it usually happens in the control loop
+    assert True

@@ -280,6 +280,10 @@ class EnvironmentProcess(ABC):
         # print('Checking if Output Active: {:}'.format(bool(self._output_active.value)))
         return self._output_active_event.is_set()
 
+    @property
+    def active(self):
+        return self._active_event.is_set()
+
     @abstractmethod
     def initialize_hardware(self, hardware_metadata: HardwareMetadata) -> None:
         """Initialize the hardware parameters in the environment.

@@ -20,11 +20,10 @@ def output(request):
     use_thread = request.param
     queue_container = mock_queue_container(use_thread)
     event_container = mock_event_container(use_thread)
-    output_active = mp.Value("i", 0)
     output = OutputProcess(
         "Process Name",
         queue_container,
-        output_active,
+        event_container.output_active_event,
         event_container.output_ready_event,
     )
     return output
@@ -36,11 +35,10 @@ def output(request):
 def test_output_init(use_thread):
     queue_container = mock_queue_container(use_thread)
     event_container = mock_event_container(use_thread)
-    output_active = mp.Value("i", 0)
     output = OutputProcess(
         "Process Name",
         queue_container,
-        output_active,
+        event_container.output_active_event,
         event_container.output_ready_event,
     )
 
@@ -55,9 +53,9 @@ def test_output_properties(output):
     # Test the output_active property
     assert output.output_active == False
     # Test the output_active setter
-    output.output_active = True
+    output.set_active()
     assert output.output_active == True
-    output.output_active = False
+    output.clear_active()
     assert output.output_active == False
 
 
@@ -156,10 +154,9 @@ def test_output_process_quit(mock_log, mock_flush, output):
 def test_output_process_func(mock_output, use_thread):
     queue_container = mock_queue_container(use_thread)
     event_container = mock_event_container(use_thread)
-    output_active = mp.Value("i", 0)
     output_process(
         queue_container,
-        output_active,
+        event_container.output_active_event,
         event_container.output_ready_event,
         event_container.output_close_event,
     )

@@ -16,9 +16,7 @@ def environment_manager(request):
     use_thread = request.param
     queue_container = mock_queue_container(use_thread)
     event_container = mock_event_container(use_thread)
-    environment_manager = EnvironmentManager(
-        queue_container, event_container.environment_ready_events, event_container.environment_close_events, use_thread
-    )
+    environment_manager = EnvironmentManager(queue_container, event_container, use_thread)
 
     return environment_manager
 
@@ -28,12 +26,10 @@ def environment_manager(request):
 def test_environment_manager_init(use_thread):
     queue_container = mock_queue_container(use_thread)
     event_container = mock_event_container(use_thread)
-    environment_manager = EnvironmentManager(
-        queue_container, event_container.environment_ready_events, event_container.environment_close_events, use_thread
-    )
+    environment_manager = EnvironmentManager(queue_container, event_container, use_thread)
 
     assert isinstance(environment_manager, EnvironmentManager)
-    assert environment_manager.threading == use_thread
+    assert environment_manager.threaded == use_thread
 
 
 @pytest.mark.parametrize(
@@ -128,9 +124,9 @@ def test_environment_manager_initialize_environment(existing_metadata, valid_met
 
     if expected is TypeError:
         with pytest.raises(TypeError):
-            environment_manager.initialize_environments(metadata_list, acquisition_active, output_active)
+            environment_manager.initialize_environments(metadata_list)
     else:
-        environment_manager.initialize_environments(metadata_list, acquisition_active, output_active)
+        environment_manager.initialize_environments(metadata_list)
         if expected == "Put":
             expected_environment_calls = [
                 mock.call.put("Environment Manager", (GlobalCommands.INITIALIZE_HARDWARE, environment_manager.hardware_metadata)),
@@ -138,7 +134,7 @@ def test_environment_manager_initialize_environment(existing_metadata, valid_met
             ]
             mock_command_queue.assert_has_calls(expected_environment_calls)
         elif expected == "Add":
-            environment_manager.add_environment.assert_called_with(environment_metadata, acquisition_active, output_active)
+            environment_manager.add_environment.assert_called()
         elif expected == "Remove":
             environment_manager.remove_environment.assert_called_with("Environment 1")
 
@@ -289,7 +285,7 @@ def test_environment_manager_add_environment(environment_type, environment_manag
     environment_manager.new_process = mock.MagicMock(return_value=mock_process)
     environment_manager.new_event = mock.MagicMock(return_value=mock_event)
 
-    environment_manager.add_environment(metadata, acquisition_active, output_active)
+    environment_manager.add_environment(metadata)
     if environment_type == None:
         assert True
     else:
@@ -313,9 +309,9 @@ def test_environment_mananger_add_environment_key_error(queue_names, expected, e
 
     if expected is KeyError:
         with pytest.raises(KeyError):
-            environment_manager.add_environment(metadata, acquisition_active, output_active)
+            environment_manager.add_environment(metadata)
     elif expected:
-        environment_manager.add_environment(metadata, acquisition_active, output_active)
+        environment_manager.add_environment(metadata)
         assert True
 
 

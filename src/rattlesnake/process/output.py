@@ -114,7 +114,7 @@ class OutputProcess(AbstractMessageProcess):
     @property
     def output_active(self):
         """Returns True if the output is currently active"""
-        return self._output_active_event.value
+        return self._output_active_event.is_set()
 
     def set_active(self):
         self._output_active_event.set()
