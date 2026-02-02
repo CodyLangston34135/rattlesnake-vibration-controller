@@ -7,7 +7,6 @@ import traceback
 import os
 import netCDF4 as nc4
 import multiprocessing as mp
-import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import multiprocessing.synchronize  # pylint: disable=unused-import
 import multiprocessing.queues as mpqueue
 import queue as thqueue
@@ -235,8 +234,8 @@ class EnvironmentProcess(ABC):
         log_file_queue: mp.Queue,
         data_in_queue: mp.Queue,
         data_out_queue: mp.Queue,
-        acquisition_active: mp.synchronize.Event,
-        output_active: mp.synchronize.Event,
+        acquisition_active_event: mp.synchronize.Event,
+        output_active_event: mp.synchronize.Event,
         active_event: mp.synchronize.Event,
         ready_event: mp.synchronize.Event,
     ):
@@ -265,21 +264,21 @@ class EnvironmentProcess(ABC):
             GlobalCommands.INITIALIZE_ENVIRONMENT: self.initialize_environment,
             GlobalCommands.STOP_ENVIRONMENT: self.stop_environment,
         }
-        self._acquisition_active = acquisition_active
-        self._output_active = output_active
+        self._acquisition_active_event = acquisition_active_event
+        self._output_active_event = output_active_event
         self.set_ready()
 
     @property
     def acquisition_active(self):
         """Flag to check if acquisition is active."""
         # print('Checking if Acquisition Active: {:}'.format(bool(self._acquisition_active.value)))
-        return self._acquisition_active.is_set()
+        return self._acquisition_active_event.is_set()
 
     @property
     def output_active(self):
         """Flag to check if output is active."""
         # print('Checking if Output Active: {:}'.format(bool(self._output_active.value)))
-        return self._output_active.is_set()
+        return self._output_active_event.is_set()
 
     @abstractmethod
     def initialize_hardware(self, hardware_metadata: HardwareMetadata) -> None:
@@ -497,8 +496,8 @@ def run_process(
     log_file_queue: mp.Queue,
     data_in_queue: mp.Queue,
     data_out_queue: mp.Queue,
-    acquisition_active: mp.synchronize.Event,
-    output_active: mp.synchronize.Event,
+    acquisition_active_event: mp.synchronize.Event,
+    output_active_event: mp.synchronize.Event,
     active_event: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
@@ -543,8 +542,8 @@ def run_process(
         log_file_queue,
         data_in_queue,
         data_out_queue,
-        acquisition_active,
-        output_active,
+        acquisition_active_event,
+        output_active_event,
         active_event,
         ready_event,
     )

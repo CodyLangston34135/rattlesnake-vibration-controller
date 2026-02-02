@@ -147,6 +147,9 @@ class Rattlesnake:
             target=controller_process,
             args=(
                 self.queue_container,
+                self.event_container.acquisition_active_event,
+                self.event_container.output_active_event,
+                self.event_container.environment_active_events,
                 self.event_container.controller_ready_event,
                 self.event_container.controller_close_event,
             ),
@@ -188,15 +191,11 @@ class Rattlesnake:
         # Set up managers that will setup processes and store metadata
         self.environment_manager = EnvironmentManager(  # Contains hardware/environment metadata
             self.queue_container,
-            self.event_container.environment_active_events,
-            self.event_container.environment_ready_events,
-            self.event_container.environment_close_events,
+            self.event_container,
             self.threaded,
         )
         self._stream_metadata = StreamMetadata()  # Default to StreamType.NO_STREAM
-        self.profile_manager = ProfileManager(  # Contains instructions/profile events
-            self.queue_container.log_file_queue, self.queue_container.controller_command_queue
-        )
+        self.profile_manager = ProfileManager(self.queue_container)  # Contains instructions/profile events
 
         if self.blocking:
             ready_event_list = [

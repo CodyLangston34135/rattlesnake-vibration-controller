@@ -59,7 +59,7 @@ class OutputProcess(AbstractMessageProcess):
         self,
         process_name: str,
         queue_container: QueueContainer,
-        output_active: mp.synchronize.Event,
+        output_active_event: mp.synchronize.Event,
         ready_event: mp.synchronize.Event,
     ):
         """
@@ -108,19 +108,19 @@ class OutputProcess(AbstractMessageProcess):
         self.hardware = None
         self.hardware_metadata = None
         # Shared memory to record activity
-        self._output_active = output_active
+        self._output_active_event = output_active_event
         # print('output setup')
 
     @property
     def output_active(self):
         """Returns True if the output is currently active"""
-        return self._output_active.value
+        return self._output_active_event.value
 
     def set_active(self):
-        self._output_active.set()
+        self._output_active_event.set()
 
     def clear_active(self):
-        self._output_active.clear()
+        self._output_active_event.clear()
 
     def initialize_hardware(self, metadata: HardwareMetadata):
         """
@@ -450,7 +450,7 @@ class OutputProcess(AbstractMessageProcess):
 # region: output_process
 def output_process(
     queue_container: QueueContainer,
-    output_active: mp.synchronize.Event,
+    output_active_event: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
 ):
@@ -470,6 +470,6 @@ def output_process(
 
     """
 
-    output_instance = OutputProcess(TASK_NAME, queue_container, output_active, ready_event)
+    output_instance = OutputProcess(TASK_NAME, queue_container, output_active_event, ready_event)
 
     output_instance.run(shutdown_event)

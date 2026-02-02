@@ -31,7 +31,6 @@ from ..user_interface.ui_utilities import TimeUICommands
 import copy
 import multiprocessing as mp
 import queue
-import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import multiprocessing.synchronize  # pylint: disable=unused-import
 import netCDF4 as nc4
 import numpy as np
@@ -200,8 +199,8 @@ class TimeEnvironment(EnvironmentProcess):
         environment_name: str,
         queue_name: str,
         queue_container: TimeQueues,
-        acquisition_active: mp.sharedctypes.Synchronized,
-        output_active: mp.sharedctypes.Synchronized,
+        acquisition_active_event: mp.synchronize.Event,
+        output_active_event: mp.synchronize.Event,
         active_event: mp.synchronize.Event,
         ready_event: mp.synchronize.Event,
     ):
@@ -228,8 +227,8 @@ class TimeEnvironment(EnvironmentProcess):
             queue_container.log_file_queue,
             queue_container.data_in_queue,
             queue_container.data_out_queue,
-            acquisition_active,
-            output_active,
+            acquisition_active_event,
+            output_active_event,
             active_event,
             ready_event,
         )
@@ -452,8 +451,8 @@ def time_process(
     log_file_queue: mp.Queue,
     data_in_queue: mp.Queue,
     data_out_queue: mp.Queue,
-    acquisition_active: mp.sharedctypes.Synchronized,
-    output_active: mp.sharedctypes.Synchronized,
+    acquisition_active_event: mp.synchronize.Event,
+    output_active_event: mp.synchronize.Event,
     active_event: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
@@ -497,8 +496,8 @@ def time_process(
         environment_name,
         queue_name,
         queue_container,
-        acquisition_active,
-        output_active,
+        acquisition_active_event,
+        output_active_event,
         active_event,
         ready_event,
     )

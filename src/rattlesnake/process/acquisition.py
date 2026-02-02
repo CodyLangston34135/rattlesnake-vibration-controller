@@ -59,7 +59,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         self,
         process_name: str,
         queue_container: QueueContainer,
-        acquisition_active: mp.synchronize.Event,
+        acquisition_active_event: mp.synchronize.Event,
         ready_event: mp.synchronize.Event,
     ):
         """
@@ -122,18 +122,18 @@ class AcquisitionProcess(AbstractMessageProcess):
         # Abort and Warning Limits
         self.abort_limits = None
         self.warning_limits = None
-        self._acquisition_active = acquisition_active
+        self._acquisition_active_event = acquisition_active_event
         # print('acquisition setup')
 
     @property
     def acquisition_active(self):
-        return self._acquisition_active.is_set()
+        return self._acquisition_active_event.is_set()
 
     def set_active(self):
-        self._acquisition_active.set()
+        self._acquisition_active_event.set()
 
     def clear_active(self):
-        self._acquisition_active.clear()
+        self._acquisition_active_event.clear()
 
     def initialize_hardware(self, metadata: HardwareMetadata):
         """Sets up the acquisition according to the specified parameters
@@ -557,7 +557,7 @@ class AcquisitionProcess(AbstractMessageProcess):
 # region: acquisition_process
 def acquisition_process(
     queue_container: QueueContainer,
-    acquisition_active: mp.synchronize.Event,
+    acquisition_active_event: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
 ):
@@ -574,6 +574,6 @@ def acquisition_process(
 
     """
 
-    acquisition_instance = AcquisitionProcess(TASK_NAME, queue_container, acquisition_active, ready_event)
+    acquisition_instance = AcquisitionProcess(TASK_NAME, queue_container, acquisition_active_event, ready_event)
 
     acquisition_instance.run(shutdown_event)

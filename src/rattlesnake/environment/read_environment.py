@@ -4,7 +4,7 @@ from ..utilities import VerboseMessageQueue, GlobalCommands
 from ..hardware.abstract_hardware import HardwareMetadata
 from ..user_interface.ui_utilities import ReadUICommands
 import multiprocessing as mp
-import multiprocessing.sharedctypes  # pylint: disable=unused-import
+import multiprocessing.synchronize  # pylint: disable=unused-import
 import netCDF4 as nc4
 
 CONTROL_TYPE = ControlTypes.READ
@@ -65,8 +65,8 @@ class ReadEnvironment(EnvironmentProcess):
         self,
         environment_name: str,
         queue_container: ReadQueues,
-        acquisition_active: mp.sharedctypes.Synchronized,
-        output_active: mp.sharedctypes.Synchronized,
+        acquisition_active: mp.synchronize.Event,
+        output_active: mp.synchronize.Event,
     ):
         super().__init__(
             environment_name,
@@ -119,8 +119,8 @@ def read_process(
     log_file_queue: mp.Queue,
     data_in_queue: mp.Queue,
     data_out_queue: mp.Queue,
-    acquisition_active: mp.sharedctypes.Synchronized,
-    output_active: mp.sharedctypes.Synchronized,
+    acquisition_active: mp.synchronize.Event,
+    output_active: mp.synchronize.Event,
 ):
 
     queue_container = ReadQueues(input_queue, gui_update_queue, controller_communication_queue, data_in_queue, data_out_queue, log_file_queue)

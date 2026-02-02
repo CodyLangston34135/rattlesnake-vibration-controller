@@ -28,6 +28,9 @@ class ControllerProcess(AbstractMessageProcess):
         self,
         process_name: str,
         queue_container: QueueContainer,
+        acquisition_active_event: mp.synchronize.Event,
+        output_active_event: mp.synchronize.Event,
+        environment_active_event: mp.synchronize.Event,
         ready_event: mp.synchronize.Event,
     ):
         """Constructor for the Controller class
@@ -51,6 +54,9 @@ class ControllerProcess(AbstractMessageProcess):
             ready_event,
         )
         self.queue_container = queue_container
+        self._acquisition_active_event = acquisition_active_event
+        self._output_active_event = output_active_event
+        self._environment_active_event = environment_active_event
         self.environment_instructions = {}
         self.stream_metadata = StreamMetadata()
         self.map_command(GlobalCommands.RUN_HARDWARE, self.run_hardware)
@@ -62,24 +68,53 @@ class ControllerProcess(AbstractMessageProcess):
         self.map_command(GlobalCommands.AT_TARGET_LEVEL, self.at_target_level)
         self.map_command(GlobalCommands.PROFILE_CLOSEOUT, self.profile_closeout)
 
+    @property
+    def acquisition_active(self):
+        return self._acquisition_active_event.is_set()
+
+    @property
+    def output_active(self):
+        return self._output_active_event.is_set()
+
+    @property
+    def environments_active(self):
+        return [queue_name for queue_name, active_event in self._environment_active_event.items() if active_event.is_set()]
+
     def run_hardware(self, data: StreamMetadata):
         self.stream_metadata = data
+        if not self.acquisition_active:
+            raise RuntimeError("Tried to start hardware while acquisition is still running")
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, None))
+        if not self.output_active:
+            raise RuntimeError("Tried to start hardware while output is still running")
         self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, None))
         if self.stream_metadata.stream_type == StreamType.IMMEDIATELY:
             self.start_streaming(True)
 
     def stop_hardware(self, data: None):
+        # Stop environments
+        for queue_name in self.environments_active:
+            self.stop_environment(queue_name)
+        # Stop acquisition
+        if not self.acquisition_active:
+            raise RuntimeError("Tried to stop hardware when acquisition was not running")
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))
+        # Stop output
+        if not self.output_active:
+            raise RuntimeError("Tried to start hardware when output was not running")
         self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))
 
     def start_environment(self, data: tuple[str, EnvironmentInstructions]):
         queue_name, instruction = data
+        if queue_name in self.environments_active:
+            raise RuntimeError(f"Tried to start {queue_name} environment while it was still running")
         self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.START_ENVIRONMENT, queue_name))
         self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.START_ENVIRONMENT, instruction))
 
     def stop_environment(self, data: str):
         queue_name = data
+        if queue_name not in self.environments_active:
+            raise RuntimeError(f"Tried to stop {queue_name} environment when it was not running")
         self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, None))
 
     def start_streaming(self, data: bool = False):
@@ -108,6 +143,9 @@ class ControllerProcess(AbstractMessageProcess):
 # region: controller_process
 def controller_process(
     queue_container: QueueContainer,
+    acquisition_active_event: mp.synchronize.Event,
+    output_active_event: mp.synchronize.Event,
+    environment_active_event: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
 ):
@@ -124,6 +162,13 @@ def controller_process(
 
     """
 
-    acquisition_instance = ControllerProcess(TASK_NAME, queue_container, ready_event)
+    acquisition_instance = ControllerProcess(
+        TASK_NAME,
+        queue_container,
+        acquisition_active_event,
+        output_active_event,
+        environment_active_event,
+        ready_event,
+    )
 
     acquisition_instance.run(shutdown_event)

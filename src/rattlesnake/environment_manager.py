@@ -1,4 +1,4 @@
-from .utilities import QueueContainer, GlobalCommands
+from .utilities import QueueContainer, EventContainer, GlobalCommands
 from .profile_manager import ProfileEvent
 from .environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions
 from .environment.environment_utilities import ControlTypes
@@ -28,9 +28,7 @@ class EnvironmentManager:
     def __init__(
         self,
         queue_container: QueueContainer,
-        environment_active_events: Dict[str, mp.synchronize.Event],
-        environment_ready_events: Dict[str, mp.synchronize.Event],
-        environment_close_events: Dict[str, mp.synchronize.Event],
+        event_container: EventContainer,
         threaded: bool,
     ):
         self.hardware_metadata = None
@@ -40,9 +38,9 @@ class EnvironmentManager:
         self.environment_metadata = {}
         self.environment_processes = {}
         self.queue_container = queue_container
-        self.environment_active_events = environment_active_events
-        self.environment_ready_events = environment_ready_events
-        self.environment_close_events = environment_close_events
+        self.environment_active_events = event_container.environment_active_events
+        self.environment_ready_events = event_container.environment_ready_events
+        self.environment_close_events = event_container.environment_close_events
         self._threaded = threaded
         if threaded:
             self.new_process = threading.Thread

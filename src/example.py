@@ -166,7 +166,7 @@ def main():
     profile_event_list = build_profile_event_list(time_metadata.environment_name)
 
     # RATTLESNAKE CONTROLLER
-    rattlesnake = Rattlesnake(threaded=False, timeout=30)
+    rattlesnake = Rattlesnake(threaded=True, timeout=30)
     rattlesnake.set_hardware(hardware_metadata)
     rattlesnake.set_environments(envrionment_metadata_list)
     rattlesnake.start_acquisition(stream_metadata)

@@ -1,8 +1,9 @@
-from .utilities import GlobalCommands
+from .utilities import QueueContainer, EventContainer, GlobalCommands, VerboseMessageQueue
 from .environment.abstract_environment import EnvironmentInstructions
 from .environment.environment_utilities import ControlTypes
 from .environment.time_environment import TimeCommands
 import threading
+import multiprocessing as mp
 from typing import List, Dict
 from datetime import datetime
 
@@ -67,9 +68,9 @@ class ProfileEvent:
 
 # region: ProfileManager
 class ProfileManager:
-    def __init__(self, log_file_queue, controller_command_queue):
-        self._log_file_queue = log_file_queue
-        self._controller_command_queue = controller_command_queue
+    def __init__(self, queue_container: QueueContainer):
+        self._log_file_queue = queue_container.log_file_queue
+        self._controller_command_queue = queue_container.controller_command_queue
 
         self.environment_instructions = {}
         self.profile_event_list = []
@@ -166,8 +167,6 @@ class ProfileManager:
 
     def stop_hardware(self, queue_name: str = "Global", data: None = None):
         self.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))
-        for queue_name in self.environment_instructions.keys():
-            self.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, queue_name))
 
     def start_streaming(self, queue_name: str = "Global", data: None = None):
         self.controller_command_queue.put(TASK_NAME, (GlobalCommands.START_STREAMING, False))
