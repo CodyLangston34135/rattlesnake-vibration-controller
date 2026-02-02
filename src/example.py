@@ -89,7 +89,7 @@ def test_sdynpy_metadata():
     hardware_metadata.sample_rate = 1000
     hardware_metadata.time_per_read = BUFFER_SIZE
     hardware_metadata.time_per_write = BUFFER_SIZE
-    hardware_metadata.hardware_file = "E:/Rattlesnake/SampleData/stiff_plate_system.npz"
+    hardware_metadata.hardware_file = "E:/Rattlesnake/SampleData/sample_system.npz"
 
     return hardware_metadata
 

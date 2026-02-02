@@ -7,7 +7,7 @@ import multiprocessing as mp
 import multiprocessing.synchronize  # pylint: disable=unused-import
 import threading
 from datetime import datetime
-from typing import List, Dict
+from typing import List
 
 TASK_NAME = "Environment Manager"
 CLOSE_TIMEOUT = 5

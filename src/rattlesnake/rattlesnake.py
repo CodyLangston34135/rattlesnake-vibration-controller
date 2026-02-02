@@ -211,7 +211,7 @@ class Rattlesnake:
     @property
     def state(self) -> RattlesnakeState:
         hardware_store = self.hardware_metadata is not None
-        environment_store = self.environment_metadata_dict is not {}
+        environment_store = self.environment_metadata_dict != {}
         acquisition_active = self.event_container.acquisition_active_event.is_set()
         output_active = self.event_container.output_active_event.is_set()
         environment_active = any(event.is_set() for event in self.event_container.environment_active_events.values())
