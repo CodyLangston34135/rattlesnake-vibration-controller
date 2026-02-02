@@ -30,7 +30,6 @@ from ..environment.abstract_environment import EnvironmentMetadata
 from ..user_interface.ui_utilities import UICommands
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
-import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import multiprocessing.synchronize  # pylint: disable=unused-import
 import queue as thqueue
 import numpy as np
@@ -60,7 +59,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         self,
         process_name: str,
         queue_container: QueueContainer,
-        acquisition_active: mp.sharedctypes.Synchronized,
+        acquisition_active: mp.synchronize.Event,
         ready_event: mp.synchronize.Event,
     ):
         """
@@ -128,14 +127,13 @@ class AcquisitionProcess(AbstractMessageProcess):
 
     @property
     def acquisition_active(self):
-        return bool(self._acquisition_active.value)
+        return self._acquisition_active.is_set()
 
-    @acquisition_active.setter
-    def acquisition_active(self, val):
-        if val:
-            self._acquisition_active.value = 1
-        else:
-            self._acquisition_active.value = 0
+    def set_active(self):
+        self._acquisition_active.set()
+
+    def clear_active(self):
+        self._acquisition_active.clear()
 
     def initialize_hardware(self, metadata: HardwareMetadata):
         """Sets up the acquisition according to the specified parameters
@@ -370,8 +368,7 @@ class AcquisitionProcess(AbstractMessageProcess):
             self.log("Starting Hardware Acquisition")
             self.hardware.start()
             self.startup = False
-            self.acquisition_active = True
-            self.set_ready()
+            self.set_active()
             # print('started acquisition')
         self.get_first_output_data()
         if (
@@ -407,9 +404,8 @@ class AcquisitionProcess(AbstractMessageProcess):
             if self.has_streamed and self.any_environments_started:
                 self.queue_container.streaming_command_queue.put(self.process_name, (GlobalCommands.FINALIZE_STREAMING, None))
                 self.has_streamed = False
-            self.acquisition_active = False
+            self.clear_active()
             self.log("Acquisition Shut Down")
-            self.set_ready()  # Alert that acquisition has shutdown
         else:
             aquiring_environments = [name for name, flag in self.environment_active_flags.items() if flag]
             self.log(f"Acquiring Data for {aquiring_environments} environments")
@@ -561,7 +557,7 @@ class AcquisitionProcess(AbstractMessageProcess):
 # region: acquisition_process
 def acquisition_process(
     queue_container: QueueContainer,
-    acquisition_active: mp.sharedctypes.Synchronized,
+    acquisition_active: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
 ):

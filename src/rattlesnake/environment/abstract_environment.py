@@ -235,8 +235,9 @@ class EnvironmentProcess(ABC):
         log_file_queue: mp.Queue,
         data_in_queue: mp.Queue,
         data_out_queue: mp.Queue,
-        acquisition_active: mp.sharedctypes.Synchronized,
-        output_active: mp.sharedctypes.Synchronized,
+        acquisition_active: mp.synchronize.Event,
+        output_active: mp.synchronize.Event,
+        active_event: mp.synchronize.Event,
         ready_event: mp.synchronize.Event,
     ):
         """
@@ -257,6 +258,7 @@ class EnvironmentProcess(ABC):
         self._data_in_queue = data_in_queue
         self._data_out_queue = data_out_queue
         self._ready_event = ready_event
+        self._active_event = active_event
         self._command_map = {
             GlobalCommands.QUIT: self.quit,
             GlobalCommands.INITIALIZE_HARDWARE: self.initialize_hardware,
@@ -271,13 +273,13 @@ class EnvironmentProcess(ABC):
     def acquisition_active(self):
         """Flag to check if acquisition is active."""
         # print('Checking if Acquisition Active: {:}'.format(bool(self._acquisition_active.value)))
-        return bool(self._acquisition_active.value)
+        return self._acquisition_active.is_set()
 
     @property
     def output_active(self):
         """Flag to check if output is active."""
         # print('Checking if Output Active: {:}'.format(bool(self._output_active.value)))
-        return bool(self._output_active.value)
+        return self._output_active.is_set()
 
     @abstractmethod
     def initialize_hardware(self, hardware_metadata: HardwareMetadata) -> None:
@@ -325,7 +327,6 @@ class EnvironmentProcess(ABC):
             due to the calling signature of functions called through the
             ``command_map``.
         """
-        self.set_ready()
 
     @property
     def environment_command_queue(self) -> VerboseMessageQueue:
@@ -393,6 +394,12 @@ class EnvironmentProcess(ABC):
 
     def clear_ready(self):
         self._ready_event.clear()
+
+    def set_active(self):
+        self._active_event.set()
+
+    def clear_active(self):
+        self._active_event.clear()
 
     def map_command(self, key, function):
         """A function that maps an instruction to a function in the ``command_map``.
@@ -490,8 +497,9 @@ def run_process(
     log_file_queue: mp.Queue,
     data_in_queue: mp.Queue,
     data_out_queue: mp.Queue,
-    acquisition_active: mp.sharedctypes.Synchronized,
-    output_active: mp.sharedctypes.Synchronized,
+    acquisition_active: mp.synchronize.Event,
+    output_active: mp.synchronize.Event,
+    active_event: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
 ):
@@ -537,6 +545,7 @@ def run_process(
         data_out_queue,
         acquisition_active,
         output_active,
+        active_event,
         ready_event,
     )
     process_class.run(shutdown_event)

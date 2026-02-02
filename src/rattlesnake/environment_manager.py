@@ -28,9 +28,10 @@ class EnvironmentManager:
     def __init__(
         self,
         queue_container: QueueContainer,
+        environment_active_events: Dict[str, mp.synchronize.Event],
         environment_ready_events: Dict[str, mp.synchronize.Event],
         environment_close_events: Dict[str, mp.synchronize.Event],
-        threading_bool: bool,
+        threaded: bool,
     ):
         self.hardware_metadata = None
         self.queue_names = []  # Static name for dictionary keys, process names, etc
@@ -39,10 +40,11 @@ class EnvironmentManager:
         self.environment_metadata = {}
         self.environment_processes = {}
         self.queue_container = queue_container
+        self.environment_active_events = environment_active_events
         self.environment_ready_events = environment_ready_events
         self.environment_close_events = environment_close_events
-        self._threading = threading_bool
-        if threading_bool:
+        self._threaded = threaded
+        if threaded:
             self.new_process = threading.Thread
             self.new_event = threading.Event
         else:
@@ -63,13 +65,18 @@ class EnvironmentManager:
         return {self.environment_names[queue_name]: queue_name for queue_name in self.queue_names}
 
     @property
-    def threading(self):
-        return self._threading
+    def threaded(self):
+        return self._threaded
 
     @property
     def ready_event_list(self):
         ready_event_list = [self.environment_ready_events[queue_name] for queue_name in self.queue_names]
         return ready_event_list
+
+    @property
+    def active_event_list(self):
+        active_event_list = [self.environment_active_events[queue_name] for queue_name in self.queue_names]
+        return active_event_list
 
     def set_ready_events(self):
         """This is used by the main process to ready the events if a timeout
@@ -106,7 +113,9 @@ class EnvironmentManager:
 
         self.hardware_metadata = hardware_metadata
 
-    def initialize_environments(self, metadata_list: List[EnvironmentMetadata], acquisition_active, output_active):
+    def initialize_environments(
+        self, metadata_list: List[EnvironmentMetadata], acquisition_active: mp.synchronize.Event, output_active: mp.synchronize.Event
+    ):
         self.log("Initializing Environments")
         mapped_queue_names = set()
         extra_metadata = []
@@ -275,6 +284,7 @@ class EnvironmentManager:
                     self.queue_container.environment_data_out_queues[queue_name],
                     acquisition_active,
                     output_active,
+                    self.environment_active_events[queue_name],
                     self.environment_ready_events[queue_name],
                     self.environment_close_events[queue_name],
                 ),
@@ -295,6 +305,7 @@ class EnvironmentManager:
                     self.queue_container.environment_data_out_queues[queue_name],
                     acquisition_active,
                     output_active,
+                    self.environment_active_events[queue_name],
                     self.environment_ready_events[queue_name],
                     self.environment_close_events[queue_name],
                 ),
@@ -311,8 +322,9 @@ class EnvironmentManager:
         self.environment_processes[queue_name] = environment_process
         self.environment_metadata[queue_name] = metadata
         self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, self.hardware_metadata))
-        self.environment_ready_events[queue_name].clear()
+        self.environment_ready_events[queue_name].clear()  # This looks weird, the event is set in the next line
         self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata))
+        self.environment_active_events[queue_name].clear()
 
     def remove_environment(self, queue_name):
         """Removes environment from container"""
@@ -332,7 +344,7 @@ class EnvironmentManager:
                 self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing {queue_name} Process\n")
                 self.environment_close_events[queue_name].set()
                 self.environment_processes[queue_name].join(timeout=CLOSE_TIMEOUT)
-                if self.environment_processes[queue_name].is_alive() and not self.threading:
+                if self.environment_processes[queue_name].is_alive() and not self.threaded:
                     self.environment_processes[queue_name].terminate()
                     self.environment_processes[queue_name].join()
 
@@ -350,7 +362,7 @@ class EnvironmentManager:
                 self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing {queue_name} Process\n")
                 self.environment_close_events[queue_name].set()
                 environment_process.join(timeout=CLOSE_TIMEOUT)
-                if environment_process.is_alive() and not self.threading:
+                if environment_process.is_alive() and not self.threaded:
                     environment_process.terminate()
                     environment_process.join()
             self.queue_container.environment_command_queues[queue_name].flush(TASK_NAME)

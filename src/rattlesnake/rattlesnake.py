@@ -26,8 +26,16 @@ class RattlesnakeState(Enum):
     INIT = 0  # Nothing is stored yet
     HARDWARE_STORE = 1  # Hardware has been stored
     ENVIRONMENT_STORE = 2  # Environments have been stored
-    ACQUISITION_START = 3  # Acquisition has started
-    OUTPUT_START = 4  # Profile/Environment output has started
+    HARDWARE_ACTIVE = 3  # Acquisition is running
+    ENVIRONMENT_ACTIVE = 4  # Environment output is running
+
+    @property
+    def is_settable(self) -> bool:
+        return self in {
+            RattlesnakeState.INIT,
+            RattlesnakeState.HARDWARE_STORE,
+            RattlesnakeState.ENVIRONMENT_STORE,
+        }
 
 
 # region: Rattlesnake
@@ -38,8 +46,6 @@ class Rattlesnake:
         self._threaded = threaded
         self._blocking = blocking  # Wait for ready events?, True for IDE, False for UI
         self._timeout = timeout  # Timeout while waiting for ready_events
-        self.acquisition_active = mp.Value("i", 0)
-        self.output_active = mp.Value("i", 0)
 
         if self.threaded:
             new_queue = thqueue.Queue  # threading-safe in-memory queue
@@ -66,9 +72,13 @@ class Rattlesnake:
         controller_command_queue = VerboseMessageQueue(log_file_queue, new_queue(), self.controller_queue_name_manager, "Controller Command Queue")
         acquisition_close_event = new_event()
         acquisition_ready_event = new_event()
+        acquisition_active_event = new_event()
+        acquisition_active_event.clear()
         acquisition_command_queue = VerboseMessageQueue(log_file_queue, new_queue(), self.controller_queue_name_manager, "Acquisition Command Queue")
         output_close_event = new_event()
         output_ready_event = new_event()
+        output_active_event = new_event()
+        output_active_event.clear()
         output_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), self.controller_queue_name_manager, "Output Command Queue")
         streaming_close_event = new_event()
         streaming_ready_event = new_event()
@@ -82,18 +92,21 @@ class Rattlesnake:
         max_environments = 16
         environment_close_events = {}
         environment_ready_events = {}
+        environment_active_events = {}
         environment_command_queues = {}
         environment_data_in_queues = {}
         environment_data_out_queues = {}
         for env_idx in range(max_environments):
-            environment_name = "Environment {:}".format(env_idx)
-            environment_close_events[environment_name] = new_event()
-            environment_ready_events[environment_name] = new_event()
-            environment_command_queues[environment_name] = VerboseMessageQueue(
-                log_file_queue, mp.Queue(), self.controller_queue_name_manager, environment_name + " Command Queue"
+            queue_name = "Environment {:}".format(env_idx)
+            environment_close_events[queue_name] = new_event()
+            environment_ready_events[queue_name] = new_event()
+            environment_active_events[queue_name] = new_event()
+            environment_active_events[queue_name].clear()
+            environment_command_queues[queue_name] = VerboseMessageQueue(
+                log_file_queue, mp.Queue(), self.controller_queue_name_manager, queue_name + " Command Queue"
             )
-            environment_data_in_queues[environment_name] = new_queue()
-            environment_data_out_queues[environment_name] = new_queue()
+            environment_data_in_queues[queue_name] = new_queue()
+            environment_data_out_queues[queue_name] = new_queue()
 
         # Set up output queue
         gui_update_queue = new_queue()
@@ -124,6 +137,9 @@ class Rattlesnake:
             output_close_event,
             streaming_close_event,
             environment_close_events,
+            acquisition_active_event,
+            output_active_event,
+            environment_active_events,
         )
 
         # Controller
@@ -141,7 +157,7 @@ class Rattlesnake:
             target=acquisition_process,
             args=(
                 self.queue_container,
-                self.acquisition_active,
+                self.event_container.acquisition_active_event,
                 self.event_container.acquisition_ready_event,
                 self.event_container.acquisition_close_event,
             ),
@@ -152,7 +168,7 @@ class Rattlesnake:
             target=output_process,
             args=(
                 self.queue_container,
-                self.output_active,
+                self.event_container.output_active_event,
                 self.event_container.output_ready_event,
                 self.event_container.output_close_event,
             ),
@@ -172,6 +188,7 @@ class Rattlesnake:
         # Set up managers that will setup processes and store metadata
         self.environment_manager = EnvironmentManager(  # Contains hardware/environment metadata
             self.queue_container,
+            self.event_container.environment_active_events,
             self.event_container.environment_ready_events,
             self.event_container.environment_close_events,
             self.threaded,
@@ -182,14 +199,41 @@ class Rattlesnake:
         )
 
         if self.blocking:
-            event_list = [
+            ready_event_list = [
                 self.event_container.controller_ready_event,
                 self.event_container.acquisition_ready_event,
                 self.event_container.output_ready_event,
                 self.event_container.streaming_ready_event,
                 *self.environment_manager.ready_event_list,
             ]
-            self.wait_for_ready_events(event_list)
+            active_event_list = []
+            self.wait_for_events(ready_event_list, active_event_list)
+
+    @property
+    def state(self) -> RattlesnakeState:
+        hardware_store = self.hardware_metadata is not None
+        environment_store = self.environment_metadata_dict is not {}
+        acquisition_active = self.event_container.acquisition_active_event.is_set()
+        output_active = self.event_container.output_active_event.is_set()
+        environment_active = any(event.is_set() for event in self.event_container.environment_active_events.values())
+
+        if hardware_store and environment_store and acquisition_active and output_active and environment_active:
+            return RattlesnakeState.ENVIRONMENT_ACTIVE
+
+        if hardware_store and environment_store and acquisition_active and output_active:
+            return RattlesnakeState.HARDWARE_ACTIVE
+
+        return self._state
+
+    @state.setter
+    def state(self, value: RattlesnakeState) -> None:
+        if not isinstance(value, RattlesnakeState):
+            raise TypeError(f"state must be a RattlesnakeState, got {type(value)}")
+
+        if not value.is_settable:
+            raise ValueError(f"{value} is a derived state and cannot be set")
+
+        self._state = value
 
     @property
     def threaded(self):
@@ -224,11 +268,16 @@ class Rattlesnake:
     def profile_event_list(self):
         return self.profile_manager.profile_event_list
 
-    def wait_for_ready_events(self, ready_event_list: List[mp.synchronize.Event]):
+    def wait_for_events(
+        self, ready_event_list: List[mp.synchronize.Event], active_event_list: List[mp.synchronize.Event], *, active_event_check: bool = None
+    ):
         start_time = time.time()
 
         while True:
-            if all(event.is_set() for event in ready_event_list):
+            ready_ok = all(event.is_set() for event in ready_event_list)
+            active_ok = all(event.is_set() == active_event_check for event in active_event_list)
+
+            if ready_ok and active_ok:
                 return
 
             if self.timeout is not None and (time.time() - start_time) >= self.timeout:
@@ -255,12 +304,13 @@ class Rattlesnake:
         self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata))
 
         if self.blocking:
-            event_list = [
+            ready_event_list = [
                 self.event_container.acquisition_ready_event,
                 self.event_container.output_ready_event,
                 *self.environment_manager.ready_event_list,
             ]
-            self.wait_for_ready_events(event_list)
+            active_event_list = []
+            self.wait_for_events(ready_event_list, active_event_list)
 
         self.state = RattlesnakeState.HARDWARE_STORE
 
@@ -275,19 +325,22 @@ class Rattlesnake:
 
         # Send environment meetadata to correct processes
         self.log("Setting Environment")
-        self.environment_manager.initialize_environments(environment_metadata_list, self.acquisition_active, self.output_active)
+        self.environment_manager.initialize_environments(
+            environment_metadata_list, self.event_container.acquisition_active_event, self.event_container.output_active_event
+        )
         self.event_container.acquisition_ready_event.clear()
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_metadata_dict))
         self.event_container.output_ready_event.clear()
         self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_metadata_dict))
 
         if self.blocking:
-            event_list = [
+            ready_event_list = [
                 self.event_container.acquisition_ready_event,
                 self.event_container.output_ready_event,
                 *self.environment_manager.ready_event_list,
             ]
-            self.wait_for_ready_events(event_list)
+            active_event_list = []
+            self.wait_for_events(ready_event_list, active_event_list)
 
         # Check if this removed all the environmetns or not
         if not self.environment_metadata_dict:
@@ -314,24 +367,23 @@ class Rattlesnake:
 
         # Tell controller to start up the hardware, controller takes over logic from here
         self.log("Arming Test Hardware")
-        self.event_container.acquisition_ready_event.clear()
-        self.event_container.output_ready_event.clear()
         self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.RUN_HARDWARE, stream_metadata))
 
         if self.blocking:
-            event_list = [
-                self.event_container.acquisition_ready_event,
-                self.event_container.output_ready_event,
+            ready_event_list = [
                 self.event_container.streaming_ready_event,
             ]
-            self.wait_for_ready_events(event_list)
+            active_event_list = [
+                self.event_container.acquisition_active_event,
+                self.event_container.output_active_event,
+            ]
+            self.wait_for_events(ready_event_list, active_event_list, active_event_check=True)
 
         self._stream_metadata = stream_metadata
-        self.state = RattlesnakeState.ACQUISITION_START
 
     def stop_acquisition(self):
         # Validate rattlesnake state (rattlesnake was acquiring data)
-        if self.state not in (RattlesnakeState.ACQUISITION_START, RattlesnakeState.OUTPUT_START):
+        if self.state not in (RattlesnakeState.HARDWARE_ACTIVE, RattlesnakeState.ENVIRONMENT_ACTIVE):
             raise RuntimeError(f"Invalid state for stopping acquisition: {self.state}")
 
         self.log("Disarming Test Hardware")
@@ -343,13 +395,15 @@ class Rattlesnake:
             self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, None))
 
         if self.blocking:
-            event_list = [
+            ready_event_list = [
                 self.event_container.controller_ready_event,
-                self.event_container.acquisition_ready_event,
-                self.event_container.output_ready_event,
-                *self.environment_manager.ready_event_list,
             ]
-            self.wait_for_ready_events(event_list)
+            active_event_list = [
+                self.event_container.acquisition_active_event,
+                self.event_container.output_active_event,
+                *self.environment_manager.active_event_list,
+            ]
+            self.wait_for_events(ready_event_list, active_event_list, active_event_check=False)
 
         self.state = RattlesnakeState.ENVIRONMENT_STORE
 
@@ -357,7 +411,7 @@ class Rattlesnake:
         self, profile_event_list: List[ProfileEvent], environment_instructions_list: List[EnvironmentInstructions], *, blocking: bool | None = None
     ):
         self.log("Settting Profile Event List")
-        if self.state != RattlesnakeState.ACQUISITION_START:
+        if self.state != RattlesnakeState.HARDWARE_ACTIVE:
             raise RuntimeError(f"Invalid state to start profile: {self.state}")
 
         # Validate and assign queue_names to events and instructions
@@ -374,8 +428,9 @@ class Rattlesnake:
         # user interface ._exec command to block the signal instead of rattlesnake waiting
         check_blocking_override = blocking if blocking is not None else self.blocking
         if check_blocking_override:
-            event_list = [self.event_container.controller_ready_event]
-            self.wait_for_ready_events(event_list)
+            ready_event_list = [self.event_container.controller_ready_event]
+            active_event_list = []
+            self.wait_for_events(ready_event_list, active_event_list)
 
     def stop_profile(self):
         self.log("Stopping Profile")
@@ -383,8 +438,9 @@ class Rattlesnake:
         self.profile_manager.stop_profile()
 
         if self.blocking:
-            event_list = [self.event_container.controller_ready_event]
-            self.wait_for_ready_events(event_list)
+            ready_event_list = [self.event_container.controller_ready_event]
+            active_event_list = []
+            self.wait_for_events(ready_event_list, active_event_list)
 
     def shutdown(self):
         # Close out of acquisition, output, streaming process

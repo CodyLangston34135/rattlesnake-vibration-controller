@@ -30,7 +30,6 @@ from ..hardware.abstract_hardware import HardwareMetadata
 from ..environment.abstract_environment import EnvironmentMetadata
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
-import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import multiprocessing.synchronize  # pylint: disable=unused-import
 import queue as thqueue
 import numpy as np
@@ -60,7 +59,7 @@ class OutputProcess(AbstractMessageProcess):
         self,
         process_name: str,
         queue_container: QueueContainer,
-        output_active: mp.sharedctypes.Synchronized,
+        output_active: mp.synchronize.Event,
         ready_event: mp.synchronize.Event,
     ):
         """
@@ -115,17 +114,13 @@ class OutputProcess(AbstractMessageProcess):
     @property
     def output_active(self):
         """Returns True if the output is currently active"""
-        return bool(self._output_active.value)
+        return self._output_active.value
 
-    @output_active.setter
-    def output_active(self, val):
-        # print('output currently active: {:}'.format(self.output_active))
-        # print('setting output active')
-        if val:
-            self._output_active.value = 1
-        else:
-            self._output_active.value = 0
-        # print('set output active')
+    def set_active(self):
+        self._output_active.set()
+
+    def clear_active(self):
+        self._output_active.clear()
 
     def initialize_hardware(self, metadata: HardwareMetadata):
         """
@@ -378,9 +373,8 @@ class OutputProcess(AbstractMessageProcess):
                 # environment with that name
                 self.queue_container.input_output_sync_queue.put((None, True))
                 self.startup = False
-                self.output_active = True
+                self.set_active()
                 # print('started output')
-                self.set_ready()
         # Now check if we need to shut down.
         if (
             self.shutdown_flag  # Time to shut down
@@ -396,8 +390,7 @@ class OutputProcess(AbstractMessageProcess):
             self.startup = True
             self.shutdown_flag = False
             flush_queue(self.queue_container.input_output_sync_queue)
-            self.output_active = False
-            self.set_ready()  # Alert that output has shutdown
+            self.clear_active()
         else:
             # Otherwise keep going
             self.queue_container.output_command_queue.put(self.process_name, (GlobalCommands.RUN_HARDWARE, None))
@@ -457,7 +450,7 @@ class OutputProcess(AbstractMessageProcess):
 # region: output_process
 def output_process(
     queue_container: QueueContainer,
-    output_active: mp.sharedctypes.Synchronized,
+    output_active: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
 ):

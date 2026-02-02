@@ -202,6 +202,7 @@ class TimeEnvironment(EnvironmentProcess):
         queue_container: TimeQueues,
         acquisition_active: mp.sharedctypes.Synchronized,
         output_active: mp.sharedctypes.Synchronized,
+        active_event: mp.synchronize.Event,
         ready_event: mp.synchronize.Event,
     ):
         """
@@ -229,6 +230,7 @@ class TimeEnvironment(EnvironmentProcess):
             queue_container.data_out_queue,
             acquisition_active,
             output_active,
+            active_event,
             ready_event,
         )
         self.queue_container = queue_container
@@ -315,6 +317,7 @@ class TimeEnvironment(EnvironmentProcess):
                 self.log("Test Level set to {:}".format(self.current_test_level))
             self.signal_remainder = self.metadata.output_signal
             self.startup = False
+            self.set_active()
         # See if any data has come in
         try:
             acquisition_data, last_acquisition = self.queue_container.data_in_queue.get_nowait()
@@ -342,6 +345,7 @@ class TimeEnvironment(EnvironmentProcess):
                     output_data = acquisition_data[self.output_channels]
                     self.queue_container.gui_update_queue.put((self.queue_name, (TimeUICommands.TIME_DATA, (measurement_data, output_data))))
                 self.shutdown()
+                self.clear_active()
                 return
         self.queue_container.environment_command_queue.put(self.environment_name, (GlobalCommands.START_ENVIRONMENT, None))
 
@@ -399,7 +403,6 @@ class TimeEnvironment(EnvironmentProcess):
 
         """
         self.adjust_test_level(0.0)
-        self.set_ready()
 
     def adjust_test_level(self, data):
         """Adjusts the test level of the signal
@@ -451,6 +454,7 @@ def time_process(
     data_out_queue: mp.Queue,
     acquisition_active: mp.sharedctypes.Synchronized,
     output_active: mp.sharedctypes.Synchronized,
+    active_event: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
 ):
@@ -480,7 +484,22 @@ def time_process(
     """
 
     # Create vibration queues
-    queue_container = TimeQueues(input_queue, gui_update_queue, controller_command_queue, data_in_queue, data_out_queue, log_file_queue)
+    queue_container = TimeQueues(
+        input_queue,
+        gui_update_queue,
+        controller_command_queue,
+        data_in_queue,
+        data_out_queue,
+        log_file_queue,
+    )
 
-    process_class = TimeEnvironment(environment_name, queue_name, queue_container, acquisition_active, output_active, ready_event)
+    process_class = TimeEnvironment(
+        environment_name,
+        queue_name,
+        queue_container,
+        acquisition_active,
+        output_active,
+        active_event,
+        ready_event,
+    )
     process_class.run(shutdown_event)

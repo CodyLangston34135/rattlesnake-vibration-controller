@@ -286,6 +286,9 @@ class EventContainer:
         output_close_event: mp.synchronize.Event,
         streaming_close_event: mp.synchronize.Event,
         environment_close_events: Dict[str, mp.synchronize.Event],
+        acquisition_active_event: mp.synchronize.Event,
+        output_active_event: mp.synchronize.Event,
+        environment_active_events: Dict[str, mp.synchronize.Event],
     ):
         # Ready Events
         self.controller_ready_event = controller_ready_event
@@ -300,6 +303,10 @@ class EventContainer:
         self.output_close_event = output_close_event
         self.streaming_close_event = streaming_close_event
         self.environment_close_events = environment_close_events
+        # Active Events
+        self.acquisition_active_event = acquisition_active_event
+        self.output_active_event = output_active_event
+        self.environment_active_events = environment_active_events
 
 
 def flush_queue(queue, timeout=None):
