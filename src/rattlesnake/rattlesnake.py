@@ -230,7 +230,7 @@ class Rattlesnake:
             raise TypeError(f"state must be a RattlesnakeState, got {type(value)}")
 
         if not value.is_settable:
-            raise ValueError(f"{value} is a derived state and cannot be set")
+            raise ValueError(f"{value} is monitored and not settable to Rattlesnake.state")
 
         self._state = value
 
@@ -389,9 +389,6 @@ class Rattlesnake:
         self.event_container.acquisition_ready_event.clear()
         self.event_container.output_ready_event.clear()
         self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))
-        for queue_name in self.environment_metadata_dict.keys():
-            self.event_container.environment_ready_events[queue_name].clear()
-            self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, None))
 
         if self.blocking:
             ready_event_list = [

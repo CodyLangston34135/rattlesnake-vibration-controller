@@ -106,27 +106,40 @@ def test_controller_run_hardware_error(acquisition_active, output_active, expect
 
 
 @pytest.mark.parametrize(
-    "acquisition_active, output_active, expected",
-    [(False, False, RuntimeError), (False, True, RuntimeError), (True, False, RuntimeError), (True, True, True)],
+    "acquisition_active, output_active, environment_active, expected",
+    [
+        (False, False, False, RuntimeError),
+        (False, True, False, RuntimeError),
+        (True, False, False, RuntimeError),
+        (True, True, False, True),
+        (True, True, True, True),
+    ],
 )
-def test_controller_stop_hardware(acquisition_active, output_active, expected, controller):
+def test_controller_stop_hardware(acquisition_active, output_active, environment_active, expected, controller):
     mock_acquisition_active = mock.MagicMock()
     mock_acquisition_active.is_set.return_value = acquisition_active
     mock_output_active = mock.MagicMock()
     mock_output_active.is_set.return_value = output_active
+    mock_environment_active = mock.MagicMock()
+    mock_environment_active.is_set.return_value = environment_active
     controller._acquisition_active_event = mock_acquisition_active
     controller._output_active_event = mock_output_active
+    controller._environment_active_event["Environment 0"] = mock_environment_active
 
     mock_acquisition = mock.MagicMock()
     mock_output = mock.MagicMock()
     controller.queue_container.acquisition_command_queue = mock_acquisition
     controller.queue_container.output_command_queue = mock_output
+    mock_stop = mock.MagicMock()
+    controller.stop_environment = mock_stop
 
     if expected is RuntimeError:
         with pytest.raises(RuntimeError):
             controller.stop_hardware(None)
     else:
         controller.stop_hardware(None)
+        if environment_active:
+            mock_stop.assert_called_with("Environment 0")
         mock_acquisition.put.assert_called_once_with("Controller", (GlobalCommands.STOP_HARDWARE, None))
         mock_output.put.assert_called_once_with("Controller", (GlobalCommands.STOP_HARDWARE, None))
 

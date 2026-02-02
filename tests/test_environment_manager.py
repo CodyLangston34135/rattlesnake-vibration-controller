@@ -105,8 +105,6 @@ def test_environment_manager_initialize_environment(existing_metadata, valid_met
 
     hardware_metadata = MockHardwareMetadata()
     environment_manager.hardware_metadata = hardware_metadata
-    acquisition_active = mp.Value("i", 0)
-    output_active = mp.Value("i", 0)
 
     environment_metadata = MockEnvironmentMetadata()
     environment_metadata.validate = mock.MagicMock(return_value=valid_metadata)
@@ -277,8 +275,6 @@ def test_environment_manager_clear_environment(environment_manager):
 def test_environment_manager_add_environment(environment_type, environment_manager):
     metadata = MockEnvironmentMetadata()
     metadata.environment_type = environment_type
-    acquisition_active = mp.Value("i", 0)
-    output_active = mp.Value("i", 0)
 
     mock_process = mock.MagicMock()
     mock_event = mock.MagicMock()
@@ -302,8 +298,6 @@ def test_environment_manager_add_environment(environment_type, environment_manag
 def test_environment_mananger_add_environment_key_error(queue_names, expected, environment_manager):
     metadata = MockEnvironmentMetadata()
     metadata.environment_type = None
-    acquisition_active = mp.Value("i", 0)
-    output_active = mp.Value("i", 0)
 
     environment_manager.queue_names = queue_names
 

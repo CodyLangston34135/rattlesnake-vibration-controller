@@ -41,6 +41,55 @@ def test_rattlesnake_init(mock_wait_event, mock_thread, mock_process, threaded, 
         mock_wait_event.assert_called()
 
 
+@pytest.mark.parametrize(
+    "rattlesnake_state, acquisition_active, output_active, environment_active, expected_state",
+    [
+        (RattlesnakeState.INIT, False, False, {}, RattlesnakeState.INIT),  # fallback _state
+        (RattlesnakeState.HARDWARE_STORE, False, False, {}, RattlesnakeState.HARDWARE_STORE),
+        (RattlesnakeState.ENVIRONMENT_STORE, False, False, False, RattlesnakeState.ENVIRONMENT_STORE),
+        (RattlesnakeState.ENVIRONMENT_STORE, True, True, False, RattlesnakeState.HARDWARE_ACTIVE),
+        (RattlesnakeState.ENVIRONMENT_STORE, True, True, True, RattlesnakeState.ENVIRONMENT_ACTIVE),
+    ],
+)
+def test_rattlesnake_state(rattlesnake_state, acquisition_active, output_active, environment_active, expected_state, rattlesnake_package):
+    rattlesnake, threaded, blocking = rattlesnake_package
+    rattlesnake.environment_manager.hardware_metadata = mock.MagicMock()
+    rattlesnake.environment_manager.environment_metadata["Environment 0"] = mock.MagicMock()
+    rattlesnake.state = rattlesnake_state
+    if acquisition_active:
+        rattlesnake.event_container.acquisition_active_event.set()
+    if output_active:
+        rattlesnake.event_container.output_active_event.set()
+    if environment_active:
+        rattlesnake.event_container.environment_active_events["Environment 0"].set()
+
+    assert rattlesnake.state == expected_state
+
+
+@pytest.mark.parametrize(
+    "rattlesnake_state, expected",
+    [
+        (RattlesnakeState.INIT, True),
+        (RattlesnakeState.HARDWARE_STORE, True),
+        (RattlesnakeState.ENVIRONMENT_STORE, True),
+        (RattlesnakeState.HARDWARE_ACTIVE, ValueError),
+        (RattlesnakeState.ENVIRONMENT_ACTIVE, ValueError),
+        ("Not a state", TypeError),
+    ],
+)
+def test_rattlesnake_state_setter(rattlesnake_state, expected, rattlesnake_package):
+    rattlesnake, threaded, blocking = rattlesnake_package
+    if expected is TypeError:
+        with pytest.raises(TypeError):
+            rattlesnake.state = rattlesnake_state
+    elif expected is ValueError:
+        with pytest.raises(ValueError):
+            rattlesnake.state = rattlesnake_state
+    else:
+        rattlesnake.state = rattlesnake_state
+        assert rattlesnake.state == rattlesnake_state
+
+
 def test_rattlesnake_properties(rattlesnake_package):
     rattlesnake, threaded, blocking = rattlesnake_package
     mock_hardware = mock.MagicMock()
@@ -62,6 +111,55 @@ def test_rattlesnake_properties(rattlesnake_package):
     assert rattlesnake.stream_metadata == mock_stream
     assert rattlesnake.environment_instructions_dict == mock_instructinos
     assert rattlesnake.profile_event_list == mock_profile
+
+
+@pytest.mark.parametrize(
+    "ready_event_return, active_event_return, active_event_check, expected",
+    [
+        ([True, True], [True, True], True, True),
+        ([True, True], [], True, True),
+        ([], [True, True], True, True),
+        ([True, True], [False, True], True, TimeoutError),
+        ([False, True], [True, True], True, TimeoutError),
+        ([True, True], [False, False], False, True),
+        ([True, True], [], False, True),
+        ([], [False, False], False, True),
+        ([True, True], [False, True], False, TimeoutError),
+        ([False, True], [True, True], False, TimeoutError),
+        ([True, True], [True, True], None, TimeoutError),
+        ([True, True], [], None, True),
+        ([], [True, True], None, TimeoutError),
+    ],
+)
+@mock.patch("rattlesnake.rattlesnake.time.time")
+def test_rattlesnake_wait_for_events(mock_time, ready_event_return, active_event_return, active_event_check, expected, rattlesnake_package):
+    rattlesnake, threaded, blocking = rattlesnake_package
+    rattlesnake._timeout = 1
+    mock_time.side_effect = [0, 2]
+
+    ready_event_list = []
+    for return_value in ready_event_return:
+        mock_ready_event = mock.MagicMock()
+        mock_ready_event.is_set.return_value = return_value
+        ready_event_list.append(mock_ready_event)
+
+    active_event_list = []
+    for return_value in active_event_return:
+        mock_active_event = mock.MagicMock()
+        mock_active_event.is_set.return_value = return_value
+        active_event_list.append(mock_active_event)
+
+    if expected is TimeoutError:
+        with pytest.raises(TimeoutError):
+            rattlesnake.wait_for_events(ready_event_list, active_event_list, active_event_check=active_event_check)
+        # Only on timeout should ready_event.set() be called
+        for ready_event in ready_event_list:
+            ready_event.set.assert_called()
+    else:
+        rattlesnake.wait_for_events(ready_event_list, active_event_list, active_event_check=active_event_check)
+        # On success, ready_event.set() should NOT be called
+        for ready_event in ready_event_list:
+            ready_event.set.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -301,9 +399,13 @@ def test_rattlesnake_shutdown(mock_flush, first_alive, second_alive, rattlesnake
     rattlesnake.environment_manager = mock_environment_manager
 
     with mock.patch.object(Rattlesnake, "state", new_callable=mock.PropertyMock) as mock_state:
-        mock_state.return_value = RattlesnakeState.ENVIRONMENT_STORE
+        mock_state.return_value = RattlesnakeState.ENVIRONMENT_ACTIVE
+        mock_stop = mock.MagicMock()
+        rattlesnake.stop_acquisition = mock_stop
 
         rattlesnake.shutdown()
+
+        mock_stop.assert_called()
 
         mock_controller_queue.put.assert_called_with("Rattlesnake", (GlobalCommands.QUIT, None))
         mock_acquisition_queue.put.assert_called_with("Rattlesnake", (GlobalCommands.QUIT, None))

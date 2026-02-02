@@ -134,6 +134,14 @@ def test_streaming_process_create_new_stream(streaming):
     mock_dataset.createVariable.assert_called_with("time_data_1", "f8", ("response_channels", "time_samples_1"))
 
 
+def test_streaming_process_create_new_stream_no_netcdf(streaming):
+    streaming.netcdf_handle = None
+
+    streaming.create_new_stream(None)
+
+    assert True
+
+
 def test_streaming_process_finalize(streaming):
     mock_dataset = mock.MagicMock()
     streaming.netcdf_handle = mock_dataset
