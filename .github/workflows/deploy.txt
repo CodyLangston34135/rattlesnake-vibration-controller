@@ -1,0 +1,45 @@
+name: deploy
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - 
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true # This caches your virtualenv automatically!
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          uv pip install jupyter-book
+          # Add any other dependencies your book needs here
+          # uv pip install -r requirements.txt 
+
+      - name: Build the book
+        run: |
+          uv run jupyter-book build .
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _build/html
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
