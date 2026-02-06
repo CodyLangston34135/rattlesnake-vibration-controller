@@ -5,13 +5,13 @@ from .mock_utilities import mock_channel_list
 from unittest import mock
 from enum import Enum
 
-UNIMPLEMENTED_ENVIRONMENT = {
+UNIMPLEMENTED_ENVIRONMENT = [
     ControlTypes.RANDOM,
     ControlTypes.TRANSIENT,
     ControlTypes.SINE,
     ControlTypes.MODAL,
     ControlTypes.READ,
-}
+]
 IMPLEMENTED_ENVIRONMENT = [environment for environment in ControlTypes if environment not in UNIMPLEMENTED_ENVIRONMENT]
 
 
