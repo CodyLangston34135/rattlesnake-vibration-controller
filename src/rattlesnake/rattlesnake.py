@@ -397,6 +397,12 @@ class Rattlesnake:
             active_event_list = [self.event_container.environment_active_events[queue_name]]
             self.wait_for_events(ready_event_list, active_event_list, active_event_check=False)
 
+    def start_stream(self):
+        self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.STREAM_MANUAL, None))
+
+    def stop_stream(self):
+        self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_STREAMING, None))
+
     def start_profile(self, profile_event_list: List[ProfileEvent], *, blocking: bool | None = None):
         self.log("Settting Profile Event List")
         if self.state != RattlesnakeState.HARDWARE_ACTIVE:

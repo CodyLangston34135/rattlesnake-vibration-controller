@@ -64,7 +64,8 @@ class ControllerProcess(AbstractMessageProcess):
         self.map_command(GlobalCommands.STOP_ENVIRONMENT, self.stop_environment)
         self.map_command(GlobalCommands.START_STREAMING, self.start_streaming)
         self.map_command(GlobalCommands.STOP_STREAMING, self.stop_streaming)
-        self.map_command(GlobalCommands.AT_TARGET_LEVEL, self.at_target_level)
+        self.map_command(GlobalCommands.STREAM_AT_TARGET_LEVEL, self.at_target_level)
+        self.map_command(GlobalCommands.STREAM_MANUAL, self.manual_stream)
         self.map_command(GlobalCommands.PROFILE_CLOSEOUT, self.profile_closeout)
         self.map_command(GlobalCommands.SEND_ENVIRONMENT_COMMAND, self.send_environment_command)
 
@@ -134,6 +135,10 @@ class ControllerProcess(AbstractMessageProcess):
     def at_target_level(self, data: str):
         environment_name = data
         if self.stream_metadata.stream_type == StreamType.TEST_LEVEL and self.stream_metadata.test_level_environment_name == environment_name:
+            self.start_streaming(True)
+
+    def manual_stream(self, data: None):
+        if self.stream_metadata.stream_type == StreamType.MANUAL:
             self.start_streaming(True)
 
     def send_environment_command(self, data):

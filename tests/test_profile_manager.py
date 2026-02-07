@@ -220,7 +220,7 @@ def test_profile_manager_stop_hardware(profile_manager):
     profile_manager.environment_instructions = {"Environment 0": instructions}
     mock_controller = mock.MagicMock()
     profile_manager._controller_command_queue = mock_controller
-    profile_manager.stop_hardware()
+    profile_manager.stop_hardware("Global", GlobalCommands.STOP_HARDWARE, None)
 
     mock_controller.put.assert_called_with("Profile Manager", (GlobalCommands.STOP_HARDWARE, None))
 
@@ -228,7 +228,7 @@ def test_profile_manager_stop_hardware(profile_manager):
 def test_profile_manager_start_streaming(profile_manager):
     mock_controller = mock.MagicMock()
     profile_manager._controller_command_queue = mock_controller
-    profile_manager.start_streaming()
+    profile_manager.start_streaming("Global", GlobalCommands.START_STREAMING, None)
 
     mock_controller.put.assert_called_once_with("Profile Manager", (GlobalCommands.START_STREAMING, False))
 
@@ -236,7 +236,7 @@ def test_profile_manager_start_streaming(profile_manager):
 def test_profile_manager_stop_streaming(profile_manager):
     mock_controller = mock.MagicMock()
     profile_manager._controller_command_queue = mock_controller
-    profile_manager.stop_streaming()
+    profile_manager.stop_streaming("Global", GlobalCommands.STOP_STREAMING, None)
 
     mock_controller.put.assert_called_once_with("Profile Manager", (GlobalCommands.STOP_STREAMING, None))
 
@@ -256,7 +256,7 @@ def test_start_environment(profile_manager):
 def test_stop_environment(profile_manager):
     mock_controller = mock.MagicMock()
     profile_manager._controller_command_queue = mock_controller
-    profile_manager.stop_environment("Environment 0", None)
+    profile_manager.stop_environment("Environment 0", GlobalCommands.STOP_ENVIRONMENT, None)
 
     mock_controller.put.assert_called_once_with("Profile Manager", (GlobalCommands.STOP_ENVIRONMENT, "Environment 0"))
 

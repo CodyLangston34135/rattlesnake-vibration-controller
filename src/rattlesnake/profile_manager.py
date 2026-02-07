@@ -154,23 +154,23 @@ class ProfileManager:
         timer.start()
         self.profile_timers.append(timer)
 
-    def stop_hardware(self, queue_name: str = "Global", command=GlobalCommands.STOP_HARDWARE, data: None = None):
+    def stop_hardware(self, queue_name: str, command: GlobalCommands, data: None):
         self.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))
 
-    def start_streaming(self, queue_name: str = "Global", command=GlobalCommands.START_STREAMING, data: None = None):
+    def start_streaming(self, queue_name: str, command: GlobalCommands, data: None):
         self.controller_command_queue.put(TASK_NAME, (GlobalCommands.START_STREAMING, False))
 
-    def stop_streaming(self, queue_name: str = "Global", command=GlobalCommands.STOP_STREAMING, data: None = None):
+    def stop_streaming(self, queue_name: str, command: GlobalCommands, data: None):
         self.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_STREAMING, None))
 
-    def start_environment(self, queue_name, command, data: EnvironmentInstructions):
+    def start_environment(self, queue_name: str, command: GlobalCommands, data: EnvironmentInstructions):
         instructions = data
         self.controller_command_queue.put(TASK_NAME, (GlobalCommands.START_ENVIRONMENT, (queue_name, instructions)))
 
-    def stop_environment(self, queue_name, command, data: None = None):
+    def stop_environment(self, queue_name: str, command: GlobalCommands, data: None):
         self.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, queue_name))
 
-    def send_environment_command(self, queue_name, command, data):
+    def send_environment_command(self, queue_name: str, command: GlobalCommands, data):
         self.controller_command_queue.put(TASK_NAME, (GlobalCommands.SEND_ENVIRONMENT_COMMAND, (queue_name, command, data)))
 
     def fire_closeout_event(self):
