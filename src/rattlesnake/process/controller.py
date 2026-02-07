@@ -30,6 +30,7 @@ class ControllerProcess(AbstractMessageProcess):
         queue_container: QueueContainer,
         acquisition_active_event: mp.synchronize.Event,
         output_active_event: mp.synchronize.Event,
+        streaming_active_event: mp.synchronize.Event,
         environment_active_event: mp.synchronize.Event,
         ready_event: mp.synchronize.Event,
     ):
@@ -56,6 +57,7 @@ class ControllerProcess(AbstractMessageProcess):
         self.queue_container = queue_container
         self._acquisition_active_event = acquisition_active_event
         self._output_active_event = output_active_event
+        self._streaming_active_event = streaming_active_event
         self._environment_active_event = environment_active_event
         self.stream_metadata = StreamMetadata()
         self.map_command(GlobalCommands.RUN_HARDWARE, self.run_hardware)
@@ -78,6 +80,10 @@ class ControllerProcess(AbstractMessageProcess):
         return self._output_active_event.is_set()
 
     @property
+    def streaming_active(self):
+        return self._streaming_active_event.is_set()
+
+    @property
     def environments_active(self):
         return [queue_name for queue_name, active_event in self._environment_active_event.items() if active_event.is_set()]
 
@@ -96,6 +102,8 @@ class ControllerProcess(AbstractMessageProcess):
         # Stop environments
         for queue_name in self.environments_active:
             self.stop_environment(queue_name)
+        if self.streaming_active:
+            self.stop_streaming()
         # Stop acquisition
         if not self.acquisition_active:
             raise RuntimeError("Tried to stop hardware when acquisition was not running")
@@ -154,6 +162,7 @@ def controller_process(
     queue_container: QueueContainer,
     acquisition_active_event: mp.synchronize.Event,
     output_active_event: mp.synchronize.Event,
+    streaming_active_event: mp.synchronize.Event,
     environment_active_event: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
@@ -176,6 +185,7 @@ def controller_process(
         queue_container,
         acquisition_active_event,
         output_active_event,
+        streaming_active_event,
         environment_active_event,
         ready_event,
     )

@@ -143,6 +143,7 @@ class Rattlesnake:
                 self.queue_container,
                 self.event_container.acquisition_active_event,
                 self.event_container.output_active_event,
+                self.event_container.streaming_active_event,
                 self.event_container.environment_active_events,
                 self.event_container.controller_ready_event,
                 self.event_container.controller_close_event,
@@ -225,6 +226,10 @@ class Rattlesnake:
             return RattlesnakeState.HARDWARE_STORE
 
         return RattlesnakeState.INIT
+
+    @property
+    def streaming(self):
+        return self.event_container.streaming_active_event.is_set()
 
     @property
     def threaded(self):
@@ -401,11 +406,29 @@ class Rattlesnake:
             active_event_list = [self.event_container.environment_active_events[queue_name]]
             self.wait_for_events(ready_event_list, active_event_list, active_event_check=False)
 
-    def start_stream(self):
+    def start_streaming(self):
+        if self.state not in (RattlesnakeState.HARDWARE_ACTIVE, RattlesnakeState.ENVIRONMENT_ACTIVE):
+            raise RuntimeError(f"Invalid state for starting streaming: {self.state}")
+        if self.streaming:
+            raise RuntimeError(f"Rattlesnake is currently streaming")
+
         self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.STREAM_MANUAL, None))
 
-    def stop_stream(self):
+        if self.blocking:
+            ready_event_list = []
+            active_event_list = [self.event_container.streaming_active_event]
+            self.wait_for_events(ready_event_list, active_event_list, active_event_check=True)
+
+    def stop_streaming(self):
+        if not self.streaming:
+            raise RuntimeError(f"Rattlesnake is not currently streaming")
+
         self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_STREAMING, None))
+
+        if self.blocking:
+            ready_event_list = []
+            active_event_list = [self.event_container.streaming_active_event]
+            self.wait_for_events(ready_event_list, active_event_list, active_event_check=False)
 
     def start_profile(self, profile_event_list: List[ProfileEvent], *, blocking: bool | None = None):
         self.log("Settting Profile Event List")
