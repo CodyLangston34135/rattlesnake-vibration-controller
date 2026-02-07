@@ -3,7 +3,7 @@ from .environment.abstract_environment import EnvironmentInstructions
 from .environment.environment_utilities import ControlTypes
 from .environment.time_environment import TimeCommands
 import threading
-from typing import List, Dict
+from typing import List
 from datetime import datetime
 
 EXTRA_CLOSEOUT_TIME = 0.5  # Adds seconds to let the last profile event happen
