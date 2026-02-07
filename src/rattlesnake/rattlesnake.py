@@ -29,20 +29,11 @@ class RattlesnakeState(Enum):
     HARDWARE_ACTIVE = 3  # Acquisition is running
     ENVIRONMENT_ACTIVE = 4  # Environment output is running
 
-    @property
-    def is_settable(self) -> bool:
-        return self in {
-            RattlesnakeState.INIT,
-            RattlesnakeState.HARDWARE_STORE,
-            RattlesnakeState.ENVIRONMENT_STORE,
-        }
-
 
 # region: Rattlesnake
 class Rattlesnake:
     def __init__(self, *, threaded: bool = THREADING, blocking: bool = True, timeout: float = 100):
         # Initialize values for checking state
-        self.state = RattlesnakeState.INIT
         self._threaded = threaded
         self._blocking = blocking  # Wait for ready events?, True for IDE, False for UI
         self._timeout = timeout  # Timeout while waiting for ready_events
@@ -230,16 +221,6 @@ class Rattlesnake:
             return RattlesnakeState.HARDWARE_STORE
 
         return RattlesnakeState.INIT
-
-    @state.setter
-    def state(self, value: RattlesnakeState) -> None:
-        if not isinstance(value, RattlesnakeState):
-            raise TypeError(f"state must be a RattlesnakeState, got {type(value)}")
-
-        if not value.is_settable:
-            raise ValueError(f"{value} is monitored and not settable to Rattlesnake.state")
-
-        self._state = value
 
     @property
     def threaded(self):

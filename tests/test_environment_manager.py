@@ -195,23 +195,22 @@ def test_environment_manager_validate_instructions(environment_name, environment
     environment_instructions.environment_name = environment_name
     environment_instructions.environment_type = environment_type
     environment_instructions.validate.return_value = validate
-    environment_instructions_list = [environment_instructions]
     environment_manager.queue_names = ["Environment 0"]
     environment_manager.environment_names = {"Environment 0": "Mock Environment"}
     environment_manager.environment_types = {"Environment 0": MockEnvironmentType.ENVIRONMENT}
 
     if expected is True:
-        valid_instruction = environment_manager.validate_environment_instructions(environment_instructions_list)
+        valid_instruction = environment_manager.validate_environment_instructions(environment_instructions)
         assert valid_instruction
     elif expected is KeyError:
         with pytest.raises(KeyError):
-            environment_manager.validate_environment_instructions(environment_instructions_list)
+            environment_manager.validate_environment_instructions(environment_instructions)
     elif expected is TypeError:
         with pytest.raises(TypeError):
-            environment_manager.validate_environment_instructions(environment_instructions_list)
+            environment_manager.validate_environment_instructions(environment_instructions)
     elif expected is ValueError:
         with pytest.raises(ValueError):
-            environment_manager.validate_environment_instructions(environment_instructions_list)
+            environment_manager.validate_environment_instructions(environment_instructions)
 
 
 @pytest.mark.parametrize(

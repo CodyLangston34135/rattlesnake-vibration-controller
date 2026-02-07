@@ -183,7 +183,7 @@ class EnvironmentManager:
         """Validate the instructions"""
         # Validate class
         if not isinstance(instructions, EnvironmentInstructions):
-            raise TypeError("The environment_instructions_list contains an object that is not an EnvironmentInstructions type")
+            raise TypeError("Rattlesnake was provided an environment_instruction that was not an EnvironmentInstructions type")
         # Validate name
         environment_name = instructions.environment_name
         try:

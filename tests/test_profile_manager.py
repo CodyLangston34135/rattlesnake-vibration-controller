@@ -43,7 +43,7 @@ def test_profile_event_properties():
     "timestamp, environment_name, command, environment_type, queue_name, expected",
     [
         (0, "Environment Name", GlobalCommands.START_STREAMING, "Global", "Global", True),
-        (0, "Environment Name", GlobalCommands.START_ENVIRONMENT, ControlTypes.TIME, "Environment 0", True),
+        (0, "Environment Name", GlobalCommands.START_ENVIRONMENT, ControlTypes.TIME, "Environment 0", TypeError),
         (-10, "Environment Name", GlobalCommands.START_STREAMING, "Global", "Global", ValueError),
         ("timestamp", "Environment Name", GlobalCommands.START_STREAMING, "Global", "Global", ValueError),
         (0, 10, GlobalCommands.START_STREAMING, "Global", "Global", TypeError),
@@ -91,61 +91,42 @@ def test_profile_manager_properties(profile_manager):
 
 
 @pytest.mark.parametrize(
-    "profile_event_list, profile_queue_names, valid_list, instructions_dict, expected",
+    "profile_event_list, profile_queue_names, valid_list, expected",
     [
-        ([], [], [], {}, True),
+        ([], [], [], True),
         (
             [ProfileEvent(0, "Global", GlobalCommands.START_STREAMING)],
             ["Global"],
             [True],
-            {"Environment 0": EnvironmentInstructions(ControlTypes.TIME, "Name")},
             True,
         ),
         (
-            [ProfileEvent(0, "Environment 0", TimeCommands.SET_TEST_LEVEL)],
+            [ProfileEvent(0, "Environment Name", TimeCommands.SET_TEST_LEVEL)],
             ["Environment 0"],
             [True],
-            {"Environment 0": EnvironmentInstructions(ControlTypes.TIME, "Name")},
             True,
         ),
         (
             [None],
             ["Global"],
             [True],
-            {"Environment 0": EnvironmentInstructions(ControlTypes.TIME, "Name")},
             TypeError,
         ),
         (
-            [ProfileEvent(0, "Environment 0", TimeCommands.SET_TEST_LEVEL)],
+            [ProfileEvent(0, "Environment Name", TimeCommands.SET_TEST_LEVEL)],
             ["Environment 0"],
             [False],
-            {"Environment 0": EnvironmentInstructions(ControlTypes.TIME, "Name")},
             ValueError,
         ),
         (
             [ProfileEvent(0, "Global", "Not a command")],
             ["Global"],
             [True],
-            {"Environment 0": EnvironmentInstructions(ControlTypes.TIME, "Name")},
             KeyError,
-        ),
-        (
-            [ProfileEvent(0, "Environment 0", TimeCommands.SET_TEST_LEVEL)],
-            ["Environment 0"],
-            [True],
-            {"Environment 1": EnvironmentInstructions(ControlTypes.TIME, "Name")},
-            KeyError,
-        ),
-        (
-            [ProfileEvent(0, "Environment 0", TimeCommands.SET_TEST_LEVEL)],
-            ["Environment 0"],
-            [True],
-            {"Environment 0": None},
-            TypeError,
         ),
     ],
 )
-def test_profile_manager_validate_profile_list(profile_event_list, profile_queue_names, valid_list, instructions_dict, expected, profile_manager):
+def test_profile_manager_validate_profile_list(profile_event_list, profile_queue_names, valid_list, expected, profile_manager):
     for profile_event, queue_name, valid in zip(profile_event_list, profile_queue_names, valid_list):
         if isinstance(profile_event, ProfileEvent):
             mock_valid = mock.MagicMock()
@@ -155,15 +136,15 @@ def test_profile_manager_validate_profile_list(profile_event_list, profile_queue
 
     if expected is KeyError:
         with pytest.raises(KeyError):
-            profile_manager.validate_profile_list(profile_event_list, instructions_dict)
+            profile_manager.validate_profile_list(profile_event_list)
     elif expected is TypeError:
         with pytest.raises(TypeError):
-            profile_manager.validate_profile_list(profile_event_list, instructions_dict)
+            profile_manager.validate_profile_list(profile_event_list)
     elif expected is ValueError:
         with pytest.raises(ValueError):
-            profile_manager.validate_profile_list(profile_event_list, instructions_dict)
+            profile_manager.validate_profile_list(profile_event_list)
     else:
-        valid_profile_event = profile_manager.validate_profile_list(profile_event_list, instructions_dict)
+        valid_profile_event = profile_manager.validate_profile_list(profile_event_list)
         assert valid_profile_event
 
 
@@ -176,8 +157,7 @@ def test_profile_manager_start_profile(mock_timer, profile_manager):
     start_event = ProfileEvent(2, "Environment Name", GlobalCommands.START_ENVIRONMENT)
     start_event._queue_name = "Environment 0"
     profile_event_list = [global_event, environment_event, start_event]
-    mock_instructions_dict = mock.MagicMock()
-    profile_manager.start_profile(profile_event_list, mock_instructions_dict)
+    profile_manager.start_profile(profile_event_list)
 
     expected_calls = [
         mock.call(
@@ -202,7 +182,6 @@ def test_profile_manager_start_profile(mock_timer, profile_manager):
     ]
 
     assert mock_timer.call_args_list == expected_calls
-    assert profile_manager.environment_instructions == mock_instructions_dict
 
 
 def test_profile_manager_fire_profile_event(profile_manager):
@@ -215,7 +194,7 @@ def test_profile_manager_fire_profile_event(profile_manager):
         None,
     )
 
-    mock_function.assert_called_once_with("Global", None)
+    mock_function.assert_called_once_with("Global", GlobalCommands.START_STREAMING, None)
 
 
 @mock.patch("rattlesnake.profile_manager.threading.Timer")
@@ -264,10 +243,9 @@ def test_profile_manager_stop_streaming(profile_manager):
 
 def test_start_environment(profile_manager):
     instructions = EnvironmentInstructions("Environment Type", "Environment 0")
-    profile_manager.environment_instructions = {"Environment 0": instructions}
     mock_controller = mock.MagicMock()
     profile_manager._controller_command_queue = mock_controller
-    profile_manager.start_environment("Environment 0", None)
+    profile_manager.start_environment("Environment 0", GlobalCommands.START_ENVIRONMENT, instructions)
 
     mock_controller.put.assert_called_once_with(
         "Profile Manager",
@@ -281,36 +259,6 @@ def test_stop_environment(profile_manager):
     profile_manager.stop_environment("Environment 0", None)
 
     mock_controller.put.assert_called_once_with("Profile Manager", (GlobalCommands.STOP_ENVIRONMENT, "Environment 0"))
-
-
-def test_profile_manager_change_test_level(profile_manager):
-    instructions = mock.MagicMock()
-    instructions.test_level = 0
-    profile_manager.environment_instructions = {"Environment 0": instructions}
-
-    profile_manager.change_test_level("Environment 0", 5)
-
-    assert instructions.test_level == 5
-
-
-def test_profile_manager_set_repeat(profile_manager):
-    instructions = mock.MagicMock()
-    instructions.repeat = False
-    profile_manager.environment_instructions = {"Environment 0": instructions}
-
-    profile_manager.set_repeat("Environment 0", None)
-
-    assert instructions.repeat is True
-
-
-def test_profile_manager_set_norepeat(profile_manager):
-    instructions = mock.MagicMock()
-    instructions.repeat = True
-    profile_manager.environment_instructions = {"Environment 0": instructions}
-
-    profile_manager.set_norepeat("Environment 0", None)
-
-    assert instructions.repeat is False
 
 
 def test_fire_closeout_event(profile_manager):

@@ -60,6 +60,12 @@ class ProfileEvent:
             if not isinstance(self.data, valid_data_type):
                 raise TypeError(f"{self.command} profile event was provided {type(self.data)}, but requires {valid_data_type}.")
 
+            if valid_data_type is EnvironmentInstructions:
+                if not self.data.environment_name == self.environment_name:
+                    raise TypeError(f"Invalid environment instruction assigned to {self.environment_name} profile event")
+                if not self.data.environment_type == self.environment_type:
+                    raise TypeError(f"Invalid environment instruction assigned to {self.environment_name} profile event")
+
         return True
 
 
