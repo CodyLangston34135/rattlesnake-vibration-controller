@@ -84,6 +84,8 @@ def mock_event_container(use_thread):
     output_active_event.clear()
     streaming_close_event = new_event()
     streaming_ready_event = new_event()
+    streaming_active_event = new_event()
+    streaming_active_event.clear()
 
     environment_close_events = {}
     environment_ready_events = {}
@@ -109,6 +111,7 @@ def mock_event_container(use_thread):
         environment_close_events,
         acquisition_active_event,
         output_active_event,
+        streaming_active_event,
         environment_active_events,
     )
 

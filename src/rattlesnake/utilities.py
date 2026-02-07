@@ -290,6 +290,7 @@ class EventContainer:
         environment_close_events: Dict[str, mp.synchronize.Event],
         acquisition_active_event: mp.synchronize.Event,
         output_active_event: mp.synchronize.Event,
+        streaming_active_event: mp.synchronize.Event,
         environment_active_events: Dict[str, mp.synchronize.Event],
     ):
         # Ready Events
@@ -308,6 +309,7 @@ class EventContainer:
         # Active Events
         self.acquisition_active_event = acquisition_active_event
         self.output_active_event = output_active_event
+        self.streaming_active_event = streaming_active_event
         self.environment_active_events = environment_active_events
 
 

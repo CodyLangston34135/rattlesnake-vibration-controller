@@ -73,6 +73,8 @@ class Rattlesnake:
         output_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), self.controller_queue_name_manager, "Output Command Queue")
         streaming_close_event = new_event()
         streaming_ready_event = new_event()
+        streaming_active_event = new_event()
+        streaming_active_event.clear()
         streaming_command_queue = VerboseMessageQueue(log_file_queue, new_queue(), self.controller_queue_name_manager, "Streaming Command Queue")
 
         # Set up data queue
@@ -130,6 +132,7 @@ class Rattlesnake:
             environment_close_events,
             acquisition_active_event,
             output_active_event,
+            streaming_active_event,
             environment_active_events,
         )
 
@@ -152,6 +155,7 @@ class Rattlesnake:
             args=(
                 self.queue_container,
                 self.event_container.acquisition_active_event,
+                self.event_container.streaming_active_event,
                 self.event_container.acquisition_ready_event,
                 self.event_container.acquisition_close_event,
             ),

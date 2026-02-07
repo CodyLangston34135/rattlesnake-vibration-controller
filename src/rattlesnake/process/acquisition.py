@@ -60,6 +60,7 @@ class AcquisitionProcess(AbstractMessageProcess):
         process_name: str,
         queue_container: QueueContainer,
         acquisition_active_event: mp.synchronize.Event,
+        streaming_active_event: mp.synchronize.Event,
         ready_event: mp.synchronize.Event,
     ):
         """
@@ -114,7 +115,6 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.hardware = None
         self.hardware_metadata = None
         # Streaming Information
-        self.streaming = False
         self.has_streamed = False
         # Persistent data
         self.read_data = None
@@ -123,17 +123,28 @@ class AcquisitionProcess(AbstractMessageProcess):
         self.abort_limits = None
         self.warning_limits = None
         self._acquisition_active_event = acquisition_active_event
+        self._streaming_active_event = streaming_active_event
         # print('acquisition setup')
 
     @property
     def acquisition_active(self):
         return self._acquisition_active_event.is_set()
 
+    @property
+    def streaming(self):
+        return self._streaming_active_event.is_set()
+
     def set_active(self):
         self._acquisition_active_event.set()
 
     def clear_active(self):
         self._acquisition_active_event.clear()
+
+    def set_streaming(self):
+        self._streaming_active_event.set()
+
+    def clear_streaming(self):
+        self._streaming_active_event.clear()
 
     def initialize_hardware(self, metadata: HardwareMetadata):
         """Sets up the acquisition according to the specified parameters
@@ -296,7 +307,7 @@ class AcquisitionProcess(AbstractMessageProcess):
             ``command_map``
 
         """
-        self.streaming = True
+        self.set_streamimg()
         if self.has_streamed:
             self.queue_container.streaming_command_queue.put(self.process_name, (GlobalCommands.CREATE_NEW_STREAM, None))
         else:
@@ -313,7 +324,7 @@ class AcquisitionProcess(AbstractMessageProcess):
             ``command_map``
 
         """
-        self.streaming = False
+        self.clear_streaming()
 
     def acquire_signal(self, data):
         """The main acquisition loop of the controller.
@@ -400,7 +411,7 @@ class AcquisitionProcess(AbstractMessageProcess):
             # print('{:} {:}'.format(self.streaming,self.any_environments_started))
             if self.streaming and self.any_environments_started:
                 self.queue_container.streaming_command_queue.put(self.process_name, (GlobalCommands.STREAMING_DATA, read_data.copy()))
-                self.streaming = False
+                self.clear_streaming()
             if self.has_streamed and self.any_environments_started:
                 self.queue_container.streaming_command_queue.put(self.process_name, (GlobalCommands.FINALIZE_STREAMING, None))
                 self.has_streamed = False
@@ -558,6 +569,7 @@ class AcquisitionProcess(AbstractMessageProcess):
 def acquisition_process(
     queue_container: QueueContainer,
     acquisition_active_event: mp.synchronize.Event,
+    streaming_active_event: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
 ):
@@ -574,6 +586,6 @@ def acquisition_process(
 
     """
 
-    acquisition_instance = AcquisitionProcess(TASK_NAME, queue_container, acquisition_active_event, ready_event)
+    acquisition_instance = AcquisitionProcess(TASK_NAME, queue_container, acquisition_active_event, streaming_active_event, ready_event)
 
     acquisition_instance.run(shutdown_event)
