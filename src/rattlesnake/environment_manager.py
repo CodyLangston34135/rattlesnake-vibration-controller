@@ -179,40 +179,27 @@ class EnvironmentManager:
 
         return True
 
-    def validate_environment_instructions(self, environment_instructions_list: List[EnvironmentInstructions]):
-        """Since the instructions will come from the UI/Termina which has
-        no idea which queue was assigned to an environment, the validation of
-        the environment_names is performed by the environment manager"""
-        # Initialize dictionary with None for instructions
-        environment_instructions_dict = {}
-        for queue_name in self.queue_names:
-            environment_instructions_dict[queue_name] = None
+    def validate_environment_instructions(self, instructions: EnvironmentInstructions):
+        """Validate the instructions"""
+        # Validate class
+        if not isinstance(instructions, EnvironmentInstructions):
+            raise TypeError("The environment_instructions_list contains an object that is not an EnvironmentInstructions type")
+        # Validate name
+        environment_name = instructions.environment_name
+        try:
+            queue_name = self.queue_names_dict[environment_name]
+        except KeyError:
+            raise KeyError(f"No environments exist for {environment_name} instruction")
+        # Validate type
+        environment_type = instructions.environment_type
+        if environment_type != self.environment_types[queue_name]:
+            raise TypeError(f"Instructions for {environment_name} is the wrong type for {environment_type} vs {self.environment_types[queue_name]}")
+        # Validate instruction
+        valid_instruction = instructions.validate()
+        if not valid_instruction:
+            raise ValueError(f"Invalid instruction for {environment_name}")
 
-        # Validate instructions
-        for instructions in environment_instructions_list:
-            # Validate class
-            if not isinstance(instructions, EnvironmentInstructions):
-                raise TypeError("The environment_instructions_list contains an object that is not an EnvironmentInstructions type")
-            # Validate name
-            environment_name = instructions.environment_name
-            try:
-                queue_name = self.queue_names_dict[environment_name]
-            except KeyError:
-                raise KeyError(f"No environments exist for {environment_name} instruction")
-            # Validate type
-            environment_type = instructions.environment_type
-            if environment_type != self.environment_types[queue_name]:
-                raise TypeError(
-                    f"Instructions for {environment_name} is the wrong type for {environment_type} vs {self.environment_types[queue_name]}"
-                )
-            # Validate instruction
-            valid_instruction = instructions.validate()
-            if not valid_instruction:
-                raise ValueError(f"Invalid instruction for {environment_name}")
-
-            # Add instructions to dict
-            environment_instructions_dict[queue_name] = instructions
-        return environment_instructions_dict
+        return True
 
     def validate_profile_events(self, profile_events_list: List[ProfileEvent]):
         """Since the profile events are comming form the UI/Terminal which has

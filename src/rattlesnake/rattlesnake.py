@@ -194,8 +194,9 @@ class Rattlesnake:
             self.event_container,
             self.threaded,
         )
-        self._stream_metadata = StreamMetadata()  # Default to StreamType.NO_STREAM
         self.profile_manager = ProfileManager(self.queue_container)  # Contains instructions/profile events
+        self.hardware_metadata = None
+        self.environment_metadata = {}
 
         if self.blocking:
             ready_event_list = [
@@ -211,7 +212,7 @@ class Rattlesnake:
     @property
     def state(self) -> RattlesnakeState:
         hardware_store = self.hardware_metadata is not None
-        environment_store = self.environment_metadata_dict != {}
+        environment_store = self.environment_metadata != {}
         acquisition_active = self.event_container.acquisition_active_event.is_set()
         output_active = self.event_container.output_active_event.is_set()
         environment_active = any(event.is_set() for event in self.event_container.environment_active_events.values())
@@ -222,7 +223,13 @@ class Rattlesnake:
         if hardware_store and environment_store and acquisition_active and output_active:
             return RattlesnakeState.HARDWARE_ACTIVE
 
-        return self._state
+        if hardware_store and environment_store:
+            return RattlesnakeState.ENVIRONMENT_STORE
+
+        if hardware_store:
+            return RattlesnakeState.HARDWARE_STORE
+
+        return RattlesnakeState.INIT
 
     @state.setter
     def state(self, value: RattlesnakeState) -> None:
@@ -245,27 +252,6 @@ class Rattlesnake:
     @property
     def timeout(self):
         return self._timeout
-
-    # Metadata properties
-    @property
-    def hardware_metadata(self):
-        return self.environment_manager.hardware_metadata
-
-    @property
-    def environment_metadata_dict(self):
-        return self.environment_manager.environment_metadata
-
-    @property
-    def stream_metadata(self):
-        return self._stream_metadata
-
-    @property
-    def environment_instructions_dict(self):
-        return self.profile_manager.environment_instructions
-
-    @property
-    def profile_event_list(self):
-        return self.profile_manager.profile_event_list
 
     def wait_for_events(
         self, ready_event_list: List[mp.synchronize.Event], active_event_list: List[mp.synchronize.Event], *, active_event_check: bool = None
@@ -311,7 +297,8 @@ class Rattlesnake:
             active_event_list = []
             self.wait_for_events(ready_event_list, active_event_list)
 
-        self.state = RattlesnakeState.HARDWARE_STORE
+        # Update state
+        self.hardware_metadata = hardware_metadata
 
     def set_environments(self, environment_metadata_list: List[EnvironmentMetadata]):
         """Validates environment_metadata, starts up environment processes, assigns queues,
@@ -326,9 +313,13 @@ class Rattlesnake:
         self.log("Setting Environment")
         self.environment_manager.initialize_environments(environment_metadata_list)
         self.event_container.acquisition_ready_event.clear()
-        self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_metadata_dict))
+        self.queue_container.acquisition_command_queue.put(
+            TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_manager.environment_metadata)
+        )
         self.event_container.output_ready_event.clear()
-        self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_metadata_dict))
+        self.queue_container.output_command_queue.put(
+            TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_manager.environment_metadata)
+        )
 
         if self.blocking:
             ready_event_list = [
@@ -339,11 +330,8 @@ class Rattlesnake:
             active_event_list = []
             self.wait_for_events(ready_event_list, active_event_list)
 
-        # Check if this removed all the environmetns or not
-        if not self.environment_metadata_dict:
-            self.state = RattlesnakeState.HARDWARE_STORE
-        else:
-            self.state = RattlesnakeState.ENVIRONMENT_STORE
+        # Update state
+        self.environment_metadata = self.environment_manager.environment_metadata
 
     def start_acquisition(self, stream_metadata: StreamMetadata):
         # Validate Rattlesnake State
@@ -359,7 +347,7 @@ class Rattlesnake:
         self.event_container.streaming_ready_event.clear()
         self.queue_container.streaming_command_queue.put(
             TASK_NAME,
-            (GlobalCommands.INITIALIZE_STREAMING, (stream_metadata, self.hardware_metadata, self.environment_metadata_dict)),
+            (GlobalCommands.INITIALIZE_STREAMING, (stream_metadata, self.hardware_metadata, self.environment_metadata)),
         )
 
         # Tell controller to start up the hardware, controller takes over logic from here
@@ -375,8 +363,6 @@ class Rattlesnake:
                 self.event_container.output_active_event,
             ]
             self.wait_for_events(ready_event_list, active_event_list, active_event_check=True)
-
-        self._stream_metadata = stream_metadata
 
     def stop_acquisition(self):
         # Validate rattlesnake state (rattlesnake was acquiring data)
@@ -399,24 +385,50 @@ class Rattlesnake:
             ]
             self.wait_for_events(ready_event_list, active_event_list, active_event_check=False)
 
-        self.state = RattlesnakeState.ENVIRONMENT_STORE
+    def start_environment(self, instructions):
+        if self.state not in (RattlesnakeState.HARDWARE_ACTIVE, RattlesnakeState.ENVIRONMENT_ACTIVE):
+            raise RuntimeError(f"Invalid state for setting environment: {self.state}")
+        if not isinstance(instructions, EnvironmentInstructions):
+            raise TypeError("Start_environment must be contain a valid EnvironmentInstructions object")
 
-    def start_profile(
-        self, profile_event_list: List[ProfileEvent], environment_instructions_list: List[EnvironmentInstructions], *, blocking: bool | None = None
-    ):
+        # Validate instructions
+        queue_name = self.environment_manager.validate_environment_instructions(instructions)
+
+        self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.START_ENVIRONMENT, (queue_name, instructions)))
+
+        if self.blocking:
+            ready_event_list = []
+            active_event_list = [self.event_container.environment_active_events[queue_name]]
+            self.wait_for_events(ready_event_list, active_event_list, active_event_check=True)
+
+    def stop_environment(self, environment_name: str):
+        if self.state not in (RattlesnakeState.ENVIRONMENT_ACTIVE):
+            raise RuntimeError(f"Invalid state for setting environment: {self.state}")
+        try:
+            queue_name = self.environment_manager.queue_names_dict[environment_name]
+        except KeyError:
+            raise KeyError(f"No environments exist for {environment_name} name")
+
+        self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, queue_name))
+
+        if self.blocking:
+            ready_event_list = []
+            active_event_list = [self.event_container.environment_active_events[queue_name]]
+            self.wait_for_events(ready_event_list, active_event_list, active_event_check=False)
+
+    def start_profile(self, profile_event_list: List[ProfileEvent], *, blocking: bool | None = None):
         self.log("Settting Profile Event List")
         if self.state != RattlesnakeState.HARDWARE_ACTIVE:
             raise RuntimeError(f"Invalid state to start profile: {self.state}")
 
-        # Validate and assign queue_names to events and instructions
-        environment_instructions_dict = self.environment_manager.validate_environment_instructions(environment_instructions_list)
+        # Validate and assign queue_names to events
         self.environment_manager.validate_profile_events(profile_event_list)
-        self.profile_manager.validate_profile_list(profile_event_list, environment_instructions_dict)
+        self.profile_manager.validate_profile_list(profile_event_list)
 
         # Start profile
         self.log("Starting Profile")
         self.event_container.controller_ready_event.clear()
-        self.profile_manager.start_profile(profile_event_list, environment_instructions_dict)
+        self.profile_manager.start_profile(profile_event_list)
 
         # This is a very specific case where you can override blocking if you want to use a
         # user interface ._exec command to block the signal instead of rattlesnake waiting

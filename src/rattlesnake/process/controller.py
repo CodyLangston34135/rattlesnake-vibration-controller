@@ -57,7 +57,6 @@ class ControllerProcess(AbstractMessageProcess):
         self._acquisition_active_event = acquisition_active_event
         self._output_active_event = output_active_event
         self._environment_active_event = environment_active_event
-        self.environment_instructions = {}
         self.stream_metadata = StreamMetadata()
         self.map_command(GlobalCommands.RUN_HARDWARE, self.run_hardware)
         self.map_command(GlobalCommands.STOP_HARDWARE, self.stop_hardware)
@@ -67,6 +66,7 @@ class ControllerProcess(AbstractMessageProcess):
         self.map_command(GlobalCommands.STOP_STREAMING, self.stop_streaming)
         self.map_command(GlobalCommands.AT_TARGET_LEVEL, self.at_target_level)
         self.map_command(GlobalCommands.PROFILE_CLOSEOUT, self.profile_closeout)
+        self.map_command(GlobalCommands.SEND_ENVIRONMENT_COMMAND, self.send_environment_command)
 
     @property
     def acquisition_active(self):
@@ -135,6 +135,10 @@ class ControllerProcess(AbstractMessageProcess):
         environment_name = data
         if self.stream_metadata.stream_type == StreamType.TEST_LEVEL and self.stream_metadata.test_level_environment_name == environment_name:
             self.start_streaming(True)
+
+    def send_environment_command(self, data):
+        queue_name, command, command_data = data
+        self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (command, command_data))
 
     def profile_closeout(self, data: None):
         self.set_ready()

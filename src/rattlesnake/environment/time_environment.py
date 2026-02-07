@@ -47,6 +47,14 @@ class TimeCommands(Enum):
     SET_REPEAT = 1
     SET_NO_REPEAT = 2
 
+    @property
+    def valid_data(self):
+        return {
+            TimeCommands.SET_TEST_LEVEL: (int, float),
+            TimeCommands.SET_REPEAT: None,
+            TimeCommands.SET_NO_REPEAT: None,
+        }[self]
+
 
 # region: TimeMetadata
 class TimeMetadata(EnvironmentMetadata):
@@ -235,6 +243,9 @@ class TimeEnvironment(EnvironmentProcess):
         self.queue_container = queue_container
         # Define command map
         self.command_map[GlobalCommands.START_ENVIRONMENT] = self.run_environment
+        self.command_map[TimeCommands.SET_TEST_LEVEL] = self.adjust_test_level
+        self.command_map[TimeCommands.SET_NO_REPEAT] = self.set_no_repeat
+        self.command_map[TimeCommands.SET_REPEAT] = self.set_repeat
         # Persistent data
         self.hardware_metadata = None
         self.metadata = None
@@ -420,6 +431,14 @@ class TimeEnvironment(EnvironmentProcess):
                     self.test_level_target, self.current_test_level, self.test_level_change
                 )
             )
+
+    def set_no_repeat(self, data=None):
+        self.repeat = False
+        self.log("Repeat turned off")
+
+    def set_repeat(self, data=None):
+        self.repeat = True
+        self.log("Repeat turned on")
 
     def shutdown(self):
         """Performs final cleanup operations when the system has shut down

@@ -13,13 +13,11 @@ VALID_COMMANDS = {
     ControlTypes.TIME: (
         GlobalCommands.START_ENVIRONMENT,
         GlobalCommands.STOP_ENVIRONMENT,
-        TimeCommands.SET_TEST_LEVEL,
-        TimeCommands.SET_REPEAT,
-        TimeCommands.SET_NO_REPEAT,
+        *TimeCommands,
     ),
 }
-VALID_DATA = {TimeCommands.SET_TEST_LEVEL: (int, float)}
-REQUIRES_INSTRUCTIONS = [TimeCommands.SET_TEST_LEVEL, TimeCommands.SET_REPEAT, TimeCommands.SET_NO_REPEAT]
+VALID_DATA = {GlobalCommands.START_ENVIRONMENT: EnvironmentInstructions}
+VALID_DATA.update({command: command.valid_data for command in TimeCommands})
 
 
 # region: ProfileEvent
@@ -71,7 +69,6 @@ class ProfileManager:
         self._log_file_queue = queue_container.log_file_queue
         self._controller_command_queue = queue_container.controller_command_queue
 
-        self.environment_instructions = {}
         self.profile_event_list = []
         self.profile_timers = []
         self.gui_timer = None
@@ -82,9 +79,7 @@ class ProfileManager:
         self.command_map[GlobalCommands.STOP_STREAMING] = self.stop_streaming
         self.command_map[GlobalCommands.START_ENVIRONMENT] = self.start_environment
         self.command_map[GlobalCommands.STOP_ENVIRONMENT] = self.stop_environment
-        self.command_map[TimeCommands.SET_TEST_LEVEL] = self.change_test_level
-        self.command_map[TimeCommands.SET_REPEAT] = self.set_repeat
-        self.command_map[TimeCommands.SET_NO_REPEAT] = self.set_norepeat
+        self.command_map.update({command: self.send_environment_command for command in TimeCommands})
 
     @property
     def log_file_queue(self):
@@ -94,7 +89,7 @@ class ProfileManager:
     def controller_command_queue(self):
         return self._controller_command_queue
 
-    def validate_profile_list(self, profile_event_list: List[ProfileEvent], environment_instructions_dict: Dict[str, EnvironmentInstructions]):
+    def validate_profile_list(self, profile_event_list: List[ProfileEvent]):
         """Validate list of profile events. Since each event needs"""
         for profile_event in profile_event_list:
             if not isinstance(profile_event, ProfileEvent):
@@ -105,29 +100,18 @@ class ProfileManager:
                 raise ValueError("Rattlesnake.set_profile requires a valid list of ProfileEvents")
 
             # Validate command has been implemented in profile_manager
-            environment_name = profile_event.environment_name
-            queue_name = profile_event.queue_name
             command = profile_event.command
             if command not in self.command_map.keys():
                 raise KeyError(f"No profile event has been implemented for {profile_event.command}")
-            # Validate that instructions exist if command requires instructions
-            if command in REQUIRES_INSTRUCTIONS:
-                try:
-                    instruction = environment_instructions_dict[queue_name]
-                except KeyError:
-                    raise KeyError(f"There are no instructions for {queue_name} environment. How did you get here?")
-                if instruction is None:
-                    raise TypeError(f"{command} requires an existing instructions for {environment_name}")
 
         # Sort profile_event_list by timestamp
         profile_event_list.sort(key=lambda event: event.timestamp)
 
         return True
 
-    def start_profile(self, profile_event_list: List[ProfileEvent], environment_instructions_dict: Dict[str, EnvironmentInstructions]):
+    def start_profile(self, profile_event_list: List[ProfileEvent]):
         self.log("Starting Profile")
         self.profile_event_list = profile_event_list
-        self.environment_instructions = environment_instructions_dict
         self.profile_timers = []
         max_timestamp = 0
         for profile_event in self.profile_event_list:
@@ -152,7 +136,7 @@ class ProfileManager:
 
     def fire_profile_event(self, queue_name, command, data):
         self.log(f"Profile Firing Event {queue_name} {command} {data}")
-        self.command_map[command](queue_name, data)
+        self.command_map[command](queue_name, command, data)
 
     def stop_profile(self):
         self.log("Stopping Profile")
@@ -164,55 +148,24 @@ class ProfileManager:
         timer.start()
         self.profile_timers.append(timer)
 
-    def stop_hardware(self, queue_name: str = "Global", data: None = None):
+    def stop_hardware(self, queue_name: str = "Global", command=GlobalCommands.STOP_HARDWARE, data: None = None):
         self.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))
 
-    def start_streaming(self, queue_name: str = "Global", data: None = None):
+    def start_streaming(self, queue_name: str = "Global", command=GlobalCommands.START_STREAMING, data: None = None):
         self.controller_command_queue.put(TASK_NAME, (GlobalCommands.START_STREAMING, False))
 
-    def stop_streaming(self, queue_name: str = "Global", data: None = None):
+    def stop_streaming(self, queue_name: str = "Global", command=GlobalCommands.STOP_STREAMING, data: None = None):
         self.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_STREAMING, None))
 
-    def start_environment(self, queue_name, data):
-        instructions = self.environment_instructions[queue_name]
+    def start_environment(self, queue_name, command, data: EnvironmentInstructions):
+        instructions = data
         self.controller_command_queue.put(TASK_NAME, (GlobalCommands.START_ENVIRONMENT, (queue_name, instructions)))
 
-    def stop_environment(self, queue_name, data):
+    def stop_environment(self, queue_name, command, data: None = None):
         self.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, queue_name))
 
-    def change_test_level(self, queue_name, test_level):
-        """Sets the test level from a profile instruction
-
-        Parameters
-        ----------
-        test_level :
-            Value to set the test level to.
-        """
-        if hasattr(self.environment_instructions[queue_name], "test_level"):
-            self.environment_instructions[queue_name].test_level = test_level
-
-    def set_repeat(self, queue_name, data):  # pylint: disable=unused-argument
-        """Sets the the signal to repeat from a profile instruction
-
-        Parameters
-        ----------
-        data : Ignored
-            Parameter is ignored but required by the ``command_map``
-        """
-        if hasattr(self.environment_instructions[queue_name], "repeat"):
-            self.environment_instructions[queue_name].repeat = True
-
-    def set_norepeat(self, queue_name, data):  # pylint: disable=unused-argument
-        """Sets the the signal to not repeat from a profile instruction
-
-        Parameters
-        ----------
-        data : Ignored
-            Parameter is ignored but required by the ``command_map``
-
-        """
-        if hasattr(self.environment_instructions[queue_name], "repeat"):
-            self.environment_instructions[queue_name].repeat = False
+    def send_environment_command(self, queue_name, command, data):
+        self.controller_command_queue.put(TASK_NAME, (GlobalCommands.SEND_ENVIRONMENT_COMMAND, (queue_name, command, data)))
 
     def fire_closeout_event(self):
         self.controller_command_queue.put(TASK_NAME, (GlobalCommands.PROFILE_CLOSEOUT, None))
