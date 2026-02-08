@@ -31,11 +31,11 @@ class TimeUI(AbstractUI):
     def __init__(
         self,
         environment_name: str,
+        rattlesnake: Rattlesnake,
         definition_tabwidget: QtWidgets.QTabWidget,
         system_id_tabwidget: QtWidgets.QTabWidget,  # pylint: disable=unused-argument
         test_predictions_tabwidget: QtWidgets.QTabWidget,  # pylint: disable=unused-argument
         run_tabwidget: QtWidgets.QTabWidget,
-        rattlesnake: Rattlesnake,
     ):
         """
         Constructs a Time User Interfae
@@ -219,51 +219,50 @@ class TimeUI(AbstractUI):
 
         return metadata
 
-    # def store_metadata(self, metadata: TimeMetadata):
-    #     """Update the user interface with environment parameters
+    def store_metadata(self, metadata: TimeMetadata):
+        """Update the user interface with environment parameters
 
-    #     This function is called when the Environment parameters are initialized.
-    #     This function should set up the user interface accordingly.  It must
-    #     return the parameters class of the environment that inherits from
-    #     AbstractMetadata.
+        This function is called when the Environment parameters are initialized.
+        This function should set up the user interface accordingly.  It must
+        return the parameters class of the environment that inherits from
+        AbstractMetadata.
 
-    #     Returns
-    #     -------
-    #     environment_parameters : TimeParameters
-    #         A TimeParameters object that contains the parameters
-    #         defining the environment.
-    #     """
-    #     self.log("Initializing Environment Parameters")
-    #     # Make sure everything is defined
-    #     if metadata.output_signal is None:
-    #         raise ValueError("Output Signal is not defined!")
-    #     # Initialize the correct sizes of the arrays
-    #     self.signal = metadata.output_signal
-    #     for plot_items in [
-    #         self.plot_data_items["output_signal_measurement"],
-    #         self.plot_data_items["response_signal_measurement"],
-    #     ]:
-    #         for curve in plot_items:
-    #             curve.setData(
-    #                 np.arange(
-    #                     (
-    #                         self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2
-    #                         if self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2 < MAX_SAMPLES_TO_PLOT
-    #                         else MAX_SAMPLES_TO_PLOT
-    #                     )
-    #                 )
-    #                 / self.hardware_metadata.sample_rate,
-    #                 np.zeros(
-    #                     (
-    #                         self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2
-    #                         if self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2 < MAX_SAMPLES_TO_PLOT
-    #                         else MAX_SAMPLES_TO_PLOT
-    #                     )
-    #                 ),
-    #             )
+        Returns
+        -------
+        environment_parameters : TimeParameters
+            A TimeParameters object that contains the parameters
+            defining the environment.
+        """
+        self.log("Initializing Environment Parameters")
+        # Make sure everything is defined
+        if metadata.output_signal is None:
+            raise ValueError("Output Signal is not defined!")
+        # Initialize the correct sizes of the arrays
+        self.signal = metadata.output_signal
+        for plot_items in [
+            self.plot_data_items["output_signal_measurement"],
+            self.plot_data_items["response_signal_measurement"],
+        ]:
+            for curve in plot_items:
+                curve.setData(
+                    np.arange(
+                        (
+                            self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2
+                            if self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2 < MAX_SAMPLES_TO_PLOT
+                            else MAX_SAMPLES_TO_PLOT
+                        )
+                    )
+                    / self.hardware_metadata.sample_rate,
+                    np.zeros(
+                        (
+                            self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2
+                            if self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2 < MAX_SAMPLES_TO_PLOT
+                            else MAX_SAMPLES_TO_PLOT
+                        )
+                    ),
+                )
 
-    #     self.show_signal()
-    #     self.environment_metadata = metadata
+        self.show_signal()
 
     # def store_metadata_from_nc4(
     #     self,

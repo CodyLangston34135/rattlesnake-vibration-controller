@@ -1,3 +1,4 @@
+from rattlesnake.rattlesnake import Rattlesnake
 from rattlesnake.user_interface.ui_utilities import Updater, UICommands, headless_ui_path, debug_ui_path
 from rattlesnake.user_interface.ui_registry import environment_uis
 from rattlesnake.utilities import QueueContainer, GlobalCommands
@@ -16,64 +17,53 @@ TASK_NAME = "UI"
 class HeadlessUI(QtWidgets.QMainWindow):
     def __init__(
         self,
-        queue_container: QueueContainer,
-        hardware_metadata: HardwareMetadata,
-        environment_metadata_dict: Dict[str, EnvironmentMetadata],
+        rattlesnake: Rattlesnake,
         *,
         theme: str = "Light",
         debug: bool = False,
     ):
         super(HeadlessUI, self).__init__()
 
-        self.queue_container = queue_container
-        self.environment_queues = []
+        self.rattlesnake = rattlesnake
         self.environment_uis = {}
 
         if debug:
             uic.loadUi(debug_ui_path, self)
             # Build environment ui
-            for queue_name, metadata in environment_metadata_dict.items():
+            for metadata in self.rattlesnake.environment_metadata_dict.values():
                 environment_name = metadata.environment_name
-                self.environment_queues.append(queue_name)
                 environment_ui = environment_uis[metadata.environment_type]
-                self.environment_uis[queue_name] = environment_ui(
+                self.environment_uis[environment_name] = environment_ui(
                     environment_name,
-                    queue_name,
+                    self.rattlesnake,
                     self.environment_definition_environment_tabs,
                     self.system_id_environment_tabs,
                     self.test_prediction_environment_tabs,
                     self.run_environment_tabs,
-                    self.queue_container.environment_command_queues[queue_name],
-                    self.queue_container.controller_command_queue,
-                    self.queue_container.log_file_queue,
                 )
-                self.environment_uis[queue_name].initialize_hardware(hardware_metadata)
-                self.environment_uis[queue_name].store_metadata(metadata)
+                self.environment_uis[environment_name].initialize_hardware(self.rattlesnake.hardware_metadata)
+                self.environment_uis[environment_name].store_metadata(metadata)
         else:
             uic.loadUi(headless_ui_path, self)
             self._dummy_definition_tabs = QtWidgets.QTabWidget()
             self._dummy_system_tabs = QtWidgets.QTabWidget()
             self._dummy_prediction_tabs = QtWidgets.QTabWidget()
-            for queue_name, metadata in environment_metadata_dict.items():
+            for metadata in self.rattlesnake.environment_metadata.values():
                 environment_name = metadata.environment_name
-                self.environment_queues.append(queue_name)
                 environment_ui = environment_uis[metadata.environment_type]
-                self.environment_uis[queue_name] = environment_ui(
+                self.environment_uis[environment_name] = environment_ui(
                     environment_name,
-                    queue_name,
+                    self.rattlesnake,
                     self._dummy_definition_tabs,
                     self._dummy_system_tabs,
                     self._dummy_prediction_tabs,
                     self.run_environment_tabs,
-                    self.queue_container.environment_command_queues[queue_name],
-                    self.queue_container.controller_command_queue,
-                    self.queue_container.log_file_queue,
                 )
-                self.environment_uis[queue_name].initialize_hardware(hardware_metadata)
-                self.environment_uis[queue_name].store_metadata(metadata)
+                self.environment_uis[environment_name].initialize_hardware(self.rattlesnake.hardware_metadata)
+                self.environment_uis[environment_name].store_metadata(metadata)
 
         self.threadpool = QtCore.QThreadPool()
-        self.gui_updater = Updater(self.queue_container.gui_update_queue)
+        self.gui_updater = Updater(self.gui_update_queue)
         self.threadpool.start(self.gui_updater)
         self.gui_updater.signals.update.connect(self.update_gui)
 
@@ -82,11 +72,23 @@ class HeadlessUI(QtWidgets.QMainWindow):
         # Change color theme
         self.change_color_theme(theme)
 
+    @property
+    def gui_update_queue(self):
+        return self.rattlesnake.queue_container.gui_update_queue
+
+    @property
+    def log_file_queue(self):
+        return self.rattlesnake.queue_container.log_file_queue
+
+    @property
+    def environment_names(self):
+        return list(self.environment_uis.keys())
+
     def update_gui(self, queue_data):
         message, data = queue_data
         if message == UICommands.ERROR:
             pass
-        elif message in self.environment_queues:
+        elif message in self.environment_names:
             self.environment_uis[message].update_gui(data)
         elif message == UICommands.MONITOR:
             pass
@@ -104,7 +106,8 @@ class HeadlessUI(QtWidgets.QMainWindow):
             pass
 
     def closeEvent(self, event):
-        self.queue_container.gui_update_queue.put((GlobalCommands.QUIT, None))
+        self.gui_update_queue.put((GlobalCommands.QUIT, None))
+        self.threadpool.waitForDone()
 
         event.accept()
 
