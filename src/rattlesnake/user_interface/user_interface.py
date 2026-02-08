@@ -26,9 +26,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         # Communication objects
         self.rattlesnake = rattlesnake
-        self.gui_update_queue = rattlesnake.queue_container.gui_update_queue
-        self.log_file_queue = rattlesnake.queue_container.log_file_queue
-        self.timeout = rattlesnake.timeout
 
         # Updater process
         self.event_thread = None
@@ -121,6 +118,18 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # Hardware
         self.hardware_selector.currentTextChanged.connect(self.hardware_update)
         self.initialize_hardware_button.clicked.connect(self.initialize_hardware)
+
+    @property
+    def gui_update_queue(self):
+        return self.rattlesnake.queue_container.gui_update_queue
+
+    @property
+    def log_file_queue(self):
+        return self.rattlesnake.queue_container.log_file_queue
+
+    @property
+    def timeout(self):
+        return self.rattlesnake.timeout
 
     # region: Utility Functions
     def update_sampling_parameters_visibility(self):
@@ -306,20 +315,14 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             *self.rattlesnake.environment_manager.ready_event_list,
         ]
         active_event_list = []
-        if getattr(self, "event_thread", None) or getattr(self, "event_watcher", None):
-            self.initialize_hardware_error("Event watcher is still active")
-            return
-        self.event_thread = QtCore.QThread()
-        self.event_watcher = EventWatcher(ready_event_list, active_event_list, timeout=self.timeout)
-        self.event_watcher.moveToThread(self.event_thread)
-        self.event_thread.started.connect(self.event_watcher.run)
+        self.create_event_watcher(self, ready_event_list, active_event_list)
         self.event_watcher.ready.connect(self.initialize_hardware_ready)
         self.event_watcher.error.connect(self.initialize_hardware_error)
         self.event_thread.start()
 
     def initialize_hardware_ready(self):
         # Clear QThread
-        self.cleanup_event_thread()
+        self.cleanup_event_watcherr()
 
         # Unlock UI
         self.initialize_hardware_button.setEnabled(True)
@@ -328,7 +331,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
     def initialize_hardware_error(self, error_message):
         # Clear QThread
-        self.cleanup_event_thread()
+        self.cleanup_event_watcherr()
 
         # Unlock UI
         self.initialize_hardware_button.setEnabled(True)
@@ -369,6 +372,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 return
             case "READ":
                 return
+            case _:
+                self.display_error("Environment type does not exist. How did you get here?")
+                return
 
         self.update_run_environment_list(self.environments.control_names)
 
@@ -392,7 +398,16 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.setStyleSheet(stylesheet)
 
     # region: QThread Functions
-    def cleanup_event_thread(self):
+    def create_event_watcher(self, ready_event_list, active_event_list):
+        if getattr(self, "event_thread", None) or getattr(self, "event_watcher", None):
+            self.initialize_hardware_error("Event watcher is still active")
+            return
+        self.event_thread = QtCore.QThread()
+        self.event_watcher = EventWatcher(ready_event_list, active_event_list, timeout=self.timeout)
+        self.event_watcher.moveToThread(self.event_thread)
+        self.event_thread.started.connect(self.event_watcher.run)
+
+    def cleanup_event_watcherr(self):
         if getattr(self, "event_thread", None):
             self.event_thread.quit()
             self.event_thread.wait()

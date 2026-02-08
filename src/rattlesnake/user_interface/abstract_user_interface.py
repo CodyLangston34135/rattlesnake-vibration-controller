@@ -1,4 +1,5 @@
-from rattlesnake.utilities import VerboseMessageQueue
+from rattlesnake.rattlesnake import Rattlesnake
+from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata
 import multiprocessing as mp
@@ -18,10 +19,7 @@ class AbstractUI(ABC):
     def __init__(
         self,
         environment_name: str,
-        queue_name: str,
-        environment_command_queue: VerboseMessageQueue,
-        controller_communication_queue: VerboseMessageQueue,
-        log_file_queue: mp.Queue,
+        rattlesnake: Rattlesnake,
     ):
         """
         Stores data required by the controller to interact with the UI
@@ -49,10 +47,7 @@ class AbstractUI(ABC):
 
         """
         self.environment_name = environment_name
-        self._queue_name = queue_name
-        self._log_file_queue = log_file_queue
-        self._environment_command_queue = environment_command_queue
-        self._controller_communication_queue = controller_communication_queue
+        self.rattlesnake = rattlesnake
         self._command_map = {
             "Start Control": self.start_control,
             "Stop Control": self.stop_control,
@@ -218,32 +213,17 @@ class AbstractUI(ABC):
     def log_file_queue(self) -> mp.Queue:
         """A property containing a reference to the queue accepting messages
         that will be written to the log file"""
-        return self._log_file_queue
+        return self.rattlesnake.queue_container.log_file_queue
 
     @property
-    def environment_command_queue(self) -> VerboseMessageQueue:
-        """A property containing a reference to the queue accepting commands
-        that will be delivered to the environment"""
-        return self._environment_command_queue
-
-    @property
-    def controller_communication_queue(self) -> VerboseMessageQueue:
-        """A property containing a reference to the queue accepting global
-        commands that will be delivered to the controller"""
-        return self._controller_communication_queue
+    def gui_update_queue(self) -> mp.Queue:
+        return self.rattlesnake.queue_container.gui_update_queue
 
     @property
     def log_name(self):
         """A property containing the name that the UI will be referenced by in
         the log file, which will typically be ``self.environment_name + ' UI'``"""
         return self.environment_name + " UI"
-
-    @property
-    def queue_name(self):
-        """The value of the key pointing to this environment command queue. Used
-        when giving commands so that the controller knows which environment is
-        giving the command even when the environment names can change"""
-        return self._queue_name
 
     def log(self, message: str):
         """Write a message to the log file
@@ -262,3 +242,12 @@ class AbstractUI(ABC):
 
         """
         self.log_file_queue.put(f"{datetime.now()}: {self.log_name} -- {message}\n")
+
+    def display_error(self, error_message):
+        self.log(f"ERROR\n\n {error_message}")
+        self.gui_update_queue.put(
+            (
+                UICommands.ERROR,
+                (f"{self.log_name} Error", f"ERROR:\n\n{error_message}"),
+            )
+        )

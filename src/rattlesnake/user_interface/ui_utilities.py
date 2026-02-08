@@ -24,9 +24,7 @@ class UICommands(Enum):
 
 
 class TimeUICommands(Enum):
-    ENABLE = 0
-    DISABLE = 1
-    TIME_DATA = 2
+    TIME_DATA = 0
 
 
 class ReadUICommands(Enum):
@@ -168,7 +166,8 @@ class EventWatcher(QtCore.QObject):
                     for event in self.ready_event_list:
                         event.set()
 
-                    raise TimeoutError("Timeout waiting for all events to be ready")
+                    self.error.emit("EventWatcher has timed out while waiting for a response")
+                    return
 
                 time.sleep(0.05)
         except Exception:

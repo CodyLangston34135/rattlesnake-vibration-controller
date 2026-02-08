@@ -1,3 +1,4 @@
+from rattlesnake.rattlesnake import Rattlesnake
 from rattlesnake.user_interface.abstract_user_interface import AbstractUI
 from rattlesnake.user_interface.ui_utilities import TimeUICommands, environment_definition_ui_paths, environment_run_ui_paths, multiline_plotter
 from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands
@@ -6,6 +7,7 @@ from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.environment.time_environment import TimeMetadata, TimeInstructions
 import openpyxl
+import traceback
 import multiprocessing as mp
 import numpy as np
 import netCDF4 as nc4
@@ -29,14 +31,11 @@ class TimeUI(AbstractUI):
     def __init__(
         self,
         environment_name: str,
-        queue_name: str,
         definition_tabwidget: QtWidgets.QTabWidget,
         system_id_tabwidget: QtWidgets.QTabWidget,  # pylint: disable=unused-argument
         test_predictions_tabwidget: QtWidgets.QTabWidget,  # pylint: disable=unused-argument
         run_tabwidget: QtWidgets.QTabWidget,
-        environment_command_queue: VerboseMessageQueue,
-        controller_communication_queue: VerboseMessageQueue,
-        log_file_queue: mp.Queue,
+        rattlesnake: Rattlesnake,
     ):
         """
         Constructs a Time User Interfae
@@ -69,13 +68,7 @@ class TimeUI(AbstractUI):
             Queue where log file messages can be written.
 
         """
-        super().__init__(
-            environment_name,
-            queue_name,
-            environment_command_queue,
-            controller_communication_queue,
-            log_file_queue,
-        )
+        super().__init__(environment_name, rattlesnake)
         # Add the page to the control definition tabwidget
         self.definition_widget = QtWidgets.QWidget()
         uic.loadUi(environment_definition_ui_paths[CONTROL_TYPE], self.definition_widget)
@@ -87,7 +80,6 @@ class TimeUI(AbstractUI):
 
         # Set up some persistent data
         self.hardware_metadata = None
-        self.environment_metadata = None
         self.signal = None
         self.physical_output_names = None
         self.physical_measurement_names = None
@@ -96,11 +88,6 @@ class TimeUI(AbstractUI):
 
         self.complete_ui()
         self.connect_callbacks()
-
-        # Complete the profile commands
-        # self.command_map["Set Test Level"] = self.change_test_level_from_profile
-        # self.command_map["Set Repeat"] = self.set_repeat_from_profile
-        # self.command_map["Set No Repeat"] = self.set_norepeat_from_profile
 
     def complete_ui(self):
         """Helper Function to continue setting up the user interface"""
@@ -214,7 +201,7 @@ class TimeUI(AbstractUI):
 
         self.hardware_metadata = hardware_metadata
 
-    def initialize_environment(self) -> TimeMetadata:
+    def get_environment_metadata(self) -> TimeMetadata:
         """Collect the parameters from the user interface defining the environment
 
         Returns
@@ -232,152 +219,151 @@ class TimeUI(AbstractUI):
 
         return metadata
 
-    def store_metadata(self, metadata: TimeMetadata):
-        """Update the user interface with environment parameters
+    # def store_metadata(self, metadata: TimeMetadata):
+    #     """Update the user interface with environment parameters
 
-        This function is called when the Environment parameters are initialized.
-        This function should set up the user interface accordingly.  It must
-        return the parameters class of the environment that inherits from
-        AbstractMetadata.
+    #     This function is called when the Environment parameters are initialized.
+    #     This function should set up the user interface accordingly.  It must
+    #     return the parameters class of the environment that inherits from
+    #     AbstractMetadata.
 
-        Returns
-        -------
-        environment_parameters : TimeParameters
-            A TimeParameters object that contains the parameters
-            defining the environment.
-        """
-        self.log("Initializing Environment Parameters")
-        # Make sure everything is defined
-        if metadata.output_signal is None:
-            raise ValueError("Output Signal is not defined!")
-        # Initialize the correct sizes of the arrays
-        self.signal = metadata.output_signal
-        for plot_items in [
-            self.plot_data_items["output_signal_measurement"],
-            self.plot_data_items["response_signal_measurement"],
-        ]:
-            for curve in plot_items:
-                curve.setData(
-                    np.arange(
-                        (
-                            self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2
-                            if self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2 < MAX_SAMPLES_TO_PLOT
-                            else MAX_SAMPLES_TO_PLOT
-                        )
-                    )
-                    / self.hardware_metadata.sample_rate,
-                    np.zeros(
-                        (
-                            self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2
-                            if self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2 < MAX_SAMPLES_TO_PLOT
-                            else MAX_SAMPLES_TO_PLOT
-                        )
-                    ),
-                )
+    #     Returns
+    #     -------
+    #     environment_parameters : TimeParameters
+    #         A TimeParameters object that contains the parameters
+    #         defining the environment.
+    #     """
+    #     self.log("Initializing Environment Parameters")
+    #     # Make sure everything is defined
+    #     if metadata.output_signal is None:
+    #         raise ValueError("Output Signal is not defined!")
+    #     # Initialize the correct sizes of the arrays
+    #     self.signal = metadata.output_signal
+    #     for plot_items in [
+    #         self.plot_data_items["output_signal_measurement"],
+    #         self.plot_data_items["response_signal_measurement"],
+    #     ]:
+    #         for curve in plot_items:
+    #             curve.setData(
+    #                 np.arange(
+    #                     (
+    #                         self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2
+    #                         if self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2 < MAX_SAMPLES_TO_PLOT
+    #                         else MAX_SAMPLES_TO_PLOT
+    #                     )
+    #                 )
+    #                 / self.hardware_metadata.sample_rate,
+    #                 np.zeros(
+    #                     (
+    #                         self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2
+    #                         if self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2 < MAX_SAMPLES_TO_PLOT
+    #                         else MAX_SAMPLES_TO_PLOT
+    #                     )
+    #                 ),
+    #             )
 
-        self.show_signal()
-        self.environment_metadata = metadata
+    #     self.show_signal()
+    #     self.environment_metadata = metadata
 
-    def store_metadata_from_nc4(
-        self,
-        netcdf_handle: nc4._netCDF4.Dataset,  # pylint: disable=c-extension-no-member
-    ):
-        """Collects environment parameters from a netCDF dataset.
+    # def store_metadata_from_nc4(
+    #     self,
+    #     netcdf_handle: nc4._netCDF4.Dataset,  # pylint: disable=c-extension-no-member
+    # ):
+    #     """Collects environment parameters from a netCDF dataset.
 
-        This function retrieves parameters from a netCDF dataset that was written
-        by the controller during streaming.  It must populate the widgets
-        in the user interface with the proper information.
+    #     This function retrieves parameters from a netCDF dataset that was written
+    #     by the controller during streaming.  It must populate the widgets
+    #     in the user interface with the proper information.
 
-        This function is the "read" counterpart to the store_to_netcdf
-        function in the TimeParameters class, which will write
-        parameters to the netCDF file to document the metadata.
+    #     This function is the "read" counterpart to the store_to_netcdf
+    #     function in the TimeParameters class, which will write
+    #     parameters to the netCDF file to document the metadata.
 
-        Note that the entire dataset is passed to this function, so the function
-        should collect parameters pertaining to the environment from a Group
-        in the dataset sharing the environment's name, e.g.
+    #     Note that the entire dataset is passed to this function, so the function
+    #     should collect parameters pertaining to the environment from a Group
+    #     in the dataset sharing the environment's name, e.g.
 
-        ``group = netcdf_handle.groups[self.environment_name]``
-        ``self.definition_widget.parameter_selector.setValue(group.parameter)``
+    #     ``group = netcdf_handle.groups[self.environment_name]``
+    #     ``self.definition_widget.parameter_selector.setValue(group.parameter)``
 
-        Parameters
-        ----------
-        netcdf_handle : nc4._netCDF4.Dataset :
-            The netCDF dataset from which the data will be read.  It should have
-            a group name with the enviroment's name.
-        """
-        group = netcdf_handle.groups[self.environment_name]
-        self.signal = group.variables["output_signal"][...].data
-        self.definition_widget.cancel_rampdown_selector.setValue(group.cancel_rampdown_time)
-        maxs = np.max(np.abs(self.signal), axis=-1)
-        rmss = rms_time(self.signal, axis=-1)
-        for i, (mx, rms) in enumerate(zip(maxs, rmss)):
-            self.definition_widget.signal_information_table.item(i, 2).setText(f"{mx:0.2f}")
-            self.definition_widget.signal_information_table.item(i, 3).setText(f"{rms:0.2f}")
-        self.show_signal()
+    #     Parameters
+    #     ----------
+    #     netcdf_handle : nc4._netCDF4.Dataset :
+    #         The netCDF dataset from which the data will be read.  It should have
+    #         a group name with the enviroment's name.
+    #     """
+    #     group = netcdf_handle.groups[self.environment_name]
+    #     self.signal = group.variables["output_signal"][...].data
+    #     self.definition_widget.cancel_rampdown_selector.setValue(group.cancel_rampdown_time)
+    #     maxs = np.max(np.abs(self.signal), axis=-1)
+    #     rmss = rms_time(self.signal, axis=-1)
+    #     for i, (mx, rms) in enumerate(zip(maxs, rmss)):
+    #         self.definition_widget.signal_information_table.item(i, 2).setText(f"{mx:0.2f}")
+    #         self.definition_widget.signal_information_table.item(i, 3).setText(f"{rms:0.2f}")
+    #     self.show_signal()
 
-    @staticmethod
-    def create_environment_template(environment_name: str, workbook: openpyxl.workbook.workbook.Workbook):
-        """Creates a template worksheet in an Excel workbook defining the
-        environment.
+    # @staticmethod
+    # def create_environment_template(environment_name: str, workbook: openpyxl.workbook.workbook.Workbook):
+    #     """Creates a template worksheet in an Excel workbook defining the
+    #     environment.
 
-        This function creates a template worksheet in an Excel workbook that
-        when filled out could be read by the controller to re-create the
-        environment.
+    #     This function creates a template worksheet in an Excel workbook that
+    #     when filled out could be read by the controller to re-create the
+    #     environment.
 
-        This function is the "write" counterpart to the
-        ``set_parameters_from_template`` function in the ``TimeUI`` class,
-        which reads the values from the template file to populate the user
-        interface.
+    #     This function is the "write" counterpart to the
+    #     ``set_parameters_from_template`` function in the ``TimeUI`` class,
+    #     which reads the values from the template file to populate the user
+    #     interface.
 
-        Parameters
-        ----------
-        environment_name : str :
-            The name of the environment that will specify the worksheet's name
-        workbook : openpyxl.workbook.workbook.Workbook :
-            A reference to an ``openpyxl`` workbook.
+    #     Parameters
+    #     ----------
+    #     environment_name : str :
+    #         The name of the environment that will specify the worksheet's name
+    #     workbook : openpyxl.workbook.workbook.Workbook :
+    #         A reference to an ``openpyxl`` workbook.
 
-        """
-        worksheet = workbook.create_sheet(environment_name)
-        worksheet.cell(1, 1, "Control Type")
-        worksheet.cell(1, 2, "Time")
-        worksheet.cell(
-            1,
-            4,
-            "Note: Replace cells with hash marks (#) to provide the requested parameters.",
-        )
-        worksheet.cell(2, 1, "Signal File")
-        worksheet.cell(2, 2, "# Path to the file that contains the time signal that will be output")
-        worksheet.cell(3, 1, "Cancel Rampdown Time")
-        worksheet.cell(
-            3,
-            2,
-            "# Time for the environment to ramp to zero if the environment is cancelled.",
-        )
+    #     """
+    #     worksheet = workbook.create_sheet(environment_name)
+    #     worksheet.cell(1, 1, "Control Type")
+    #     worksheet.cell(1, 2, "Time")
+    #     worksheet.cell(
+    #         1,
+    #         4,
+    #         "Note: Replace cells with hash marks (#) to provide the requested parameters.",
+    #     )
+    #     worksheet.cell(2, 1, "Signal File")
+    #     worksheet.cell(2, 2, "# Path to the file that contains the time signal that will be output")
+    #     worksheet.cell(3, 1, "Cancel Rampdown Time")
+    #     worksheet.cell(
+    #         3,
+    #         2,
+    #         "# Time for the environment to ramp to zero if the environment is cancelled.",
+    #     )
 
-    def store_metadata_from_template(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
-        """
-        Collects parameters for the user interface from the Excel template file
+    # def store_metadata_from_template(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+    #     """
+    #     Collects parameters for the user interface from the Excel template file
 
-        This function reads a filled out template worksheet to create an
-        environment.  Cells on this worksheet contain parameters needed to
-        specify the environment, so this function should read those cells and
-        update the UI widgets with those parameters.
+    #     This function reads a filled out template worksheet to create an
+    #     environment.  Cells on this worksheet contain parameters needed to
+    #     specify the environment, so this function should read those cells and
+    #     update the UI widgets with those parameters.
 
-        This function is the "read" counterpart to the
-        ``create_environment_template`` function in the ``TimeUI`` class,
-        which writes a template file that can be filled out by a user.
+    #     This function is the "read" counterpart to the
+    #     ``create_environment_template`` function in the ``TimeUI`` class,
+    #     which writes a template file that can be filled out by a user.
 
+    #     Parameters
+    #     ----------
+    #     worksheet : openpyxl.worksheet.worksheet.Worksheet
+    #         An openpyxl worksheet that contains the environment template.
+    #         Cells on this worksheet should contain the parameters needed for the
+    #         user interface.
 
-        Parameters
-        ----------
-        worksheet : openpyxl.worksheet.worksheet.Worksheet
-            An openpyxl worksheet that contains the environment template.
-            Cells on this worksheet should contain the parameters needed for the
-            user interface.
-
-        """
-        self.load_signal(None, worksheet.cell(2, 2).value)
-        self.definition_widget.cancel_rampdown_selector.setValue(float(worksheet.cell(3, 2).value))
+    #     """
+    #     self.load_signal(None, worksheet.cell(2, 2).value)
+    #     self.definition_widget.cancel_rampdown_selector.setValue(float(worksheet.cell(3, 2).value))
 
     ## Callbacks
     def load_signal(self, clicked, filename=None):  # pylint: disable=unused-argument
@@ -426,25 +412,34 @@ class TimeUI(AbstractUI):
 
     def start_control(self):
         """Starts running the environment"""
+        try:
+            instruction = TimeInstructions(self.environment_name)
+            instruction.current_test_level = db2scale(self.run_widget.test_level_selector.value())
+            instruction.repeat = self.run_widget.repeat_signal_checkbox.isChecked()
+
+            self.rattlesnake.start_environment(instruction)
+            self.rattlesnake.environment_at_target_level(self.environment_name)
+        except Exception:
+            tb = traceback.format_exc()
+            self.display_error(tb)
+
         self.run_widget.stop_test_button.setEnabled(True)
         self.run_widget.start_test_button.setEnabled(False)
         self.run_widget.test_level_selector.setEnabled(False)
         self.run_widget.repeat_signal_checkbox.setEnabled(False)
 
-        instruction = TimeInstructions(self.environment_name)
-        instruction.current_test_level = db2scale(self.run_widget.test_level_selector.value())
-        instruction.repeat = self.run_widget.repeat_signal_checkbox.isChecked()
-
-        self.controller_communication_queue.put(self.log_name, (GlobalCommands.START_ENVIRONMENT, (self.queue_name, instruction)))
-        self.controller_communication_queue.put(self.log_name, (GlobalCommands.AT_TARGET_LEVEL, self.queue_name))
-
     def stop_control(self):
         """Stops running the environment"""
+        try:
+            self.rattlesnake.stop_environment(self.environment_name)
+        except Exception:
+            tb = traceback.format_exc()
+            self.display_error(tb)
+
         self.run_widget.stop_test_button.setEnabled(False)
         self.run_widget.start_test_button.setEnabled(True)
         self.run_widget.test_level_selector.setEnabled(True)
         self.run_widget.repeat_signal_checkbox.setEnabled(True)
-        self.environment_command_queue.put(self.log_name, (GlobalCommands.STOP_ENVIRONMENT, None))
 
     def update_gui(self, queue_data):
         """Update the graphical interface for the environment
@@ -468,44 +463,5 @@ class TimeUI(AbstractUI):
                 x, y = curve.getData()
                 y = np.concatenate((y[this_output.size :], this_output[-x.size :]), axis=0)
                 curve.setData(x, y)
-        elif message == TimeUICommands.ENABLE:
-            widget = None
-            for parent in [self.definition_widget, self.run_widget]:
-                try:
-                    widget = getattr(parent, data)
-                    break
-                except AttributeError:
-                    continue
-            if widget is None:
-                raise ValueError(f"Cannot Enable Widget {data}: not found in UI")
-            widget.setEnabled(True)
-        elif message == TimeUICommands.DISABLE:
-            widget = None
-            for parent in [self.definition_widget, self.run_widget]:
-                try:
-                    widget = getattr(parent, data)
-                    break
-                except AttributeError:
-                    continue
-            if widget is None:
-                raise ValueError(f"Cannot Disable Widget {data}: not found in UI")
-            widget.setEnabled(False)
         else:
-            widget = None
-            for parent in [self.definition_widget, self.run_widget]:
-                try:
-                    widget = getattr(parent, message)
-                    break
-                except AttributeError:
-                    continue
-            if widget is None:
-                raise ValueError(f"Cannot Update Widget {message}: not found in UI")
-            if isinstance(widget, QtWidgets.QDoubleSpinBox):
-                widget.setValue(data)
-            elif isinstance(widget, QtWidgets.QSpinBox):
-                widget.setValue(data)
-            elif isinstance(widget, QtWidgets.QLineEdit):
-                widget.setText(data)
-            elif isinstance(widget, QtWidgets.QListWidget):
-                widget.clear()
-                widget.addItems([f"{d:.3f}" for d in data])
+            self.display_error(f"{message} is not linked to a valid command in time_ui.update_gui")

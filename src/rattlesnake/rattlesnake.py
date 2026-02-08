@@ -377,7 +377,7 @@ class Rattlesnake:
 
     def start_environment(self, instructions):
         if self.state not in (RattlesnakeState.HARDWARE_ACTIVE, RattlesnakeState.ENVIRONMENT_ACTIVE):
-            raise RuntimeError(f"Invalid state for setting environment: {self.state}")
+            raise RuntimeError(f"Invalid state for starting environment: {self.state}")
         if not isinstance(instructions, EnvironmentInstructions):
             raise TypeError("Start_environment must be contain a valid EnvironmentInstructions object")
 
@@ -393,7 +393,7 @@ class Rattlesnake:
 
     def stop_environment(self, environment_name: str):
         if self.state not in (RattlesnakeState.ENVIRONMENT_ACTIVE):
-            raise RuntimeError(f"Invalid state for setting environment: {self.state}")
+            raise RuntimeError(f"Invalid state for stopping environment: {self.state}")
         try:
             queue_name = self.environment_manager.queue_names_dict[environment_name]
         except KeyError:
@@ -405,6 +405,16 @@ class Rattlesnake:
             ready_event_list = []
             active_event_list = [self.event_container.environment_active_events[queue_name]]
             self.wait_for_events(ready_event_list, active_event_list, active_event_check=False)
+
+    def environment_at_target_level(self, environment_name: str):
+        if self.state not in (RattlesnakeState.ENVIRONMENT_ACTIVE):
+            raise RuntimeError(f"Invalid state for streaming at target level: {self.state}")
+        try:
+            self.environment_manager.queue_names_dict[environment_name]
+        except KeyError:
+            raise KeyError(f"No environments exist for {environment_name} name")
+
+        self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.STREAM_AT_TARGET_LEVEL, environment_name))
 
     def start_streaming(self):
         if self.state not in (RattlesnakeState.HARDWARE_ACTIVE, RattlesnakeState.ENVIRONMENT_ACTIVE):
