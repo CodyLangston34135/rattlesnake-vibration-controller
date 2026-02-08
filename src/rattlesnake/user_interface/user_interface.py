@@ -2,6 +2,7 @@ from rattlesnake.rattlesnake import Rattlesnake
 from rattlesnake.utilities import GlobalCommands
 from rattlesnake.user_interface.ui_utilities import UICommands, Updater, EventWatcher, error_message_qt, VISIBLE_HARDWARE_WIDGETS, ui_path
 from rattlesnake.hardware.hardware_utilities import HardwareType, Channel
+from rattlesnake.environment.environment_utilities import ControlTypes
 from qtpy import QtWidgets, QtGui, QtCore, uic
 import traceback
 import ctypes
@@ -56,8 +57,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.table_layout.setStretch(0, 5)  # Channel table
         self.table_layout.setStretch(1, 1)  # Environments table
         self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
-        self.environment_channel_table.horizontalHeader().setVisible(True)
-        self.environment_channel_table.verticalHeader().setVisible(True)
 
         # Hardware Widgets
         self.hardware_widgets = {
@@ -74,6 +73,14 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             "select_file": [self.select_file_button],
         }
         self.update_sampling_parameters_visibility()
+
+        # Environments table
+        self.environment_channel_table.horizontalHeader().setVisible(True)
+        self.environment_channel_table.verticalHeader().setVisible(True)
+        self.environment_channel_table.setColumnCount(1)
+        self.environment_channel_table.hide()
+        for control in ControlTypes:
+            self.add_environment_combobox.addItem(control.name)
 
         # Set icons and window
         icon = QtGui.QIcon("logo/Rattlesnake_Icon.png")
@@ -327,6 +334,49 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.initialize_hardware_button.setEnabled(True)
         self.display_error(error_message)
 
+    # region: Environment callbacks
+    def add_environment(self):
+        """Function used to add an environment"""
+        # Check whether it was added from Data Setup tab or Definitions tab
+        if self.rattlesnake_tabs.currentIndex() == 0:  # Data setup tab
+            environment_str = self.add_environment_combobox.currentText()
+        elif self.rattlesnake_tabs.currentIndex() == 1:  # Definitions tab
+            environment_str = self.definition_tab_combobox.currentText()
+
+        # If an environment was not selected, return
+        if environment_str == "Add Environment" or environment_str == "+":
+            return
+
+        # Add environment to container
+        channel_list = self.get_channel_list()
+
+        match environment_str:
+            case "Add Environment":
+                return
+            case "+":
+                return
+            case "RANDOM":
+                return
+            case "TRANSIENT":
+                return
+            case "SINE":
+                return
+            case "TIME":
+                from rattlesnake.user_interface.time_ui import TimeUI
+
+                pass
+            case "MODAL":
+                return
+            case "READ":
+                return
+
+        self.update_run_environment_list(self.environments.control_names)
+
+        # Refresh the Ui
+        self.environments.update_channel_rows(self.channels.row_count)
+        self.update_environment_table()
+        self.update_environment_tabs()
+
     # region: Global callbacks
     def change_color_theme(self, text: str):
         """Updates the color scheme of the UI"""
@@ -404,7 +454,18 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 if __name__ == "__main__":
     rattlesnake = Rattlesnake(threaded=True, blocking=False, timeout=10)
 
+    # This is a fix for scaling Rattlesnake to different resolution monitors
+    font_size = 10  # pt size
+    QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
+    QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
+    QtWidgets.QApplication.setHighDpiScaleFactorRoundingPolicy(QtCore.Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     app = QtWidgets.QApplication(sys.argv)
+    screen = app.primaryScreen()
+    dpi = screen.logicalDotsPerInch()
+    scale_factor = dpi / 96  # 96 DPI = standard
+    font = app.font()
+    font.setPointSizeF(font_size * scale_factor)  # base font 12pt
+    app.setFont(font)
     _ = RattlesnakeUI(rattlesnake)
     app.exec_()
 
