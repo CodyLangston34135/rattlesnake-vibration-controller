@@ -52,6 +52,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # Disable all tabs except the first
         for i in range(1, self.rattlesnake_tabs.count() - 1):
             self.rattlesnake_tabs.setTabEnabled(i, False)
+        self.rattlesnake_tabs.tabBar().setTabVisible(2, False)
+        self.rattlesnake_tabs.tabBar().setTabVisible(3, False)
 
         # Data Setup Tab
         # Channel Table
@@ -98,7 +100,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.color_theme_combobox.currentTextChanged.connect(self.change_color_theme)
 
         # Data Setup Tab
-        # Channel table
+        # Channel Table
         channel_table_scroll = self.channel_table.verticalScrollBar()
         channel_table_scroll.valueChanged.connect(self.sync_environment_table)
         environment_table_scroll = self.environment_channel_table.verticalScrollBar()
@@ -121,9 +123,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # Hardware
         self.hardware_selector.currentTextChanged.connect(self.hardware_update)
         self.initialize_hardware_button.clicked.connect(self.initialize_hardware)
-        # Environment
+        # Environment Channeel Table
         self.add_environment_combobox.currentTextChanged.connect(self.add_environment)
         self.remove_environment_button.clicked.connect(self.remove_environment)
+        self.environment_channel_table.horizontalHeader().sectionDoubleClicked.connect(self.rename_environment)
 
     @property
     def gui_update_queue(self):
@@ -138,17 +141,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         return self.rattlesnake.timeout
 
     # region: Utility Functions
-    def update_sampling_parameters_visibility(self):
-        """Helper function to update the visibility of the sampling parameters group box"""
-        current_hardware = self.hardware_selector.currentText()
-        visible_widgets = VISIBLE_HARDWARE_WIDGETS.get(current_hardware, set())
-
-        for name, widgets in self.hardware_widgets.items():
-            for widget in widgets:
-                widget.setVisible(name in visible_widgets)
-
-    def get_hardware_metadata(self):
-        pass
 
     # region: Data Setup Tab Callbacks
     def channel_table_copy(self):
@@ -234,6 +226,55 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     return
                 self.hardware_file = filename
 
+    def update_sampling_parameters_visibility(self):
+        """Helper function to update the visibility of the sampling parameters group box"""
+        current_hardware = self.hardware_selector.currentText()
+        visible_widgets = VISIBLE_HARDWARE_WIDGETS.get(current_hardware, set())
+
+        for name, widgets in self.hardware_widgets.items():
+            for widget in widgets:
+                widget.setVisible(name in visible_widgets)
+
+    def get_channel_list(self):
+        channel_list = []
+        channel_attr_list = Channel().channel_attr_list
+        for row_idx in range(self.channel_table.rowCount()):
+            channel = Channel()
+            for col_idx in range(self.channel_table.columnCount()):
+                attr = channel_attr_list[col_idx]
+                item = self.channel_table.item(row_idx, col_idx)
+                # Check if item exists and has text
+                if item and item.text().strip():
+                    setattr(channel, attr, item.text())
+
+            if channel.is_empty:
+                break
+
+            channel_list.append(channel)
+
+        return channel_list
+
+    def get_environment_channel_list(self):
+        channel_list = self.get_channel_list()
+        environment_channel_list = {}
+        num_rows = self.environment_channel_table.rowCount()
+        num_cols = self.environment_channel_table.columnCount()
+        for col in range(num_cols):
+            header_item = self.environment_channel_table.horizontalHeaderItem(col)
+            environment_name = header_item.text()
+            selected_channels = []
+
+            for row in range(num_rows):
+                checkbox = self.environment_channel_table.cellWidget(row, col)
+                if checkbox is None:
+                    continue
+                if checkbox.isChecked():
+                    if row < len(channel_list):
+                        selected_channels.append(channel_list[row])
+            environment_channel_list[environment_name] = selected_channels
+
+        return environment_channel_list
+
     def initialize_hardware(self):
         self.log("Initializing Hardware")
 
@@ -291,6 +332,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
             # Send hardware metadata to rattlesnake
             self.rattlesnake.set_hardware(hardware_metadata)
+
+            environment_channel_list = self.get_environment_channel_list()
+            for environment_name, environment_ui in self.environment_uis.items():
+                hardware_metadata.channel_list = environment_channel_list[environment_name]
+                environment_ui.initialize_hardware(hardware_metadata)
+
         except Exception:
             tb = traceback.format_exc()
             self.initialize_hardware_error(tb)
@@ -303,41 +350,26 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             *self.rattlesnake.environment_manager.ready_event_list,
         ]
         active_event_list = []
-        self.create_event_watcher(self, ready_event_list, active_event_list)
+        self.create_event_watcher(ready_event_list, active_event_list)
         self.event_watcher.ready.connect(self.initialize_hardware_ready)
         self.event_watcher.error.connect(self.initialize_hardware_error)
         self.event_thread.start()
 
-    def get_channel_list(self):
-        channel_list = []
-        channel_attr_list = Channel().channel_attr_list
-        for row_idx in range(self.channel_table.rowCount()):
-            channel = Channel()
-            for col_idx in range(self.channel_table.columnCount()):
-                attr = channel_attr_list[col_idx]
-                item = self.channel_table.item(row_idx, col_idx)
-                if item is not None:
-                    setattr(channel, attr, item.text())
-
-            if channel.is_empty:
-                break
-
-            channel_list.append(channel)
-
-        return channel_list
-
     def initialize_hardware_ready(self):
         # Clear QThread
-        self.cleanup_event_watcherr()
+        self.cleanup_event_watcher()
 
         # Unlock UI
         self.initialize_hardware_button.setEnabled(True)
-        self.rattlesnake_tabs.setTabEnabled(1, True)
-        self.rattlesnake_tabs.setCurrentIndex(1)
+        self.update_environment_tabs()
+        num_environments = len(self.environment_uis)
+        if num_environments != 0:
+            self.rattlesnake_tabs.setTabEnabled(1, True)
+            self.rattlesnake_tabs.setCurrentIndex(1)
 
     def initialize_hardware_error(self, error_message):
         # Clear QThread
-        self.cleanup_event_watcherr()
+        self.cleanup_event_watcher()
 
         # Unlock UI
         self.initialize_hardware_button.setEnabled(True)
@@ -374,37 +406,87 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.display_error("Environment type does not exist. How did you get here?")
                 return
 
+        # Update environment UIs and channel table
         self.environment_uis[environment_name] = environment_ui
+        new_col = self.environment_channel_table.columnCount()
+        self.environment_channel_table.insertColumn(new_col)
+        self.environment_channel_table.setHorizontalHeaderItem(new_col, QtWidgets.QTableWidgetItem(environment_name))
+        self.environment_channel_table.show()
 
-        self.update_environment_tabs()
+        # Set checkboxes
+        channel_list = self.get_channel_list()
+        num_channels = len(channel_list)
+        num_rows = self.environment_channel_table.rowCount()
+        for row in range(num_rows):
+            checkbox = QtWidgets.QCheckBox()
+            checkbox.setChecked(row < num_channels)
+            self.environment_channel_table.setCellWidget(row, new_col, checkbox)
+
+        # Reset add environment combobox
         self.add_environment_combobox.setCurrentIndex(0)
 
     def remove_environment(self, index):
+        # Find selected ranges on the environment channel table
         selected_ranges = self.environment_channel_table.selectedRanges()
-
         if not selected_ranges:
             self.display_error("Please select an environment in environment channel table to remove")
             return
 
+        # Remove selected columns from environment table and environment_uis
         selected_range = selected_ranges[0]
         columns = range(selected_range.leftColumn(), selected_range.rightColumn() + 1)
         for col in sorted(columns, reverse=True):
             header_item = self.environment_channel_table.horizontalHeaderItem(col)
             environment_name = header_item.text()
             self.environment_uis.pop(environment_name)
+            self.environment_channel_table.removeColumn(col)
 
-        self.update_environment_tabs()
+        # If all environments are removed, hide environment channel table
+        if len(self.environment_uis) == 0:
+            self.environment_channel_table.hide()
+
+    def rename_environment(self, col_idx: int):
+        """Function to rename an environment
+
+        Parameters
+        ----------
+        index : int :
+            The index of the environment to rename
+        """
+
+        # Pull header text from environment_channel_table
+        header_item = self.environment_channel_table.horizontalHeaderItem(col_idx)
+        current_name = header_item.text()
+
+        # Create dialog box to get a new name
+        new_name, ok_chosen = QtWidgets.QInputDialog.getText(self, "Rename Tab", "Enter new tab name:", text=current_name)
+        if not ok_chosen:
+            return
+        new_name = new_name.strip()
+        if not new_name:
+            return
+
+        # Make sure name does not already exist
+        if new_name in self.environment_uis:
+            QtWidgets.QMessageBox.warning(
+                self,
+                "Error",
+                "The new name already exists. Please choose a different name.",
+            )
+            return
+
+        # Replace old name in dict with new name while keeping order
+        # This is scuffed but is very specific to this case
+        ordered_dict = {}
+        for environment_name, environment_ui in self.environment_uis.items():
+            if environment_name == current_name:
+                ordered_dict[new_name] = environment_ui
+            else:
+                ordered_dict[environment_name] = environment_ui
+        self.environment_uis = ordered_dict
+        header_item.setText(new_name)
 
     def update_environment_tabs(self):
-        # Environment Table
-        environment_names = list(self.environment_uis.keys())
-        num_environments = len(environment_names)
-        self.environment_channel_table.setColumnCount(num_environments)
-        self.environment_channel_table.setHorizontalHeaderLabels(environment_names)
-        if num_environments == 0:
-            self.environment_channel_table.hide()
-        else:
-            self.environment_channel_table.show()
 
         # Definition tabs
         self.environment_definition_environment_tabs.setCurrentIndex(-1)
@@ -415,20 +497,24 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.environment_definition_environment_tabs.addTab(definition_widget, environment_name)
 
         # System Identification tab
+        self.rattlesnake_tabs.tabBar().setTabVisible(2, False)
         self.system_id_environment_tabs.setCurrentIndex(-1)
         self.system_id_environment_tabs.clear()
         for environment_name, environment_ui in self.environment_uis.items():
             system_id_widget = environment_ui.system_id_widget
             if system_id_widget is not None:
                 self.system_id_environment_tabs.addTab(system_id_widget, environment_name)
+                self.rattlesnake_tabs.tabBar().setTabVisible(2, True)
 
         # Prediction tab
+        self.rattlesnake_tabs.tabBar().setTabVisible(3, False)
         self.test_prediction_environment_tabs.setCurrentIndex(-1)
         self.test_prediction_environment_tabs.clear()
         for environment_name, environment_ui in self.environment_uis.items():
             prediction_widget = environment_ui.prediction_widget
             if prediction_widget is not None:
                 self.test_prediction_environment_tabs.addTab(prediction_widget, environment_name)
+                self.rattlesnake_tabs.tabBar().setTabVisible(3, True)
 
         # Run tab
         self.run_environment_tabs.setCurrentIndex(-1)
@@ -453,16 +539,16 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.setStyleSheet(stylesheet)
 
     # region: QThread Functions
-    def create_event_watcher(self, ready_event_list, active_event_list):
+    def create_event_watcher(self, ready_event_list, active_event_list, active_event_check: bool = None):
         if getattr(self, "event_thread", None) or getattr(self, "event_watcher", None):
             self.initialize_hardware_error("Event watcher is still active")
             return
         self.event_thread = QtCore.QThread()
-        self.event_watcher = EventWatcher(ready_event_list, active_event_list, timeout=self.timeout)
+        self.event_watcher = EventWatcher(ready_event_list, active_event_list, active_event_check=active_event_check, timeout=self.timeout)
         self.event_watcher.moveToThread(self.event_thread)
         self.event_thread.started.connect(self.event_watcher.run)
 
-    def cleanup_event_watcherr(self):
+    def cleanup_event_watcher(self):
         if getattr(self, "event_thread", None):
             self.event_thread.quit()
             self.event_thread.wait()
