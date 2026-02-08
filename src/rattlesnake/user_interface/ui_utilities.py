@@ -1,10 +1,11 @@
 from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands
 from rattlesnake.environment.environment_utilities import ControlTypes
+import traceback
 import sys
 import os
 import time
 from enum import Enum
-from qtpy import QtCore
+from qtpy import QtWidgets, QtCore
 
 this_path = os.path.split(__file__)[0]
 
@@ -30,6 +31,19 @@ class TimeUICommands(Enum):
 
 class ReadUICommands(Enum):
     TIME_DATA = 0
+
+
+VISIBLE_HARDWARE_WIDGETS = {
+    "Select Hardware": {"hardware_selector"},
+    "NI DAQmx": {"hardware_selector", "sample_rate", "buffer_size", "task_trigger", "trigger_output"},
+    "HBK LAN-XI": {"hardware_selector", "lanxi_sample_rate", "buffer_size", "lanxi_processes", "lanxi_ip"},
+    "Data Physics Quattro": {"hardware_selector", "sample_rate", "buffer_size", "integration_oversample", "select_file"},
+    "Data Physics 900 Series": {"hardware_selector", "sample_rate", "buffer_size", "integration_oversample", "select_file"},
+    "Exodus Modal Solution...": {"hardware_selector", "sample_rate", "buffer_size", "integration_oversample", "damping_ratio", "select_file"},
+    "State Space Integration...": {"hardware_selector", "sample_rate", "buffer_size", "integration_oversample", "select_file"},
+    "SDynPy System Integration...": {"hardware_selector", "sample_rate", "buffer_size", "integration_oversample", "select_file"},
+    "SDynPy FRF Convolution...": {"hardware_selector", "sample_rate", "buffer_size", "integration_oversample", "select_file"},
+}
 
 
 # Define paths to the User Interface UI Files
@@ -124,6 +138,56 @@ class Updater(QtCore.QRunnable):
             self.signals.update.emit(queue_data)
         self.signals.finished.emit()
         time.sleep(1)
+
+
+class EventWatcher(QtCore.QObject):
+    ready = QtCore.Signal()
+    error = QtCore.Signal(str)
+
+    def __init__(self, ready_event_list, active_event_list, *, active_event_check: bool = None, timeout=None):
+        super().__init__()
+        self.ready_event_list = ready_event_list
+        self.active_event_list = active_event_list
+        self.active_event_check = active_event_check
+        self.timeout = timeout
+
+    def run(self):
+        start = time.time()
+
+        try:
+            while True:
+
+                ready_ok = all(event.is_set() for event in self.ready_event_list)
+                active_ok = all(event.is_set() == self.active_event_check for event in self.active_event_list)
+
+                if ready_ok and active_ok:
+                    self.ready.emit()
+                    return
+
+                if self.timeout and (time.time() - start) > self.timeout:
+                    for event in self.ready_event_list:
+                        event.set()
+
+                    raise TimeoutError("Timeout waiting for all events to be ready")
+
+                time.sleep(0.05)
+        except Exception:
+            tb = traceback.format_exc()
+            self.error.emit(tb)
+
+
+def error_message_qt(title, message):
+    """Helper class to create an error dialog.
+
+    Parameters
+    ----------
+    title : str :
+        Title of the window that the error message will appear in.
+    message : str :
+        Error message that will be displayed.
+
+    """
+    QtWidgets.QMessageBox.critical(None, title, message)
 
 
 colororder = [

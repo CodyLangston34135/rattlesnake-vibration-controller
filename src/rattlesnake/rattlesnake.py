@@ -32,7 +32,7 @@ class RattlesnakeState(Enum):
 
 # region: Rattlesnake
 class Rattlesnake:
-    def __init__(self, *, threaded: bool = THREADING, blocking: bool = True, timeout: float = 100):
+    def __init__(self, *, threaded: bool = THREADING, blocking: bool = True, timeout: float = 30):
         # Initialize values for checking state
         self._threaded = threaded
         self._blocking = blocking  # Wait for ready events?, True for IDE, False for UI

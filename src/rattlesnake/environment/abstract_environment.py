@@ -2,6 +2,7 @@ from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.hardware.hardware_utilities import Channel
+from rattlesnake.user_interface.ui_utilities import UICommands
 from abc import ABC, abstractmethod
 import traceback
 import os
@@ -451,10 +452,10 @@ class EnvironmentProcess(ABC):
                 self.log(f"ERROR\n\n {tb}")
                 self.gui_update_queue.put(
                     (
-                        "error",
+                        UICommands.ERROR,
                         (
                             f"{self.environment_name} Error",
-                            f"!!!UNKNOWN ERROR!!!\n\n{tb}",
+                            f"ERROR:\n\n{tb}",
                         ),
                     )
                 )

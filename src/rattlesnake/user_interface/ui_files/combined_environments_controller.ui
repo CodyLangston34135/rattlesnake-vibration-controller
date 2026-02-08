@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1527</width>
-    <height>703</height>
+    <height>696</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -82,9 +82,9 @@
               </spacer>
              </item>
              <item>
-              <widget class="QPushButton" name="initialize_data_acquisition_button">
+              <widget class="QPushButton" name="initialize_hardware_button">
                <property name="text">
-                <string>Initialize Data Acqusition</string>
+                <string>Initialize Hardware</string>
                </property>
               </widget>
              </item>
@@ -1467,13 +1467,6 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
               </widget>
              </item>
              <item>
-              <widget class="QLabel" name="channel_table_label">
-               <property name="text">
-                <string>Channel Table:</string>
-               </property>
-              </widget>
-             </item>
-             <item>
               <widget class="QPushButton" name="save_channel_table_button">
                <property name="toolTip">
                 <string>Saves the current channel table to an Excel Spreadsheet.</string>
@@ -1603,6 +1596,11 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
                <item>
                 <property name="text">
                  <string>SDynPy System Integration...</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>SDynPy FRF Convolution...</string>
                 </property>
                </item>
               </widget>
@@ -1800,14 +1798,14 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
               </widget>
              </item>
              <item>
-              <widget class="QLabel" name="task_trigger_output_label">
+              <widget class="QLabel" name="trigger_output_label">
                <property name="text">
                 <string>Trigger Output Channel</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QLineEdit" name="task_trigger_output_selector"/>
+              <widget class="QLineEdit" name="trigger_output_selector"/>
              </item>
              <item>
               <widget class="QPushButton" name="select_file_button">
@@ -2519,13 +2517,6 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
          </size>
         </property>
        </spacer>
-      </item>
-      <item>
-       <widget class="QPushButton" name="refresh_acqusition_processes_button">
-        <property name="text">
-         <string>Recover Crashed Process</string>
-        </property>
-       </widget>
       </item>
      </layout>
     </item>

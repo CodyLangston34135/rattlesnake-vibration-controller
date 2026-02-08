@@ -26,7 +26,7 @@ class HardwareMetadata(ABC):
         self.sample_rate = 1000
         self.time_per_read = 0.25
         self.time_per_write = 0.25
-        self.output_oversample = 1
+        self.output_oversample = 1  # This is only used in virtual hardware
 
     @property
     def samples_per_read(self):

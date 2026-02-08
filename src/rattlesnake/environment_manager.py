@@ -252,7 +252,7 @@ class EnvironmentManager:
 
         # Figure out what type of environment to add
         if environment_type == ControlTypes.TIME:
-            from .environment.time_environment import time_process
+            from rattlesnake.environment.time_environment import time_process
 
             self.queue_container.environment_command_queues[queue_name].assign_environment(environment_name)
             environment_process = self.new_process(
@@ -275,7 +275,7 @@ class EnvironmentManager:
             )
             environment_process.start()
         elif environment_type == ControlTypes.READ:
-            from .environment.read_environment import read_process
+            from rattlesnake.environment.read_environment import read_process
 
             environment_process = self.new_process(
                 target=read_process,
