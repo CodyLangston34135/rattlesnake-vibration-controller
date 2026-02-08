@@ -1,5 +1,5 @@
-from .abstract_hardware import HardwareMetadata, HardwareAcquisition, HardwareOutput
-from .hardware_utilities import Channel, HardwareType
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata, HardwareAcquisition, HardwareOutput
+from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
 import nidaqmx as ni
 import nidaqmx.constants as nic
 import nidaqmx.stream_readers as ni_read

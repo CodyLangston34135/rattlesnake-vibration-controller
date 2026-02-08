@@ -1,10 +1,10 @@
-from .abstract_user_interface import AbstractUI
-from .ui_utilities import TimeUICommands, environment_definition_ui_paths, environment_run_ui_paths, multiline_plotter
-from ..utilities import VerboseMessageQueue, GlobalCommands
-from ..math_operations import load_time_history, rms_time, db2scale
-from ..hardware.abstract_hardware import HardwareMetadata
-from ..environment.environment_utilities import ControlTypes
-from ..environment.time_environment import TimeMetadata, TimeInstructions
+from rattlesnake.user_interface.abstract_user_interface import AbstractUI
+from rattlesnake.user_interface.ui_utilities import TimeUICommands, environment_definition_ui_paths, environment_run_ui_paths, multiline_plotter
+from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands
+from rattlesnake.math_operations import load_time_history, rms_time, db2scale
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.time_environment import TimeMetadata, TimeInstructions
 import openpyxl
 import multiprocessing as mp
 import numpy as np

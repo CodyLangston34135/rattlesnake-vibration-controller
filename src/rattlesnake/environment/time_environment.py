@@ -23,11 +23,11 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-from .abstract_environment import EnvironmentMetadata, EnvironmentInstructions, EnvironmentProcess
-from .environment_utilities import ControlTypes
-from ..utilities import VerboseMessageQueue, GlobalCommands
-from ..hardware.abstract_hardware import HardwareMetadata
-from ..user_interface.ui_utilities import TimeUICommands
+from rattlesnake.environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions, EnvironmentProcess
+from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.user_interface.ui_utilities import TimeUICommands
 import copy
 import multiprocessing as mp
 import queue

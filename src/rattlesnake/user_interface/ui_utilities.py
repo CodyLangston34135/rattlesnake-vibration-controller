@@ -1,5 +1,5 @@
-from ..utilities import VerboseMessageQueue, GlobalCommands
-from ..environment.environment_utilities import ControlTypes
+from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands
+from rattlesnake.environment.environment_utilities import ControlTypes
 import sys
 import os
 import time

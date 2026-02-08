@@ -1,12 +1,12 @@
-from .utilities import GlobalCommands, VerboseMessageQueue, QueueContainer, EventContainer, log_file_task, flush_queue
-from .process.controller import controller_process
-from .process.acquisition import acquisition_process
-from .process.output import output_process
-from .process.streaming import StreamMetadata, streaming_process
-from .profile_manager import ProfileManager, ProfileEvent
-from .hardware.abstract_hardware import HardwareMetadata
-from .environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions
-from .environment_manager import EnvironmentManager
+from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue, QueueContainer, EventContainer, log_file_task, flush_queue
+from rattlesnake.process.controller import controller_process
+from rattlesnake.process.acquisition import acquisition_process
+from rattlesnake.process.output import output_process
+from rattlesnake.process.streaming import StreamMetadata, streaming_process
+from rattlesnake.profile_manager import ProfileManager, ProfileEvent
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions
+from rattlesnake.environment_manager import EnvironmentManager
 import time
 import multiprocessing as mp
 import threading

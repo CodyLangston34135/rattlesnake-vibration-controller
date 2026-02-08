@@ -1,10 +1,10 @@
-from .abstract_user_interface import AbstractUI
-from .ui_utilities import ReadUICommands, environment_run_ui_paths, multiline_plotter
-from ..utilities import VerboseMessageQueue, GlobalCommands
-from ..hardware.abstract_hardware import HardwareMetadata
-from ..environment.environment_utilities import ControlTypes
-from ..environment.abstract_environment import EnvironmentMetadata
-from ..environment.read_environment import ReadMetadata
+from rattlesnake.user_interface.abstract_user_interface import AbstractUI
+from rattlesnake.user_interface.ui_utilities import ReadUICommands, environment_run_ui_paths, multiline_plotter
+from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.abstract_environment import EnvironmentMetadata
+from rattlesnake.environment.read_environment import ReadMetadata
 from qtpy import QtCore, QtWidgets, uic
 import openpyxl
 import multiprocessing as mp

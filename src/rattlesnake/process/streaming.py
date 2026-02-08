@@ -21,10 +21,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-from .abstract_message_process import AbstractMessageProcess
-from ..utilities import GlobalCommands, QueueContainer
-from ..hardware.abstract_hardware import HardwareMetadata
-from ..environment.abstract_environment import EnvironmentMetadata
+from rattlesnake.process.abstract_message_process import AbstractMessageProcess
+from rattlesnake.utilities import GlobalCommands, QueueContainer
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.environment.abstract_environment import EnvironmentMetadata
 import multiprocessing as mp
 import netCDF4 as nc
 import numpy as np

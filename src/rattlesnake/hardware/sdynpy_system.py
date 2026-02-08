@@ -21,9 +21,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from .abstract_hardware import HardwareAcquisition, HardwareOutput, HardwareMetadata
-from .hardware_utilities import HardwareType, Channel
-from ..utilities import flush_queue
+from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput, HardwareMetadata
+from rattlesnake.hardware.hardware_utilities import HardwareType, Channel
+from rattlesnake.utilities import flush_queue
 import time
 import multiprocessing as mp
 import numpy as np

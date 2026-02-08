@@ -1,8 +1,8 @@
-from .ui_utilities import Updater, UICommands, headless_ui_path, debug_ui_path
-from .ui_registry import environment_uis
-from ..utilities import QueueContainer, GlobalCommands
-from ..hardware.abstract_hardware import HardwareMetadata
-from ..environment.abstract_environment import EnvironmentMetadata
+from rattlesnake.user_interface.ui_utilities import Updater, UICommands, headless_ui_path, debug_ui_path
+from rattlesnake.user_interface.ui_registry import environment_uis
+from rattlesnake.utilities import QueueContainer, GlobalCommands
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.environment.abstract_environment import EnvironmentMetadata
 import os
 from qtpy import QtCore, QtWidgets, uic
 from typing import Dict

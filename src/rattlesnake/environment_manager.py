@@ -1,8 +1,8 @@
-from .utilities import QueueContainer, EventContainer, GlobalCommands
-from .profile_manager import ProfileEvent
-from .environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions
-from .environment.environment_utilities import ControlTypes
-from .hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.utilities import QueueContainer, EventContainer, GlobalCommands
+from rattlesnake.profile_manager import ProfileEvent
+from rattlesnake.environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions
+from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 import multiprocessing as mp
 import multiprocessing.synchronize  # pylint: disable=unused-import
 import threading

@@ -14,7 +14,7 @@ import time
 import numpy as np
 from qtpy import QtWidgets
 
-BUFFER_SIZE = 0.01
+BUFFER_SIZE = 0.05
 
 
 def test_nidaq_metadata():
@@ -122,16 +122,16 @@ def build_profile_event_list(environment_name):
     time_instructions.repeat = True
     start_environment_event = ProfileEvent(timestamp, environment_name, command, time_instructions)
 
-    timestamp = 6
+    timestamp = 4
     command = TimeCommands.SET_TEST_LEVEL
     data = db2scale(5)
     set_level_event = ProfileEvent(timestamp, environment_name, command, data)
 
-    timestamp = 10
+    timestamp = 6
     command = GlobalCommands.STOP_ENVIRONMENT
     stop_environment_event = ProfileEvent(timestamp, environment_name, command)
 
-    timestamp = 12
+    timestamp = 8
     command = GlobalCommands.STOP_STREAMING
     stop_stream_event = ProfileEvent(timestamp, "Global", command)
 

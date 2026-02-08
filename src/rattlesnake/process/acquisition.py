@@ -21,13 +21,13 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-from .abstract_message_process import AbstractMessageProcess
-from ..math_operations import align_signals, correlation_norm_signal_spec_ratio
-from ..utilities import GlobalCommands, QueueContainer, flush_queue
-from ..hardware.hardware_utilities import HardwareType
-from ..hardware.abstract_hardware import HardwareMetadata
-from ..environment.abstract_environment import EnvironmentMetadata
-from ..user_interface.ui_utilities import UICommands
+from rattlesnake.process.abstract_message_process import AbstractMessageProcess
+from rattlesnake.math_operations import align_signals, correlation_norm_signal_spec_ratio
+from rattlesnake.utilities import GlobalCommands, QueueContainer, flush_queue
+from rattlesnake.hardware.hardware_utilities import HardwareType
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.environment.abstract_environment import EnvironmentMetadata
+from rattlesnake.user_interface.ui_utilities import UICommands
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
 import multiprocessing.synchronize  # pylint: disable=unused-import

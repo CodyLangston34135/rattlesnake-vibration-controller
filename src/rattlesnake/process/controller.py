@@ -1,7 +1,7 @@
-from .abstract_message_process import AbstractMessageProcess
-from ..utilities import QueueContainer, GlobalCommands
-from ..environment.abstract_environment import EnvironmentInstructions
-from .streaming import StreamMetadata, StreamType
+from rattlesnake.process.abstract_message_process import AbstractMessageProcess
+from rattlesnake.process.streaming import StreamMetadata, StreamType
+from rattlesnake.utilities import QueueContainer, GlobalCommands
+from rattlesnake.environment.abstract_environment import EnvironmentInstructions
 import multiprocessing as mp
 import multiprocessing.synchronize  # pylint: disable=unused-import
 
