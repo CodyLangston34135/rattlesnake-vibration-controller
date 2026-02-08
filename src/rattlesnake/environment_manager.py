@@ -251,52 +251,53 @@ class EnvironmentManager:
         self.environment_close_events[queue_name].clear()
 
         # Figure out what type of environment to add
-        if environment_type == ControlTypes.TIME:
-            from rattlesnake.environment.time_environment import time_process
+        match environment_type:
+            case ControlTypes.TIME:
+                from rattlesnake.environment.time_environment import time_process
 
-            self.queue_container.environment_command_queues[queue_name].assign_environment(environment_name)
-            environment_process = self.new_process(
-                target=time_process,
-                args=(
-                    environment_name,
-                    queue_name,
-                    self.queue_container.environment_command_queues[queue_name],
-                    self.queue_container.gui_update_queue,
-                    self.queue_container.controller_command_queue,
-                    self.queue_container.log_file_queue,
-                    self.queue_container.environment_data_in_queues[queue_name],
-                    self.queue_container.environment_data_out_queues[queue_name],
-                    self.event_container.acquisition_active_event,
-                    self.event_container.output_active_event,
-                    self.environment_active_events[queue_name],
-                    self.environment_ready_events[queue_name],
-                    self.environment_close_events[queue_name],
-                ),
-            )
-            environment_process.start()
-        elif environment_type == ControlTypes.READ:
-            from rattlesnake.environment.read_environment import read_process
+                self.queue_container.environment_command_queues[queue_name].assign_environment(environment_name)
+                environment_process = self.new_process(
+                    target=time_process,
+                    args=(
+                        environment_name,
+                        queue_name,
+                        self.queue_container.environment_command_queues[queue_name],
+                        self.queue_container.gui_update_queue,
+                        self.queue_container.controller_command_queue,
+                        self.queue_container.log_file_queue,
+                        self.queue_container.environment_data_in_queues[queue_name],
+                        self.queue_container.environment_data_out_queues[queue_name],
+                        self.event_container.acquisition_active_event,
+                        self.event_container.output_active_event,
+                        self.environment_active_events[queue_name],
+                        self.environment_ready_events[queue_name],
+                        self.environment_close_events[queue_name],
+                    ),
+                )
+                environment_process.start()
+            case ControlTypes.READ:
+                from rattlesnake.environment.read_environment import read_process
 
-            environment_process = self.new_process(
-                target=read_process,
-                args=(
-                    queue_name,
-                    self.queue_container.environment_command_queues[queue_name],
-                    self.queue_container.gui_update_queue,
-                    self.queue_container.controller_command_queue,
-                    self.queue_container.log_file_queue,
-                    self.queue_container.environment_data_in_queues[queue_name],
-                    self.queue_container.environment_data_out_queues[queue_name],
-                    self.event_container.acquisition_active_event,
-                    self.event_container.output_active_event,
-                    self.environment_active_events[queue_name],
-                    self.environment_ready_events[queue_name],
-                    self.environment_close_events[queue_name],
-                ),
-            )
-            environment_process.start()
-        else:  # If "Select Environment" was chosen
-            return
+                environment_process = self.new_process(
+                    target=read_process,
+                    args=(
+                        queue_name,
+                        self.queue_container.environment_command_queues[queue_name],
+                        self.queue_container.gui_update_queue,
+                        self.queue_container.controller_command_queue,
+                        self.queue_container.log_file_queue,
+                        self.queue_container.environment_data_in_queues[queue_name],
+                        self.queue_container.environment_data_out_queues[queue_name],
+                        self.event_container.acquisition_active_event,
+                        self.event_container.output_active_event,
+                        self.environment_active_events[queue_name],
+                        self.environment_ready_events[queue_name],
+                        self.environment_close_events[queue_name],
+                    ),
+                )
+                environment_process.start()
+            case _:  # If "Select Environment" was chosen
+                raise TypeError(f"{environment_type} has not been implemented yet")
 
         # Store the environment to the container
         self.log(f"Assigning {environment_name} to {queue_name} Queue")

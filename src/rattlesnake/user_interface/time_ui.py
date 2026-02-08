@@ -32,10 +32,6 @@ class TimeUI(AbstractUI):
         self,
         environment_name: str,
         rattlesnake: Rattlesnake,
-        definition_tabwidget: QtWidgets.QTabWidget,
-        system_id_tabwidget: QtWidgets.QTabWidget,  # pylint: disable=unused-argument
-        test_predictions_tabwidget: QtWidgets.QTabWidget,  # pylint: disable=unused-argument
-        run_tabwidget: QtWidgets.QTabWidget,
     ):
         """
         Constructs a Time User Interfae
@@ -72,11 +68,9 @@ class TimeUI(AbstractUI):
         # Add the page to the control definition tabwidget
         self.definition_widget = QtWidgets.QWidget()
         uic.loadUi(environment_definition_ui_paths[CONTROL_TYPE], self.definition_widget)
-        definition_tabwidget.addTab(self.definition_widget, self.environment_name)
         # Add the page to the run tabwidget
         self.run_widget = QtWidgets.QWidget()
         uic.loadUi(environment_run_ui_paths[CONTROL_TYPE], self.run_widget)
-        run_tabwidget.addTab(self.run_widget, self.environment_name)
 
         # Set up some persistent data
         self.hardware_metadata = None
@@ -263,106 +257,6 @@ class TimeUI(AbstractUI):
                 )
 
         self.show_signal()
-
-    # def store_metadata_from_nc4(
-    #     self,
-    #     netcdf_handle: nc4._netCDF4.Dataset,  # pylint: disable=c-extension-no-member
-    # ):
-    #     """Collects environment parameters from a netCDF dataset.
-
-    #     This function retrieves parameters from a netCDF dataset that was written
-    #     by the controller during streaming.  It must populate the widgets
-    #     in the user interface with the proper information.
-
-    #     This function is the "read" counterpart to the store_to_netcdf
-    #     function in the TimeParameters class, which will write
-    #     parameters to the netCDF file to document the metadata.
-
-    #     Note that the entire dataset is passed to this function, so the function
-    #     should collect parameters pertaining to the environment from a Group
-    #     in the dataset sharing the environment's name, e.g.
-
-    #     ``group = netcdf_handle.groups[self.environment_name]``
-    #     ``self.definition_widget.parameter_selector.setValue(group.parameter)``
-
-    #     Parameters
-    #     ----------
-    #     netcdf_handle : nc4._netCDF4.Dataset :
-    #         The netCDF dataset from which the data will be read.  It should have
-    #         a group name with the enviroment's name.
-    #     """
-    #     group = netcdf_handle.groups[self.environment_name]
-    #     self.signal = group.variables["output_signal"][...].data
-    #     self.definition_widget.cancel_rampdown_selector.setValue(group.cancel_rampdown_time)
-    #     maxs = np.max(np.abs(self.signal), axis=-1)
-    #     rmss = rms_time(self.signal, axis=-1)
-    #     for i, (mx, rms) in enumerate(zip(maxs, rmss)):
-    #         self.definition_widget.signal_information_table.item(i, 2).setText(f"{mx:0.2f}")
-    #         self.definition_widget.signal_information_table.item(i, 3).setText(f"{rms:0.2f}")
-    #     self.show_signal()
-
-    # @staticmethod
-    # def create_environment_template(environment_name: str, workbook: openpyxl.workbook.workbook.Workbook):
-    #     """Creates a template worksheet in an Excel workbook defining the
-    #     environment.
-
-    #     This function creates a template worksheet in an Excel workbook that
-    #     when filled out could be read by the controller to re-create the
-    #     environment.
-
-    #     This function is the "write" counterpart to the
-    #     ``set_parameters_from_template`` function in the ``TimeUI`` class,
-    #     which reads the values from the template file to populate the user
-    #     interface.
-
-    #     Parameters
-    #     ----------
-    #     environment_name : str :
-    #         The name of the environment that will specify the worksheet's name
-    #     workbook : openpyxl.workbook.workbook.Workbook :
-    #         A reference to an ``openpyxl`` workbook.
-
-    #     """
-    #     worksheet = workbook.create_sheet(environment_name)
-    #     worksheet.cell(1, 1, "Control Type")
-    #     worksheet.cell(1, 2, "Time")
-    #     worksheet.cell(
-    #         1,
-    #         4,
-    #         "Note: Replace cells with hash marks (#) to provide the requested parameters.",
-    #     )
-    #     worksheet.cell(2, 1, "Signal File")
-    #     worksheet.cell(2, 2, "# Path to the file that contains the time signal that will be output")
-    #     worksheet.cell(3, 1, "Cancel Rampdown Time")
-    #     worksheet.cell(
-    #         3,
-    #         2,
-    #         "# Time for the environment to ramp to zero if the environment is cancelled.",
-    #     )
-
-    # def store_metadata_from_template(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
-    #     """
-    #     Collects parameters for the user interface from the Excel template file
-
-    #     This function reads a filled out template worksheet to create an
-    #     environment.  Cells on this worksheet contain parameters needed to
-    #     specify the environment, so this function should read those cells and
-    #     update the UI widgets with those parameters.
-
-    #     This function is the "read" counterpart to the
-    #     ``create_environment_template`` function in the ``TimeUI`` class,
-    #     which writes a template file that can be filled out by a user.
-
-    #     Parameters
-    #     ----------
-    #     worksheet : openpyxl.worksheet.worksheet.Worksheet
-    #         An openpyxl worksheet that contains the environment template.
-    #         Cells on this worksheet should contain the parameters needed for the
-    #         user interface.
-
-    #     """
-    #     self.load_signal(None, worksheet.cell(2, 2).value)
-    #     self.definition_widget.cancel_rampdown_selector.setValue(float(worksheet.cell(3, 2).value))
 
     ## Callbacks
     def load_signal(self, clicked, filename=None):  # pylint: disable=unused-argument

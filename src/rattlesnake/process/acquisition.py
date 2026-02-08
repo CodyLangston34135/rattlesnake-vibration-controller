@@ -163,69 +163,71 @@ class AcquisitionProcess(AbstractMessageProcess):
         # Check which type of hardware we have
         if self.hardware is not None:
             self.hardware.close()
-        if metadata.hardware_type == HardwareType.NI_DAQMX:
-            from ..hardware.nidaqmx import NIDAQmxAcquisition
 
-            self.hardware = NIDAQmxAcquisition(metadata.task_trigger, metadata.output_trigger_generator)
+        match metadata.hardware_type:
+            case HardwareType.NI_DAQMX:
+                from ..hardware.nidaqmx import NIDAQmxAcquisition
 
-        elif metadata.hardware_type == HardwareType.LAN_XI:
-            # from .lanxi_hardware_multiprocessing import LanXIAcquisition
+                self.hardware = NIDAQmxAcquisition(metadata.task_trigger, metadata.output_trigger_generator)
 
-            # self.hardware = LanXIAcquisition(
-            #     data_acquisition_parameters.extra_parameters[
-            #         "maximum_acquisition_processes"
-            #     ]
-            # )
-            pass
-        elif metadata.hardware_type == HardwareType.DP_QUATTRO:
-            # from .data_physics_hardware import DataPhysicsAcquisition
+            case HardwareType.LAN_XI:
+                # from .lanxi_hardware_multiprocessing import LanXIAcquisition
 
-            # self.hardware = DataPhysicsAcquisition(
-            #     data_acquisition_parameters.hardware_file,
-            #     self.queue_container.single_process_hardware_queue,
-            # )
-            pass
-        elif metadata.hardware_type == HardwareType.DP_900:
-            # from .data_physics_dp900_hardware import DataPhysicsDP900Acquisition
+                # self.hardware = LanXIAcquisition(
+                #     data_acquisition_parameters.extra_parameters[
+                #         "maximum_acquisition_processes"
+                #     ]
+                # )
+                pass
+            case HardwareType.DP_QUATTRO:
+                # from .data_physics_hardware import DataPhysicsAcquisition
 
-            # self.hardware = DataPhysicsDP900Acquisition(
-            #     data_acquisition_parameters.hardware_file,
-            #     self.queue_container.single_process_hardware_queue,
-            # )
-            pass
-        elif metadata.hardware_type == HardwareType.EXODUS:
-            # from .exodus_modal_solution_hardware import ExodusAcquisition
+                # self.hardware = DataPhysicsAcquisition(
+                #     data_acquisition_parameters.hardware_file,
+                #     self.queue_container.single_process_hardware_queue,
+                # )
+                pass
+            case HardwareType.DP_900:
+                # from .data_physics_dp900_hardware import DataPhysicsDP900Acquisition
 
-            # self.hardware = ExodusAcquisition(
-            #     data_acquisition_parameters.hardware_file,
-            #     self.queue_container.single_process_hardware_queue,
-            # )
-            pass
-        elif metadata.hardware_type == HardwareType.STATE_SPACE:
-            # from .state_space_virtual_hardware import StateSpaceAcquisition
+                # self.hardware = DataPhysicsDP900Acquisition(
+                #     data_acquisition_parameters.hardware_file,
+                #     self.queue_container.single_process_hardware_queue,
+                # )
+                pass
+            case HardwareType.EXODUS:
+                # from .exodus_modal_solution_hardware import ExodusAcquisition
 
-            # self.hardware = StateSpaceAcquisition(
-            #     data_acquisition_parameters.hardware_file,
-            #     self.queue_container.single_process_hardware_queue,
-            # )
-            pass
-        elif metadata.hardware_type == HardwareType.SDYNPY_SYSTEM:
-            from ..hardware.sdynpy_system import SDynPySystemAcquisition
+                # self.hardware = ExodusAcquisition(
+                #     data_acquisition_parameters.hardware_file,
+                #     self.queue_container.single_process_hardware_queue,
+                # )
+                pass
+            case HardwareType.STATE_SPACE:
+                # from .state_space_virtual_hardware import StateSpaceAcquisition
 
-            self.hardware = SDynPySystemAcquisition(
-                metadata.hardware_file,
-                self.queue_container.single_process_hardware_queue,
-            )
-        elif metadata.hardware_type == HardwareType.SDYNPY_FRF:
-            # from .sdynpy_frf_virtual_hardware import SDynPyFRFAcquisition
+                # self.hardware = StateSpaceAcquisition(
+                #     data_acquisition_parameters.hardware_file,
+                #     self.queue_container.single_process_hardware_queue,
+                # )
+                pass
+            case HardwareType.SDYNPY_SYSTEM:
+                from ..hardware.sdynpy_system import SDynPySystemAcquisition
 
-            # self.hardware = SDynPyFRFAcquisition(
-            #     data_acquisition_parameters.hardware_file,
-            #     self.queue_container.single_process_hardware_queue,
-            # )
-            pass
-        else:
-            raise TypeError("Invalid Hardware or Hardware Not Implemented!")
+                self.hardware = SDynPySystemAcquisition(
+                    metadata.hardware_file,
+                    self.queue_container.single_process_hardware_queue,
+                )
+            case HardwareType.SDYNPY_FRF:
+                # from .sdynpy_frf_virtual_hardware import SDynPyFRFAcquisition
+
+                # self.hardware = SDynPyFRFAcquisition(
+                #     data_acquisition_parameters.hardware_file,
+                #     self.queue_container.single_process_hardware_queue,
+                # )
+                pass
+            case _:
+                raise TypeError(f"{metadata.hardware_type} has not been implemented")
         # Initialize hardware and create channels
         self.hardware.initialize_hardware(metadata)
         # Set up warning and abort limits

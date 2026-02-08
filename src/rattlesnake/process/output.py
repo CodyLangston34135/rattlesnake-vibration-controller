@@ -142,51 +142,53 @@ class OutputProcess(AbstractMessageProcess):
         # Check which type of hardware we have
         if self.hardware is not None:
             self.hardware.close()
-        if metadata.hardware_type == HardwareType.NI_DAQMX:
-            from ..hardware.nidaqmx import NIDAQmxOutput
 
-            self.hardware = NIDAQmxOutput(
-                metadata.task_trigger,
-                metadata.output_trigger_generator,
-            )
-        elif metadata.hardware_type == HardwareType.LAN_XI:
-            # from .lanxi_hardware_multiprocessing import LanXIOutput
+        match metadata.hardware_type:
+            case HardwareType.NI_DAQMX:
+                from ..hardware.nidaqmx import NIDAQmxOutput
 
-            # self.hardware = LanXIOutput(data_acquisition_parameters.extra_parameters["maximum_acquisition_processes"])
-            pass
-        elif metadata.hardware_type == HardwareType.DP_QUATTRO:
-            # from .data_physics_hardware import DataPhysicsOutput
+                self.hardware = NIDAQmxOutput(
+                    metadata.task_trigger,
+                    metadata.output_trigger_generator,
+                )
+            case HardwareType.LAN_XI:
+                # from .lanxi_hardware_multiprocessing import LanXIOutput
 
-            # self.hardware = DataPhysicsOutput(self.queue_container.single_process_hardware_queue)
-            pass
-        elif metadata.hardware_type == HardwareType.DP_900:
-            # from .data_physics_dp900_hardware import DataPhysicsDP900Output
+                # self.hardware = LanXIOutput(data_acquisition_parameters.extra_parameters["maximum_acquisition_processes"])
+                pass
+            case HardwareType.DP_QUATTRO:
+                # from .data_physics_hardware import DataPhysicsOutput
 
-            # self.hardware = DataPhysicsDP900Output(
-            #     self.queue_container.single_process_hardware_queue,
-            # )
-            pass
-        elif metadata.hardware_type == HardwareType.EXODUS:
-            # from .exodus_modal_solution_hardware import ExodusOutput
+                # self.hardware = DataPhysicsOutput(self.queue_container.single_process_hardware_queue)
+                pass
+            case HardwareType.DP_900:
+                # from .data_physics_dp900_hardware import DataPhysicsDP900Output
 
-            # self.hardware = ExodusOutput(self.queue_container.single_process_hardware_queue)
-            pass
-        elif metadata.hardware_type == HardwareType.STATE_SPACE:
-            # from .state_space_virtual_hardware import StateSpaceOutput
+                # self.hardware = DataPhysicsDP900Output(
+                #     self.queue_container.single_process_hardware_queue,
+                # )
+                pass
+            case HardwareType.EXODUS:
+                # from .exodus_modal_solution_hardware import ExodusOutput
 
-            # self.hardware = StateSpaceOutput(self.queue_container.single_process_hardware_queue)
-            pass
-        elif metadata.hardware_type == HardwareType.SDYNPY_SYSTEM:
-            from ..hardware.sdynpy_system import SDynPySystemOutput
+                # self.hardware = ExodusOutput(self.queue_container.single_process_hardware_queue)
+                pass
+            case HardwareType.STATE_SPACE:
+                # from .state_space_virtual_hardware import StateSpaceOutput
 
-            self.hardware = SDynPySystemOutput(self.queue_container.single_process_hardware_queue)
-        elif metadata.hardware_type == HardwareType.SDYNPY_FRF:
-            # from .sdynpy_frf_virtual_hardware import SDynPyFRFOutput
+                # self.hardware = StateSpaceOutput(self.queue_container.single_process_hardware_queue)
+                pass
+            case HardwareType.SDYNPY_SYSTEM:
+                from ..hardware.sdynpy_system import SDynPySystemOutput
 
-            # self.hardware = SDynPyFRFOutput(self.queue_container.single_process_hardware_queue)
-            pass
-        else:
-            raise TypeError("Invalid Hardware or Hardware Not Implemented!")
+                self.hardware = SDynPySystemOutput(self.queue_container.single_process_hardware_queue)
+            case HardwareType.SDYNPY_FRF:
+                # from .sdynpy_frf_virtual_hardware import SDynPyFRFOutput
+
+                # self.hardware = SDynPyFRFOutput(self.queue_container.single_process_hardware_queue)
+                pass
+            case _:
+                raise TypeError(f"{metadata.hardware_type} has not been implemented")
         # Initialize hardware and create channels
         self.hardware.initialize_hardware(metadata)
         # Get the environment output channels in reference to all the output channels
