@@ -29,7 +29,7 @@ import multiprocessing as mp
 import numpy as np
 import scipy.signal as signal
 from typing import List
-
+from collections import defaultdict
 
 _direction_map = {
     "X+": 1,
@@ -94,16 +94,92 @@ class SDynPySystemMetadata(HardwareMetadata):
     def __init__(self):
         super().__init__(HARDWARE_TYPE)
         self.hardware_file = None
-
-    def validate(self):
-        return super().validate()
-
-    def valid_channel_dict(self, channel):
-        pass
+        self._node_dict = None  # Dont set this
 
     @property
     def extra_attr_list(self):
         return ["hardware_file"]
+
+    # Validation
+    def validate(self):
+        super().validate()
+        # Validate node number
+        self.detect_devices()
+        for row, channel in enumerate(self.channel_list):
+            if channel.node_number not in self.valid_node_numbers:
+                raise ValueError(f"Invalid node number in channel table row {row}")
+            if channel.node_direction not in self.valid_node_directions(channel.node_number):
+                raise ValueError(f"Invalid node direction in channel table row {row}")
+            if channel.physical_device == "":
+                raise ValueError(f"Physical device should be 'Virtual' in channel table row {row}")
+            if str(channel.channel_type).lower() == "force" and channel.feedback_device == "":
+                raise ValueError(f"Force channel types require 'Virtual' feedback device in channel table row {row}")
+            if str(channel.channel_type).lower() not in self.accepted_channel_type_strings:
+                raise ValueError(
+                    f"Invalid channel type in channel table row {row}. Valid channel types include 'Displacement', 'Velocity', 'Acceleration', 'Force'"
+                )
+
+        return True
+
+    def valid_channel_dict(self, channel):
+        if not self.node_dict:
+            self.detect_devices()
+
+    def detect_devices(self):
+        try:
+            sdynpy_system_data = {key: val for key, val in np.load(self.hardware_file).items()}
+            channel_indices = {tuple([abs(v) for v in val]) for val in sdynpy_system_data["coordinate"]}
+        except:
+            raise ValueError("Invalid SDynPy system file")
+
+        # Map node directions to node numbers
+        self._node_dict = defaultdict(set)
+        for node_num, dir_ind in channel_indices:
+            node_dir = _direction_inv_map[dir_ind]
+            neg_node_dir = _direction_inv_map[-dir_ind]
+            self._node_dict[str(node_num)].add(node_dir)
+            self._node_dict[str(node_num)].add(neg_node_dir)
+
+    @property
+    def node_dict(self):
+        return self._node_dict
+
+    @property
+    def valid_node_numbers(self):
+        node_numbers = list(self.node_dict.keys())
+        node_numbers.sort()
+        return node_numbers
+
+    def valid_node_directions(self, node_number: str = ""):
+        if node_number in list(self.node_dict.keys()):
+            node_directions = list(self.node_dict[node_number])
+            node_directions.sort()
+        else:
+            node_directions = []
+        return node_directions
+
+    @property
+    def valid_physical_device(self):
+        return ["Virtual"]
+
+    @property
+    def valid_channel_types(self):
+        channel_types = ["Acceleration", "Velocity", "Displacement", "Force"]
+        return channel_types
+
+    @property
+    def accepted_channel_type_strings(self):
+        channel_types = [
+            "accel",
+            "acceleration",
+            "acc",
+            "force",
+            "vel",
+            "velocity",
+            "disp",
+            "displacement",
+        ]
+        return channel_types
 
 
 # region: SDynPySystemAcquisition

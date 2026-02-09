@@ -48,6 +48,16 @@ class HardwareMetadata(ABC):
         """Property returning the output sample rate."""
         return self.sample_rate * self.output_oversample
 
+    @property
+    @abstractmethod
+    def extra_attr_list(self) -> List[str]:
+        """
+        Method that returns a list of extra attributes that should be stored to the
+        netcdf4 output file so that the hardware can be defined when loading Rattlesnake
+        from a file.
+        """
+        return []
+
     @abstractmethod
     def validate(self) -> True:
         """
@@ -66,15 +76,9 @@ class HardwareMetadata(ABC):
 
         return True
 
-    @property
     @abstractmethod
-    def extra_attr_list(self) -> List[str]:
-        """
-        Method that returns a list of extra attributes that should be stored to the
-        netcdf4 output file so that the hardware can be defined when loading Rattlesnake
-        from a file.
-        """
-        return []
+    def valid_channel_dict(self, channel):
+        pass
 
 
 # region: HardwareAcquisition
