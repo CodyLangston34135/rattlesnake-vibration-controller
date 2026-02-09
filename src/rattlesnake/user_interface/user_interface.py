@@ -1,4 +1,4 @@
-from rattlesnake.rattlesnake import Rattlesnake
+from rattlesnake.rattlesnake import Rattlesnake, RattlesnakeState
 from rattlesnake.utilities import GlobalCommands
 from rattlesnake.user_interface.ui_utilities import UICommands, Updater, EventWatcher, error_message_qt, VISIBLE_HARDWARE_WIDGETS, ui_path
 from rattlesnake.hardware.hardware_utilities import HardwareType, Channel
@@ -43,6 +43,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.connect_callbacks()
         self.complete_ui()
 
+        # Store any presets to the UI
+        self.sync_rattlesnake_state()
+
         self.show()
 
     def complete_ui(self):
@@ -82,7 +85,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             "trigger_output": [self.trigger_output_label, self.trigger_output_selector],
             "select_file": [self.select_file_button],
         }
-        self.update_sampling_parameters_visibility()
+        self.update_hardware_widget_visibility()
 
         # Set icons and window
         icon = QtGui.QIcon("logo/Rattlesnake_Icon.png")
@@ -128,6 +131,15 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.remove_environment_button.clicked.connect(self.remove_environment)
         self.environment_channel_table.horizontalHeader().sectionDoubleClicked.connect(self.rename_environment)
 
+    def sync_rattlesnake_state(self):
+        state = self.rattlesnake.state
+
+        match state:
+            case RattlesnakeState.INIT:
+                return
+            case RattlesnakeState.HARDWARE_STORE:
+                self.load_hardware_metadata()
+
     @property
     def gui_update_queue(self):
         return self.rattlesnake.queue_container.gui_update_queue
@@ -140,7 +152,33 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
     def timeout(self):
         return self.rattlesnake.timeout
 
-    # region: Utility Functions
+    # region: Data Loading
+    def load_hardware_metadata(self):
+        hardware_metadata = self.rattlesnake.hardware_metadata
+
+        # Fill out channel table
+        channel_list = hardware_metadata.channel_list
+        attr_list = Channel().channel_attr_list
+        for row, channel in enumerate(channel_list):
+            for col, attr_name in enumerate(attr_list):
+                value = getattr(channel, attr_name)
+                value = str(value) if value else None
+
+                item = QtWidgets.QTableWidgetItem(value)
+                self.channel_table.setItem(row, col, item)
+
+        match hardware_metadata.hardware_type:
+            case HardwareType.SDYNPY_SYSTEM:
+                self.hardware_selector.blockSignals(True)
+                self.hardware_selector.setCurrentText("SDynPy System Integration...")
+                self.hardware_selector.blockSignals(False)
+                self.update_hardware_widget_visibility()
+                self.hardware_file = hardware_metadata.hardware_file
+                self.sample_rate_selector.setValue(hardware_metadata.sample_rate)
+                self.buffer_size_selector.setValue(hardware_metadata.samples_per_read)
+                self.integration_oversample_selector.setValue(hardware_metadata.output_oversample)
+            case _:
+                self.display_error(f"{hardware_metadata.hardware_type} is not yet implemented")
 
     # region: Data Setup Tab Callbacks
     def channel_table_copy(self):
@@ -213,7 +251,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.channel_table.verticalScrollBar().setValue(self.environment_channel_table.verticalScrollBar().value())
 
     def hardware_update(self, hardware_text):
-        self.update_sampling_parameters_visibility()
+        self.update_hardware_widget_visibility()
 
         match hardware_text:
             case "SDynPy System Integration...":
@@ -226,7 +264,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     return
                 self.hardware_file = filename
 
-    def update_sampling_parameters_visibility(self):
+    def update_hardware_widget_visibility(self):
         """Helper function to update the visibility of the sampling parameters group box"""
         current_hardware = self.hardware_selector.currentText()
         visible_widgets = VISIBLE_HARDWARE_WIDGETS.get(current_hardware, set())
@@ -363,7 +401,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.initialize_hardware_button.setEnabled(True)
         self.update_environment_tabs()
         num_environments = len(self.environment_uis)
-        if num_environments != 0:
+        if num_environments == 0:
+            self.rattlesnake_tabs.setTabEnabled(1, False)
+        else:
             self.rattlesnake_tabs.setTabEnabled(1, True)
             self.rattlesnake_tabs.setCurrentIndex(1)
 
