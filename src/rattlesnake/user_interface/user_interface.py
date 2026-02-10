@@ -216,6 +216,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.load_stored_environments()
                 if has_profile:
                     self.load_stored_profile()
+                if has_streamed:
+                    self.load_stored_stream()
 
     def load_stored_hardware(self):
         hardware_metadata = self.rattlesnake.hardware_metadata
@@ -304,6 +306,26 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         self.rattlesnake_tabs.setTabEnabled(4, True)
         self.rattlesnake_tabs.setCurrentIndex(4)
+
+    def load_stored_stream(self):
+        stream_metadata = self.rattlesnake.last_stream_metadata
+
+        match stream_metadata.stream_type:
+            case StreamType.NO_STREAM:
+                self.no_streaming_radiobutton.setChecked(True)
+            case StreamType.PROFILE_INSTRUCTION:
+                self.profile_streaming_radiobutton.setChecked(True)
+            case StreamType.TEST_LEVEL:
+                self.test_level_streaming_radiobutton.setChecked(True)
+                self.streaming_environment_select_combobox.setCurrentText(stream_metadata.test_level_environment_name)
+            case StreamType.IMMEDIATELY:
+                self.immediate_streaming_radiobutton.setChecked(True)
+            case StreamType.MANUAL:
+                self.manual_streaming_radiobutton.setChecked(True)
+
+        self.streaming_file_display.setText(stream_metadata.stream_file)
+
+        self.initialize_profile()
 
     # region: Channel Table
     def get_channel(self, row):
@@ -1251,16 +1273,19 @@ if __name__ == "__main__":
         make_sdynpy_system_metadata,
         make_time_environment_metadata,
         make_time_environment_event_list,
+        make_time_environment_stream_metadata,
     )
 
     hardware_metadata = make_sdynpy_system_metadata()
     environment_metadata = make_time_environment_metadata(hardware_metadata)
     profile_event_list = make_time_environment_event_list()
+    stream_metadata = make_time_environment_stream_metadata()
 
     rattlesnake = Rattlesnake(threaded=True, timeout=10)
     rattlesnake.set_hardware(hardware_metadata)
     rattlesnake.set_environments([environment_metadata])
     rattlesnake.set_profile_event_list(profile_event_list)
+    rattlesnake.set_stream_metadata(stream_metadata)
 
     # This is a fix for scaling Rattlesnake to different resolution monitors
     font_size = 10  # pt size

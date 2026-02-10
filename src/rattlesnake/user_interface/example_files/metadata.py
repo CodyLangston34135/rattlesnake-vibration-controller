@@ -3,6 +3,7 @@ from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.hardware.hardware_utilities import Channel
 from rattlesnake.hardware.sdynpy_system import SDynPySystemMetadata
 from rattlesnake.environment.time_environment import TimeMetadata, TimeInstructions, TimeCommands
+from rattlesnake.process.streaming import StreamMetadata, StreamType
 import numpy as np
 
 BUFFER_SIZE = 0.05
@@ -109,3 +110,12 @@ def make_time_environment_event_list(environment_name="My Time"):
 
     profile_event_list = [start_stream_event, start_environment_event, set_level_event, stop_environment_event, stop_stream_event]
     return profile_event_list
+
+
+def make_time_environment_stream_metadata(environment_name="My Time"):
+    stream_metadata = StreamMetadata()
+    stream_metadata.stream_type = StreamType.MANUAL
+    stream_metadata.stream_file = "E:/Rattlesnake/SampleData/streaming4.nc4"
+    stream_metadata.test_level_environment_name = "My Time"
+
+    return stream_metadata
