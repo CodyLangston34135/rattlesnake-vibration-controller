@@ -24,10 +24,6 @@ class UICommands(Enum):
     STOP = 6
 
 
-class TimeUICommands(Enum):
-    TIME_DATA = 0
-
-
 class ReadUICommands(Enum):
     TIME_DATA = 0
 

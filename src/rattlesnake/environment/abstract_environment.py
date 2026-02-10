@@ -50,6 +50,10 @@ class EnvironmentCommands(Enum):
         return {}.get(self)
 
 
+class EnvironmentUICommands(Enum):
+    """These are extra commands that the UI needs to use"""
+
+
 # region: EnvironmentMetadata
 class EnvironmentMetadata(ABC):
     """

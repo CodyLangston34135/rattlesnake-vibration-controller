@@ -1,11 +1,11 @@
 from rattlesnake.rattlesnake import Rattlesnake
 from rattlesnake.user_interface.abstract_user_interface import AbstractUI
-from rattlesnake.user_interface.ui_utilities import TimeUICommands, environment_definition_ui_paths, environment_run_ui_paths, multiline_plotter
+from rattlesnake.user_interface.ui_utilities import environment_definition_ui_paths, environment_run_ui_paths, multiline_plotter
 from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands
 from rattlesnake.math_operations import load_time_history, rms_time
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_utilities import ControlTypes
-from rattlesnake.environment.time_environment import TimeMetadata, TimeInstructions, TimeCommands
+from rattlesnake.environment.time_environment import TimeMetadata, TimeInstructions, TimeCommands, TimeUICommands
 import openpyxl
 import traceback
 import multiprocessing as mp
@@ -80,6 +80,11 @@ class TimeUI(AbstractUI):
         self.physical_measurement_names = None
         self.show_signal_checkboxes = None
         self.plot_data_items = {}
+
+        # Map commands
+        self.map_command(TimeUICommands.TIME_DATA, self.plot_time_data)
+        self.map_command(TimeCommands.SET_TEST_LEVEL, self.set_test_level)
+        self.map_command(TimeCommands.SET_NO_REPEAT, self.set_no_repeat)
 
         self.complete_ui()
         self.connect_callbacks()
@@ -214,7 +219,7 @@ class TimeUI(AbstractUI):
 
         return metadata
 
-    def store_metadata(self, metadata: TimeMetadata):
+    def display_metadata(self, metadata: TimeMetadata):
         """Update the user interface with environment parameters
 
         This function is called when the Environment parameters are initialized.
@@ -266,22 +271,45 @@ class TimeUI(AbstractUI):
 
         return instruction
 
-    def store_environment_instructions(self, instructions: TimeInstructions):
+    # region: Commands
+    def display_environment_started(self, data):
+        self.run_widget.stop_test_button.setEnabled(True)
+        self.run_widget.start_test_button.setEnabled(False)
+        self.run_widget.test_level_selector.setEnabled(False)
+        self.run_widget.repeat_signal_checkbox.setEnabled(False)
+
+    def display_environment_ended(self, data):
+        self.run_widget.stop_test_button.setEnabled(False)
+        self.run_widget.start_test_button.setEnabled(True)
+        self.run_widget.test_level_selector.setEnabled(True)
+        self.run_widget.repeat_signal_checkbox.setEnabled(True)
+
+    def display_environment_instructions(self, data: TimeInstructions):
+        instructions = data
         self.run_widget.test_level_selector.setValue(instructions.current_test_level)
         self.run_widget.repeat_signal_checkbox.setChecked(instructions.repeat)
 
-    def process_profile_event(self, profile_event):
-        command = profile_event.command
-        data = profile_event.data
-        match command:
-            case TimeCommands.SET_TEST_LEVEL:
-                self.run_widget.test_level_selector.setValue(int(data))
-            case TimeCommands.SET_REPEAT:
-                self.run_widget.repeat_signal_checkbox.setChecked(True)
-            case TimeCommands.SET_NO_REPEAT:
-                self.run_widget.repeat_signal_checkbox.setChecked(False)
-            case _:
-                super().process_profile_event(profile_event)
+    def set_test_level(self, data):
+        test_level = int(data)
+        self.run_widget.test_level_selector.setValue(test_level)
+
+    def set_repeat(self, data):
+        self.run_widget.repeat_signal_checkbox.setChecked(True)
+
+    def set_no_repeat(self, data):
+        self.run_widget.repeat_signal_checkbox.setChecked(False)
+
+    def plot_time_data(self, data):
+        response_data, output_data = data
+        for curve, this_data in zip(self.plot_data_items["response_signal_measurement"], response_data):
+            x, y = curve.getData()
+            y = np.concatenate((y[this_data.size :], this_data[-x.size :]), axis=0)
+            curve.setData(x, y)
+        # Display the data
+        for curve, this_output in zip(self.plot_data_items["output_signal_measurement"], output_data):
+            x, y = curve.getData()
+            y = np.concatenate((y[this_output.size :], this_output[-x.size :]), axis=0)
+            curve.setData(x, y)
 
     # region: Callbacks
     def load_signal(self, clicked, filename=None):  # pylint: disable=unused-argument
@@ -341,11 +369,6 @@ class TimeUI(AbstractUI):
             tb = traceback.format_exc()
             self.display_error(tb)
 
-        self.run_widget.stop_test_button.setEnabled(True)
-        self.run_widget.start_test_button.setEnabled(False)
-        self.run_widget.test_level_selector.setEnabled(False)
-        self.run_widget.repeat_signal_checkbox.setEnabled(False)
-
     def stop_control(self):
         """Stops running the environment"""
         try:
@@ -353,33 +376,3 @@ class TimeUI(AbstractUI):
         except Exception:
             tb = traceback.format_exc()
             self.display_error(tb)
-
-        self.run_widget.stop_test_button.setEnabled(False)
-        self.run_widget.start_test_button.setEnabled(True)
-        self.run_widget.test_level_selector.setEnabled(True)
-        self.run_widget.repeat_signal_checkbox.setEnabled(True)
-
-    def update_gui(self, queue_data):
-        """Update the graphical interface for the environment
-
-        Parameters
-        ----------
-        queue_data :
-            A 2-tuple consisting of ``(message,data)`` pairs where the message
-            denotes what to change and the data contains the information needed
-            to be displayed.
-        """
-        message, data = queue_data
-        if message == TimeUICommands.TIME_DATA:
-            response_data, output_data = data
-            for curve, this_data in zip(self.plot_data_items["response_signal_measurement"], response_data):
-                x, y = curve.getData()
-                y = np.concatenate((y[this_data.size :], this_data[-x.size :]), axis=0)
-                curve.setData(x, y)
-            # Display the data
-            for curve, this_output in zip(self.plot_data_items["output_signal_measurement"], output_data):
-                x, y = curve.getData()
-                y = np.concatenate((y[this_output.size :], this_output[-x.size :]), axis=0)
-                curve.setData(x, y)
-        else:
-            self.display_error(f"{message} is not linked to a valid command in time_ui.update_gui")

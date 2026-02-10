@@ -28,7 +28,6 @@ from rattlesnake.math_operations import db2scale
 from rattlesnake.environment.abstract_environment import EnvironmentCommands, EnvironmentMetadata, EnvironmentInstructions, EnvironmentProcess
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.user_interface.ui_utilities import TimeUICommands
 import copy
 import multiprocessing as mp
 import queue
@@ -60,6 +59,10 @@ class TimeCommands(EnvironmentCommands):
             TimeCommands.SET_REPEAT: (type(None),),
             TimeCommands.SET_NO_REPEAT: (type(None),),
         }.get(self)
+
+
+class TimeUICommands(Enum):
+    TIME_DATA = 0
 
 
 # region: TimeMetadata
@@ -255,7 +258,6 @@ class TimeEnvironment(EnvironmentProcess):
         # Persistent data
         self.hardware_metadata = None
         self.metadata = None
-        self.startup = True
         self.shutdown_flag = False
         self.current_test_level = 0.0
         self.target_test_level = 0.0
@@ -326,14 +328,15 @@ class TimeEnvironment(EnvironmentProcess):
             a boolean specifying whether or not to repeat the signal.
 
         """
-        if self.startup:
+        if not self.active:
             if data is not None:
                 self.current_test_level = data.current_test_level
                 self.repeat = data.repeat
+                self.queue_container.gui_update_queue.put((self.environment_name, (GlobalCommands.SET_ENVIRONMENT_INSTRUCTIONS, data)))
                 self.log("Test Level set to {:}".format(self.current_test_level))
             self.signal_remainder = self.metadata.output_signal
-            self.startup = False
             self.set_active()
+            self.queue_container.gui_update_queue.put((self.environment_name, (GlobalCommands.START_ENVIRONMENT, None)))
         # See if any data has come in
         try:
             acquisition_data, last_acquisition = self.queue_container.data_in_queue.get_nowait()
@@ -361,7 +364,6 @@ class TimeEnvironment(EnvironmentProcess):
                     output_data = acquisition_data[self.output_channels]
                     self.queue_container.gui_update_queue.put((self.environment_name, (TimeUICommands.TIME_DATA, (measurement_data, output_data))))
                 self.shutdown()
-                self.clear_active()
                 return
         self.queue_container.environment_command_queue.put(self.environment_name, (GlobalCommands.START_ENVIRONMENT, None))
 
@@ -437,14 +439,17 @@ class TimeEnvironment(EnvironmentProcess):
                     self.test_level_target, self.current_test_level, self.test_level_change
                 )
             )
+        self.queue_container.gui_update_queue.put((self.environment_name, (TimeCommands.SET_TEST_LEVEL, data)))
 
     def set_no_repeat(self, data=None):
         self.repeat = False
         self.log("Repeat turned off")
+        self.queue_container.gui_update_queue.put((self.environment_name, (TimeCommands.SET_NO_REPEAT, data)))
 
     def set_repeat(self, data=None):
         self.repeat = True
         self.log("Repeat turned on")
+        self.queue_container.gui_update_queue.put((self.environment_name, (TimeCommands.SET_REPEAT, data)))
 
     def shutdown(self):
         """Performs final cleanup operations when the system has shut down
@@ -459,11 +464,8 @@ class TimeEnvironment(EnvironmentProcess):
         self.log("Shutting Down Time History Generation")
         self.queue_container.environment_command_queue.flush(self.environment_name)
         # Enable the volume controls
-        # self.queue_container.gui_update_queue.put((self.environment_name, (TimeUICommands.ENABLE, "test_level_selector")))
-        # self.queue_container.gui_update_queue.put((self.environment_name, (TimeUICommands.ENABLE, "repeat_signal_checkbox")))
-        # self.queue_container.gui_update_queue.put((self.environment_name, (TimeUICommands.ENABLE, "start_test_button")))
-        # self.queue_container.gui_update_queue.put((self.environment_name, (TimeUICommands.DISABLE, "stop_test_button")))
-        self.startup = True
+        self.clear_active()
+        self.queue_container.gui_update_queue.put((self.environment_name, (GlobalCommands.STOP_ENVIRONMENT, None)))
 
 
 # region: time_process

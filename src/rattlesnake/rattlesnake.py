@@ -195,8 +195,8 @@ class Rattlesnake:
         self.environment_metadata = {}
         # These are only used for UI to pull from if they have already been set to the controller. These
         # are not used for any logic in this controller
-        self.stream_metadata = None
-        self.profile_event_list = []
+        self.last_stream_metadata = None
+        self.last_profile_event_list = []
 
         if self.blocking:
             ready_event_list = [
@@ -249,13 +249,13 @@ class Rattlesnake:
 
     @property
     def has_streamed(self):
-        if self.stream_metadata:
+        if self.last_stream_metadata:
             return True
         return False
 
     @property
     def has_profile(self):
-        if self.profile_event_list:
+        if self.last_profile_event_list:
             return True
         return False
 
@@ -356,7 +356,7 @@ class Rattlesnake:
             raise TypeError("Rattlesnake.set_stream requires a valid StreamMetadata class")
         stream_metadata.validate()
 
-        self.stream_metadata = stream_metadata
+        self.last_stream_metadata = stream_metadata
 
     def start_acquisition(self, stream_metadata: StreamMetadata):
         # Validate Rattlesnake State
@@ -390,7 +390,7 @@ class Rattlesnake:
             self.wait_for_events(ready_event_list, active_event_list, active_event_check=True)
 
         # Update stream_metadata
-        self.stream_metadata = stream_metadata
+        self.last_stream_metadata = stream_metadata
 
     def stop_acquisition(self):
         # Validate rattlesnake state (rattlesnake was acquiring data)
@@ -491,9 +491,9 @@ class Rattlesnake:
 
         self.environment_manager.validate_profile_events(profile_event_list)
         self.profile_manager.validate_profile_list(profile_event_list)
-        self.profile_event_list = profile_event_list
+        self.last_profile_event_list = profile_event_list
 
-    def start_profile(self, profile_event_list: List[ProfileEvent], *, blocking: bool | None = None):
+    def start_profile(self, profile_event_list: List[ProfileEvent]):
         self.log("Starting Profile")
         if self.state not in (RattlesnakeState.HARDWARE_ACTIVE):
             raise RuntimeError(f"Invalid state to start profile: {self.state}")
@@ -507,15 +507,13 @@ class Rattlesnake:
         self.event_container.controller_ready_event.clear()
         self.profile_manager.start_profile(profile_event_list)
 
-        # This is a very specific case where you can override blocking if you want to use a
-        # user interface ._exec command to block the signal instead of rattlesnake waiting
-        check_blocking_override = blocking if blocking is not None else self.blocking
-        if check_blocking_override:
+        if self.blocking:
             ready_event_list = [self.event_container.controller_ready_event]
             active_event_list = []
             self.wait_for_events(ready_event_list, active_event_list)
 
-            self.profile_event_list = profile_event_list
+        # Update profile event list
+        self.last_profile_event_list = profile_event_list
 
     def stop_profile(self):
         self.log("Stopping Profile")

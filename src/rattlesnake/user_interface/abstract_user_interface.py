@@ -57,8 +57,9 @@ class AbstractUI(ABC):
         self.prediction_widget = None
         self.run_widget = None
         self._command_map = {
-            "Start Control": self.start_control,
-            "Stop Control": self.stop_control,
+            GlobalCommands.START_ENVIRONMENT: self.display_environment_started,
+            GlobalCommands.STOP_ENVIRONMENT: self.display_environment_ended,
+            GlobalCommands.SET_ENVIRONMENT_INSTRUCTIONS: self.display_environment_instructions,
         }
 
     @property
@@ -91,28 +92,20 @@ class AbstractUI(ABC):
 
         Returns
         -------
-        AbstractMetadata
-            A metadata or parameters object containing the parameters defining
-            the corresponding environment.
-
+        EnvironmentMetadata
+            An EnvironmentMetadata-inheriting object that contains the parameters
+            defining the environment.
         """
 
     @abstractmethod
-    def store_metadata(self) -> EnvironmentMetadata:
+    def display_metadata(self, metadata: EnvironmentMetadata):
         """
-        Update the user interface with environment parameters
+        Update the user interface from environment metadata
 
         This function is called when the Environment parameters are initialized.
         This function should set up the user interface accordingly.  It must
         return the parameters class of the environment that inherits from
         AbstractMetadata.
-
-        Returns
-        -------
-        EnvironmentMetadata
-            An EnvironmentMetadata-inheriting object that contains the parameters
-            defining the environment.
-
         """
 
     @abstractmethod
@@ -128,49 +121,55 @@ class AbstractUI(ABC):
             in the environment likely to change between runs
         """
 
+    # region: Commands
     @abstractmethod
-    def process_profile_event(self, profile_event: ProfileEvent):
+    def display_environment_instructions(self, instructions: EnvironmentInstructions):
         """
-        This is going to be given an ProfileEvent and needs to store it to the UI.
+        Updates the user interface with environment instructions
 
-        This can just pass if it doesn't want to do anything with the event.
+        This function is called when wanting to sync the environment ui with an
+        EnvironmentInstructions object. This will most likely set widgets in the
+        environment's run_tab to the values in the EnvironmentInstructions
         """
-        command = profile_event.command
-        data = profile_event.data
-        match command:
-            case GlobalCommands.START_ENVIRONMENT:
-                pass
-            case GlobalCommands.STOP_ENVIRONMENT:
-                pass
-            case _:
-                pass
-
-    # region: Callbacks
-    @abstractmethod
-    def start_control(self):
-        """Runs the corresponding environment in the controller"""
 
     @abstractmethod
-    def stop_control(self):
-        """Stops the corresponding environment in the controller"""
+    def display_environment_started(self):
+        """
+        This command is called when the environment process officially
+        starts up. Needs to prevent user from starting environment again until
+        display_environment ended has been called.
+        """
 
     @abstractmethod
-    def update_gui(self, queue_data: tuple):
-        """Update the environment's graphical user interface
+    def display_environment_ended(self):
+        """
+        This command is called when the environment process has officially
+        shut down. Needs to enable the user to start up the process again.
+        """
 
-        This function will receive data from the gui_update_queue that
-        specifies how the user interface should be updated.  Data will usually
-        be received as ``(instruction,data)`` pairs, where the ``instruction`` notes
-        what operation should be taken or which widget should be modified, and
-        the ``data`` notes what data should be used in the update.
+    def map_command(self, key, function):
+        """Maps commands to instructions
+
+        Maps the instruction ``key`` to the function ``function`` so when
+        ``(key,data)`` pairs are pulled from the ``command_queue``, the function
+        ``function`` is called with argument ``data``.
 
         Parameters
         ----------
-        queue_data : tuple
-            A tuple containing ``(instruction,data)`` pairs where ``instruction``
-            defines and operation or widget to be modified and ``data`` contains
-            the data used to perform the operation.
+        key :
+            Instruction pulled from the command queue
+
+        function :
+            Function to be called when the given ``key`` is pulled from the
+            ``command_queue``
+
         """
+        self._command_map[key] = function
+
+    @property
+    def command_map(self) -> dict:
+        """A dictionary that maps commands received by the ``command_queue`` to functions in the class."""
+        return self._command_map
 
     @property
     def log_file_queue(self) -> mp.Queue:

@@ -173,6 +173,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         # Acquisition
         self.select_streaming_file_button.clicked.connect(self.select_streaming_file)
+        self.arm_test_button.clicked.connect(self.start_acquisition)
+        self.disarm_test_button.clicked.connect(self.stop_acquisition)
 
     @property
     def gui_update_queue(self):
@@ -255,14 +257,14 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.rename_environment(environment_idx, environment_name)
 
             self.environment_uis[environment_name].initialize_hardware(hardware_metadata)
-            self.environment_uis[environment_name].store_metadata(environment_metadata)
+            self.environment_uis[environment_name].display_metadata(environment_metadata)
 
         self.update_environment_tabs()
         self.rattlesnake_tabs.setTabEnabled(1, True)
         self.rattlesnake_tabs.setCurrentIndex(1)
 
     def load_stored_profile(self):
-        profile_event_list = self.rattlesnake.profile_event_list
+        profile_event_list = self.rattlesnake.last_profile_event_list
 
         for profile_event in profile_event_list:
             timestamp = profile_event.timestamp
@@ -836,7 +838,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             *self.rattlesnake.environment_manager.ready_event_list,
         ]
         active_event_list = []
-        active_event_list = []
         self.create_event_watcher(ready_event_list, active_event_list)
         self.event_watcher.ready.connect(self.initialize_environments_ready)
         self.event_watcher.error.connect(self.initialize_environments_error)
@@ -998,9 +999,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 # Build data from global commands
                 if command is GlobalCommands.START_ENVIRONMENT:
                     data = self.environment_uis[environment_name].get_environment_instructions()
-                elif command is GlobalCommands.SET_ENVIRONMENT_INSTRUCTIONS:
+                elif command is GlobalCommands.SET_ENVIRONMENT_INSTRUCTIONS:  # Store data to the UI but dont add it as an event
                     data = data_item.data(QtCore.Qt.ItemDataRole.UserRole)
-                    self.environment_uis[environment_name].store_environment_instructions(data)
+                    self.environment_uis[environment_name].display_environment_instructions(data)
                     continue
                 elif isinstance(command, GlobalCommands):
                     data = None
@@ -1021,7 +1022,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
                 # Inform environment_ui
                 if environment_name != "Global":
-                    self.environment_uis[environment_name].process_profile_event(profile_event)
+                    self.environment_uis[environment_name].command_map[command](data)
 
                 # Append to list
                 profile_event_list.append(profile_event)
@@ -1049,7 +1050,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.initialize_profile_button.setEnabled(True)
 
     # region: Acquisition
-    def get_streaming_metadata(self):
+    def get_stream_metadata(self):
         stream_metadata = StreamMetadata()
 
         stream_file = self.streaming_file_display.text()
@@ -1084,10 +1085,82 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.streaming_file_display.setText(filename)
 
     def start_acquisition(self):
-        pass
+        self.log("Starting hardware acquistion")
+        self.arm_test_button.setEnabled(False)
+
+        try:
+            stream_metadata = self.get_stream_metadata()
+
+            self.rattlesnake.start_acquisition(stream_metadata)
+        except Exception as e:
+            self.start_acquisition_error(e)
+
+        ready_event_list = [
+            self.rattlesnake.event_container.streaming_ready_event,
+        ]
+        active_event_list = [
+            self.rattlesnake.event_container.acquisition_active_event,
+            self.rattlesnake.event_container.output_active_event,
+        ]
+        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
+        self.event_watcher.ready.connect(self.start_acqusition_ready)
+        self.event_watcher.error.connect(self.start_acquisition_error)
+        self.event_thread.start()
+
+    def start_acqusition_ready(self):
+        self.cleanup_event_watcher()
+
+        # Unlock UI
+        self.arm_test_button.setEnabled(False)
+        self.disarm_test_button.setEnabled(True)
+
+    def start_acquisition_error(self, error):
+        self.cleanup_event_watcher()
+
+        # Show error
+        self.display_error(error)
+
+        # Unlock UI
+        self.arm_test_button.setEnabled(True)
+        self.disarm_test_button.setEnabled(False)
 
     def stop_acquisition(self):
-        pass
+        self.log("Stopping hardware acquisition")
+
+        try:
+            self.rattlesnake.stop_acquisition()
+        except Exception as e:
+            self.stop_acquisition_error(e)
+
+        ready_event_list = [
+            self.rattlesnake.event_container.controller_ready_event,
+        ]
+        active_event_list = [
+            self.rattlesnake.event_container.acquisition_active_event,
+            self.rattlesnake.event_container.output_active_event,
+            *self.rattlesnake.environment_manager.active_event_list,
+        ]
+        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=False)
+        self.event_watcher.ready.connect(self.stop_acquistion_ready)
+        self.event_watcher.error.connect(self.stop_acquisition_error)
+        self.event_thread.start()
+
+    def stop_acquistion_ready(self):
+        self.cleanup_event_watcher()
+
+        # Unlock UI
+        self.arm_test_button.setEnabled(True)
+        self.disarm_test_button.setEnabled(False)
+
+    def stop_acquisition_error(self, error):
+        self.cleanup_event_watcher()
+
+        # Show error
+        self.display_error(error)
+
+        # Unlock UI
+        self.arm_test_button.setEnabled(False)
+        self.disarm_test_button.setEnabled(True)
 
     # region: Global
     def change_color_theme(self, text: str):
@@ -1124,7 +1197,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         )
 
     # region: Events
-    def create_event_watcher(self, ready_event_list, active_event_list, active_event_check: bool = None):
+    def create_event_watcher(self, ready_event_list, active_event_list, *, active_event_check: bool = None):
         if getattr(self, "event_thread", None) or getattr(self, "event_watcher", None):
             self.initialize_hardware_error("Event watcher is still active")
             return
@@ -1148,8 +1221,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         if message == UICommands.ERROR:
             dialog_title, error_message = data
             error_message_qt(dialog_title, error_message)
-        elif message in self.environment_queues:
-            self.environment_uis[message].update_gui(data)
+        elif message in self.environment_uis.keys():
+            command, environment_data = data
+            self.environment_uis[message].command_map[command](environment_data)
         elif message == UICommands.MONITOR:
             pass
         elif message == UICommands.ENABLE:
