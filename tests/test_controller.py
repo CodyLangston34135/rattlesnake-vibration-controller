@@ -19,6 +19,7 @@ def controller(request):
         queue_container,
         event_container.acquisition_active_event,
         event_container.output_active_event,
+        event_container.streaming_active_event,
         event_container.environment_active_events,
         event_container.controller_ready_event,
     )
@@ -36,6 +37,7 @@ def test_controller_init(use_thread):
         queue_container,
         event_container.acquisition_active_event,
         event_container.output_active_event,
+        event_container.streaming_active_event,
         event_container.environment_active_events,
         event_container.controller_ready_event,
     )
@@ -248,6 +250,7 @@ def test_controller_process_func(mock_controller, use_thread):
         queue_container,
         event_container.acquisition_active_event,
         event_container.output_active_event,
+        event_container.streaming_active_event,
         event_container.environment_active_events,
         event_container.controller_ready_event,
         event_container.controller_close_event,

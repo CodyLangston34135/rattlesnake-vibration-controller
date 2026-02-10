@@ -309,7 +309,7 @@ class AcquisitionProcess(AbstractMessageProcess):
             ``command_map``
 
         """
-        self.set_streamimg()
+        self.set_streaming()
         if self.has_streamed:
             self.queue_container.streaming_command_queue.put(self.process_name, (GlobalCommands.CREATE_NEW_STREAM, None))
         else:

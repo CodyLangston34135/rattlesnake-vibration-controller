@@ -24,7 +24,9 @@ from unittest import mock
 @mock.patch("rattlesnake.rattlesnake.Rattlesnake.wait_for_events")
 def rattlesnake_package(mock_wait_event, mock_thread, mock_process, request):
     threaded, blocking = request.param
-    rattlesnake = Rattlesnake(threaded=threaded, blocking=blocking, timeout=1)
+    rattlesnake = Rattlesnake(threaded=threaded, timeout=1)
+    if not blocking:
+        rattlesnake.clear_blocking()
     return (rattlesnake, threaded, blocking)
 
 
@@ -36,7 +38,9 @@ def rattlesnake_package(mock_wait_event, mock_thread, mock_process, request):
 @mock.patch("rattlesnake.rattlesnake.Rattlesnake.wait_for_events")
 def test_rattlesnake_init(mock_wait_event, mock_thread, mock_process, threaded, blocking):
     mock_wait_event.return_value = None
-    rattlesnake = Rattlesnake(threaded=threaded, blocking=blocking, timeout=1)
+    rattlesnake = Rattlesnake(threaded=threaded, timeout=1)
+    if not blocking:
+        rattlesnake.clear_blocking()
 
     assert isinstance(rattlesnake, Rattlesnake)
     if blocking:

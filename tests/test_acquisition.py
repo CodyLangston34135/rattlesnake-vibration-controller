@@ -22,6 +22,7 @@ def acquisition(request):
         "Process Name",
         queue_container,
         event_container.acquisition_active_event,
+        event_container.streaming_active_event,
         event_container.acquisition_ready_event,
     )
     return acquisition
@@ -37,6 +38,7 @@ def test_acquisition_init(use_thread):
         "Process Name",
         queue_container,
         event_container.acquisition_active_event,
+        event_container.streaming_active_event,
         event_container.acquisition_ready_event,
     )
 
@@ -280,6 +282,7 @@ def test_acquisition_process_func(mock_acquisition, use_thread):
         queue_container,
         acquisition_active,
         event_container.acquisition_ready_event,
+        event_container.streaming_active_event,
         event_container.acquisition_close_event,
     )
 
