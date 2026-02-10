@@ -1,14 +1,10 @@
-from rattlesnake.rattlesnake import Rattlesnake
-from rattlesnake.hardware.sdynpy_system import SDynPySystemMetadata
 from rattlesnake.hardware.hardware_utilities import Channel
-from rattlesnake.user_interface.user_interface import RattlesnakeUI
-from qtpy import QtWidgets, QtCore
-import sys
+from rattlesnake.hardware.sdynpy_system import SDynPySystemMetadata
 
 BUFFER_SIZE = 0.05
 
 
-def test_sdynpy_metadata():
+def make_sdynpy_system_metadata():
     excitation_1 = Channel()
     excitation_1.node_number = 2000038
     excitation_1.node_direction = "X+"
@@ -58,27 +54,3 @@ def test_sdynpy_metadata():
     hardware_metadata.hardware_file = "E:/Rattlesnake/SampleData/sample_system.npz"
 
     return hardware_metadata
-
-
-if __name__ == "__main__":
-    hardware_metadata = test_sdynpy_metadata()
-
-    rattlesnake = Rattlesnake(threaded=True, blocking=False, timeout=10)
-    rattlesnake.set_hardware(hardware_metadata)
-
-    # This is a fix for scaling Rattlesnake to different resolution monitors
-    font_size = 10  # pt size
-    QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
-    QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
-    QtWidgets.QApplication.setHighDpiScaleFactorRoundingPolicy(QtCore.Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
-    app = QtWidgets.QApplication(sys.argv)
-    screen = app.primaryScreen()
-    dpi = screen.logicalDotsPerInch()
-    scale_factor = dpi / 96  # 96 DPI = standard
-    font = app.font()
-    font.setPointSizeF(font_size * scale_factor)  # base font 12pt
-    app.setFont(font)
-    _ = RattlesnakeUI(rattlesnake)
-    app.exec_()
-
-    rattlesnake.shutdown()

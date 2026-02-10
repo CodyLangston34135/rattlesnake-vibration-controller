@@ -105,19 +105,25 @@ class SDynPySystemMetadata(HardwareMetadata):
         super().validate()
         # Validate node number
         self.detect_devices()
+        has_physical = False
         for row, channel in enumerate(self.channel_list):
             if str(channel.node_number) not in self.valid_node_numbers:
                 raise ValueError(f"Invalid node number in channel table row {row}")
             if channel.node_direction not in self.valid_node_directions(str(channel.node_number)):
                 raise ValueError(f"Invalid node direction in channel table row {row}")
-            if channel.physical_device == "":
+            if channel.physical_device is None:
                 raise ValueError(f"Physical device should be 'Virtual' in channel table row {row}")
-            if str(channel.channel_type).lower() == "force" and channel.feedback_device == "":
+            if str(channel.channel_type).lower() == "force" and channel.feedback_device is None:
                 raise ValueError(f"Force channel types require 'Virtual' feedback device in channel table row {row}")
             if str(channel.channel_type).lower() not in self.accepted_channel_type_strings:
                 raise ValueError(
                     f"Invalid channel type in channel table row {row}. Valid channel types include 'Displacement', 'Velocity', 'Acceleration', 'Force'"
                 )
+            if channel.physical_device is not None and channel.feedback_device is None:
+                has_physical = True
+
+        if not has_physical:
+            raise ValueError("SDynPy channel table requires atleast 1 physical device without an assigned feedback device")
 
         return True
 

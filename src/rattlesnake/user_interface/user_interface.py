@@ -20,7 +20,6 @@ import sys
 import os
 from datetime import datetime
 
-
 TASK_NAME = "UI"
 VERSION = "3.1.1"
 directory = os.path.split(__file__)[0]
@@ -36,6 +35,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         # Communication objects
         self.rattlesnake = rattlesnake
+        self.rattlesnake.clear_blocking()
         self.environment_uis = {}
 
         # Updater process
@@ -136,6 +136,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # Hardware
         self.hardware_selector.currentTextChanged.connect(self.update_hardware)
         self.initialize_hardware_button.clicked.connect(self.initialize_hardware)
+        self.select_file_button.clicked.connect(self.select_hardware_file)
         # Environment Channeel Table
         environment_table_scroll = self.environment_channel_table.verticalScrollBar()
         environment_table_scroll.valueChanged.connect(self.sync_channel_table)
@@ -441,6 +442,13 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             for widget in widgets:
                 widget.setVisible(name in visible_widgets)
 
+    def select_hardware_file(self):
+        filename, file_filter = QtWidgets.QFileDialog.getOpenFileName(self, "Load a SDynPy System", filter="Numpy File (*.npz)")
+        # Check for 'cancel' dialog
+        if filename == "" or filename is None:
+            return
+        self.hardware_file = filename
+
     def initialize_hardware(self):
         self.log("Initializing Hardware")
 
@@ -463,9 +471,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 hardware_metadata.channel_list = environment_channel_list[environment_name]
                 environment_ui.initialize_hardware(hardware_metadata)
 
-        except Exception:
-            tb = traceback.format_exc()
-            self.initialize_hardware_error(tb)
+        except Exception as e:
+            self.initialize_hardware_error(e)
             return
 
         # Block until hardware metadata has been stored
@@ -760,7 +767,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
 
 if __name__ == "__main__":
-    rattlesnake = Rattlesnake(threaded=True, blocking=False, timeout=10)
+    from rattlesnake.user_interface.example_files.metadata import make_sdynpy_system_metadata
+
+    hardware_metadata = make_sdynpy_system_metadata()
+
+    rattlesnake = Rattlesnake(threaded=True, timeout=10)
+    rattlesnake.set_hardware(hardware_metadata)
 
     # This is a fix for scaling Rattlesnake to different resolution monitors
     font_size = 10  # pt size

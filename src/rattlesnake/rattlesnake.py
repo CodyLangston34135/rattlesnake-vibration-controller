@@ -32,10 +32,10 @@ class RattlesnakeState(Enum):
 
 # region: Rattlesnake
 class Rattlesnake:
-    def __init__(self, *, threaded: bool = THREADING, blocking: bool = True, timeout: float = 30):
+    def __init__(self, *, threaded: bool = THREADING, timeout: float = 30):
         # Initialize values for checking state
         self._threaded = threaded
-        self._blocking = blocking  # Wait for ready events?, True for IDE, False for UI
+        self._blocking = True  # Wait for ready events?, True for IDE, False for UI
         self._timeout = timeout  # Timeout while waiting for ready_events
 
         if self.threaded:
@@ -242,6 +242,12 @@ class Rattlesnake:
     @property
     def timeout(self):
         return self._timeout
+
+    def set_blocking(self):
+        self._blocking = True
+
+    def clear_blocking(self):
+        self._blocking = False
 
     def wait_for_events(
         self, ready_event_list: List[mp.synchronize.Event], active_event_list: List[mp.synchronize.Event], *, active_event_check: bool = None
