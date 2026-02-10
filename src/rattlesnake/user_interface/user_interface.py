@@ -137,12 +137,15 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.hardware_selector.currentTextChanged.connect(self.update_hardware)
         self.initialize_hardware_button.clicked.connect(self.initialize_hardware)
         self.select_file_button.clicked.connect(self.select_hardware_file)
-        # Environment Channeel Table
+        # Environment Channel Table
         environment_table_scroll = self.environment_channel_table.verticalScrollBar()
         environment_table_scroll.valueChanged.connect(self.sync_channel_table)
         self.add_environment_combobox.currentTextChanged.connect(self.add_environment)
         self.remove_environment_button.clicked.connect(self.remove_environment)
         self.environment_channel_table.horizontalHeader().sectionDoubleClicked.connect(self.rename_environment)
+
+        # Environment Definition Tab
+        self.initialize_environments_button.clicked.connect(self.initialize_environments)
 
     @property
     def gui_update_queue(self):
@@ -509,7 +512,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.initialize_hardware_button.setEnabled(True)
         self.display_error(error_message)
 
-    # region: Environment table
+    # region: Environment
     def get_environment_channel_list(self):
         channel_list = self.get_channel_list()
         environment_channel_list = {}
@@ -682,6 +685,56 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             run_widget = environment_ui.run_widget
             if run_widget is not None:
                 self.run_environment_tabs.addTab(run_widget, environment_name)
+
+    def initialize_environments(self):
+        self.log("Initializing Environment")
+
+        # Prevent user from initializing multiple times
+        self.initialize_environments_button.setEnabled(False)
+
+        try:
+            # Build environment metadata list
+            environment_metadata_list = []
+            for environment_ui in self.environment_uis.values():
+                metadata = environment_ui.get_environment_metadata()
+                environment_metadata_list.append(metadata)
+
+            # Send hardware metadata to rattlesnake
+            self.rattlesnake.set_environments(environment_metadata_list)
+
+        except Exception as e:
+            self.initialize_environments_error(e)
+            return
+
+        # Block until environment metadata has been stored
+        ready_event_list = [
+            self.rattlesnake.event_container.acquisition_ready_event,
+            self.rattlesnake.event_container.output_ready_event,
+            *self.rattlesnake.environment_manager.ready_event_list,
+        ]
+        active_event_list = []
+        active_event_list = []
+        self.create_event_watcher(ready_event_list, active_event_list)
+        self.event_watcher.ready.connect(self.initialize_environments_ready)
+        self.event_watcher.error.connect(self.initialize_environments_error)
+        self.event_thread.start()
+
+    def initialize_environments_ready(self):
+        # Clear QThread
+        self.cleanup_event_watcher()
+
+        # Unlock UI
+        self.initialize_environments_button.setEnabled(True)
+        self.rattlesnake_tabs.setTabEnabled(2, True)
+        self.rattlesnake_tabs.setCurrentIndex(2)
+
+    def initialize_environments_error(self, error_message):
+        # Clear QThread
+        self.cleanup_event_watcher()
+
+        # Unlock UI
+        self.initialize_environments_button.setEnabled(True)
+        self.display_error(error_message)
 
     # region: Global
     def change_color_theme(self, text: str):

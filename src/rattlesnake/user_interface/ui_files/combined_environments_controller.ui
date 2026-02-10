@@ -799,12 +799,12 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_4">
         <item>
-         <layout class="QHBoxLayout" name="initialize_environment">
+         <layout class="QHBoxLayout" name="initialize_environments_layout">
           <property name="bottomMargin">
            <number>0</number>
           </property>
           <item>
-           <spacer name="initialize_environment_spacer">
+           <spacer name="initialize_environments_spacer">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
@@ -817,9 +817,9 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
            </spacer>
           </item>
           <item>
-           <widget class="QPushButton" name="initialize_environment_button">
+           <widget class="QPushButton" name="initialize_environments_button">
             <property name="text">
-             <string>Initialize Environment</string>
+             <string>Initialize Environments</string>
             </property>
            </widget>
           </item>
