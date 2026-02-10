@@ -1,7 +1,7 @@
 from rattlesnake.rattlesnake import Rattlesnake
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.environment.abstract_environment import EnvironmentMetadata
+from rattlesnake.environment.abstract_environment import ControlTypes, EnvironmentMetadata
 import multiprocessing as mp
 import netCDF4 as nc4
 import openpyxl
@@ -18,6 +18,7 @@ class AbstractUI(ABC):
     @abstractmethod
     def __init__(
         self,
+        environment_type: ControlTypes,
         environment_name: str,
         rattlesnake: Rattlesnake,
     ):
@@ -46,6 +47,7 @@ class AbstractUI(ABC):
 
 
         """
+        self.environment_type = environment_type
         self.environment_name = environment_name
         self.rattlesnake = rattlesnake
         self.definition_widget = None

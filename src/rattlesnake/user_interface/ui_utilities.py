@@ -205,7 +205,7 @@ class EditableCombobox(QtWidgets.QComboBox):
         if "" not in texts:
             texts.insert(0, "")
 
-        value = str(value) if not value is None else ""
+        value = str(value) if value is not None else ""
         if value not in texts:
             texts.insert(0, value)
 
@@ -220,7 +220,7 @@ class EditableCombobox(QtWidgets.QComboBox):
         super().addItems(texts)
 
     def setCurrentText(self, value: str):
-        value = str(value) if not value is None else ""
+        value = str(value) if value is not None else ""
 
         super().blockSignals(True)
         super().setCurrentText(value)

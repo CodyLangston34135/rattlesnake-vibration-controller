@@ -13,12 +13,13 @@ from rattlesnake.user_interface.ui_utilities import (
     ui_path,
 )
 from rattlesnake.hardware.hardware_utilities import HardwareType, HardwareModules, Channel
-from rattlesnake.environment.environment_utilities import ControlTypes, environment_long_names
+from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.profile_manager import VALID_COMMANDS
 from qtpy import QtWidgets, QtGui, QtCore, uic
-import traceback
 import ctypes
 import sys
 import os
+import pyqtgraph
 from datetime import datetime
 
 TASK_NAME = "UI"
@@ -61,28 +62,30 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
     def complete_ui(self):
 
-        # Rattlesnake
+        # Universal
         self.setMinimumWidth(500)
         # Disable all tabs except the first
         for i in range(1, self.rattlesnake_tabs.count() - 1):
             self.rattlesnake_tabs.setTabEnabled(i, False)
         self.rattlesnake_tabs.tabBar().setTabVisible(2, False)
         self.rattlesnake_tabs.tabBar().setTabVisible(3, False)
+        # Set icons and window
+        icon = QtGui.QIcon("logo/Rattlesnake_Icon.png")
+        self.tray_icon = QtWidgets.QSystemTrayIcon(self)
+        self.tray_icon.setIcon(icon)
+        self.tray_icon.show()
+        if sys.platform.startswith("win"):  # This fixes windows treating taskbar icon as python.exe
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(f"sandia.rattlesnake.{VERSION}")
+        self.setWindowIcon(icon)
+        self.setWindowTitle("Rattlesnake Vibration Controller")
+        self.change_color_theme("Light")
 
-        # Data Setup Tab
         # Channel Table
         self.table_layout.setStretch(0, 5)  # Channel table
         self.table_layout.setStretch(1, 1)  # Environments table
         self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
-        # Environment Channel Table
-        self.environment_channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
-        self.environment_channel_table.horizontalHeader().setVisible(True)
-        self.environment_channel_table.verticalHeader().setVisible(True)
-        self.environment_channel_table.setColumnCount(0)
-        self.environment_channel_table.hide()
-        for control in ControlTypes:
-            self.add_environment_combobox.addItem(control.name)
-        # Hardware Widgets
+
+        # Hardware
         self.hardware_widgets = {
             "hardware_selector": [self.hardware_selector_label, self.hardware_selector],
             "sample_rate": [self.sample_rate_label, self.sample_rate_selector],
@@ -98,23 +101,23 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         }
         self.update_hardware_widget_visibility()
 
-        # Set icons and window
-        icon = QtGui.QIcon("logo/Rattlesnake_Icon.png")
-        self.tray_icon = QtWidgets.QSystemTrayIcon(self)
-        self.tray_icon.setIcon(icon)
-        self.tray_icon.show()
-        if sys.platform.startswith("win"):  # This fixes windows treating taskbar icon as python.exe
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(f"sandia.rattlesnake.{VERSION}")
-        self.setWindowIcon(icon)
-        self.setWindowTitle("Rattlesnake Vibration Controller")
-        self.change_color_theme("Light")
+        # Environment
+        for control in ControlTypes:
+            self.add_environment_combobox.addItem(control.name)
+        self.environment_channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+        self.environment_channel_table.horizontalHeader().setVisible(True)
+        self.environment_channel_table.verticalHeader().setVisible(True)
+        self.environment_channel_table.setColumnCount(0)
+        self.environment_channel_table.hide()
+
+        # Profile
+        self.profile_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
 
     # region: Callbacks
     def connect_callbacks(self):
         # Universal
         self.color_theme_combobox.currentTextChanged.connect(self.change_color_theme)
 
-        # Data Setup Tab
         # Channel Table
         channel_table_scroll = self.channel_table.verticalScrollBar()
         channel_table_scroll.valueChanged.connect(self.sync_environment_table)
@@ -138,15 +141,18 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.hardware_selector.currentTextChanged.connect(self.update_hardware)
         self.initialize_hardware_button.clicked.connect(self.initialize_hardware)
         self.select_file_button.clicked.connect(self.select_hardware_file)
-        # Environment Channel Table
+
+        # Environments
         environment_table_scroll = self.environment_channel_table.verticalScrollBar()
         environment_table_scroll.valueChanged.connect(self.sync_channel_table)
         self.add_environment_combobox.currentTextChanged.connect(self.add_environment)
         self.remove_environment_button.clicked.connect(self.remove_environment)
         self.environment_channel_table.horizontalHeader().sectionDoubleClicked.connect(self.rename_environment)
-
-        # Environment Definition Tab
         self.initialize_environments_button.clicked.connect(self.initialize_environments)
+
+        # Profiles
+        self.add_profile_event_button.clicked.connect(self.add_profile_event)
+        self.remove_profile_event_button.clicked.connect(self.remove_profile_event)
 
     @property
     def gui_update_queue(self):
@@ -646,7 +652,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         if len(self.environment_uis) == 0:
             self.environment_channel_table.hide()
 
-    def rename_environment(self, col_idx: int, new_name: str):
+    def rename_environment(self, col_idx: int, new_name: str = None):
         """Function to rename an environment
 
         Parameters
@@ -785,6 +791,97 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.initialize_environments_button.setEnabled(True)
         self.display_error(error_message)
 
+    # region: Profile
+    def add_profile_event(self, clicked=None):
+        # Create new row in profile table
+        selected_row = self.profile_table.rowCount()
+        self.profile_table.insertRow(selected_row)
+
+        # Add spinbox to select time
+        timestamp_spinbox = QtWidgets.QDoubleSpinBox()
+        timestamp_spinbox.setMaximum(1e6)
+        self.profile_table.setCellWidget(selected_row, 0, timestamp_spinbox)
+        timestamp_spinbox.valueChanged.connect(self.update_profile_plot)
+
+        # Add combobox with environment names
+        environment_combobox = QtWidgets.QComboBox()
+        environment_combobox.addItem("Global")
+        for environment_name in self.environment_uis.keys():
+            environment_combobox.addItem(environment_name)
+        self.profile_table.setCellWidget(selected_row, 1, environment_combobox)
+        environment_combobox.currentTextChanged.connect(lambda text, row=selected_row: self.update_profile_operations(text, row))
+
+        operation_combobox = QtWidgets.QComboBox()
+        valid_commands = VALID_COMMANDS["Global"]
+        valid_operations = [command.name.replace("_", " ").title() for command in valid_commands]
+        for command, operation in zip(valid_commands, valid_operations):
+            operation_combobox.addItem(operation, userData=command)
+        self.profile_table.setCellWidget(selected_row, 2, operation_combobox)
+        operation_combobox.currentIndexChanged.connect(self.update_profile_plot)
+
+        self.update_profile_plot()
+
+    def remove_profile_event(self, clicked=None):
+        selected_row = self.profile_table.currentRow()
+        if selected_row >= 0:
+            self.profile_table.removeRow(selected_row)
+
+        self.update_profile_plot()
+
+    def update_profile_operations(self, environment_name, row):
+        """Update profile operations given a selected environment"""
+        if environment_name == "Global":
+            environment_type = "Global"
+        else:
+            environment_type = self.environment_uis[environment_name].environment_type
+
+        # Find valid commands for that environment type
+        valid_commands = VALID_COMMANDS[environment_type]
+        valid_operations = [command.name.replace("_", " ").title() for command in valid_commands]
+
+        # Set operation combobox to those commands
+        operation_combobox = self.profile_table.cellWidget(row, 2)
+        operation_combobox.blockSignals(True)
+        operation_combobox.clear()
+        for command, operation in zip(valid_commands, valid_operations):
+            operation_combobox.addItem(operation, userData=command)
+        operation_combobox.blockSignals(False)
+
+        self.update_profile_plot()
+
+    def update_profile_plot(self):
+        """Updates the plot of profile events"""
+        # Format plot
+        plot_item = self.profile_timeline_plot.getPlotItem()
+        plot_item.clear()
+        plot_item.showGrid(True, True, 0.25)
+        plot_item.disableAutoRange()
+
+        max_time = 0
+        for row in range(self.profile_table.rowCount()):
+            timestamp = self.profile_table.cellWidget(row, 0).value()
+            environment_index = self.profile_table.cellWidget(row, 1).currentIndex()
+            operation = self.profile_table.cellWidget(row, 2).currentText()
+            data = self.profile_table.item(row, 3)
+            data = data.text() if data is not None else ""
+            data = data if data.strip() != "" else ""
+
+            # Add point and text to plot at correct location
+            plot_item.plot([timestamp], [environment_index], pen=None, symbol="o", pxMode=True)
+            text_item = pyqtgraph.TextItem(f"{row + 1}: " + operation + (": " + data), color=(0, 0, 0), angle=-15)
+            plot_item.addItem(text_item)
+            text_item.setPos(timestamp, environment_index)
+
+            if timestamp > max_time:
+                max_time = timestamp
+
+        # Label axis and scale range
+        environment_names = list(self.environment_uis.keys())
+        axis = plot_item.getAxis("left")
+        axis.setTicks([[(i, name) for i, name in enumerate(["Global"] + environment_names)], []])
+        plot_item.setXRange(0, max_time * 1.1)
+        plot_item.setYRange(-1, len(environment_names))
+
     # region: Global
     def change_color_theme(self, text: str):
         """Updates the color scheme of the UI"""
@@ -815,7 +912,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.gui_update_queue.put(
             (
                 UICommands.ERROR,
-                (f"Rattlesnake Error", f"ERROR:\n\n{error_message}"),
+                ("Rattlesnake Error", f"ERROR:\n\n{error_message}"),
             )
         )
 
