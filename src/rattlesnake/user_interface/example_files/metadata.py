@@ -1,6 +1,8 @@
+from rattlesnake.utilities import GlobalCommands
+from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.hardware.hardware_utilities import Channel
 from rattlesnake.hardware.sdynpy_system import SDynPySystemMetadata
-from rattlesnake.environment.time_environment import TimeMetadata
+from rattlesnake.environment.time_environment import TimeMetadata, TimeInstructions, TimeCommands
 import numpy as np
 
 BUFFER_SIZE = 0.05
@@ -58,7 +60,7 @@ def make_sdynpy_system_metadata():
     return hardware_metadata
 
 
-def make_time_environment_metadata(hardware_metadata):
+def make_time_environment_metadata(hardware_metadata, environment_name="My Time"):
     num_rows = 3
     num_samples = 10000
     sample_rate = 1000  # Hz
@@ -71,10 +73,39 @@ def make_time_environment_metadata(hardware_metadata):
     signal = np.zeros((num_rows, num_samples))
     signal[0, :] = np.sin(2 * np.pi * frequency * t)  # sine wave in first row
 
-    time_metadata = TimeMetadata("My Time")
+    time_metadata = TimeMetadata(environment_name)
     time_metadata.channel_list = hardware_metadata.channel_list
     time_metadata.sample_rate = 1000
     time_metadata.output_signal = signal
     time_metadata.cancel_rampdown_time = 0.5
 
     return time_metadata
+
+
+def make_time_environment_event_list(environment_name="My Time"):
+    timestamp = 0
+    command = GlobalCommands.START_STREAMING
+    start_stream_event = ProfileEvent(timestamp, "Global", command)
+
+    timestamp = 2
+    command = GlobalCommands.START_ENVIRONMENT
+    time_instructions = TimeInstructions(environment_name)
+    time_instructions.current_test_level = 1
+    time_instructions.repeat = True
+    start_environment_event = ProfileEvent(timestamp, environment_name, command, time_instructions)
+
+    timestamp = 4
+    command = TimeCommands.SET_TEST_LEVEL
+    data = 2
+    set_level_event = ProfileEvent(timestamp, environment_name, command, data)
+
+    timestamp = 6
+    command = GlobalCommands.STOP_ENVIRONMENT
+    stop_environment_event = ProfileEvent(timestamp, environment_name, command)
+
+    timestamp = 8
+    command = GlobalCommands.STOP_STREAMING
+    stop_stream_event = ProfileEvent(timestamp, "Global", command)
+
+    profile_event_list = [start_stream_event, start_environment_event, set_level_event, stop_environment_event, stop_stream_event]
+    return profile_event_list

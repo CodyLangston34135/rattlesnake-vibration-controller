@@ -11,6 +11,7 @@ import multiprocessing as mp
 import multiprocessing.synchronize  # pylint: disable=unused-import
 import multiprocessing.queues as mpqueue
 import queue as thqueue
+from enum import Enum
 from datetime import datetime
 from typing import List
 
@@ -18,6 +19,35 @@ PICKLE_ON_ERROR = False
 
 if PICKLE_ON_ERROR:
     import pickle
+
+
+class EnvironmentCommands(Enum):
+    """
+    Example class for profile commands the environment can recieve from the
+    controller.
+
+    Enums are weird and dont work well with ABCs so this is just an outline
+    for the command object.
+    """
+
+    @property
+    def label(self):
+        """Used by UI as names for commands in profile table"""
+        return self.name.replace("_", " ").title()
+
+    @property
+    def valid_data(self):
+        """
+        This is used to validate data given with the command.
+
+        Map the specific command to a tuple of valid data types. The first
+        element in the tuple will be what the UI tries to convert the data
+        string in the profile table to.
+
+        For example {TimeCommand.SET_TEST_LEVEL: (float, int),
+                     TimeCommand.SET_REPEAT: (type(None),)}.get(self)
+        """
+        return {}.get(self)
 
 
 # region: EnvironmentMetadata

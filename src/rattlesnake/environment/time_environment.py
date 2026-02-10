@@ -23,9 +23,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-from rattlesnake.environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions, EnvironmentProcess
-from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands
+from rattlesnake.math_operations import db2scale
+from rattlesnake.environment.abstract_environment import EnvironmentCommands, EnvironmentMetadata, EnvironmentInstructions, EnvironmentProcess
+from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.user_interface.ui_utilities import TimeUICommands
 import copy
@@ -42,18 +43,23 @@ TEST_LEVEL_THRESHOLD = 1.01
 
 
 # region: TimeCommands
-class TimeCommands(Enum):
+class TimeCommands(EnvironmentCommands):
     SET_TEST_LEVEL = 0
     SET_REPEAT = 1
     SET_NO_REPEAT = 2
 
     @property
+    def label(self):
+        """Used by UI as names for commands in profile table"""
+        return self.name.replace("_", " ").title()
+
+    @property
     def valid_data(self):
         return {
-            TimeCommands.SET_TEST_LEVEL: (int, float),
-            TimeCommands.SET_REPEAT: None,
-            TimeCommands.SET_NO_REPEAT: None,
-        }[self]
+            TimeCommands.SET_TEST_LEVEL: (float, int),
+            TimeCommands.SET_REPEAT: (type(None),),
+            TimeCommands.SET_NO_REPEAT: (type(None),),
+        }.get(self)
 
 
 # region: TimeMetadata
@@ -423,7 +429,7 @@ class TimeEnvironment(EnvironmentProcess):
             New target test level
 
         """
-        self.test_level_target = data
+        self.test_level_target = db2scale(data)
         self.test_level_change = (self.test_level_target - self.current_test_level) / self.metadata.cancel_rampdown_samples
         if self.test_level_change != 0.0:
             self.log(

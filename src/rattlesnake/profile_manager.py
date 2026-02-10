@@ -13,10 +13,18 @@ VALID_COMMANDS = {
     ControlTypes.TIME: (
         GlobalCommands.START_ENVIRONMENT,
         GlobalCommands.STOP_ENVIRONMENT,
+        GlobalCommands.SET_ENVIRONMENT_INSTRUCTIONS,
         *TimeCommands,
     ),
 }
-VALID_DATA = {GlobalCommands.START_ENVIRONMENT: EnvironmentInstructions}
+VALID_DATA = {
+    GlobalCommands.STOP_HARDWARE: (type(None),),
+    GlobalCommands.START_STREAMING: (type(None),),
+    GlobalCommands.STOP_STREAMING: (type(None),),
+    GlobalCommands.START_ENVIRONMENT: (EnvironmentInstructions,),
+    GlobalCommands.STOP_ENVIRONMENT: (type(None),),
+    GlobalCommands.SET_ENVIRONMENT_INSTRUCTIONS: (EnvironmentInstructions,),  # Dont use this in headless
+}
 VALID_DATA.update({command: command.valid_data for command in TimeCommands})
 
 

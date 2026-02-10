@@ -2,10 +2,10 @@ from rattlesnake.rattlesnake import Rattlesnake
 from rattlesnake.user_interface.abstract_user_interface import AbstractUI
 from rattlesnake.user_interface.ui_utilities import TimeUICommands, environment_definition_ui_paths, environment_run_ui_paths, multiline_plotter
 from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands
-from rattlesnake.math_operations import load_time_history, rms_time, db2scale
+from rattlesnake.math_operations import load_time_history, rms_time
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_utilities import ControlTypes
-from rattlesnake.environment.time_environment import TimeMetadata, TimeInstructions
+from rattlesnake.environment.time_environment import TimeMetadata, TimeInstructions, TimeCommands
 import openpyxl
 import traceback
 import multiprocessing as mp
@@ -18,6 +18,7 @@ MAX_RESPONSES_TO_PLOT = 20
 MAX_SAMPLES_TO_PLOT = 100000
 
 
+# region: Init
 class TimeUI(AbstractUI):
     """Class defining the user interface for a Random Vibration environment.
 
@@ -103,7 +104,7 @@ class TimeUI(AbstractUI):
         self.run_widget.start_test_button.clicked.connect(self.start_control)
         self.run_widget.stop_test_button.clicked.connect(self.stop_control)
 
-    ## Store/Export metadata methods
+    # region: Metadata
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         """Update the user interface with data acquisition parameters
 
@@ -258,7 +259,31 @@ class TimeUI(AbstractUI):
 
         self.show_signal()
 
-    ## Callbacks
+    def get_environment_instructions(self):
+        instruction = TimeInstructions(self.environment_name)
+        instruction.set_test_level = self.run_widget.test_level_selector.value()
+        instruction.repeat = self.run_widget.repeat_signal_checkbox.isChecked()
+
+        return instruction
+
+    def store_environment_instructions(self, instructions: TimeInstructions):
+        self.run_widget.test_level_selector.setValue(instructions.current_test_level)
+        self.run_widget.repeat_signal_checkbox.setChecked(instructions.repeat)
+
+    def process_profile_event(self, profile_event):
+        command = profile_event.command
+        data = profile_event.data
+        match command:
+            case TimeCommands.SET_TEST_LEVEL:
+                self.run_widget.test_level_selector.setValue(int(data))
+            case TimeCommands.SET_REPEAT:
+                self.run_widget.repeat_signal_checkbox.setChecked(True)
+            case TimeCommands.SET_NO_REPEAT:
+                self.run_widget.repeat_signal_checkbox.setChecked(False)
+            case _:
+                super().process_profile_event(profile_event)
+
+    # region: Callbacks
     def load_signal(self, clicked, filename=None):  # pylint: disable=unused-argument
         """Loads a time signal using a dialog or the specified filename
 
@@ -307,7 +332,7 @@ class TimeUI(AbstractUI):
         """Starts running the environment"""
         try:
             instruction = TimeInstructions(self.environment_name)
-            instruction.current_test_level = db2scale(self.run_widget.test_level_selector.value())
+            instruction.current_test_level = self.run_widget.test_level_selector.value()
             instruction.repeat = self.run_widget.repeat_signal_checkbox.isChecked()
 
             self.rattlesnake.start_environment(instruction)

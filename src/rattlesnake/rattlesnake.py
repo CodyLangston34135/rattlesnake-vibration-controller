@@ -193,6 +193,10 @@ class Rattlesnake:
         self.profile_manager = ProfileManager(self.queue_container)  # Contains instructions/profile events
         self.hardware_metadata = None
         self.environment_metadata = {}
+        # These are only used for UI to pull from if they have already been set to the controller. These
+        # are not used for any logic in this controller
+        self.stream_metadata = None
+        self.profile_event_list = []
 
         if self.blocking:
             ready_event_list = [
@@ -242,6 +246,18 @@ class Rattlesnake:
     @property
     def timeout(self):
         return self._timeout
+
+    @property
+    def has_streamed(self):
+        if self.stream_metadata:
+            return True
+        return False
+
+    @property
+    def has_profile(self):
+        if self.profile_event_list:
+            return True
+        return False
 
     def set_blocking(self):
         self._blocking = True
@@ -293,8 +309,8 @@ class Rattlesnake:
             active_event_list = []
             self.wait_for_events(ready_event_list, active_event_list)
 
-        # Update state
-        self.hardware_metadata = hardware_metadata
+            # Update state
+            self.hardware_metadata = hardware_metadata
 
     def set_environments(self, environment_metadata_list: List[EnvironmentMetadata]):
         """Validates environment_metadata, starts up environment processes, assigns queues,
@@ -326,8 +342,21 @@ class Rattlesnake:
             active_event_list = []
             self.wait_for_events(ready_event_list, active_event_list)
 
-        # Update state
-        self.environment_metadata = self.environment_manager.environment_metadata
+            # Update state
+            self.environment_metadata = self.environment_manager.environment_metadata
+
+    def set_stream_metadata(self, stream_metadata: StreamMetadata):
+        """
+        This is only used to load a stream_metadata to the controller for UI purposes. Start_acquisition
+        still requirs a stream_metadata object so the metadata stored here will never be used.
+        """
+        if self.state != RattlesnakeState.ENVIRONMENT_STORE:
+            raise RuntimeError(f"Invalid state for starting acquisition: {self.state}")
+        if not isinstance(stream_metadata, StreamMetadata):
+            raise TypeError("Rattlesnake.set_stream requires a valid StreamMetadata class")
+        stream_metadata.validate()
+
+        self.stream_metadata = stream_metadata
 
     def start_acquisition(self, stream_metadata: StreamMetadata):
         # Validate Rattlesnake State
@@ -359,6 +388,9 @@ class Rattlesnake:
                 self.event_container.output_active_event,
             ]
             self.wait_for_events(ready_event_list, active_event_list, active_event_check=True)
+
+        # Update stream_metadata
+        self.stream_metadata = stream_metadata
 
     def stop_acquisition(self):
         # Validate rattlesnake state (rattlesnake was acquiring data)
@@ -446,9 +478,24 @@ class Rattlesnake:
             active_event_list = [self.event_container.streaming_active_event]
             self.wait_for_events(ready_event_list, active_event_list, active_event_check=False)
 
-    def start_profile(self, profile_event_list: List[ProfileEvent], *, blocking: bool | None = None):
+    def set_profile_event_list(self, profile_event_list: List[ProfileEvent]):
+        """
+        This is mainly to preload profile event list for UI purposes. You
+        still have to give a profile event list to start_profile so this is
+        not useful for headless opperation
+        """
         self.log("Settting Profile Event List")
-        if self.state != RattlesnakeState.HARDWARE_ACTIVE:
+
+        if self.state not in (RattlesnakeState.ENVIRONMENT_STORE, RattlesnakeState.HARDWARE_ACTIVE):
+            raise RuntimeError(f"Invalid state for storing profile: {self.state}")
+
+        self.environment_manager.validate_profile_events(profile_event_list)
+        self.profile_manager.validate_profile_list(profile_event_list)
+        self.profile_event_list = profile_event_list
+
+    def start_profile(self, profile_event_list: List[ProfileEvent], *, blocking: bool | None = None):
+        self.log("Starting Profile")
+        if self.state not in (RattlesnakeState.HARDWARE_ACTIVE):
             raise RuntimeError(f"Invalid state to start profile: {self.state}")
 
         # Validate and assign queue_names to events
@@ -467,6 +514,8 @@ class Rattlesnake:
             ready_event_list = [self.event_container.controller_ready_event]
             active_event_list = []
             self.wait_for_events(ready_event_list, active_event_list)
+
+            self.profile_event_list = profile_event_list
 
     def stop_profile(self):
         self.log("Stopping Profile")

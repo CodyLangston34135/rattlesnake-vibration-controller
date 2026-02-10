@@ -1,7 +1,9 @@
 from rattlesnake.rattlesnake import Rattlesnake
+from rattlesnake.profile_manager import ProfileEvent
+from rattlesnake.utilities import GlobalCommands
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.environment.abstract_environment import ControlTypes, EnvironmentMetadata
+from rattlesnake.environment.abstract_environment import ControlTypes, EnvironmentMetadata, EnvironmentInstructions
 import multiprocessing as mp
 import netCDF4 as nc4
 import openpyxl
@@ -65,7 +67,7 @@ class AbstractUI(ABC):
         are called when the instruction is executed."""
         return self._command_map
 
-    ## Store/Export metadata methods
+    # region: Metadata
     @abstractmethod
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         """Update the user interface with data acquisition parameters
@@ -107,13 +109,43 @@ class AbstractUI(ABC):
 
         Returns
         -------
-        AbstractMetadata
-            An AbstractMetadata-inheriting object that contains the parameters
+        EnvironmentMetadata
+            An EnvironmentMetadata-inheriting object that contains the parameters
             defining the environment.
 
         """
 
-    ## Callbacks
+    @abstractmethod
+    def get_environment_instructions(self) -> EnvironmentInstructions:
+        """
+        Compiles environment instructions to give to the main environment class
+        when start_environment is called
+
+        Returns
+        -------
+        EnvironmentInstructions
+            An EnvironmentInstructions-inheriting object that contians parameters
+            in the environment likely to change between runs
+        """
+
+    @abstractmethod
+    def process_profile_event(self, profile_event: ProfileEvent):
+        """
+        This is going to be given an ProfileEvent and needs to store it to the UI.
+
+        This can just pass if it doesn't want to do anything with the event.
+        """
+        command = profile_event.command
+        data = profile_event.data
+        match command:
+            case GlobalCommands.START_ENVIRONMENT:
+                pass
+            case GlobalCommands.STOP_ENVIRONMENT:
+                pass
+            case _:
+                pass
+
+    # region: Callbacks
     @abstractmethod
     def start_control(self):
         """Runs the corresponding environment in the controller"""
