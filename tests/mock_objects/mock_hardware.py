@@ -77,14 +77,21 @@ class MockHardwareMetadata(HardwareMetadata):
         self.output_oversample = 1
         self.extra_attr = "attr"
 
-    def validate(self):
-        super().validate()
-        return True
-
     @property
     def extra_attr_list(self):
         super().extra_attr_list
         return ["extra_attr"]
+
+    def validate(self):
+        super().validate()
+        return True
+
+    def valid_channel_dict(self, channel):
+        return super().valid_channel_dict(channel)
+
+    @property
+    def assist_mode_modules(self):
+        return super().assist_mode_modules
 
 
 # region: MockHardwareAcquisition

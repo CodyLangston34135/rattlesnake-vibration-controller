@@ -208,3 +208,28 @@ class HardwareOutput(ABC):
     def ready_for_new_output(self) -> bool:
         """Method that returns true if the hardware should accept a new signal"""
         pass
+
+
+# region: Null Metadata
+class NullHardwareMetadata(HardwareMetadata):
+    """
+    This is a null class that I use to maintain access to abstract methods so that
+    the UI can use it when there is no hardware selected
+    """
+
+    def __init__(self, hardware_type):
+        super().__init__(hardware_type)
+
+    @property
+    def extra_attr_list(self):
+        return []
+
+    def validate(self):
+        return False  # or True, depending on UI logic
+
+    def valid_channel_dict(self, channel: Channel):
+        return super().valid_channel_dict(channel)
+
+    @property
+    def assist_mode_modules(self):
+        return super().assist_mode_modules

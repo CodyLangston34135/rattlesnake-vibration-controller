@@ -378,9 +378,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         hardware_type = HARDWARE_TYPE[hardware_text]
         match hardware_type:
             case "Select":
-                from rattlesnake.user_interface.null_ui_metadata import NullHardwareMetadata
+                from rattlesnake.hardware.abstract_hardware import NullHardwareMetadata
 
-                hardware_metadata = NullHardwareMetadata()
+                hardware_metadata = NullHardwareMetadata("Select")
             case HardwareType.NI_DAQMX:
                 from rattlesnake.hardware.nidaqmx import NIDAQmxMetadata
 
