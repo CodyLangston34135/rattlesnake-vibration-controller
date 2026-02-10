@@ -54,7 +54,17 @@
    <item>
     <layout class="QHBoxLayout" name="signal_display_layout">
      <item>
-      <widget class="PlotWidget" name="signal_display_plot"/>
+      <widget class="PlotWidget" name="signal_display_plot">
+       <property name="backgroundBrush">
+        <brush brushstyle="NoBrush">
+         <color alpha="255">
+          <red>255</red>
+          <green>255</green>
+          <blue>255</blue>
+         </color>
+        </brush>
+       </property>
+      </widget>
      </item>
      <item>
       <widget class="QTableWidget" name="signal_information_table">
