@@ -9,6 +9,7 @@ from rattlesnake.user_interface.ui_utilities import (
     error_message_qt,
     VISIBLE_HARDWARE_WIDGETS,
     HARDWARE_TYPE,
+    ENVIRONMENT_TYPE,
     ui_path,
 )
 from rattlesnake.hardware.hardware_utilities import HardwareType, HardwareModules, Channel
@@ -159,6 +160,18 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
     def timeout(self):
         return self.rattlesnake.timeout
 
+    @property
+    def has_system_id(self):
+        if self.system_id_environment_tabs.count() != 0:
+            return True
+        return False
+
+    @property
+    def has_test_pred(self):
+        if self.test_prediction_environment_tabs.count() != 0:
+            return True
+        return False
+
     # region: Data Loading
     def load_from_rattlesnake_state(self):
         state = self.rattlesnake.state
@@ -167,9 +180,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             case RattlesnakeState.INIT:
                 return
             case RattlesnakeState.HARDWARE_STORE:
-                self.load_hardware_metadata()
+                self.load_hardware_stored()
+            case RattlesnakeState.ENVIRONMENT_STORE:
+                self.load_hardware_stored()
+                self.load_enviroment_store()
 
-    def load_hardware_metadata(self):
+    def load_hardware_stored(self):
         hardware_metadata = self.rattlesnake.hardware_metadata
 
         # Fill out channel table
@@ -195,6 +211,25 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.integration_oversample_selector.setValue(hardware_metadata.output_oversample)
             case _:
                 self.display_error(f"{hardware_metadata.hardware_type} is not yet implemented")
+
+    def load_enviroment_store(self):
+        hardware_metadata = self.rattlesnake.hardware_metadata
+        environment_metadata_dict = self.rattlesnake.environment_metadata
+
+        for environment_idx, environment_metadata in enumerate(environment_metadata_dict.values()):
+            # Add environments
+            environment_type = environment_metadata.environment_type
+            self.add_environment(environment_type)
+
+            environment_name = environment_metadata.environment_name
+            self.rename_environment(environment_idx, environment_name)
+
+            self.environment_uis[environment_name].initialize_hardware(hardware_metadata)
+            self.environment_uis[environment_name].store_metadata(environment_metadata)
+
+        self.update_environment_tabs()
+        self.rattlesnake_tabs.setTabEnabled(1, True)
+        self.rattlesnake_tabs.setCurrentIndex(1)
 
     # region: Channel Table
     def get_channel(self, row):
@@ -538,18 +573,22 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         """Callback to synchronize scrolling between channel tables"""
         self.environment_channel_table.verticalScrollBar().setValue(self.channel_table.verticalScrollBar().value())
 
-    def add_environment(self, environment_str):
+    def add_environment(self, environment_type: str | ControlTypes):
         """Function used to add an environment"""
-        match environment_str:
-            case "Add Environment":
+        # If comming from UI, environment_type will be text in combobox
+        if isinstance(environment_type, str):
+            environment_type = ENVIRONMENT_TYPE[environment_type]
+
+        match environment_type:
+            case "Select":
                 return
-            case "RANDOM":
+            case ControlTypes.RANDOM:
                 return
-            case "TRANSIENT":
+            case ControlTypes.TRANSIENT:
                 return
-            case "SINE":
+            case ControlTypes.SINE:
                 return
-            case "TIME":
+            case ControlTypes.TIME:
                 from rattlesnake.user_interface.time_ui import TimeUI
 
                 # Create a unique name
@@ -560,9 +599,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     environment_name = f"Time Environment {idx}"
 
                 environment_ui = TimeUI(environment_name, self.rattlesnake)
-            case "MODAL":
+            case ControlTypes.MODAL:
                 return
-            case "READ":
+            case ControlTypes.READ:
                 return
             case _:
                 self.display_error("Environment type does not exist. How did you get here?")
@@ -607,7 +646,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         if len(self.environment_uis) == 0:
             self.environment_channel_table.hide()
 
-    def rename_environment(self, col_idx: int):
+    def rename_environment(self, col_idx: int, new_name: str):
         """Function to rename an environment
 
         Parameters
@@ -620,13 +659,15 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         header_item = self.environment_channel_table.horizontalHeaderItem(col_idx)
         current_name = header_item.text()
 
-        # Create dialog box to get a new name
-        new_name, ok_chosen = QtWidgets.QInputDialog.getText(self, "Rename Tab", "Enter new tab name:", text=current_name)
-        if not ok_chosen:
-            return
-        new_name = new_name.strip()
+        # If name not given, ask user for a name
         if not new_name:
-            return
+            # Create dialog box to get a new name
+            new_name, ok_chosen = QtWidgets.QInputDialog.getText(self, "Rename Tab", "Enter new tab name:", text=current_name)
+            if not ok_chosen:
+                return
+            new_name = new_name.strip()
+            if not new_name:
+                return
 
         # Make sure name does not already exist
         if new_name in self.environment_uis:
@@ -725,8 +766,16 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         # Unlock UI
         self.initialize_environments_button.setEnabled(True)
-        self.rattlesnake_tabs.setTabEnabled(2, True)
-        self.rattlesnake_tabs.setCurrentIndex(2)
+
+        if self.has_system_id:
+            self.rattlesnake_tabs.setTabEnabled(2, True)
+            self.rattlesnake_tabs.setCurrentIndex(2)
+        elif self.has_test_pred:
+            self.rattlesnake_tabs.setTabEnabled(3, True)
+            self.rattlesnake_tabs.setCurrentIndex(3)
+        else:
+            self.rattlesnake_tabs.setTabEnabled(4, True)
+            self.rattlesnake_tabs.setCurrentIndex(4)
 
     def initialize_environments_error(self, error_message):
         # Clear QThread
@@ -820,12 +869,14 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
 
 if __name__ == "__main__":
-    from rattlesnake.user_interface.example_files.metadata import make_sdynpy_system_metadata
+    from rattlesnake.user_interface.example_files.metadata import make_sdynpy_system_metadata, make_time_environment_metadata
 
     hardware_metadata = make_sdynpy_system_metadata()
+    environment_metadata = make_time_environment_metadata(hardware_metadata)
 
     rattlesnake = Rattlesnake(threaded=True, timeout=10)
     rattlesnake.set_hardware(hardware_metadata)
+    rattlesnake.set_environments([environment_metadata])
 
     # This is a fix for scaling Rattlesnake to different resolution monitors
     font_size = 10  # pt size

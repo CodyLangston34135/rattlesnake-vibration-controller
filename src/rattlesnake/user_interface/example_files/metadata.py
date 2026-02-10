@@ -1,5 +1,7 @@
 from rattlesnake.hardware.hardware_utilities import Channel
 from rattlesnake.hardware.sdynpy_system import SDynPySystemMetadata
+from rattlesnake.environment.time_environment import TimeMetadata
+import numpy as np
 
 BUFFER_SIZE = 0.05
 
@@ -54,3 +56,25 @@ def make_sdynpy_system_metadata():
     hardware_metadata.hardware_file = "E:/Rattlesnake/SampleData/sample_system.npz"
 
     return hardware_metadata
+
+
+def make_time_environment_metadata(hardware_metadata):
+    num_rows = 3
+    num_samples = 10000
+    sample_rate = 1000  # Hz
+    frequency = 2  # Hz sine wave
+
+    # Create time vector
+    t = np.arange(num_samples) / sample_rate
+
+    # Create signal array
+    signal = np.zeros((num_rows, num_samples))
+    signal[0, :] = np.sin(2 * np.pi * frequency * t)  # sine wave in first row
+
+    time_metadata = TimeMetadata("Time Environment 1")
+    time_metadata.channel_list = hardware_metadata.channel_list
+    time_metadata.sample_rate = 1000
+    time_metadata.output_signal = signal
+    time_metadata.cancel_rampdown_time = 0.5
+
+    return time_metadata

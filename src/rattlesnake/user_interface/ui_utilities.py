@@ -56,6 +56,16 @@ HARDWARE_TYPE = {
     "SDynPy FRF Convolution...": HardwareType.SDYNPY_FRF,
 }
 
+ENVIRONMENT_TYPE = {
+    "Add Environment": "Select",
+    "RANDOM": ControlTypes.RANDOM,
+    "TRANSIENT": ControlTypes.TRANSIENT,
+    "SINE": ControlTypes.SINE,
+    "TIME": ControlTypes.TIME,
+    "MODAL": ControlTypes.MODAL,
+    "READ": ControlTypes.READ,
+}
+
 
 # Define paths to the User Interface UI Files
 environment_definition_ui_paths = {}
