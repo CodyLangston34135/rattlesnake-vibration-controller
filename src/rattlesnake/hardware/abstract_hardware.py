@@ -1,3 +1,4 @@
+from rattlesnake.hardware.hardware_utilities import Channel, HardwareModules
 from abc import ABC, abstractmethod
 from typing import List
 import numpy as np
@@ -77,8 +78,19 @@ class HardwareMetadata(ABC):
         return True
 
     @abstractmethod
-    def valid_channel_dict(self, channel):
-        pass
+    def valid_channel_dict(self, channel: Channel):
+        valid_dict = {}
+        for attr in Channel().channel_attr_list:
+            valid_dict[attr] = []
+        return valid_dict
+
+    @property
+    @abstractmethod
+    def assist_mode_modules(self):
+        assist_modules = {}
+        for attr in Channel().channel_attr_list:
+            assist_modules[attr] = HardwareModules.NONE
+        return assist_modules
 
 
 # region: HardwareAcquisition

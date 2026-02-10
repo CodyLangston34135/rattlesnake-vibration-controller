@@ -1,7 +1,17 @@
 from rattlesnake.rattlesnake import Rattlesnake, RattlesnakeState
 from rattlesnake.utilities import GlobalCommands
-from rattlesnake.user_interface.ui_utilities import UICommands, Updater, EventWatcher, error_message_qt, VISIBLE_HARDWARE_WIDGETS, ui_path
-from rattlesnake.hardware.hardware_utilities import HardwareType, Channel
+from rattlesnake.user_interface.ui_utilities import (
+    UICommands,
+    Updater,
+    EventWatcher,
+    EditableCombobox,
+    EditableSpinBox,
+    error_message_qt,
+    VISIBLE_HARDWARE_WIDGETS,
+    HARDWARE_TYPE,
+    ui_path,
+)
+from rattlesnake.hardware.hardware_utilities import HardwareType, HardwareModules, Channel
 from rattlesnake.environment.environment_utilities import ControlTypes, environment_long_names
 from qtpy import QtWidgets, QtGui, QtCore, uic
 import traceback
@@ -44,7 +54,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.complete_ui()
 
         # Store any presets to the UI
-        self.sync_rattlesnake_state()
+        self.load_from_rattlesnake_state()
 
         self.show()
 
@@ -98,6 +108,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.setWindowTitle("Rattlesnake Vibration Controller")
         self.change_color_theme("Light")
 
+    # region: Callbacks
     def connect_callbacks(self):
         # Universal
         self.color_theme_combobox.currentTextChanged.connect(self.change_color_theme)
@@ -106,39 +117,31 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # Channel Table
         channel_table_scroll = self.channel_table.verticalScrollBar()
         channel_table_scroll.valueChanged.connect(self.sync_environment_table)
-        environment_table_scroll = self.environment_channel_table.verticalScrollBar()
-        environment_table_scroll.valueChanged.connect(self.sync_channel_table)
+        self.assist_channel_table_checkbox.stateChanged.connect(self.assist_channel_table_init)
         # Copy
         self.channel_table_action_copy = QtWidgets.QAction("Copy", self.channel_table)
         self.channel_table_action_copy.setShortcut("Ctrl+C")
-        self.channel_table_action_copy.triggered.connect(self.channel_table_copy)
+        self.channel_table_action_copy.triggered.connect(self.copy_channel_table)
         self.channel_table.addAction(self.channel_table_action_copy)
         # Paste
         self.channel_table_action_paste = QtWidgets.QAction("Paste", self.channel_table)
         self.channel_table_action_paste.setShortcut("Ctrl+V")
-        self.channel_table_action_paste.triggered.connect(self.channel_table_paste)
+        self.channel_table_action_paste.triggered.connect(self.paste_channel_table)
         self.channel_table.addAction(self.channel_table_action_paste)
         # Delete
         self.channel_table_action_delete = QtWidgets.QAction("Delete", self.channel_table)
         self.channel_table_action_delete.setShortcut("Del")
-        self.channel_table_action_delete.triggered.connect(self.channel_table_delete)
+        self.channel_table_action_delete.triggered.connect(self.delete_channel_table)
         self.channel_table.addAction(self.channel_table_action_delete)
         # Hardware
-        self.hardware_selector.currentTextChanged.connect(self.hardware_update)
+        self.hardware_selector.currentTextChanged.connect(self.update_hardware)
         self.initialize_hardware_button.clicked.connect(self.initialize_hardware)
         # Environment Channeel Table
+        environment_table_scroll = self.environment_channel_table.verticalScrollBar()
+        environment_table_scroll.valueChanged.connect(self.sync_channel_table)
         self.add_environment_combobox.currentTextChanged.connect(self.add_environment)
         self.remove_environment_button.clicked.connect(self.remove_environment)
         self.environment_channel_table.horizontalHeader().sectionDoubleClicked.connect(self.rename_environment)
-
-    def sync_rattlesnake_state(self):
-        state = self.rattlesnake.state
-
-        match state:
-            case RattlesnakeState.INIT:
-                return
-            case RattlesnakeState.HARDWARE_STORE:
-                self.load_hardware_metadata()
 
     @property
     def gui_update_queue(self):
@@ -153,6 +156,15 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         return self.rattlesnake.timeout
 
     # region: Data Loading
+    def load_from_rattlesnake_state(self):
+        state = self.rattlesnake.state
+
+        match state:
+            case RattlesnakeState.INIT:
+                return
+            case RattlesnakeState.HARDWARE_STORE:
+                self.load_hardware_metadata()
+
     def load_hardware_metadata(self):
         hardware_metadata = self.rattlesnake.hardware_metadata
 
@@ -180,9 +192,48 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             case _:
                 self.display_error(f"{hardware_metadata.hardware_type} is not yet implemented")
 
-    # region: Data Setup Tab Callbacks
-    def channel_table_copy(self):
+    # region: Channel Table
+    def get_channel(self, row):
+        channel = Channel()
+        channel_attr_list = channel.channel_attr_list
+        for col in range(self.channel_table.columnCount()):
+            attr = channel_attr_list[col]
+            item = self.channel_table.item(row, col)
+            # Check if item exists and has text
+            if item and item.text().strip():
+                setattr(channel, attr, item.text())
+
+        return channel
+
+    def get_channel_list(self):
+        channel_list = []
+        channel_attr_list = Channel().channel_attr_list
+        for row in range(self.channel_table.rowCount()):
+            channel = Channel()
+            for col in range(self.channel_table.columnCount()):
+                attr = channel_attr_list[col]
+                item = self.channel_table.item(row, col)
+                # Check if item exists and has text
+                if item and item.text().strip():
+                    setattr(channel, attr, item.text())
+
+            if channel.is_empty:
+                break
+
+            channel_list.append(channel)
+
+        return channel_list
+
+    def sync_channel_table(self):
+        """Callback to synchronize scrolling between channel tables"""
+        self.channel_table.verticalScrollBar().setValue(self.environment_channel_table.verticalScrollBar().value())
+
+    def copy_channel_table(self):
         """Function to copy text from channel table in a format that Excel recognizes"""
+        if self.assist_channel_table_checkbox.isChecked():
+            self.display_error("Please remove assist mode for copy functionality")
+            return
+
         clipboard = QtWidgets.QApplication.clipboard()
         selected_ranges = self.channel_table.selectedRanges()
         if selected_ranges:
@@ -202,8 +253,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             copied_text = "\n".join(copied_text)  # Newline between rows
             clipboard.setText(copied_text)
 
-    def channel_table_paste(self):
+    def paste_channel_table(self):
         """Function to paste clipboard starting from top left cell"""
+        if self.assist_channel_table_checkbox.isChecked():
+            self.display_error("Please remove assist mode for paste functionality")
+            return
+
         selection_range = self.channel_table.selectedRanges()
         self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
         if selection_range:
@@ -226,8 +281,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                         self.channel_table.setItem(top_left_row + i, top_left_column + j, item)
         self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
 
-    def channel_table_delete(self):
+    def delete_channel_table(self):
         """Function to delete text from a channel table when delete is pressed"""
+        if self.assist_channel_table_checkbox.isChecked():
+            self.display_error("Please remove assist mode for delete functionality")
+            return
+
         selection_range = self.channel_table.selectedRanges()
         self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
         if selection_range:
@@ -242,19 +301,125 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     self.channel_table.setItem(row, column, clear_item)
         self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
 
-    def sync_environment_table(self):
-        """Callback to synchronize scrolling between channel tables"""
-        self.environment_channel_table.verticalScrollBar().setValue(self.channel_table.verticalScrollBar().value())
+    def assist_channel_table_init(self, assist_checked):
+        # Clear out old widgets:
+        num_rows = self.channel_table.rowCount()
+        num_cols = self.channel_table.columnCount()
+        for row in range(num_rows):
+            for col in range(num_cols):
+                self.channel_table.removeCellWidget(row, col)
 
-    def sync_channel_table(self):
-        """Callback to synchronize scrolling between channel tables"""
-        self.channel_table.verticalScrollBar().setValue(self.environment_channel_table.verticalScrollBar().value())
+        # Should be fine
+        if not assist_checked:
+            return
 
-    def hardware_update(self, hardware_text):
+        # Build new modules
+        hardware_metadata = self.get_hardware_metadata_no_channels()
+        channel_list = self.get_channel_list()
+        hardware_modules = hardware_metadata.assist_mode_modules
+        for row, channel in enumerate(channel_list):
+            channel_dict = hardware_metadata.valid_channel_dict(channel)
+            for col, (attr, module) in enumerate(hardware_modules.items()):
+                attr_value = getattr(channel, attr)
+                valid_values = channel_dict[attr]
+                match module:
+                    case HardwareModules.NONE:
+                        pass
+                    case HardwareModules.COMBOBOX:
+                        combobox = EditableCombobox(valid_values, attr_value)
+                        combobox.currentTextChanged.connect(lambda text, row=row, col=col: self.assist_channel_table_update(text, row, col))
+                        self.channel_table.setCellWidget(row, col, combobox)
+                    case HardwareModules.SPINBOX:
+                        pass
+
+        # Fill out empty modules
+        empty_channel_dict = hardware_metadata.valid_channel_dict(Channel())
+        for row in range(len(channel_list), num_rows):
+            for col, (attr, module) in enumerate(hardware_modules.items()):
+                valid_values = empty_channel_dict[attr]
+                match module:
+                    case HardwareModules.NONE:
+                        # item = QtWidgets.QTableWidgetItem(attr_value)
+                        # self.channel_table.setItem(row, col, item)
+                        pass
+                    case HardwareModules.COMBOBOX:
+                        combobox = EditableCombobox(valid_values)
+                        combobox.currentTextChanged.connect(lambda text, row=row, col=col: self.assist_channel_table_update(text, row, col))
+                        self.channel_table.setCellWidget(row, col, combobox)
+                    case HardwareModules.SPINBOX:
+                        pass
+
+    def assist_channel_table_update(self, text, row, col):
+        # Assign text to channel table item
+        item = QtWidgets.QTableWidgetItem(text)
+        self.channel_table.setItem(row, col, item)
+
+        hardware_metadata = self.get_hardware_metadata_no_channels()
+        channel = self.get_channel(row)
+        hardware_modules = hardware_metadata.assist_mode_modules
+        channel_dict = hardware_metadata.valid_channel_dict(channel)
+        for col, (attr, module) in enumerate(hardware_modules.items()):
+            attr_value = getattr(channel, attr)
+            valid_values = channel_dict[attr]
+            match module:
+                case HardwareModules.NONE:
+                    pass
+                case HardwareModules.COMBOBOX:
+                    combobox = EditableCombobox(valid_values, attr_value)
+                    combobox.currentTextChanged.connect(lambda text, row=row, col=col: self.assist_channel_table_update(text, row, col))
+                    self.channel_table.setCellWidget(row, col, combobox)
+                case HardwareModules.SPINBOX:
+                    pass
+
+    # region: Hardware
+    def get_hardware_metadata_no_channels(self):
+
+        hardware_text = self.hardware_selector.currentText()
+        hardware_type = HARDWARE_TYPE[hardware_text]
+        match hardware_type:
+            case "Select":
+                from rattlesnake.user_interface.null_ui_metadata import NullHardwareMetadata
+
+                hardware_metadata = NullHardwareMetadata()
+            case HardwareType.NI_DAQMX:
+                from rattlesnake.hardware.nidaqmx import NIDAQmxMetadata
+
+                hardware_metadata = NIDAQmxMetadata()
+                hardware_metadata.sample_rate = self.sample_rate_selector.value()
+                hardware_metadata.time_per_read = self.buffer_size_selector.value()
+                hardware_metadata.time_per_write = self.buffer_size_selector.value()
+                hardware_metadata.task_trigger = self.task_trigger_selector.text()
+                hardware_metadata.output_trigger_generator = self.trigger_output_selector.value()
+            case HardwareType.LAN_XI:
+                return
+            case HardwareType.DP_QUATTRO:
+                return
+            case HardwareType.DP_900:
+                return
+            case HardwareType.EXODUS:
+                return
+            case HardwareType.STATE_SPACE:
+                return
+            case HardwareType.SDYNPY_SYSTEM:
+                from rattlesnake.hardware.sdynpy_system import SDynPySystemMetadata
+
+                hardware_metadata = SDynPySystemMetadata()
+                hardware_metadata.sample_rate = self.sample_rate_selector.value()
+                hardware_metadata.time_per_read = self.buffer_size_selector.value()
+                hardware_metadata.time_per_write = self.buffer_size_selector.value()
+                hardware_metadata.output_oversample = self.integration_oversample_selector.value()
+                hardware_metadata.hardware_file = self.hardware_file
+            case HardwareType.SDYNPY_FRF:
+                return
+
+        return hardware_metadata
+
+    def update_hardware(self, hardware_text):
         self.update_hardware_widget_visibility()
 
-        match hardware_text:
-            case "SDynPy System Integration...":
+        hardware_type = HARDWARE_TYPE[hardware_text]
+        match hardware_type:
+            case HardwareType.SDYNPY_SYSTEM:
                 filename, file_filter = QtWidgets.QFileDialog.getOpenFileName(self, "Load a SDynPy System", filter="Numpy File (*.npz)")
                 # Check for 'cancel' dialog
                 if filename == "" or filename is None:
@@ -263,6 +428,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     self.hardware_selector.blockSignals(False)
                     return
                 self.hardware_file = filename
+
+        if self.assist_channel_table_checkbox.isChecked():
+            self.assist_channel_table_init(True)
 
     def update_hardware_widget_visibility(self):
         """Helper function to update the visibility of the sampling parameters group box"""
@@ -273,46 +441,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             for widget in widgets:
                 widget.setVisible(name in visible_widgets)
 
-    def get_channel_list(self):
-        channel_list = []
-        channel_attr_list = Channel().channel_attr_list
-        for row_idx in range(self.channel_table.rowCount()):
-            channel = Channel()
-            for col_idx in range(self.channel_table.columnCount()):
-                attr = channel_attr_list[col_idx]
-                item = self.channel_table.item(row_idx, col_idx)
-                # Check if item exists and has text
-                if item and item.text().strip():
-                    setattr(channel, attr, item.text())
-
-            if channel.is_empty:
-                break
-
-            channel_list.append(channel)
-
-        return channel_list
-
-    def get_environment_channel_list(self):
-        channel_list = self.get_channel_list()
-        environment_channel_list = {}
-        num_rows = self.environment_channel_table.rowCount()
-        num_cols = self.environment_channel_table.columnCount()
-        for col in range(num_cols):
-            header_item = self.environment_channel_table.horizontalHeaderItem(col)
-            environment_name = header_item.text()
-            selected_channels = []
-
-            for row in range(num_rows):
-                checkbox = self.environment_channel_table.cellWidget(row, col)
-                if checkbox is None:
-                    continue
-                if checkbox.isChecked():
-                    if row < len(channel_list):
-                        selected_channels.append(channel_list[row])
-            environment_channel_list[environment_name] = selected_channels
-
-        return environment_channel_list
-
     def initialize_hardware(self):
         self.log("Initializing Hardware")
 
@@ -321,52 +449,11 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         try:
             # Build hardware metadata
+            hardware_metadata = self.get_hardware_metadata_no_channels()
             channel_list = self.get_channel_list()
-            hardware_text = self.hardware_selector.currentText()
-            match hardware_text:
-                case "Select Hardware":
-                    self.initialize_hardware_error("Please select a hardware type.")
-                    return
-                case "NI DAQmx":
-                    from rattlesnake.hardware.nidaqmx import NIDAQmxMetadata
-
-                    hardware_metadata = NIDAQmxMetadata()
-                    hardware_metadata.channel_list = channel_list
-                    hardware_metadata.sample_rate = self.sample_rate_selector.value()
-                    hardware_metadata.time_per_read = self.buffer_size_selector.value()
-                    hardware_metadata.time_per_write = self.buffer_size_selector.value()
-                    hardware_metadata.task_trigger = self.task_trigger_selector.text()
-                    hardware_metadata.output_trigger_generator = self.trigger_output_selector.value()
-
-                case "HBK LAN-XI":
-                    self.initialize_hardware_error(f"{hardware_text} has not been implemented yet")
-                    return
-                case "Data Physics Quattro":
-                    self.initialize_hardware_error(f"{hardware_text} has not been implemented yet")
-                    return
-                case "Data Physics 900 Series":
-                    self.initialize_hardware_error(f"{hardware_text} has not been implemented yet")
-                    return
-                case "Exodus Modal Solution...":
-                    self.initialize_hardware_error(f"{hardware_text} has not been implemented yet")
-                    return
-                case "State Space Integration...":
-                    self.initialize_hardware_error(f"{hardware_text} has not been implemented yet")
-                    return
-                case "SDynPy System Integration...":
-                    from rattlesnake.hardware.sdynpy_system import SDynPySystemMetadata
-
-                    hardware_metadata = SDynPySystemMetadata()
-                    hardware_metadata.channel_list = channel_list
-                    hardware_metadata.sample_rate = self.sample_rate_selector.value()
-                    hardware_metadata.time_per_read = self.buffer_size_selector.value()
-                    hardware_metadata.time_per_write = self.buffer_size_selector.value()
-                    hardware_metadata.output_oversample = self.integration_oversample_selector.value()
-                    hardware_metadata.hardware_file = self.hardware_file
-
-                case "SDynPy FRF Convolution...":
-                    self.initialize_hardware_error(f"{hardware_text} has not been implemented yet")
-                    return
+            hardware_metadata.channel_list = channel_list
+            if hardware_metadata.hardware_type == "Select":
+                self.initialize_hardware_error("Please select a hardware type.")
 
             # Send hardware metadata to rattlesnake
             self.rattlesnake.set_hardware(hardware_metadata)
@@ -415,7 +502,32 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.initialize_hardware_button.setEnabled(True)
         self.display_error(error_message)
 
-    # region: Environment callbacks
+    # region: Environment table
+    def get_environment_channel_list(self):
+        channel_list = self.get_channel_list()
+        environment_channel_list = {}
+        num_rows = self.environment_channel_table.rowCount()
+        num_cols = self.environment_channel_table.columnCount()
+        for col in range(num_cols):
+            header_item = self.environment_channel_table.horizontalHeaderItem(col)
+            environment_name = header_item.text()
+            selected_channels = []
+
+            for row in range(num_rows):
+                checkbox = self.environment_channel_table.cellWidget(row, col)
+                if checkbox is None:
+                    continue
+                if checkbox.isChecked():
+                    if row < len(channel_list):
+                        selected_channels.append(channel_list[row])
+            environment_channel_list[environment_name] = selected_channels
+
+        return environment_channel_list
+
+    def sync_environment_table(self):
+        """Callback to synchronize scrolling between channel tables"""
+        self.environment_channel_table.verticalScrollBar().setValue(self.channel_table.verticalScrollBar().value())
+
     def add_environment(self, environment_str):
         """Function used to add an environment"""
         match environment_str:
@@ -564,7 +676,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             if run_widget is not None:
                 self.run_environment_tabs.addTab(run_widget, environment_name)
 
-    # region: Global callbacks
+    # region: Global
     def change_color_theme(self, text: str):
         """Updates the color scheme of the UI"""
         if text == "Light":
@@ -578,7 +690,27 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             stylesheet.replace(r"%%IMAGES_PATH%%", images_path)
             self.setStyleSheet(stylesheet)
 
-    # region: QThread Functions
+    def log(self, string):
+        """Pass a message to the log_file_queue along with date/time and task name
+
+        Parameters
+        ----------
+        string : str
+            Message that will be written to the queue
+
+        """
+        self.log_file_queue.put(f"{datetime.now()}: {TASK_NAME} -- {string}\n")
+
+    def display_error(self, error_message):
+        self.log(f"ERROR\n\n {error_message}")
+        self.gui_update_queue.put(
+            (
+                UICommands.ERROR,
+                (f"Rattlesnake Error", f"ERROR:\n\n{error_message}"),
+            )
+        )
+
+    # region: Events
     def create_event_watcher(self, ready_event_list, active_event_list, active_event_check: bool = None):
         if getattr(self, "event_thread", None) or getattr(self, "event_watcher", None):
             self.initialize_hardware_error("Event watcher is still active")
@@ -619,26 +751,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             pass
         else:
             pass
-
-    def log(self, string):
-        """Pass a message to the log_file_queue along with date/time and task name
-
-        Parameters
-        ----------
-        string : str
-            Message that will be written to the queue
-
-        """
-        self.log_file_queue.put(f"{datetime.now()}: {TASK_NAME} -- {string}\n")
-
-    def display_error(self, error_message):
-        self.log(f"ERROR\n\n {error_message}")
-        self.gui_update_queue.put(
-            (
-                UICommands.ERROR,
-                (f"Rattlesnake Error", f"ERROR:\n\n{error_message}"),
-            )
-        )
 
     def closeEvent(self, event):
         self.gui_update_queue.put((GlobalCommands.QUIT, None))

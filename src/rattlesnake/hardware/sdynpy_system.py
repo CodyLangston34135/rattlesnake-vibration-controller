@@ -22,7 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput, HardwareMetadata
-from rattlesnake.hardware.hardware_utilities import HardwareType, Channel
+from rattlesnake.hardware.hardware_utilities import HardwareType, HardwareModules, Channel
 from rattlesnake.utilities import flush_queue
 import time
 import multiprocessing as mp
@@ -106,9 +106,9 @@ class SDynPySystemMetadata(HardwareMetadata):
         # Validate node number
         self.detect_devices()
         for row, channel in enumerate(self.channel_list):
-            if channel.node_number not in self.valid_node_numbers:
+            if str(channel.node_number) not in self.valid_node_numbers:
                 raise ValueError(f"Invalid node number in channel table row {row}")
-            if channel.node_direction not in self.valid_node_directions(channel.node_number):
+            if channel.node_direction not in self.valid_node_directions(str(channel.node_number)):
                 raise ValueError(f"Invalid node direction in channel table row {row}")
             if channel.physical_device == "":
                 raise ValueError(f"Physical device should be 'Virtual' in channel table row {row}")
@@ -121,9 +121,29 @@ class SDynPySystemMetadata(HardwareMetadata):
 
         return True
 
-    def valid_channel_dict(self, channel):
+    @property
+    def assist_mode_modules(self):
+        assist_mode_modules = super().assist_mode_modules
+        assist_mode_modules["node_number"] = HardwareModules.COMBOBOX
+        assist_mode_modules["node_direction"] = HardwareModules.COMBOBOX
+        assist_mode_modules["physical_device"] = HardwareModules.COMBOBOX
+        assist_mode_modules["channel_type"] = HardwareModules.COMBOBOX
+        assist_mode_modules["feedback_device"] = HardwareModules.COMBOBOX
+        return assist_mode_modules
+
+    def valid_channel_dict(self, channel: Channel):
+        valid_dict = super().valid_channel_dict(channel)
+
         if not self.node_dict:
             self.detect_devices()
+
+        valid_dict["node_number"] = self.valid_node_numbers
+        valid_dict["node_direction"] = self.valid_node_directions(channel.node_number)
+        valid_dict["physical_device"] = self.valid_physical_device
+        valid_dict["channel_type"] = self.valid_channel_types
+        valid_dict["feedback_device"] = self.valid_feedback_device
+
+        return valid_dict
 
     def detect_devices(self):
         try:
@@ -159,10 +179,6 @@ class SDynPySystemMetadata(HardwareMetadata):
         return node_directions
 
     @property
-    def valid_physical_device(self):
-        return ["Virtual"]
-
-    @property
     def valid_channel_types(self):
         channel_types = ["Acceleration", "Velocity", "Displacement", "Force"]
         return channel_types
@@ -180,6 +196,14 @@ class SDynPySystemMetadata(HardwareMetadata):
             "displacement",
         ]
         return channel_types
+
+    @property
+    def valid_physical_device(self):
+        return ["Virtual"]
+
+    @property
+    def valid_feedback_device(self):
+        return ["Virtual"]
 
 
 # region: SDynPySystemAcquisition

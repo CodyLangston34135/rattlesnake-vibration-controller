@@ -1,4 +1,5 @@
 from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands
+from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.environment.environment_utilities import ControlTypes
 import traceback
 import sys
@@ -41,6 +42,18 @@ VISIBLE_HARDWARE_WIDGETS = {
     "State Space Integration...": {"hardware_selector", "sample_rate", "buffer_size", "integration_oversample", "select_file"},
     "SDynPy System Integration...": {"hardware_selector", "sample_rate", "buffer_size", "integration_oversample", "select_file"},
     "SDynPy FRF Convolution...": {"hardware_selector", "sample_rate", "buffer_size", "integration_oversample", "select_file"},
+}
+
+HARDWARE_TYPE = {
+    "Select Hardware": "Select",
+    "NI DAQmx": HardwareType.NI_DAQMX,
+    "HBK LAN-XI": HardwareType.LAN_XI,
+    "Data Physics Quattro": HardwareType.DP_QUATTRO,
+    "Data Physics 900 Series": HardwareType.DP_900,
+    "Exodus Modal Solution...": HardwareType.EXODUS,
+    "State Space Integration...": HardwareType.STATE_SPACE,
+    "SDynPy System Integration...": HardwareType.SDYNPY_SYSTEM,
+    "SDynPy FRF Convolution...": HardwareType.SDYNPY_FRF,
 }
 
 
@@ -176,14 +189,17 @@ class EventWatcher(QtCore.QObject):
 
 
 class EditableCombobox(QtWidgets.QComboBox):
-    def __init__(self, texts=[], parent=None, value=""):
+    def __init__(self, texts=[], value=None, parent=None):
         super().__init__(parent)
 
-        self.setItems(texts)
-
-        self.setEditable(True)
+        if "" not in texts:
+            texts.insert(0, "")
 
         value = str(value) if not value is None else ""
+        if value not in texts:
+            texts.insert(0, value)
+
+        self.setItems(texts)
         self.setCurrentText(value)
 
     def setItems(self, texts: list[str]):
@@ -200,8 +216,8 @@ class EditableCombobox(QtWidgets.QComboBox):
         super().setCurrentText(value)
         super().blockSignals(False)
 
-    def blockSignals(self, b: bool):
-        return super().blockSignals(b)
+    def blockSignals(self, block: bool):
+        return super().blockSignals(block)
 
 
 class EditableSpinBox(QtWidgets.QSpinBox):

@@ -13,6 +13,12 @@ class HardwareType(Enum):
     SDYNPY_FRF = 7
 
 
+class HardwareModules(Enum):
+    NONE = 0
+    COMBOBOX = 2
+    SPINBOX = 1
+
+
 # region: Channel
 class Channel:
     """Property container for a single channel in the controller."""
