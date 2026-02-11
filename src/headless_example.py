@@ -170,12 +170,7 @@ def main():
     rattlesnake.set_hardware(hardware_metadata)
     rattlesnake.set_environments(envrionment_metadata_list)
     rattlesnake.start_acquisition(stream_metadata)
-    rattlesnake.start_profile(profile_event_list, blocking=False)
-
-    app = QtWidgets.QApplication(sys.argv)
-    _ = HeadlessUI(rattlesnake, theme="Dark", debug=False)
-    app.exec_()
-
+    rattlesnake.start_profile(profile_event_list)
     rattlesnake.stop_acquisition()
     rattlesnake.shutdown()
 
