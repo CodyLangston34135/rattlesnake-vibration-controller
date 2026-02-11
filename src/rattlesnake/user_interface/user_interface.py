@@ -44,6 +44,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.environment_uis = {}
         self.profile_table_list = []
         self.profile_timer_list = []
+        self.theme = "Light"
 
         # Updater process
         self.event_thread = None
@@ -75,6 +76,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.rattlesnake_tabs.setTabEnabled(i, False)
         self.rattlesnake_tabs.tabBar().setTabVisible(2, False)
         self.rattlesnake_tabs.tabBar().setTabVisible(3, False)
+        self.channel_monitor_button.setVisible(False)
         # Set icons and window
         icon = QtGui.QIcon("logo/Rattlesnake_Icon.png")
         self.tray_icon = QtWidgets.QSystemTrayIcon(self)
@@ -84,7 +86,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(f"sandia.rattlesnake.{VERSION}")
         self.setWindowIcon(icon)
         self.setWindowTitle("Rattlesnake Vibration Controller")
-        self.change_color_theme("Light")
+        self.change_color_theme(self.theme)
 
         # Channel Table
         self.table_layout.setStretch(0, 5)  # Channel table
@@ -209,7 +211,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             return True
         return False
 
-    # region: Data Loading
+    # region: State Loading
     def load_from_rattlesnake_state(self):
         state = self.rattlesnake.state
         has_profile = self.rattlesnake.has_profile
@@ -1175,6 +1177,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         plot_item.showGrid(True, True, 0.25)
         plot_item.disableAutoRange()
 
+        if self.theme == "Light":
+            text_color = (0, 0, 0)
+        else:
+            text_color = (255, 255, 255)
         max_time = 0
         for row in range(self.profile_table.rowCount()):
             timestamp = self.profile_table.cellWidget(row, 0).value()
@@ -1186,7 +1192,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
             # Add point and text to plot at correct location
             plot_item.plot([timestamp], [environment_index], pen=None, symbol="o", pxMode=True)
-            text_item = pyqtgraph.TextItem(f"{row + 1}: " + operation + (": " + data), color=(0, 0, 0), angle=-15)
+            text_item = pyqtgraph.TextItem(f"{row + 1}: " + operation + (": " + data), color=text_color, angle=-15)
             plot_item.addItem(text_item)
             text_item.setPos(timestamp, environment_index)
 
@@ -1411,6 +1417,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         """Updates the color scheme of the UI"""
         if text == "Light":
             self.setStyleSheet("")
+            self.theme = "Light"
         elif text == "Dark":
             dark_theme_path = os.path.join(directory, "themes", "dark_theme.txt")
             with open(dark_theme_path, encoding="utf-8") as file:
@@ -1419,6 +1426,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             # print(f"Images Path: {images_path}")
             stylesheet.replace(r"%%IMAGES_PATH%%", images_path)
             self.setStyleSheet(stylesheet)
+            self.theme = "Dark"
+
+        self.update_profile_plot()
 
     def log(self, string):
         """Pass a message to the log_file_queue along with date/time and task name

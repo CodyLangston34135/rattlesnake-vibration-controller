@@ -7,8 +7,7 @@ from rattlesnake.environment.time_environment import TimeMetadata, TimeInstructi
 from rattlesnake.environment.read_environment import ReadMetadata
 from rattlesnake.process.streaming import StreamType, StreamMetadata
 from rattlesnake.profile_manager import ProfileEvent, TimeCommands
-from rattlesnake.user_interface.headless_ui import HeadlessUI
-from rattlesnake.math_operations import db2scale
+from rattlesnake.math_utilities import db2scale
 import sys
 import time
 import numpy as np

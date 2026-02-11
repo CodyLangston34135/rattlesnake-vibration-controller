@@ -24,7 +24,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands
-from rattlesnake.math_operations import db2scale
+from rattlesnake.math_utilities import db2scale
 from rattlesnake.environment.abstract_environment import EnvironmentCommands, EnvironmentMetadata, EnvironmentInstructions, EnvironmentProcess
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.user_interface.ui_utilities import UICommands
