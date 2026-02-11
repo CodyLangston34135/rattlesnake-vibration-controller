@@ -27,6 +27,7 @@ from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands
 from rattlesnake.math_operations import db2scale
 from rattlesnake.environment.abstract_environment import EnvironmentCommands, EnvironmentMetadata, EnvironmentInstructions, EnvironmentProcess
 from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 import copy
 import multiprocessing as mp
@@ -55,9 +56,9 @@ class TimeCommands(EnvironmentCommands):
     @property
     def valid_data(self):
         return {
-            TimeCommands.SET_TEST_LEVEL: (float, int),
-            TimeCommands.SET_REPEAT: (type(None),),
-            TimeCommands.SET_NO_REPEAT: (type(None),),
+            TimeCommands.SET_TEST_LEVEL: int,
+            TimeCommands.SET_REPEAT: type(None),
+            TimeCommands.SET_NO_REPEAT: type(None),
         }.get(self)
 
 
@@ -252,7 +253,7 @@ class TimeEnvironment(EnvironmentProcess):
         self.queue_container = queue_container
         # Define command map
         self.command_map[GlobalCommands.START_ENVIRONMENT] = self.run_environment
-        self.command_map[TimeCommands.SET_TEST_LEVEL] = self.adjust_test_level
+        self.command_map[TimeCommands.SET_TEST_LEVEL] = self.set_test_level
         self.command_map[TimeCommands.SET_NO_REPEAT] = self.set_no_repeat
         self.command_map[TimeCommands.SET_REPEAT] = self.set_repeat
         # Persistent data
@@ -330,13 +331,12 @@ class TimeEnvironment(EnvironmentProcess):
         """
         if not self.active:
             if data is not None:
-                self.current_test_level = data.current_test_level
+                self.current_test_level = db2scale(data.current_test_level)
                 self.repeat = data.repeat
-                self.queue_container.gui_update_queue.put((self.environment_name, (GlobalCommands.SET_ENVIRONMENT_INSTRUCTIONS, data)))
+                self.queue_container.gui_update_queue.put((self.environment_name, (UICommands.SET_ENVIRONMENT_INSTRUCTIONS, data)))
                 self.log("Test Level set to {:}".format(self.current_test_level))
             self.signal_remainder = self.metadata.output_signal
             self.set_active()
-            self.queue_container.gui_update_queue.put((self.environment_name, (GlobalCommands.START_ENVIRONMENT, None)))
         # See if any data has come in
         try:
             acquisition_data, last_acquisition = self.queue_container.data_in_queue.get_nowait()
@@ -431,7 +431,7 @@ class TimeEnvironment(EnvironmentProcess):
             New target test level
 
         """
-        self.test_level_target = db2scale(data)
+        self.test_level_target = data
         self.test_level_change = (self.test_level_target - self.current_test_level) / self.metadata.cancel_rampdown_samples
         if self.test_level_change != 0.0:
             self.log(
@@ -439,6 +439,10 @@ class TimeEnvironment(EnvironmentProcess):
                     self.test_level_target, self.current_test_level, self.test_level_change
                 )
             )
+
+    def set_test_level(self, data):
+        level = db2scale(data)
+        self.adjust_test_level(level)
         self.queue_container.gui_update_queue.put((self.environment_name, (TimeCommands.SET_TEST_LEVEL, data)))
 
     def set_no_repeat(self, data=None):
@@ -465,7 +469,6 @@ class TimeEnvironment(EnvironmentProcess):
         self.queue_container.environment_command_queue.flush(self.environment_name)
         # Enable the volume controls
         self.clear_active()
-        self.queue_container.gui_update_queue.put((self.environment_name, (GlobalCommands.STOP_ENVIRONMENT, None)))
 
 
 # region: time_process

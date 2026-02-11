@@ -22,6 +22,12 @@ class UICommands(Enum):
     DISABLE_TAB = 4
     SET_ATTR = 5
     STOP = 6
+    SET_ENVIRONMENT_INSTRUCTIONS = 7
+
+    @property
+    def label(self):
+        """Used by UI as names for"""
+        return self.name.replace("_", " ").title()
 
 
 class ReadUICommands(Enum):

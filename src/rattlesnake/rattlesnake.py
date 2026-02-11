@@ -430,7 +430,7 @@ class Rattlesnake:
             self.wait_for_events(ready_event_list, active_event_list, active_event_check=True)
 
     def stop_environment(self, environment_name: str):
-        if self.state not in (RattlesnakeState.ENVIRONMENT_ACTIVE):
+        if self.state not in (RattlesnakeState.ENVIRONMENT_ACTIVE,):
             raise RuntimeError(f"Invalid state for stopping environment: {self.state}")
         try:
             queue_name = self.environment_manager.queue_names_dict[environment_name]
@@ -445,7 +445,7 @@ class Rattlesnake:
             self.wait_for_events(ready_event_list, active_event_list, active_event_check=False)
 
     def environment_at_target_level(self, environment_name: str):
-        if self.state not in (RattlesnakeState.ENVIRONMENT_ACTIVE):
+        if self.state not in (RattlesnakeState.ENVIRONMENT_ACTIVE,):
             raise RuntimeError(f"Invalid state for streaming at target level: {self.state}")
         try:
             self.environment_manager.queue_names_dict[environment_name]
@@ -495,7 +495,7 @@ class Rattlesnake:
 
     def start_profile(self, profile_event_list: List[ProfileEvent]):
         self.log("Starting Profile")
-        if self.state not in (RattlesnakeState.HARDWARE_ACTIVE):
+        if self.state not in (RattlesnakeState.HARDWARE_ACTIVE,):
             raise RuntimeError(f"Invalid state to start profile: {self.state}")
 
         # Validate and assign queue_names to events

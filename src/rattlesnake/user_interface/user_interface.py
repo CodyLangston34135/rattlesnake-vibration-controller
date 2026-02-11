@@ -218,6 +218,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     self.load_stored_profile()
                 if has_streamed:
                     self.load_stored_stream()
+            case RattlesnakeState.HARDWARE_ACTIVE:
+                self.load_stored_hardware()
+                self.load_stored_environments()
+                if has_profile:
+                    self.load_stored_profile()
+                self.load_stored_stream()
 
     def load_stored_hardware(self):
         hardware_metadata = self.rattlesnake.hardware_metadata
@@ -284,7 +290,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 environment_combobox = self.profile_table.cellWidget(row, 1)
                 environment_combobox.setCurrentText(environment_name)
                 command_combobox = self.profile_table.cellWidget(row, 2)
-                command_combobox.setCurrentText(GlobalCommands.SET_ENVIRONMENT_INSTRUCTIONS.label)
+                command_combobox.setCurrentText(UICommands.SET_ENVIRONMENT_INSTRUCTIONS.label)
                 data_item = QtWidgets.QTableWidgetItem("Environment Instructions Object")
                 data_item.setData(QtCore.Qt.ItemDataRole.UserRole, data)
                 self.profile_table.setItem(row, 3, data_item)
@@ -789,6 +795,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         ordered_dict = {}
         for environment_name, environment_ui in self.environment_uis.items():
             if environment_name == current_name:
+                environment_ui.environment_name = new_name
                 ordered_dict[new_name] = environment_ui
             else:
                 ordered_dict[environment_name] = environment_ui
@@ -1018,32 +1025,29 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             profile_event_list = []
             for timestamp, row, environment_name, command, data_item in profile_table_list:
 
-                # Build data from global commands
+                # Walk through commands and
                 if command is GlobalCommands.START_ENVIRONMENT:
                     data = self.environment_uis[environment_name].get_environment_instructions()
-                elif command is GlobalCommands.SET_ENVIRONMENT_INSTRUCTIONS:  # Store data to the UI but dont add it as an event
+                elif isinstance(command, GlobalCommands):
+                    data = None
+                elif command is UICommands.SET_ENVIRONMENT_INSTRUCTIONS:  # Store data to the UI but dont add it as an event
                     data = data_item.data(QtCore.Qt.ItemDataRole.UserRole)
                     self.environment_uis[environment_name].display_environment_instructions(data)
                     continue
-                elif isinstance(command, GlobalCommands):
-                    data = None
                 else:  # Convert data str to correct data type
                     data = data_item.text() if data_item is not None else ""
                     data = data if data.strip() != "" else ""
-                    validator = command.valid_data[0]
-                    if validator is None:
-                        data = None
-                    else:
-                        try:
-                            data = validator(data)
-                        except:
-                            raise ValueError(f"{environment_name} profile event {command} requires {validator} data type")
+                    validator = command.valid_data
+                    try:
+                        data = validator(data)
+                    except:
+                        raise ValueError(f"{environment_name} profile event {command} requires {validator} data type")
 
                 # Build profile event
                 profile_event = ProfileEvent(timestamp, environment_name, command, data)
 
-                # Inform environment_ui
-                if environment_name != "Global":
+                # Update environment ui
+                if environment_name != "Global" and command in self.environment_uis[environment_name].command_map.keys():
                     self.environment_uis[environment_name].command_map[command](data)
 
                 # Append to list
@@ -1143,11 +1147,16 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.display_error(error)
 
         # Unlock UI
-        self.arm_test_button.setEnabled(True)
-        self.disarm_test_button.setEnabled(False)
+        if self.rattlesnake.state is RattlesnakeState.HARDWARE_ACTIVE:
+            self.arm_test_button.setEnabled(False)
+            self.disarm_test_button.setEnabled(True)
+        else:
+            self.arm_test_button.setEnabled(True)
+            self.disarm_test_button.setEnabled(False)
 
     def stop_acquisition(self):
         self.log("Stopping hardware acquisition")
+        self.disarm_test_button.setEnabled(False)
 
         try:
             self.rattlesnake.stop_acquisition()
@@ -1181,8 +1190,12 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.display_error(error)
 
         # Unlock UI
-        self.arm_test_button.setEnabled(False)
-        self.disarm_test_button.setEnabled(True)
+        if self.rattlesnake.state is RattlesnakeState.HARDWARE_ACTIVE:
+            self.arm_test_button.setEnabled(False)
+            self.disarm_test_button.setEnabled(True)
+        else:
+            self.arm_test_button.setEnabled(True)
+            self.disarm_test_button.setEnabled(False)
 
     # region: Global
     def change_color_theme(self, text: str):
@@ -1221,7 +1234,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
     # region: Events
     def create_event_watcher(self, ready_event_list, active_event_list, *, active_event_check: bool = None):
         if getattr(self, "event_thread", None) or getattr(self, "event_watcher", None):
-            self.initialize_hardware_error("Event watcher is still active")
+            self.display_error("Event watcher is still active")
             return
         self.event_thread = QtCore.QThread()
         self.event_watcher = EventWatcher(ready_event_list, active_event_list, active_event_check=active_event_check, timeout=self.timeout)

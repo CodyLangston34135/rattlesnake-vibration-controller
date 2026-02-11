@@ -2,6 +2,7 @@ from rattlesnake.utilities import QueueContainer, GlobalCommands
 from rattlesnake.environment.abstract_environment import EnvironmentInstructions
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.environment.time_environment import TimeCommands
+from rattlesnake.user_interface.ui_utilities import UICommands
 import threading
 from typing import List
 from datetime import datetime
@@ -13,17 +14,17 @@ VALID_COMMANDS = {
     ControlTypes.TIME: (
         GlobalCommands.START_ENVIRONMENT,
         GlobalCommands.STOP_ENVIRONMENT,
-        GlobalCommands.SET_ENVIRONMENT_INSTRUCTIONS,
+        UICommands.SET_ENVIRONMENT_INSTRUCTIONS,
         *TimeCommands,
     ),
 }
 VALID_DATA = {
-    GlobalCommands.STOP_HARDWARE: (type(None),),
-    GlobalCommands.START_STREAMING: (type(None),),
-    GlobalCommands.STOP_STREAMING: (type(None),),
-    GlobalCommands.START_ENVIRONMENT: (EnvironmentInstructions,),
-    GlobalCommands.STOP_ENVIRONMENT: (type(None),),
-    GlobalCommands.SET_ENVIRONMENT_INSTRUCTIONS: (EnvironmentInstructions,),  # Dont use this in headless
+    GlobalCommands.STOP_HARDWARE: type(None),
+    GlobalCommands.START_STREAMING: type(None),
+    GlobalCommands.STOP_STREAMING: type(None),
+    GlobalCommands.START_ENVIRONMENT: EnvironmentInstructions,
+    GlobalCommands.STOP_ENVIRONMENT: type(None),
+    UICommands.SET_ENVIRONMENT_INSTRUCTIONS: EnvironmentInstructions,
 }
 VALID_DATA.update({command: command.valid_data for command in TimeCommands})
 

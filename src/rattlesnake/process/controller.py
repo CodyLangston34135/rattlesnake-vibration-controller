@@ -98,7 +98,7 @@ class ControllerProcess(AbstractMessageProcess):
         if self.stream_metadata.stream_type == StreamType.IMMEDIATELY:
             self.start_streaming(True)
 
-    def stop_hardware(self, data: None):
+    def stop_hardware(self, data: None = None):
         # Stop environments
         for queue_name in self.environments_active:
             self.stop_environment(queue_name)
@@ -137,7 +137,7 @@ class ControllerProcess(AbstractMessageProcess):
         elif self.stream_metadata.stream_type == StreamType.PROFILE_INSTRUCTION:
             self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.START_STREAMING, None))
 
-    def stop_streaming(self, data: None):
+    def stop_streaming(self, data: None = None):
         self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.STOP_STREAMING, None))
 
     def at_target_level(self, data: str):
@@ -145,7 +145,7 @@ class ControllerProcess(AbstractMessageProcess):
         if self.stream_metadata.stream_type == StreamType.TEST_LEVEL and self.stream_metadata.test_level_environment_name == environment_name:
             self.start_streaming(True)
 
-    def manual_stream(self, data: None):
+    def manual_stream(self, data: None = None):
         if self.stream_metadata.stream_type == StreamType.MANUAL:
             self.start_streaming(True)
 

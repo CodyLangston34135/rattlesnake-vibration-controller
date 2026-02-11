@@ -20,20 +20,19 @@ class GlobalCommands(Enum):
     INITIALIZE_ENVIRONMENT = 4  # Stores metadata to processes
     START_ENVIRONMENT = 5  # Tells output to start that environment
     STOP_ENVIRONMENT = 6  # Tells output to stop that environment
-    SET_ENVIRONMENT_INSTRUCTIONS = 7  # Tells environment to set instructions
-    INITIALIZE_STREAMING = 8  # Creates stream file to store to
-    CREATE_NEW_STREAM = 9  # Create new stream of data in file
-    START_STREAMING = 10  # Acquisition sends data to stream process
-    STREAMING_DATA = 11  # Continue storing data
-    STOP_STREAMING = 12  # Acquisition stops sending data to stream process
-    FINALIZE_STREAMING = 13  # Close out of stream file
-    INITIALIZE_PROFILE = 14  # Send profile metadata to controller
-    START_PROFILE = 15  # Start test from profile
-    STOP_PROFILE = 16  # Stop test from profile
-    PROFILE_CLOSEOUT = 17  # Tells controller the profile events are over
-    STREAM_AT_TARGET_LEVEL = 18  # Notifies controller that environment has hit its target level
-    STREAM_MANUAL = 19  # Notifies controller that manual streaming has been enabled
-    SEND_ENVIRONMENT_COMMAND = 20  # Sends environment specific command to environment
+    INITIALIZE_STREAMING = 7  # Creates stream file to store to
+    CREATE_NEW_STREAM = 8  # Create new stream of data in file
+    START_STREAMING = 9  # Acquisition sends data to stream process
+    STREAMING_DATA = 10  # Continue storing data
+    STOP_STREAMING = 11  # Acquisition stops sending data to stream process
+    FINALIZE_STREAMING = 12  # Close out of stream file
+    INITIALIZE_PROFILE = 13  # Send profile metadata to controller
+    START_PROFILE = 14  # Start test from profile
+    STOP_PROFILE = 15  # Stop test from profile
+    PROFILE_CLOSEOUT = 16  # Tells controller the profile events are over
+    STREAM_AT_TARGET_LEVEL = 17  # Notifies controller that environment has hit its target level
+    STREAM_MANUAL = 18  # Notifies controller that manual streaming has been enabled
+    SEND_ENVIRONMENT_COMMAND = 19  # Sends environment specific command to environment
 
     @property
     def label(self):

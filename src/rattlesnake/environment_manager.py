@@ -199,7 +199,7 @@ class EnvironmentManager:
         if not valid_instruction:
             raise ValueError(f"Invalid instruction for {environment_name}")
 
-        return True
+        return queue_name
 
     def validate_profile_events(self, profile_events_list: List[ProfileEvent]):
         """Since the profile events are comming form the UI/Terminal which has

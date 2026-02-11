@@ -1,7 +1,7 @@
 from rattlesnake.rattlesnake import Rattlesnake
 from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.utilities import GlobalCommands
-from rattlesnake.user_interface.ui_utilities import UICommands
+from rattlesnake.user_interface.ui_utilities import UICommands, EventWatcher
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.abstract_environment import ControlTypes, EnvironmentMetadata, EnvironmentInstructions
 import multiprocessing as mp
@@ -9,6 +9,7 @@ import netCDF4 as nc4
 import openpyxl
 from abc import ABC, abstractmethod
 from datetime import datetime
+from qtpy import QtCore
 
 
 class AbstractUI(ABC):
@@ -56,11 +57,14 @@ class AbstractUI(ABC):
         self.system_id_widget = None
         self.prediction_widget = None
         self.run_widget = None
-        self._command_map = {
-            GlobalCommands.START_ENVIRONMENT: self.display_environment_started,
-            GlobalCommands.STOP_ENVIRONMENT: self.display_environment_ended,
-            GlobalCommands.SET_ENVIRONMENT_INSTRUCTIONS: self.display_environment_instructions,
-        }
+        self.event_thread = None
+        self.event_watcher = None
+        self._command_map = {UICommands.SET_ENVIRONMENT_INSTRUCTIONS: self.display_environment_instructions}
+
+    @property
+    def active(self):
+        queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
+        return self.rattlesnake.environment_manager.event_container.environment_active_events[queue_name].is_set()
 
     @property
     def command_map(self) -> dict:
@@ -132,21 +136,6 @@ class AbstractUI(ABC):
         environment's run_tab to the values in the EnvironmentInstructions
         """
 
-    @abstractmethod
-    def display_environment_started(self):
-        """
-        This command is called when the environment process officially
-        starts up. Needs to prevent user from starting environment again until
-        display_environment ended has been called.
-        """
-
-    @abstractmethod
-    def display_environment_ended(self):
-        """
-        This command is called when the environment process has officially
-        shut down. Needs to enable the user to start up the process again.
-        """
-
     def map_command(self, key, function):
         """Maps commands to instructions
 
@@ -170,6 +159,80 @@ class AbstractUI(ABC):
     def command_map(self) -> dict:
         """A dictionary that maps commands received by the ``command_queue`` to functions in the class."""
         return self._command_map
+
+    # region: Processes
+    @abstractmethod
+    def start_environment(self):
+        """
+        This method in the UI class should follow this structure:
+        1. Disable start_environment button
+        2. Call super().start_environment
+        """
+        try:
+            instructions = self.get_environment_instructions()
+            queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
+            self.rattlesnake.start_environment(instructions)
+        except Exception as e:
+            self.start_environment_error(e)
+            return
+
+        ready_event_list = []
+        active_event_list = [self.rattlesnake.event_container.environment_active_events[queue_name]]
+        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
+        self.event_watcher.ready.connect(self.start_environment_ready)
+        self.event_watcher.error.connect(self.start_environment_error)
+        self.event_thread.start()
+
+    @abstractmethod
+    def start_environment_ready(self):
+        self.clean_up_event_watcher()
+
+    @abstractmethod
+    def start_environment_error(self, error):
+        """
+        This method defines how to recover UI if the instruction/environment did
+        not start up correctly. Should follow this structure:
+        1. Enable stop_environment and start_environment button
+        2. Call super().start_environment_error or display error some other way
+        """
+        self.clean_up_event_watcher()
+        self.display_error(error)
+
+    @abstractmethod
+    def stop_environment(self):
+        """
+        This method in the UI class should follow this structure:
+        1. Disable stop_environment button
+        2. Call super().stop_environment
+        """
+        try:
+            queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
+            self.rattlesnake.stop_environment(self.environment_name)
+        except Exception as e:
+            self.stop_environment_error(e)
+            return
+
+        ready_event_list = []
+        active_event_list = [self.rattlesnake.event_container.environment_active_events[queue_name]]
+        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=False)
+        self.event_watcher.ready.connect(self.stop_environment_ready)
+        self.event_watcher.error.connect(self.stop_environment_error)
+        self.event_thread.start()
+
+    @abstractmethod
+    def stop_environment_ready(self):
+        self.clean_up_event_watcher()
+
+    @abstractmethod
+    def stop_environment_error(self, error):
+        """
+        This method defines how to recover UI if the instruction/environment did
+        not start up correctly. Should follow this structure:
+        1. Enable stop_environment and start_environment button
+        2. Call super().start_environment_error or display error some other way
+        """
+        self.clean_up_event_watcher()
+        self.display_error(error)
 
     @property
     def log_file_queue(self) -> mp.Queue:
@@ -204,6 +267,27 @@ class AbstractUI(ABC):
 
         """
         self.log_file_queue.put(f"{datetime.now()}: {self.log_name} -- {message}\n")
+
+    def create_event_watcher(self, ready_event_list, active_event_list, *, active_event_check: bool = None):
+        if getattr(self, "event_thread", None) or getattr(self, "event_watcher", None):
+            self.display_error("Event watcher is still active")
+            return
+        self.event_thread = QtCore.QThread()
+        self.event_watcher = EventWatcher(
+            ready_event_list, active_event_list, active_event_check=active_event_check, timeout=self.rattlesnake.timeout
+        )
+        self.event_watcher.moveToThread(self.event_thread)
+        self.event_thread.started.connect(self.event_watcher.run)
+
+    def clean_up_event_watcher(self):
+        if getattr(self, "event_thread", None):
+            self.event_thread.quit()
+            self.event_thread.wait()
+            self.event_thread.deleteLater()
+            self.event_thread = None
+        if getattr(self, "event_watcher", None):
+            self.event_watcher.deleteLater()
+            self.event_watcher = None
 
     def display_error(self, error_message):
         self.log(f"ERROR\n\n {error_message}")
