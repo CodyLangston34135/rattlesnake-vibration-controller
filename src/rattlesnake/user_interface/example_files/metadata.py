@@ -7,6 +7,7 @@ from rattlesnake.process.streaming import StreamMetadata, StreamType
 import numpy as np
 
 BUFFER_SIZE = 0.05
+TIME_ENVIRONMENT_NAME = "My Time"
 
 
 def make_sdynpy_system_metadata():
@@ -61,7 +62,7 @@ def make_sdynpy_system_metadata():
     return hardware_metadata
 
 
-def make_time_environment_metadata(hardware_metadata, environment_name="My Time"):
+def make_time_environment_metadata(hardware_metadata, environment_name=TIME_ENVIRONMENT_NAME):
     num_rows = 3
     num_samples = 10000
     sample_rate = 1000  # Hz
@@ -83,16 +84,14 @@ def make_time_environment_metadata(hardware_metadata, environment_name="My Time"
     return time_metadata
 
 
-def make_time_environment_event_list(environment_name="My Time"):
+def make_time_environment_event_list(environment_name=TIME_ENVIRONMENT_NAME):
     timestamp = 0
     command = GlobalCommands.START_STREAMING
     start_stream_event = ProfileEvent(timestamp, "Global", command)
 
     timestamp = 2
     command = GlobalCommands.START_ENVIRONMENT
-    time_instructions = TimeInstructions(environment_name)
-    time_instructions.current_test_level = 1
-    time_instructions.repeat = True
+    time_instructions = make_time_environment_instructions(environment_name)
     start_environment_event = ProfileEvent(timestamp, environment_name, command, time_instructions)
 
     timestamp = 4
@@ -112,10 +111,17 @@ def make_time_environment_event_list(environment_name="My Time"):
     return profile_event_list
 
 
-def make_time_environment_stream_metadata(environment_name="My Time"):
+def make_time_environment_stream_metadata(environment_name=TIME_ENVIRONMENT_NAME):
     stream_metadata = StreamMetadata()
     stream_metadata.stream_type = StreamType.IMMEDIATELY
     stream_metadata.stream_file = "E:/Rattlesnake/SampleData/streaming4.nc4"
-    stream_metadata.test_level_environment_name = "My Time"
+    stream_metadata.test_level_environment_name = environment_name
 
     return stream_metadata
+
+
+def make_time_environment_instructions(environment_name=TIME_ENVIRONMENT_NAME):
+    time_instructions = TimeInstructions(environment_name)
+    time_instructions.current_test_level = 1
+    time_instructions.repeat = True
+    return time_instructions

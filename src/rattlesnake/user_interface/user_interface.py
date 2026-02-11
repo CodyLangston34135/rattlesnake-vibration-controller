@@ -123,7 +123,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.immediate_streaming_radiobutton,
             self.select_streaming_file_button,
             self.manual_streaming_radiobutton,
+            self.manual_streaming_trigger_button,
         ]
+        self.manual_streaming_trigger_button.hide()
 
         # Profile
         self.profile_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
@@ -171,6 +173,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.select_streaming_file_button.clicked.connect(self.select_streaming_file)
         self.arm_test_button.clicked.connect(self.start_acquisition)
         self.disarm_test_button.clicked.connect(self.stop_acquisition)
+        self.manual_streaming_radiobutton.toggled.connect(self.show_hide_manual_streaming)
+        self.manual_streaming_trigger_button.clicked.connect(self.start_stop_streaming)
 
         # Profiles
         self.add_profile_event_button.clicked.connect(self.add_profile_event)
@@ -227,6 +231,18 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 if has_profile:
                     self.load_stored_profile()
                 self.load_stored_stream()
+                self.display_acquisition_started()
+            case RattlesnakeState.ENVIRONMENT_ACTIVE:
+                self.load_stored_hardware()
+                self.load_stored_environments()
+                if has_profile:
+                    self.load_stored_profile()
+                self.load_stored_stream()
+                self.display_acquisition_started()
+                for queue_name, active_event in self.rattlesnake.event_container.environment_active_events.items():
+                    if active_event.is_set():
+                        environment_name = self.rattlesnake.environment_manager.environment_names[queue_name]
+                        self.environment_uis[environment_name].display_environment_started()
 
     def load_stored_hardware(self):
         hardware_metadata = self.rattlesnake.hardware_metadata
@@ -654,12 +670,11 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # Clear QThread
         self.cleanup_event_watcher()
 
-        # Update rattlesnake state
-        self.rattlesnake.hardware_metadata = None
-
         # Lock UI
-        for i in range(1, self.rattlesnake_tabs.count() - 1):
-            self.rattlesnake_tabs.setTabEnabled(i, False)
+        # If not acquiring, disable future tabs
+        if self.rattlesnake.state in (RattlesnakeState.INIT, RattlesnakeState.HARDWARE_STORE, RattlesnakeState.ENVIRONMENT_STORE):
+            for i in range(1, self.rattlesnake_tabs.count() - 1):
+                self.rattlesnake_tabs.setTabEnabled(i, False)
 
         # Unlock UI
         self.initialize_hardware_button.setEnabled(True)
@@ -914,14 +929,32 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         # Lock future UI
         self.streaming_environment_select_combobox.clear()
-        for i in range(2, self.rattlesnake_tabs.count() - 1):
-            self.rattlesnake_tabs.setTabEnabled(i, False)
+        # If not acquiring, disable future tabs
+        if self.rattlesnake.state in (RattlesnakeState.INIT, RattlesnakeState.HARDWARE_STORE, RattlesnakeState.ENVIRONMENT_STORE):
+            for i in range(2, self.rattlesnake_tabs.count() - 1):
+                self.rattlesnake_tabs.setTabEnabled(i, False)
 
         # Unlock UI
         self.initialize_environments_button.setEnabled(True)
         self.display_error(error_message)
 
     # region: Acquisition
+    def show_hide_manual_streaming(self):
+        """Shows or hides the manual streaming button depending on which streaming type is chosen"""
+        if self.manual_streaming_radiobutton.isChecked():
+            self.manual_streaming_trigger_button.setVisible(True)
+        else:
+            self.manual_streaming_trigger_button.setVisible(False)
+
+    def start_stop_streaming(self):
+        """Starts or stops streaming manually"""
+        if self.manual_streaming_trigger_button.text() == "Stop\nStreaming":
+            self.manual_streaming_trigger_button.setText("Start\nStreaming")
+            self.rattlesnake.stop_streaming()
+        else:
+            self.manual_streaming_trigger_button.setText("Stop\nStreaming")
+            self.rattlesnake.start_streaming()
+
     def get_stream_metadata(self):
         stream_metadata = StreamMetadata()
 
@@ -957,24 +990,38 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.streaming_file_display.setText(filename)
 
     def display_acquisition_started(self):
+        # Acquisition
         self.arm_test_button.setEnabled(False)
         self.disarm_test_button.setEnabled(True)
+        # Environment
         for i in range(self.run_environment_tabs.count()):
             self.run_environment_tabs.widget(i).setEnabled(True)
-
+        # Streaming
+        for widget in self.streaming_widgets:
+            widget.setEnabled(False)
+        self.manual_streaming_trigger_button.setEnabled(True)
+        # Profile
         self.run_profile_widget.setEnabled(True)
 
     def display_acquisition_ended(self):
+        # Acquisition
         self.arm_test_button.setEnabled(True)
         self.disarm_test_button.setEnabled(False)
+        # Environment
         for i in range(self.run_environment_tabs.count()):
             self.run_environment_tabs.widget(i).setEnabled(False)
-
+        # Streaming
+        for widget in self.streaming_widgets:
+            widget.setEnabled(True)
+        self.manual_streaming_trigger_button.setEnabled(False)
+        # Profile
         self.run_profile_widget.setEnabled(False)
 
     def start_acquisition(self):
         self.log("Starting hardware acquistion")
         self.arm_test_button.setEnabled(False)
+        for widget in self.streaming_widgets:
+            widget.setEnabled(False)
 
         try:
             stream_metadata = self.get_stream_metadata()
@@ -1022,6 +1069,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         except Exception as e:
             self.stop_acquisition_error(e)
 
+        # Make sure event watcher will work since disarm daq is usually an "oh crap" moment
         ready_event_list = [
             self.rattlesnake.event_container.controller_ready_event,
         ]
@@ -1188,6 +1236,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         instructions so that the event list is adaptive to the user's inputs into the run tab UI.
         """
         self.start_profile_button.setEnabled(False)
+        self.disarm_test_button.setEnabled(False)
+        for i in range(self.run_environment_tabs.count()):
+            self.run_environment_tabs.widget(i).setEnabled(False)
         try:
             # Figure out initial environment UI
             initial_instructions = {}
@@ -1255,6 +1306,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
     def profile_closed_out(self):
         self.cleanup_event_watcher()
 
+        for i in range(self.run_environment_tabs.count()):
+            self.run_environment_tabs.widget(i).setEnabled(True)
+        self.disarm_test_button.setEnabled(True)
         self.start_profile_button.setEnabled(True)
         self.stop_profile_button.setEnabled(False)
 
@@ -1265,7 +1319,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.display_error(error)
 
         # Unlock UI
+        self.disarm_test_button.setEnabled(True)
         self.start_profile_button.setEnabled(True)
+        for i in range(self.run_environment_tabs.count()):
+            self.run_environment_tabs.widget(i).setEnabled(True)
 
     def stop_profile(self):
         self.stop_profile_button.setEnabled(False)
@@ -1375,18 +1432,22 @@ if __name__ == "__main__":
         make_time_environment_metadata,
         make_time_environment_event_list,
         make_time_environment_stream_metadata,
+        make_time_environment_instructions,
     )
 
     hardware_metadata = make_sdynpy_system_metadata()
     environment_metadata = make_time_environment_metadata(hardware_metadata)
     profile_event_list = make_time_environment_event_list()
     stream_metadata = make_time_environment_stream_metadata()
+    environment_instructino = make_time_environment_instructions()
 
     rattlesnake = Rattlesnake(threaded=True, timeout=10)
     rattlesnake.set_hardware(hardware_metadata)
     rattlesnake.set_environments([environment_metadata])
     rattlesnake.set_profile_event_list(profile_event_list)
     rattlesnake.set_stream_metadata(stream_metadata)
+    rattlesnake.start_acquisition(stream_metadata)
+    rattlesnake.start_environment(environment_instructino)
 
     # This is a fix for scaling Rattlesnake to different resolution monitors
     font_size = 10  # pt size
