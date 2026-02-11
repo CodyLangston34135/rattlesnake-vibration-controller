@@ -59,7 +59,11 @@ class AbstractUI(ABC):
         self.run_widget = None
         self.event_thread = None
         self.event_watcher = None
-        self._command_map = {UICommands.SET_ENVIRONMENT_INSTRUCTIONS: self.display_environment_instructions}
+        self._command_map = {
+            UICommands.ENVIRONMENT_STARTED: self.display_environment_started,
+            UICommands.ENVIRONMENT_ENDED: self.display_environment_ended,
+            UICommands.SET_ENVIRONMENT_INSTRUCTIONS: self.display_environment_instructions,
+        }
 
     @property
     def active(self):
@@ -134,6 +138,21 @@ class AbstractUI(ABC):
         This function is called when wanting to sync the environment ui with an
         EnvironmentInstructions object. This will most likely set widgets in the
         environment's run_tab to the values in the EnvironmentInstructions
+        """
+
+    @abstractmethod
+    def display_environment_started(self):
+        """
+        This command is called when the environment process officially
+        starts up. Needs to prevent user from starting environment again until
+        display_environment ended has been called.
+        """
+
+    @abstractmethod
+    def display_environment_ended(self):
+        """
+        This command is called when the environment process has officially
+        shut down. Needs to enable the user to start up the process again.
         """
 
     def map_command(self, key, function):

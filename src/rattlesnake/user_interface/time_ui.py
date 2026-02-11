@@ -273,22 +273,22 @@ class TimeUI(AbstractUI):
         return instruction
 
     # region: Commands
-    def display_environment_started(self):
+    def display_environment_instructions(self, data: TimeInstructions):
+        instructions = data
+        self.run_widget.test_level_selector.setValue(instructions.current_test_level)
+        self.run_widget.repeat_signal_checkbox.setChecked(instructions.repeat)
+
+    def display_environment_started(self, data=None):
         self.run_widget.stop_test_button.setEnabled(True)
         self.run_widget.start_test_button.setEnabled(False)
         self.run_widget.test_level_selector.setEnabled(False)
         self.run_widget.repeat_signal_checkbox.setEnabled(False)
 
-    def display_environment_ended(self):
+    def display_environment_ended(self, data=None):
         self.run_widget.stop_test_button.setEnabled(False)
         self.run_widget.start_test_button.setEnabled(True)
         self.run_widget.test_level_selector.setEnabled(True)
         self.run_widget.repeat_signal_checkbox.setEnabled(True)
-
-    def display_environment_instructions(self, data: TimeInstructions):
-        instructions = data
-        self.run_widget.test_level_selector.setValue(instructions.current_test_level)
-        self.run_widget.repeat_signal_checkbox.setChecked(instructions.repeat)
 
     def set_test_level(self, data):
         test_level = int(data)
@@ -366,8 +366,6 @@ class TimeUI(AbstractUI):
         super().start_environment()
 
     def start_environment_ready(self):
-        self.display_environment_started()
-
         super().start_environment_ready()
 
     def start_environment_error(self, error):
@@ -376,7 +374,7 @@ class TimeUI(AbstractUI):
         else:
             self.display_environment_ended()
 
-        super().stop_environment_error(error)
+        super().start_environment_error(error)
 
     def stop_environment(self):
         """Stops running the environment"""
@@ -385,8 +383,6 @@ class TimeUI(AbstractUI):
         super().stop_environment()
 
     def stop_environment_ready(self):
-        self.display_environment_ended()
-
         super().stop_environment_ready()
 
     def stop_environment_error(self, error):

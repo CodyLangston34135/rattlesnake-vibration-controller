@@ -337,6 +337,7 @@ class TimeEnvironment(EnvironmentProcess):
                 self.log("Test Level set to {:}".format(self.current_test_level))
             self.signal_remainder = self.metadata.output_signal
             self.set_active()
+            self.queue_container.gui_update_queue.put((self.environment_name, (UICommands.ENVIRONMENT_STARTED, None)))
         # See if any data has come in
         try:
             acquisition_data, last_acquisition = self.queue_container.data_in_queue.get_nowait()
@@ -469,6 +470,7 @@ class TimeEnvironment(EnvironmentProcess):
         self.queue_container.environment_command_queue.flush(self.environment_name)
         # Enable the volume controls
         self.clear_active()
+        self.queue_container.gui_update_queue.put((self.environment_name, (UICommands.ENVIRONMENT_ENDED, None)))
 
 
 # region: time_process

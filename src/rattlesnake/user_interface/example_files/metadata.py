@@ -114,7 +114,7 @@ def make_time_environment_event_list(environment_name="My Time"):
 
 def make_time_environment_stream_metadata(environment_name="My Time"):
     stream_metadata = StreamMetadata()
-    stream_metadata.stream_type = StreamType.MANUAL
+    stream_metadata.stream_type = StreamType.IMMEDIATELY
     stream_metadata.stream_file = "E:/Rattlesnake/SampleData/streaming4.nc4"
     stream_metadata.test_level_environment_name = "My Time"
 

@@ -7,7 +7,7 @@ import threading
 from typing import List
 from datetime import datetime
 
-EXTRA_CLOSEOUT_TIME = 0.5  # Adds seconds to let the last profile event happen
+EXTRA_CLOSEOUT_TIME = 0.1  # Adds seconds to let the last profile event happen
 TASK_NAME = "Profile Manager"
 VALID_COMMANDS = {
     "Global": (GlobalCommands.STOP_HARDWARE, GlobalCommands.START_STREAMING, GlobalCommands.STOP_STREAMING),

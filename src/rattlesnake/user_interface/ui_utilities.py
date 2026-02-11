@@ -23,6 +23,8 @@ class UICommands(Enum):
     SET_ATTR = 5
     STOP = 6
     SET_ENVIRONMENT_INSTRUCTIONS = 7
+    ENVIRONMENT_STARTED = 8
+    ENVIRONMENT_ENDED = 9
 
     @property
     def label(self):

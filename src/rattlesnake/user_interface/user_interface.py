@@ -114,9 +114,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.environment_channel_table.setColumnCount(0)
         self.environment_channel_table.hide()
 
-        # Profile
-        self.profile_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
-
         # Acquisition
         self.streaming_widgets = [
             self.no_streaming_radiobutton,
@@ -127,6 +124,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.select_streaming_file_button,
             self.manual_streaming_radiobutton,
         ]
+
+        # Profile
+        self.profile_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+        self.run_profile_widget.setEnabled(False)
 
     # region: Callbacks
     def connect_callbacks(self):
@@ -166,15 +167,17 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.environment_channel_table.horizontalHeader().sectionDoubleClicked.connect(self.rename_environment)
         self.initialize_environments_button.clicked.connect(self.initialize_environments)
 
-        # Profiles
-        self.add_profile_event_button.clicked.connect(self.add_profile_event)
-        self.remove_profile_event_button.clicked.connect(self.remove_profile_event)
-        self.initialize_profile_button.clicked.connect(self.initialize_profile)
-
         # Acquisition
         self.select_streaming_file_button.clicked.connect(self.select_streaming_file)
         self.arm_test_button.clicked.connect(self.start_acquisition)
         self.disarm_test_button.clicked.connect(self.stop_acquisition)
+
+        # Profiles
+        self.add_profile_event_button.clicked.connect(self.add_profile_event)
+        self.remove_profile_event_button.clicked.connect(self.remove_profile_event)
+        self.initialize_profile_button.clicked.connect(self.initialize_profile)
+        self.start_profile_button.clicked.connect(self.start_profile)
+        self.stop_profile_button.clicked.connect(self.stop_profile)
 
     @property
     def gui_update_queue(self):
@@ -268,6 +271,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.environment_uis[environment_name].display_metadata(environment_metadata)
 
         self.update_environment_tabs()
+        streaming_environment_items = [""] + list(self.environment_uis.keys())
+        self.streaming_environment_select_combobox.clear()
+        self.streaming_environment_select_combobox.addItems(streaming_environment_items)
         self.rattlesnake_tabs.setTabEnabled(1, True)
         self.rattlesnake_tabs.setCurrentIndex(1)
 
@@ -291,7 +297,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 environment_combobox.setCurrentText(environment_name)
                 command_combobox = self.profile_table.cellWidget(row, 2)
                 command_combobox.setCurrentText(UICommands.SET_ENVIRONMENT_INSTRUCTIONS.label)
-                data_item = QtWidgets.QTableWidgetItem("Environment Instructions Object")
+                data_item = QtWidgets.QTableWidgetItem("")
                 data_item.setData(QtCore.Qt.ItemDataRole.UserRole, data)
                 self.profile_table.setItem(row, 3, data_item)
                 data = None
@@ -840,6 +846,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             if run_widget is not None:
                 self.run_environment_tabs.addTab(run_widget, environment_name)
 
+        # Disable run tabs
+        for i in range(self.run_environment_tabs.count()):
+            self.run_environment_tabs.widget(i).setEnabled(False)
+
     def initialize_environments(self):
         self.log("Initializing Environment")
 
@@ -910,6 +920,138 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # Unlock UI
         self.initialize_environments_button.setEnabled(True)
         self.display_error(error_message)
+
+    # region: Acquisition
+    def get_stream_metadata(self):
+        stream_metadata = StreamMetadata()
+
+        stream_file = self.streaming_file_display.text()
+
+        if self.no_streaming_radiobutton.isChecked():
+            stream_metadata.stream_type = StreamType.NO_STREAM
+        elif self.profile_streaming_radiobutton.isChecked():
+            stream_metadata.stream_type = StreamType.PROFILE_INSTRUCTION
+            stream_metadata.stream_file = stream_file
+        elif self.test_level_streaming_radiobutton.isChecked():
+            stream_metadata.stream_type = StreamType.TEST_LEVEL
+            stream_metadata.test_level_environment_name = self.streaming_environment_select_combobox.currentText()
+            stream_metadata.stream_file = stream_file
+        elif self.immediate_streaming_radiobutton.isChecked():
+            stream_metadata.stream_type = StreamType.IMMEDIATELY
+            stream_metadata.stream_file = stream_file
+        elif self.manual_streaming_radiobutton.isChecked():
+            stream_metadata.stream_type = StreamType.MANUAL
+            stream_metadata.stream_file = stream_file
+
+        return stream_metadata
+
+    def select_streaming_file(self):
+        """Selects a file to stream data to disk"""
+        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Select NetCDF File to Save Control Data",
+            filter="NetCDF File (*.nc4)",
+        )
+        if filename == "":
+            return
+        self.streaming_file_display.setText(filename)
+
+    def display_acquisition_started(self):
+        self.arm_test_button.setEnabled(False)
+        self.disarm_test_button.setEnabled(True)
+        for i in range(self.run_environment_tabs.count()):
+            self.run_environment_tabs.widget(i).setEnabled(True)
+
+        self.run_profile_widget.setEnabled(True)
+
+    def display_acquisition_ended(self):
+        self.arm_test_button.setEnabled(True)
+        self.disarm_test_button.setEnabled(False)
+        for i in range(self.run_environment_tabs.count()):
+            self.run_environment_tabs.widget(i).setEnabled(False)
+
+        self.run_profile_widget.setEnabled(False)
+
+    def start_acquisition(self):
+        self.log("Starting hardware acquistion")
+        self.arm_test_button.setEnabled(False)
+
+        try:
+            stream_metadata = self.get_stream_metadata()
+
+            self.rattlesnake.start_acquisition(stream_metadata)
+        except Exception as e:
+            self.start_acquisition_error(e)
+
+        ready_event_list = [
+            self.rattlesnake.event_container.streaming_ready_event,
+        ]
+        active_event_list = [
+            self.rattlesnake.event_container.acquisition_active_event,
+            self.rattlesnake.event_container.output_active_event,
+        ]
+        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
+        self.event_watcher.ready.connect(self.start_acqusition_ready)
+        self.event_watcher.error.connect(self.start_acquisition_error)
+        self.event_thread.start()
+
+    def start_acqusition_ready(self):
+        self.cleanup_event_watcher()
+
+        # Unlock UI
+        self.display_acquisition_started()
+
+    def start_acquisition_error(self, error):
+        self.cleanup_event_watcher()
+
+        # Show error
+        self.display_error(error)
+
+        # Unlock UI
+        if self.rattlesnake.state is RattlesnakeState.HARDWARE_ACTIVE:
+            self.display_acquisition_started()
+        else:
+            self.display_acquisition_ended()
+
+    def stop_acquisition(self):
+        self.log("Stopping hardware acquisition")
+        self.disarm_test_button.setEnabled(False)
+
+        try:
+            self.rattlesnake.stop_acquisition()
+        except Exception as e:
+            self.stop_acquisition_error(e)
+
+        ready_event_list = [
+            self.rattlesnake.event_container.controller_ready_event,
+        ]
+        active_event_list = [
+            self.rattlesnake.event_container.acquisition_active_event,
+            self.rattlesnake.event_container.output_active_event,
+            *self.rattlesnake.environment_manager.active_event_list,
+        ]
+        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=False)
+        self.event_watcher.ready.connect(self.stop_acquistion_ready)
+        self.event_watcher.error.connect(self.stop_acquisition_error)
+        self.event_thread.start()
+
+    def stop_acquistion_ready(self):
+        self.cleanup_event_watcher()
+
+        # Unlock UI
+        self.display_acquisition_ended()
+
+    def stop_acquisition_error(self, error):
+        self.cleanup_event_watcher()
+
+        # Show error
+        self.display_error(error)
+
+        # Unlock UI
+        if self.rattlesnake.state is RattlesnakeState.HARDWARE_ACTIVE:
+            self.display_acquisition_started()
+        else:
+            self.display_acquisition_ended()
 
     # region: Profile
     def add_profile_event(self, clicked=None):
@@ -1006,34 +1148,71 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         plot_item.setYRange(-1, len(environment_names))
 
     def initialize_profile(self):
-        self.profile_event_list = []
-        self.initialize_profile_button.setEnabled(False)
+        self.log("Initializing Profile Event List")
+        sort_list = []
+        num_rows = self.profile_table.rowCount()
+        for row in range(num_rows):
+            timestamp = self.profile_table.cellWidget(row, 0).value()
+            environment_name = self.profile_table.cellWidget(row, 1).currentText()
+            command = self.profile_table.cellWidget(row, 2).currentData()
+            data_item = self.profile_table.item(row, 3)
+            data_text = data_item.text() if data_item is not None else ""
 
+            profile_event = ProfileEvent(timestamp, environment_name, command, data_item)
+            instruction_string = f"{timestamp:0.2f} {environment_name} {command} {data_text}"
+
+            sort_list.append((timestamp, row, profile_event, instruction_string))
+
+        # Order profile table in ascending timestamp, then row number
+        sort_list.sort(key=lambda x: (x[0], x[1]))
+        profile_table_list = [row[2] for row in sort_list]
+        instructions_list = [row[3] for row in sort_list]
+
+        self.profile_table_list = profile_table_list
+
+        # Unlock UI
+        if len(profile_table_list) == 0:
+            self.run_profile_widget.hide()
+        else:
+            self.run_profile_widget.show()
+        self.upcoming_instructions_list.clear()
+        self.upcoming_instructions_list.addItems(instructions_list)
+        self.rattlesnake_tabs.setTabEnabled(5, True)
+        self.rattlesnake_tabs.setCurrentIndex(5)
+
+    def start_profile(self):
+        """
+        Build valid profile_event_list and give it to the controller.
+
+        This function starts by walking through the initialized event list and storing information/building
+        instructions so that the event list is adaptive to the user's inputs into the run tab UI.
+        """
+        self.start_profile_button.setEnabled(False)
         try:
-            # Order profile table in ascending timestamp, then row number
-            profile_table_list = []
-            num_rows = self.profile_table.rowCount()
-            for row in range(num_rows):
-                timestamp = self.profile_table.cellWidget(row, 0).value()
-                environment_name = self.profile_table.cellWidget(row, 1).currentText()
-                command = self.profile_table.cellWidget(row, 2).currentData()
-                data_item = self.profile_table.item(row, 3)
-                profile_table_list.append((timestamp, row, environment_name, command, data_item))
-            profile_table_list.sort(key=lambda x: (x[0], x[1]))
+            # Figure out initial environment UI
+            initial_instructions = {}
+            for environment_name, environment_ui in self.environment_uis.items():
+                environment_instructions = environment_ui.get_environment_instructions()
+                initial_instructions[environment_name] = environment_instructions
 
-            # Build out profile_event_list
+            # Walk through events and store to UI/build event.data
             profile_event_list = []
-            for timestamp, row, environment_name, command, data_item in profile_table_list:
+            max_timestamp = 0
+            for event in self.profile_table_list:
+                timestamp = event.timestamp
+                environment_name = event.environment_name
+                command = event.command
+                data_item = event.data
 
-                # Walk through commands and
+                # For start_environment pull instruction from current UI
                 if command is GlobalCommands.START_ENVIRONMENT:
                     data = self.environment_uis[environment_name].get_environment_instructions()
-                elif isinstance(command, GlobalCommands):
-                    data = None
                 elif command is UICommands.SET_ENVIRONMENT_INSTRUCTIONS:  # Store data to the UI but dont add it as an event
                     data = data_item.data(QtCore.Qt.ItemDataRole.UserRole)
                     self.environment_uis[environment_name].display_environment_instructions(data)
                     continue
+                elif isinstance(command, GlobalCommands):
+                    data = None
                 else:  # Convert data str to correct data type
                     data = data_item.text() if data_item is not None else ""
                     data = data if data.strip() != "" else ""
@@ -1043,159 +1222,65 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     except:
                         raise ValueError(f"{environment_name} profile event {command} requires {validator} data type")
 
-                # Build profile event
-                profile_event = ProfileEvent(timestamp, environment_name, command, data)
-
                 # Update environment ui
                 if environment_name != "Global" and command in self.environment_uis[environment_name].command_map.keys():
                     self.environment_uis[environment_name].command_map[command](data)
 
-                # Append to list
+                # Add to profile_event_list
+                profile_event = ProfileEvent(timestamp, environment_name, command, data)
                 profile_event_list.append(profile_event)
+
+                if timestamp > max_timestamp:
+                    max_timestamp = timestamp
+
+            # Reset UI to initial UI
+            for environment_name, instruction in initial_instructions.items():
+                self.environment_uis[environment_name].display_environment_instructions(instruction)
+
+            # Start Rattlesnake from profile_event_list
+            self.rattlesnake.start_profile(profile_event_list)
         except Exception as e:
-            self.initialize_profile_error(e)
+            self.start_profile_error(e)
             return
 
-        self.profile_event_list = profile_event_list
-        self.initialize_profile_ready()
+        ready_event_list = [self.rattlesnake.event_container.controller_ready_event]
+        active_event_list = []
+        self.create_event_watcher(ready_event_list, active_event_list, timeout=max_timestamp + self.timeout)
+        self.event_watcher.ready.connect(self.profile_closed_out)
+        self.event_watcher.error.connect(self.start_profile_error)
+        self.event_thread.start()
 
-    def initialize_profile_ready(self):
-        self.initialize_profile_button.setEnabled(True)
-        self.rattlesnake_tabs.setTabEnabled(5, True)
-        self.rattlesnake_tabs.setCurrentIndex(5)
+        self.stop_profile_button.setEnabled(True)
 
-    def initialize_profile_error(self, error):
+    def profile_closed_out(self):
+        self.cleanup_event_watcher()
+
+        self.start_profile_button.setEnabled(True)
+        self.stop_profile_button.setEnabled(False)
+
+    def start_profile_error(self, error):
+        self.cleanup_event_watcher()
+
         # Show error
         self.display_error(error)
 
-        # Lock UI
-        for i in range(5, self.rattlesnake_tabs.count() - 1):
-            self.rattlesnake_tabs.setTabEnabled(i, False)
-
         # Unlock UI
-        self.initialize_profile_button.setEnabled(True)
+        self.start_profile_button.setEnabled(True)
 
-    # region: Acquisition
-    def get_stream_metadata(self):
-        stream_metadata = StreamMetadata()
-
-        stream_file = self.streaming_file_display.text()
-
-        if self.no_streaming_radiobutton.isChecked():
-            stream_metadata.stream_type = StreamType.NO_STREAM
-        elif self.profile_streaming_radiobutton.isChecked():
-            stream_metadata.stream_type = StreamType.PROFILE_INSTRUCTION
-            stream_metadata.stream_file = stream_file
-        elif self.test_level_streaming_radiobutton.isChecked():
-            stream_metadata.stream_type = StreamType.TEST_LEVEL
-            stream_metadata.test_level_environment_name = self.streaming_environment_select_combobox.currentText()
-            stream_metadata.stream_file = stream_file
-        elif self.immediate_streaming_radiobutton.isChecked():
-            stream_metadata.stream_type = StreamType.IMMEDIATELY
-            stream_metadata.stream_file = stream_file
-        elif self.manual_streaming_radiobutton.isChecked():
-            stream_metadata.stream_type = StreamType.MANUAL
-            stream_metadata.stream_file = stream_file
-
-        return stream_metadata
-
-    def select_streaming_file(self):
-        """Selects a file to stream data to disk"""
-        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self,
-            "Select NetCDF File to Save Control Data",
-            filter="NetCDF File (*.nc4)",
-        )
-        if filename == "":
+    def stop_profile(self):
+        self.stop_profile_button.setEnabled(False)
+        try:
+            self.rattlesnake.stop_profile()
+        except Exception as e:
+            self.stop_profile_error(e)
             return
-        self.streaming_file_display.setText(filename)
 
-    def start_acquisition(self):
-        self.log("Starting hardware acquistion")
-        self.arm_test_button.setEnabled(False)
-
-        try:
-            stream_metadata = self.get_stream_metadata()
-
-            self.rattlesnake.start_acquisition(stream_metadata)
-        except Exception as e:
-            self.start_acquisition_error(e)
-
-        ready_event_list = [
-            self.rattlesnake.event_container.streaming_ready_event,
-        ]
-        active_event_list = [
-            self.rattlesnake.event_container.acquisition_active_event,
-            self.rattlesnake.event_container.output_active_event,
-        ]
-        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
-        self.event_watcher.ready.connect(self.start_acqusition_ready)
-        self.event_watcher.error.connect(self.start_acquisition_error)
-        self.event_thread.start()
-
-    def start_acqusition_ready(self):
-        self.cleanup_event_watcher()
-
-        # Unlock UI
-        self.arm_test_button.setEnabled(False)
-        self.disarm_test_button.setEnabled(True)
-
-    def start_acquisition_error(self, error):
-        self.cleanup_event_watcher()
-
+    def stop_profile_error(self, error):
         # Show error
         self.display_error(error)
 
         # Unlock UI
-        if self.rattlesnake.state is RattlesnakeState.HARDWARE_ACTIVE:
-            self.arm_test_button.setEnabled(False)
-            self.disarm_test_button.setEnabled(True)
-        else:
-            self.arm_test_button.setEnabled(True)
-            self.disarm_test_button.setEnabled(False)
-
-    def stop_acquisition(self):
-        self.log("Stopping hardware acquisition")
-        self.disarm_test_button.setEnabled(False)
-
-        try:
-            self.rattlesnake.stop_acquisition()
-        except Exception as e:
-            self.stop_acquisition_error(e)
-
-        ready_event_list = [
-            self.rattlesnake.event_container.controller_ready_event,
-        ]
-        active_event_list = [
-            self.rattlesnake.event_container.acquisition_active_event,
-            self.rattlesnake.event_container.output_active_event,
-            *self.rattlesnake.environment_manager.active_event_list,
-        ]
-        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=False)
-        self.event_watcher.ready.connect(self.stop_acquistion_ready)
-        self.event_watcher.error.connect(self.stop_acquisition_error)
-        self.event_thread.start()
-
-    def stop_acquistion_ready(self):
-        self.cleanup_event_watcher()
-
-        # Unlock UI
-        self.arm_test_button.setEnabled(True)
-        self.disarm_test_button.setEnabled(False)
-
-    def stop_acquisition_error(self, error):
-        self.cleanup_event_watcher()
-
-        # Show error
-        self.display_error(error)
-
-        # Unlock UI
-        if self.rattlesnake.state is RattlesnakeState.HARDWARE_ACTIVE:
-            self.arm_test_button.setEnabled(False)
-            self.disarm_test_button.setEnabled(True)
-        else:
-            self.arm_test_button.setEnabled(True)
-            self.disarm_test_button.setEnabled(False)
+        self.stop_profile_button.setEnabled(True)
 
     # region: Global
     def change_color_theme(self, text: str):
@@ -1232,12 +1317,15 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         )
 
     # region: Events
-    def create_event_watcher(self, ready_event_list, active_event_list, *, active_event_check: bool = None):
+    def create_event_watcher(self, ready_event_list, active_event_list, *, active_event_check: bool = None, timeout: float = None):
+        if timeout is None:
+            timeout = self.timeout
+
         if getattr(self, "event_thread", None) or getattr(self, "event_watcher", None):
             self.display_error("Event watcher is still active")
             return
         self.event_thread = QtCore.QThread()
-        self.event_watcher = EventWatcher(ready_event_list, active_event_list, active_event_check=active_event_check, timeout=self.timeout)
+        self.event_watcher = EventWatcher(ready_event_list, active_event_list, active_event_check=active_event_check, timeout=timeout)
         self.event_watcher.moveToThread(self.event_thread)
         self.event_thread.started.connect(self.event_watcher.run)
 

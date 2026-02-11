@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1529</width>
+    <width>2107</width>
     <height>703</height>
    </rect>
   </property>
@@ -1341,7 +1341,7 @@ Streaming</string>
                <item>
                 <widget class="QPushButton" name="start_profile_button">
                  <property name="enabled">
-                  <bool>false</bool>
+                  <bool>true</bool>
                  </property>
                  <property name="toolTip">
                   <string>Starts running the specified test timeline.  Listed events will occur automatically at their prescribed timestamps.</string>
@@ -1486,7 +1486,7 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1529</width>
+     <width>2107</width>
      <height>22</height>
     </rect>
    </property>
