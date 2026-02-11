@@ -5,6 +5,7 @@ from rattlesnake.user_interface.ui_utilities import (
     UICommands,
     Updater,
     EventWatcher,
+    ProfileTimer,
     EditableCombobox,
     EditableSpinBox,
     error_message_qt,
@@ -41,7 +42,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.rattlesnake = rattlesnake
         self.rattlesnake.clear_blocking()
         self.environment_uis = {}
-        self.profile_event_list = []
+        self.profile_table_list = []
+        self.profile_timer_list = []
 
         # Updater process
         self.event_thread = None
@@ -217,7 +219,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             case RattlesnakeState.INIT:
                 return
             case RattlesnakeState.HARDWARE_STORE:
-                self.load_hardware_stored()
+                self.load_stored_hardware()
             case RattlesnakeState.ENVIRONMENT_STORE:
                 self.load_stored_hardware()
                 self.load_stored_environments()
@@ -266,7 +268,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.update_hardware_widget_visibility()
                 self.hardware_file = hardware_metadata.hardware_file
                 self.sample_rate_selector.setValue(hardware_metadata.sample_rate)
-                self.buffer_size_selector.setValue(hardware_metadata.samples_per_read)
+                self.buffer_size_selector.setValue(hardware_metadata.time_per_read)
                 self.integration_oversample_selector.setValue(hardware_metadata.output_oversample)
             case _:
                 self.display_error(f"{hardware_metadata.hardware_type} is not yet implemented")
@@ -1063,6 +1065,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
     def stop_acquisition(self):
         self.log("Stopping hardware acquisition")
         self.disarm_test_button.setEnabled(False)
+        for i in range(self.run_environment_tabs.count()):
+            self.run_environment_tabs.widget(i).setEnabled(False)
+        self.manual_streaming_trigger_button.setEnabled(False)
 
         try:
             self.rattlesnake.stop_acquisition()
@@ -1195,6 +1200,67 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         plot_item.setXRange(0, max_time * 1.1)
         plot_item.setYRange(-1, len(environment_names))
 
+    def display_event_strings(self, event_string_list):
+        self.upcoming_instructions_list.clear()
+        self.upcoming_instructions_list.addItems(event_string_list)
+
+    def reset_profile_ui_timers(self):
+        profile_timer_list = []
+        event_string_list = []
+        for event in self.profile_table_list:
+            timestamp = event.timestamp
+            environment_name = event.environment_name
+            command = event.command
+            data_item = event.data
+            data_text = data_item.text() if data_item is not None else ""
+
+            timer = ProfileTimer(timestamp, environment_name, command, data_text)
+            timer.setSingleShot(True)
+            timer.timeout.connect(lambda name=environment_name: self.switch_profile_environment(name))
+            profile_timer_list.append(timer)
+
+            event_string = f"{timestamp:0.2f} {environment_name} {command.label} {data_text}"
+            event_string_list.append(event_string)
+
+        self.upcoming_instructions_list.clear()
+        self.upcoming_instructions_list.addItems(event_string_list)
+        self.profile_timer_list = profile_timer_list
+
+    def start_profile_event_timers(self):
+        for timer in self.profile_timer_list:
+            timer.start(int(timer.timestamp * 1000))
+
+        self.profile_list_update_timer = QtCore.QTimer()
+        self.profile_list_update_timer.timeout.connect(self.update_profile_list)
+        self.profile_list_update_timer.start(250)
+
+    def update_profile_list(self):
+        """Updates the list of upcoming profile events."""
+        event_string_list = []
+        for timer in self.profile_timer_list:
+            remaining_time = timer.remainingTime() / 1000
+            environment_name = timer.environment_name
+            command = timer.command
+            data = timer.data
+
+            if remaining_time > 0:
+                event_string = f"{remaining_time:0.2f} {environment_name} {command.label} {data}"
+                event_string_list.append(event_string)
+
+        self.upcoming_instructions_list.clear()
+        self.upcoming_instructions_list.addItems(event_string_list)
+        if len(event_string_list) != 0:
+            self.profile_list_update_timer.start(250)
+        else:
+            self.reset_profile_ui_timers()
+
+    def switch_profile_environment(self, environment_name):
+        if self.show_profile_change_checkbox.isChecked():
+            for i in range(self.run_environment_tabs.count()):
+                if self.run_environment_tabs.tabText(i) == environment_name:
+                    self.run_environment_tabs.setCurrentIndex(i)
+                    break
+
     def initialize_profile(self):
         self.log("Initializing Profile Event List")
         sort_list = []
@@ -1207,24 +1273,22 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             data_text = data_item.text() if data_item is not None else ""
 
             profile_event = ProfileEvent(timestamp, environment_name, command, data_item)
-            instruction_string = f"{timestamp:0.2f} {environment_name} {command} {data_text}"
 
-            sort_list.append((timestamp, row, profile_event, instruction_string))
+            sort_list.append((timestamp, row, profile_event))
 
         # Order profile table in ascending timestamp, then row number
         sort_list.sort(key=lambda x: (x[0], x[1]))
         profile_table_list = [row[2] for row in sort_list]
-        instructions_list = [row[3] for row in sort_list]
-
         self.profile_table_list = profile_table_list
+
+        # Build timers and reset event list in run tab
+        self.reset_profile_ui_timers()
 
         # Unlock UI
         if len(profile_table_list) == 0:
             self.run_profile_widget.hide()
         else:
             self.run_profile_widget.show()
-        self.upcoming_instructions_list.clear()
-        self.upcoming_instructions_list.addItems(instructions_list)
         self.rattlesnake_tabs.setTabEnabled(5, True)
         self.rattlesnake_tabs.setCurrentIndex(5)
 
@@ -1290,6 +1354,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
             # Start Rattlesnake from profile_event_list
             self.rattlesnake.start_profile(profile_event_list)
+            self.start_profile_event_timers()
         except Exception as e:
             self.start_profile_error(e)
             return
@@ -1305,6 +1370,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
     def profile_closed_out(self):
         self.cleanup_event_watcher()
+
+        self.reset_profile_ui_timers()
 
         for i in range(self.run_environment_tabs.count()):
             self.run_environment_tabs.widget(i).setEnabled(True)
@@ -1439,15 +1506,15 @@ if __name__ == "__main__":
     environment_metadata = make_time_environment_metadata(hardware_metadata)
     profile_event_list = make_time_environment_event_list()
     stream_metadata = make_time_environment_stream_metadata()
-    environment_instructino = make_time_environment_instructions()
+    environment_instructions = make_time_environment_instructions()
 
     rattlesnake = Rattlesnake(threaded=True, timeout=10)
     rattlesnake.set_hardware(hardware_metadata)
     rattlesnake.set_environments([environment_metadata])
     rattlesnake.set_profile_event_list(profile_event_list)
     rattlesnake.set_stream_metadata(stream_metadata)
-    rattlesnake.start_acquisition(stream_metadata)
-    rattlesnake.start_environment(environment_instructino)
+    # rattlesnake.start_acquisition(stream_metadata)
+    # rattlesnake.start_environment(environment_instructions)
 
     # This is a fix for scaling Rattlesnake to different resolution monitors
     font_size = 10  # pt size

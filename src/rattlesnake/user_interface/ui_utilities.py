@@ -202,6 +202,36 @@ class EventWatcher(QtCore.QObject):
             self.error.emit(tb)
 
 
+class ProfileTimer(QtCore.QTimer):
+    """A timer class that allows storage of controller instruction information"""
+
+    def __init__(self, timestamp: float, environment_name: str, command: str, data: str):
+        """
+        A timer class that allows storage of controller instruction information
+
+        When the timer times out, the environment, operation, and any data can
+        be collected by the callback by accessing the self.sender().environment,
+        .operation, or .data attributes.
+
+        Parameters
+        ----------
+        environment : str
+            The name of the environment (or 'Global') that the instruction will
+            be sent to
+        operation : str
+            The operation that the environment will be instructed to perform
+        data : str
+            Any data corresponding to that operation that is required
+
+
+        """
+        super().__init__()
+        self.timestamp = timestamp
+        self.environment_name = environment_name
+        self.command = command
+        self.data = data
+
+
 class EditableCombobox(QtWidgets.QComboBox):
     def __init__(self, texts=[], value=None, parent=None):
         super().__init__(parent)

@@ -212,7 +212,7 @@ class TimeUI(AbstractUI):
             the corresponding environment.
         """
         # return TimeParameters.from_ui(self)
-        metadata = TimeMetadata()
+        metadata = TimeMetadata(self.environment_name)
         metadata.channel_list = self.hardware_metadata.channel_list
         metadata.sample_rate = self.definition_widget.output_sample_rate_display.value()
         metadata.output_signal = self.signal
@@ -238,30 +238,8 @@ class TimeUI(AbstractUI):
         # Make sure everything is defined
         if metadata.output_signal is None:
             raise ValueError("Output Signal is not defined!")
-        # Initialize the correct sizes of the arrays
+
         self.signal = metadata.output_signal
-        for plot_items in [
-            self.plot_data_items["output_signal_measurement"],
-            self.plot_data_items["response_signal_measurement"],
-        ]:
-            for curve in plot_items:
-                curve.setData(
-                    np.arange(
-                        (
-                            self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2
-                            if self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2 < MAX_SAMPLES_TO_PLOT
-                            else MAX_SAMPLES_TO_PLOT
-                        )
-                    )
-                    / self.hardware_metadata.sample_rate,
-                    np.zeros(
-                        (
-                            self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2
-                            if self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2 < MAX_SAMPLES_TO_PLOT
-                            else MAX_SAMPLES_TO_PLOT
-                        )
-                    ),
-                )
 
         self.show_signal()
 
@@ -346,6 +324,30 @@ class TimeUI(AbstractUI):
 
     def show_signal(self):
         """Shows the signal on the user interface"""
+        # Update run tab x-axis length
+        for plot_items in [
+            self.plot_data_items["output_signal_measurement"],
+            self.plot_data_items["response_signal_measurement"],
+        ]:
+            for curve in plot_items:
+                curve.setData(
+                    np.arange(
+                        (
+                            self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2
+                            if self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2 < MAX_SAMPLES_TO_PLOT
+                            else MAX_SAMPLES_TO_PLOT
+                        )
+                    )
+                    / self.hardware_metadata.sample_rate,
+                    np.zeros(
+                        (
+                            self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2
+                            if self.signal.shape[-1] // self.hardware_metadata.output_oversample * 2 < MAX_SAMPLES_TO_PLOT
+                            else MAX_SAMPLES_TO_PLOT
+                        )
+                    ),
+                )
+
         for curve, signal, check_box in zip(
             self.plot_data_items["output_signal_definition"],
             self.signal,
@@ -369,6 +371,8 @@ class TimeUI(AbstractUI):
         super().start_environment_ready()
 
     def start_environment_error(self, error):
+        self.display_environment_ended()
+
         if self.active:
             self.display_environment_started()
         else:

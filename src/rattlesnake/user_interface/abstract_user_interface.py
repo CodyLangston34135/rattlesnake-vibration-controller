@@ -67,8 +67,11 @@ class AbstractUI(ABC):
 
     @property
     def active(self):
-        queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
-        return self.rattlesnake.environment_manager.event_container.environment_active_events[queue_name].is_set()
+        try:
+            queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
+            return self.rattlesnake.environment_manager.event_container.environment_active_events[queue_name].is_set()
+        except:
+            return False
 
     @property
     def command_map(self) -> dict:

@@ -171,7 +171,7 @@ class StreamingProcess(AbstractMessageProcess):
             "i1",
             ("response_channels", "num_environments"),
         )
-        var[...] = np.array(environment_booleans).astype("int8")
+        var[...] = np.array(environment_booleans, dtype="int8").T
         # Create channel table variables
         labels = [
             ["node_number", str],
