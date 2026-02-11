@@ -415,7 +415,7 @@ class AcquisitionProcess(AbstractMessageProcess):
                 self.queue_container.streaming_command_queue.put(self.process_name, (GlobalCommands.STREAMING_DATA, read_data.copy()))
                 self.clear_streaming()
             if self.has_streamed and self.any_environments_started:
-                self.queue_container.streaming_command_queue.put(self.process_name, (GlobalCommands.FINALIZE_STREAMING, None))
+                # self.queue_container.streaming_command_queue.put(self.process_name, (GlobalCommands.FINALIZE_STREAMING, None))
                 self.has_streamed = False
             self.clear_active()
             self.log("Acquisition Shut Down")

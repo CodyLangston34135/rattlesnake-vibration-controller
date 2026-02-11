@@ -104,6 +104,8 @@ class ControllerProcess(AbstractMessageProcess):
             self.stop_environment(queue_name)
         if self.streaming_active:
             self.stop_streaming()
+        if self.stream_metadata.stream_type is not StreamType.NO_STREAM:
+            self.queue_container.streaming_command_queue.put(self.process_name, (GlobalCommands.FINALIZE_STREAMING, None))
         # Stop acquisition
         if not self.acquisition_active:
             raise RuntimeError("Tried to stop hardware when acquisition was not running")
