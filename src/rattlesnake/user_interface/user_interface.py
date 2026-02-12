@@ -284,6 +284,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         # Fill out channel table
         channel_list = hardware_metadata.channel_list
+        self.channel_table.blockSignals(True)
+        self.channel_table.setRowCount(len(channel_list))
         attr_list = Channel().channel_attr_list
         for row, channel in enumerate(channel_list):
             for col, attr_name in enumerate(attr_list):
@@ -292,6 +294,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
                 item = QtWidgets.QTableWidgetItem(value)
                 self.channel_table.setItem(row, col, item)
+        self.channel_table.blockSignals(False)
+        self.add_empty_channel_table_rows()
 
         match hardware_metadata.hardware_type:
             case HardwareType.SDYNPY_SYSTEM:
@@ -411,7 +415,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             case ".xlsx":
                 channel_list = load_channel_list_from_worksheet(filepath)
 
-        channel_list = hardware_metadata.channel_list
+        self.channel_table.blockSignals(True)
+        self.channel_table.setRowCount(len(channel_list))
         attr_list = Channel().channel_attr_list
         for row, channel in enumerate(channel_list):
             for col, attr_name in enumerate(attr_list):
@@ -420,6 +425,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
                 item = QtWidgets.QTableWidgetItem(value)
                 self.channel_table.setItem(row, col, item)
+        self.channel_table.blockSignals(False)
+        self.add_empty_channel_table_rows()
 
     def load_test_file(self, filepath=None):
         if not filepath:
@@ -725,8 +732,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     valid_values = empty_channel_dict[attr]
                     match module:
                         case HardwareModules.NONE:
-                            # item = QtWidgets.QTableWidgetItem(attr_value)
-                            # self.channel_table.setItem(row, col, item)
                             pass
                         case HardwareModules.COMBOBOX:
                             combobox = EditableCombobox(valid_values)
