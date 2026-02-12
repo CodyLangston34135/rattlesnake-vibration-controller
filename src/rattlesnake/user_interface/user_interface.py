@@ -518,6 +518,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         """Callback to synchronize scrolling between channel tables"""
         self.channel_table.verticalScrollBar().setValue(self.environment_channel_table.verticalScrollBar().value())
 
+    def sync_environment_table(self):
+        """Callback to synchronize scrolling between channel tables"""
+        self.environment_channel_table.verticalScrollBar().setValue(self.channel_table.verticalScrollBar().value())
+
     def add_empty_channel_table_rows(self, item=None):
         self.channel_table.blockSignals(True)
         num_rows = self.channel_table.rowCount()
@@ -532,17 +536,21 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         desired_rows = max(last_row + BUFFER_ROWS, MIN_ROWS)
         if self.channel_table.rowCount() != desired_rows:
             self.channel_table.setRowCount(desired_rows)
-            self.set_environment_channel_table_row_count(desired_rows)
+            self.set_environment_table_row_count(desired_rows)
+
+        if self.assist_channel_table_checkbox.isChecked():
+            widget_range = range(num_rows, desired_rows)
+            self.assist_channel_table_init(True, widget_range)
 
         self.channel_table.blockSignals(False)
 
-    def set_environment_channel_table_row_count(self, row_count):
-        old_row_count = self.environment_channel_table.rowCount()
-        col_count = self.environment_channel_table.columnCount()
-        self.environment_channel_table.setRowCount(row_count)
-        if row_count > old_row_count:
-            for row in range(old_row_count, row_count):
-                for col in range(col_count):
+    def set_environment_table_row_count(self, desired_rows):
+        num_rows = self.environment_channel_table.rowCount()
+        num_cols = self.environment_channel_table.columnCount()
+        self.environment_channel_table.setRowCount(desired_rows)
+        if desired_rows > num_rows:
+            for row in range(num_rows, desired_rows):
+                for col in range(num_cols):
                     checkbox = QtWidgets.QCheckBox()
                     checkbox.setChecked(False)
                     self.environment_channel_table.setCellWidget(row, col, checkbox)
@@ -674,11 +682,14 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         self.add_empty_channel_table_rows()
 
-    def assist_channel_table_init(self, assist_checked):
+    def assist_channel_table_init(self, assist_checked, edit_rows=[]):
         # Clear out old widgets:
         num_rows = self.channel_table.rowCount()
         num_cols = self.channel_table.columnCount()
-        for row in range(num_rows):
+        if not edit_rows:
+            edit_rows = range(num_rows)
+
+        for row in edit_rows:
             for col in range(num_cols):
                 self.channel_table.removeCellWidget(row, col)
 
@@ -691,36 +702,38 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         channel_list = self.get_channel_list()
         hardware_modules = hardware_metadata.assist_mode_modules
         for row, channel in enumerate(channel_list):
-            channel_dict = hardware_metadata.valid_channel_dict(channel)
-            for col, (attr, module) in enumerate(hardware_modules.items()):
-                attr_value = getattr(channel, attr)
-                valid_values = channel_dict[attr]
-                match module:
-                    case HardwareModules.NONE:
-                        pass
-                    case HardwareModules.COMBOBOX:
-                        combobox = EditableCombobox(valid_values, attr_value)
-                        combobox.currentTextChanged.connect(lambda text, row=row, col=col: self.assist_channel_table_update(text, row, col))
-                        self.channel_table.setCellWidget(row, col, combobox)
-                    case HardwareModules.SPINBOX:
-                        pass
+            if row in edit_rows:
+                channel_dict = hardware_metadata.valid_channel_dict(channel)
+                for col, (attr, module) in enumerate(hardware_modules.items()):
+                    attr_value = getattr(channel, attr)
+                    valid_values = channel_dict[attr]
+                    match module:
+                        case HardwareModules.NONE:
+                            pass
+                        case HardwareModules.COMBOBOX:
+                            combobox = EditableCombobox(valid_values, attr_value)
+                            combobox.currentTextChanged.connect(lambda text, row=row, col=col: self.assist_channel_table_update(text, row, col))
+                            self.channel_table.setCellWidget(row, col, combobox)
+                        case HardwareModules.SPINBOX:
+                            pass
 
         # Fill out empty modules
         empty_channel_dict = hardware_metadata.valid_channel_dict(Channel())
         for row in range(len(channel_list), num_rows):
-            for col, (attr, module) in enumerate(hardware_modules.items()):
-                valid_values = empty_channel_dict[attr]
-                match module:
-                    case HardwareModules.NONE:
-                        # item = QtWidgets.QTableWidgetItem(attr_value)
-                        # self.channel_table.setItem(row, col, item)
-                        pass
-                    case HardwareModules.COMBOBOX:
-                        combobox = EditableCombobox(valid_values)
-                        combobox.currentTextChanged.connect(lambda text, row=row, col=col: self.assist_channel_table_update(text, row, col))
-                        self.channel_table.setCellWidget(row, col, combobox)
-                    case HardwareModules.SPINBOX:
-                        pass
+            if row in edit_rows:
+                for col, (attr, module) in enumerate(hardware_modules.items()):
+                    valid_values = empty_channel_dict[attr]
+                    match module:
+                        case HardwareModules.NONE:
+                            # item = QtWidgets.QTableWidgetItem(attr_value)
+                            # self.channel_table.setItem(row, col, item)
+                            pass
+                        case HardwareModules.COMBOBOX:
+                            combobox = EditableCombobox(valid_values)
+                            combobox.currentTextChanged.connect(lambda text, row=row, col=col: self.assist_channel_table_update(text, row, col))
+                            self.channel_table.setCellWidget(row, col, combobox)
+                        case HardwareModules.SPINBOX:
+                            pass
 
     def assist_channel_table_update(self, text, row, col):
         # Assign text to channel table item
@@ -911,10 +924,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             environment_channel_list[environment_name] = selected_channels
 
         return environment_channel_list
-
-    def sync_environment_table(self):
-        """Callback to synchronize scrolling between channel tables"""
-        self.environment_channel_table.verticalScrollBar().setValue(self.channel_table.verticalScrollBar().value())
 
     def add_environment(self, environment_type: str | ControlTypes):
         """Function used to add an environment"""
