@@ -14,12 +14,14 @@ from rattlesnake.user_interface.ui_utilities import (
     ENVIRONMENT_TYPE,
     ui_path,
 )
-from rattlesnake.user_interface.ui_registry import ENVIRONMENT_UIS
 from rattlesnake.hardware.hardware_utilities import HardwareType, HardwareModules, Channel
 from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.abstract_environment import EnvironmentInstructions
 from rattlesnake.process.streaming import StreamMetadata, StreamType
 from rattlesnake.profile_manager import VALID_COMMANDS
+from rattlesnake.load_utilities import load_channel_list_from_netcdf, load_channel_list_from_worksheet
 from qtpy import QtWidgets, QtGui, QtCore, uic
+import traceback
 import ctypes
 import sys
 import os
@@ -140,12 +142,13 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
     def connect_callbacks(self):
         # Universal
         self.color_theme_combobox.currentTextChanged.connect(self.change_color_theme)
-        # self.load_test_file_button.clicked.connect(self.load_test_file)
+        self.load_test_file_button.clicked.connect(self.load_test_file)
 
         # Channel Table
         channel_table_scroll = self.channel_table.verticalScrollBar()
         channel_table_scroll.valueChanged.connect(self.sync_environment_table)
         self.assist_channel_table_checkbox.stateChanged.connect(self.assist_channel_table_init)
+        self.load_channel_table_button.clicked.connect(self.load_channel_table)
         # Copy
         self.channel_table_action_copy = QtWidgets.QAction("Copy", self.channel_table)
         self.channel_table_action_copy.setShortcut("Ctrl+C")
@@ -278,6 +281,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.display_error(f"{hardware_metadata.hardware_type} is not yet implemented")
 
     def load_stored_environments(self):
+        environment_names = list(self.environment_uis.keys())
+        for environment_name in environment_names:
+            self.remove_environment(None, environment_name)
+
         hardware_metadata = self.rattlesnake.hardware_metadata
         environment_metadata_dict = self.rattlesnake.environment_metadata
 
@@ -300,6 +307,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.rattlesnake_tabs.setCurrentIndex(1)
 
     def load_stored_profile(self):
+        for event_idx in reversed(range(self.profile_table.rowCount())):
+            self.remove_profile_event(None, event_idx)
+
         profile_event_list = self.rattlesnake.last_profile_event_list
 
         for profile_event in profile_event_list:
@@ -310,7 +320,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
             # If command is START_ENVIRONMENT, add the instructions command so that
             # the user can remove those instructions if they desire
-            if command is GlobalCommands.START_ENVIRONMENT:
+            if command is GlobalCommands.START_ENVIRONMENT and isinstance(data, EnvironmentInstructions):
                 self.add_profile_event()
                 row = self.profile_table.rowCount() - 1
                 timestamp_spinbox = self.profile_table.cellWidget(row, 0)
@@ -361,16 +371,55 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         self.initialize_profile()
 
-    # def load_test_file(self, filename, hardware=True):
-    #     if not filename:
-    #         filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-    #             self,
-    #             "Load Test NetCDF File",
-    #             filter="NetCDF File (*.nc4);;All Files (*.*)",
-    #         )
-    #         if filename == "":
-    #             return
-    #     load_metadata_from_file(filename)
+    def load_channel_table(self, filepath=None):
+        if not filepath:
+            filepath, _ = QtWidgets.QFileDialog.getOpenFileName(
+                self,
+                "Load Test NetCDF File",
+                filter="Rattlesnake Files (*.nc4 *.xlsx);;NetCDF Files (*.nc4);;Excel Files (*.xlsx);;All Files (*.*)",
+            )
+            if filepath == "":
+                return
+
+        filename, filetype = os.path.splitext(filepath)
+
+        if not os.access(filepath, os.R_OK):
+            raise PermissionError("You do not have permissions to open {filepath}")
+
+        match filetype:
+            case ".nc4":
+                channel_list = load_channel_list_from_netcdf(filepath)
+            case ".xlsx":
+                channel_list = load_channel_list_from_worksheet(filepath)
+
+        channel_list = hardware_metadata.channel_list
+        attr_list = Channel().channel_attr_list
+        for row, channel in enumerate(channel_list):
+            for col, attr_name in enumerate(attr_list):
+                value = getattr(channel, attr_name)
+                value = str(value) if value else None
+
+                item = QtWidgets.QTableWidgetItem(value)
+                self.channel_table.setItem(row, col, item)
+
+    def load_test_file(self, filepath=None):
+        if not filepath:
+            filepath, _ = QtWidgets.QFileDialog.getOpenFileName(
+                self,
+                "Load Test NetCDF File",
+                filter="Rattlesnake Files (*.nc4 *.xlsx);;NetCDF Files (*.nc4);;Excel Files (*.xlsx);;All Files (*.*)",
+            )
+            if filepath == "":
+                return
+
+        try:
+            self.rattlesnake.load_data_from_file(filepath)
+        except Exception:  # pylint: disable=broad-exception-caught
+            tb = traceback.format_exc()
+            self.display_error(tb)
+            return
+
+        self.load_from_rattlesnake_state()
 
     # region: Channel Table
     def get_channel(self, row):
@@ -733,14 +782,16 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             return
 
         idx = 0
-        environment_name = f"{ControlTypes.name} {idx}"
+        environment_name = f"{environment_type.name} {idx}"
         while environment_name in self.environment_uis.keys():
             idx += 1
-            environment_name = f"{ControlTypes.name} {idx}"
+            environment_name = f"{environment_type.name} {idx}"
 
-        if environment_type not in ENVIRONMENT_UIS.keys():
-            raise TypeError(f"{environment_type} has not been implemented yet")
-        environment_ui = ENVIRONMENT_UIS(environment_name, self.rattlesnake)
+        match environment_type:
+            case ControlTypes.TIME:
+                from rattlesnake.user_interface.time_ui import TimeUI
+
+                environment_ui = TimeUI(environment_name, self.rattlesnake)
 
         # Update environment UIs and channel table
         self.environment_uis[environment_name] = environment_ui
@@ -761,16 +812,22 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # Reset add environment combobox
         self.add_environment_combobox.setCurrentIndex(0)
 
-    def remove_environment(self, index):
+    def remove_environment(self, clicked=None, environment_name=None):
         # Find selected ranges on the environment channel table
-        selected_ranges = self.environment_channel_table.selectedRanges()
-        if not selected_ranges:
-            self.display_error("Please select an environment in environment channel table to remove")
-            return
+        if environment_name:
+            for col in range(self.environment_channel_table.columnCount()):
+                item = self.environment_channel_table.horizontalHeaderItem(col)
+                if item and item.text() == environment_name:
+                    columns = [col]
+        else:
+            selected_ranges = self.environment_channel_table.selectedRanges()
+            if not selected_ranges:
+                self.display_error("Please select an environment in environment channel table to remove")
+                return
+            # Remove selected columns from environment table and environment_uis
+            selected_range = selected_ranges[0]
+            columns = range(selected_range.leftColumn(), selected_range.rightColumn() + 1)
 
-        # Remove selected columns from environment table and environment_uis
-        selected_range = selected_ranges[0]
-        columns = range(selected_range.leftColumn(), selected_range.rightColumn() + 1)
         for col in sorted(columns, reverse=True):
             header_item = self.environment_channel_table.horizontalHeaderItem(col)
             environment_name = header_item.text()
@@ -1139,8 +1196,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         self.update_profile_plot()
 
-    def remove_profile_event(self, clicked=None):
-        selected_row = self.profile_table.currentRow()
+    def remove_profile_event(self, clicked=None, selected_row=None):
+        if selected_row is None:
+            selected_row = self.profile_table.currentRow()
+
         if selected_row >= 0:
             self.profile_table.removeRow(selected_row)
 
@@ -1517,11 +1576,11 @@ if __name__ == "__main__":
     environment_instructions = make_time_environment_instructions()
 
     rattlesnake = Rattlesnake(threaded=True, timeout=10)
-    rattlesnake.set_hardware(hardware_metadata)
-    rattlesnake.set_environments([environment_metadata])
-    rattlesnake.set_profile_event_list(profile_event_list)
-    rattlesnake.set_stream_metadata(stream_metadata)
-    rattlesnake.start_acquisition(stream_metadata)
+    # rattlesnake.set_hardware(hardware_metadata)
+    # rattlesnake.set_environments([environment_metadata])
+    # rattlesnake.set_profile_event_list(profile_event_list)
+    # rattlesnake.set_stream_metadata(stream_metadata)
+    # rattlesnake.start_acquisition(stream_metadata)
     # rattlesnake.start_environment(environment_instructions)
 
     # This is a fix for scaling Rattlesnake to different resolution monitors

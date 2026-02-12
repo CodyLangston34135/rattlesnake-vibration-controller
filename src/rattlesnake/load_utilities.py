@@ -1,8 +1,7 @@
-from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
-from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.hardware.hardware_utilities import Channel
 import os
-import openpyxl
 import netCDF4
+import openpyxl
 import numpy as np
 import scipy.signal as sig
 from scipy.interpolate import interp1d
@@ -68,6 +67,25 @@ def load_time_history(signal_path, sample_rate):
     return signal
 
 
+def load_channel_list_from_netcdf(filepath):
+    dataset = netCDF4.Dataset(filepath)
+    channel_table = dataset["channels"]
+    channel_list = []
+    num_channels = dataset.dimensions["response_channels"].size
+    channel_attr_list = Channel().channel_attr_list
+    for row_idx in range(num_channels):
+        channel = Channel()
+        for attr in channel_attr_list:
+            value = channel_table[attr][row_idx]
+            value = None if isinstance(value, str) and not value.strip() else value
+            setattr(channel, attr, value)
+
+        if not channel.is_empty:  # optional safety check
+            channel_list.append(channel)
+
+    return channel_list
+
+
 def load_channel_list_from_worksheet(filepath):
     workbook = openpyxl.load_workbook(filepath, read_only=True)
     sheets = workbook.sheetnames
@@ -83,118 +101,15 @@ def load_channel_list_from_worksheet(filepath):
 
     channel_list = []
     channel_attr_list = Channel().channel_attr_list
-    for row in worksheet.iter_rows(min_row=3, max_col=23):
+    for row in worksheet.iter_rows(min_row=3, min_col=2, max_col=23):
         channel = Channel()
         for col, cell in enumerate(row):
+            value = cell.value
+            value = None if isinstance(value, str) and not value.strip() else value
             setattr(channel, channel_attr_list[col], cell.value)
         if channel.is_empty:
             break
-        channel_list.append(Channel)
+        channel_list.append(channel)
     workbook.close()
 
     return channel_list
-
-
-def load_metadata_from_netcdf4(filepath):
-    """Loads a test file using a file dialog"""
-    dataset = netCDF4.Dataset(filepath)  # pylint: disable=no-member
-
-    # Channel Table
-    channel_table = dataset["channels"]
-    channel_list = []
-    num_channels = dataset.dimensions["response_channels"].size
-    channel_attr_list = Channel().channel_attr_list
-    for row_idx in range(num_channels):
-        channel = Channel()
-        for attr in channel_attr_list:
-            value = channel_table[attr][row_idx]
-            setattr(channel, attr, value)
-
-        if not channel.is_empty:  # optional safety check
-            channel_list.append(channel)
-
-    # Hardware
-    hardware_type = HardwareType(dataset.hardware)
-    match hardware_type:
-        case HardwareType.SDYNPY_SYSTEM:
-            from rattlesnake.hardware.sdynpy_system import SDynPySystemMetadata
-
-            hardware_metadata = SDynPySystemMetadata()
-            hardware_metadata.hardware_file = dataset.hardware_file
-
-        case _:
-            raise ValueError(f"{hardware_type} has not been implemented yet")
-
-    hardware_metadata.channel_list = channel_list
-    hardware_metadata.sample_rate = dataset.sample_rate
-    hardware_metadata.time_per_read = dataset.time_per_read
-    hardware_metadata.time_per_write = dataset.time_per_write
-    hardware_metadata.output_oversample = dataset.output_oversample
-
-    # Environments
-    environment_metadata_list = []
-    for environment_index, environment_name in enumerate(
-        dataset.variables["environment_names"][...],
-    ):
-        environment_active_channels = dataset.variables["environment_active_channels"][:, environment_index]
-        environment_channel_list = [channel for channel, channel_bool in zip(channel_list, environment_active_channels) if channel_bool == 1]
-        environment_type_int = dataset.variables["environment_types"][environment_index]
-        environment_type = ControlTypes(environment_type_int)
-        environment_group = dataset.groups[environment_name]
-
-        match environment_type:
-            case ControlTypes.TIME:
-                from rattlesnake.environment.time_environment import TimeMetadata
-
-                environment_metadata = TimeMetadata(environment_name)
-                environment_metadata.sample_rate = hardware_metadata.sample_rate  # This is rough
-            case _:
-                raise TypeError(f"{environment_type} has not been implemented yet")
-
-        environment_metadata.channel_list = environment_channel_list
-        environment_metadata.retrieve_metadata(environment_group)
-
-        environment_metadata_list.append(environment_metadata)
-
-    return (hardware_metadata, environment_metadata)
-
-
-def load_metadata_from_worksheet(filepath):
-    workbook = openpyxl.load_workbook(filepath, read_only=True)
-
-    channel_list = load_channel_list_from_worksheet(filepath)
-
-    hardware_sheet = workbook["Hardware"]
-    hardware_type_int = int(hardware_sheet.rows[0][1].value)
-    hardware_type = HardwareType(hardware_type_int)
-    match hardware_type:
-        case HardwareType.SDYNPY_SYSTEM:
-            from rattlesnake.hardware.sdynpy_system import SDynPySystemMetadata
-
-            hardware_metadata = SDynPySystemMetadata()
-
-    hardware_metadata.channel_list = channel_list
-    for row in enumerate(hardware_sheet.rows[4:]):
-        name = str(row[0].value).lower().strip().replace(" ", "_")
-        value = row[1].value
-        match name:
-            case "hardware_file":
-                hardware_metadata.hardware_file = value
-            case "sample_rate":
-                hardware_metadata.sample_rate = value
-            case "time_per_read":
-                hardware_metadata.time_per_read = value
-            case "time_per_write":
-                hardware_metadata.time_per_write = value
-            case "integration_oversampling":
-                hardware_metadata.output_oversample = int(value)
-            case "task_trigger":
-                hardware_metadata.task_trigger = int(value)
-            case "task_trigger_output_channel":
-                hardware_metadata.task_output = str(value)
-            case "maximum_acquisition_processes":
-                hardware_metadata.maximum_acquisition_processes = int(value)
-            case "":
-                continue
-            case _:
-                print(f"Hardware sheet entry {row[0].value} not recognized")

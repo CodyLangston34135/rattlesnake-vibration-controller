@@ -29,9 +29,12 @@ from rattlesnake.environment.abstract_environment import EnvironmentCommands, En
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.load_utilities import load_time_history
 import copy
+import openpyxl
+import queue as thqueue
+import multiprocessing.queues as mpqueue
 import multiprocessing as mp
-import queue
 import multiprocessing.synchronize  # pylint: disable=unused-import
 import netCDF4 as nc4
 import numpy as np
@@ -124,7 +127,7 @@ class TimeMetadata(EnvironmentMetadata):
         if not isinstance(self.cancel_rampdown_time, (int, float)) or self.cancel_rampdown_time <= 0:
             raise ValueError(f"{self.environment_name} cancel_rampdown_time must be a number greater than 0")
 
-        if not isinstance(self.sample_rate, (int, float)) or self.sample_rate <= 0:
+        if not isinstance(self.sample_rate, int) or self.sample_rate <= 0:
             raise ValueError(f"{self.environment_name} sample_rate must be a number greater than 0")
 
         if not isinstance(self.output_signal, np.ndarray):
@@ -160,7 +163,7 @@ class TimeMetadata(EnvironmentMetadata):
         var = netcdf_group_handle.createVariable("output_signal", "f8", ("output_channels", "signal_samples"))
         var[...] = self.output_signal
 
-    def retrieve_metadata(self, group: nc4._netCDF4.Dataset):  # pylint: disable=c-extension-no-member
+    def retrieve_metadata_from_netcdf(self, group: nc4._netCDF4.Dataset):  # pylint: disable=c-extension-no-member
         """Collects environment parameters from a netCDF dataset.
 
         This function retrieves parameters from a netCDF dataset that was written
@@ -186,12 +189,26 @@ class TimeMetadata(EnvironmentMetadata):
         """
         self.output_signal = group.variables["output_signal"][...].data
         self.cancel_rampdown_time = group.cancel_rampdown_time
-        # maxs = np.max(np.abs(self.signal), axis=-1)
-        # rmss = rms_time(self.signal, axis=-1)
-        # for i, (mx, rms) in enumerate(zip(maxs, rmss)):
-        #     self.definition_widget.signal_information_table.item(i, 2).setText(f"{mx:0.2f}")
-        #     self.definition_widget.signal_information_table.item(i, 3).setText(f"{rms:0.2f}")
-        # self.show_signal()
+
+    def store_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+        pass
+
+    def retrieve_metadata_from_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+        for row in worksheet.rows:
+            name = str(row[0].value).lower().strip().replace(" ", "_")
+            value = row[1].value
+            match name:
+                case "control_type":
+                    continue
+                case "signal_file":
+                    signal_file = value
+                    self.output_signal = load_time_history(signal_file, self.sample_rate)
+                case "cancel_rampdown_time":
+                    self.cancel_rampdown_time = value
+                case "":
+                    continue
+                case _:
+                    raise TypeError(f"{name} does not go with {self.environment_type} environment")
 
 
 # region: TimeInstructions
@@ -377,7 +394,7 @@ class TimeEnvironment(EnvironmentProcess):
             measurement_data = acquisition_data[self.measurement_channels]
             output_data = acquisition_data[self.output_channels]
             self.queue_container.gui_update_queue.put((self.environment_name, (TimeUICommands.TIME_DATA, (measurement_data, output_data))))
-        except (queue.Empty, mp.queues.Empty):
+        except (thqueue.Empty, mpqueue.Empty):
             last_acquisition = False
         # See if we need to output data
         if self.queue_container.data_out_queue.empty():

@@ -420,22 +420,6 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
               </widget>
              </item>
              <item>
-              <widget class="QPushButton" name="save_channel_table_button">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="toolTip">
-                <string>Saves the current channel table to an Excel Spreadsheet.</string>
-               </property>
-               <property name="text">
-                <string>Save Channel Table</string>
-               </property>
-              </widget>
-             </item>
-             <item>
               <widget class="QPushButton" name="load_channel_table_button">
                <property name="toolTip">
                 <string>Loads a channel table in the form of an Excel Spreadsheet.</string>
@@ -1431,6 +1415,22 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
     <item>
      <layout class="QHBoxLayout" name="stop_program_button_layout">
       <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Maximum</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>10</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
        <widget class="QPushButton" name="channel_monitor_button">
         <property name="enabled">
          <bool>false</bool>
@@ -1440,6 +1440,22 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
         </property>
         <property name="text">
          <string>Channel Monitor</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="save_rattlesnake_template_button">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="toolTip">
+         <string>Saves the current channel table to an Excel Spreadsheet.</string>
+        </property>
+        <property name="text">
+         <string>Save Template</string>
         </property>
        </widget>
       </item>

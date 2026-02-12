@@ -6,6 +6,7 @@ from rattlesnake.user_interface.ui_utilities import UICommands
 from abc import ABC, abstractmethod
 import traceback
 import os
+import openpyxl
 import netCDF4 as nc4
 import multiprocessing as mp
 import multiprocessing.synchronize  # pylint: disable=unused-import
@@ -148,10 +149,9 @@ class EnvironmentMetadata(ABC):
             A reference to the Group within the netCDF dataset where the
             environment's metadata is stored.
         """
-        pass
 
     @abstractmethod
-    def retrieve_metadata(self, netcdf_handle: nc4._netCDF4.Dataset):  # pylint: disable=c-extension-no-member
+    def retrieve_metadata_from_netcdf(self, netcdf_handle: nc4._netCDF4.Dataset):  # pylint: disable=c-extension-no-member
         """Collects environment parameters from a netCDF dataset.
 
         This function retrieves parameters from a netCDF dataset that was written
@@ -174,6 +174,46 @@ class EnvironmentMetadata(ABC):
         netcdf_handle : nc4._netCDF4.Dataset :
             The netCDF dataset from which the data will be read.  It should have
             a group name with the enviroment's name.
+
+        """
+
+    @abstractmethod
+    def store_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+        """
+        Store parameters to a worksheet in an netCDF streaming file.
+
+        This function stores parameters from the environment into the netCDF
+        file in a group with the environment's name as its name.  The function
+        will receive a reference to the group within the dataset and should
+        store the environment's parameters into that group in the form of
+        attributes, dimensions, or variables.
+
+        This function is the "write" counterpart to the retrieve_metadata
+        function in the AbstractUI class, which will read parameters from
+        the netCDF file to populate the parameters in the user interface.
+
+        Parameters
+        ----------
+        netcdf_group_handle : nc4._netCDF4.Group
+            A reference to the Group within the netCDF dataset where the
+            environment's metadata is stored.
+        """
+
+    @abstractmethod
+    def retrieve_metadata_from_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):  # pylint: disable=c-extension-no-member
+        """Collects environment parameters from an Excel worksheet.
+
+        This function retrieves parameters from an Excel worksheet that was written
+        by the controller during streaming.  It must populate the widgets
+        in the user interface with the proper information.
+
+        This function is the "read" counterpart to the store_to_worksheet
+        function in the AbstractMetadata class, which will write parameters to
+        the netCDF file to document the metadata.
+
+        Note that the entire dataset is passed to this function, so the function
+        should collect parameters pertaining to the environment from a worksheet
+        in the worksheet sharing the environment's name, e.g.
 
         """
 
