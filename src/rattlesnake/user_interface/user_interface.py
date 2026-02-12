@@ -32,6 +32,8 @@ TASK_NAME = "UI"
 VERSION = "3.1.1"
 directory = os.path.split(__file__)[0]
 QtCore.QDir.addSearchPath("images", os.path.join(directory, "themes", "images"))
+BUFFER_ROWS = 10
+MIN_ROWS = 30
 
 
 # region: Init
@@ -146,6 +148,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.save_template_button.clicked.connect(self.save_template)
 
         # Channel Table
+        self.channel_table.itemChanged.connect(self.add_empty_channel_table_rows)
         channel_table_scroll = self.channel_table.verticalScrollBar()
         channel_table_scroll.valueChanged.connect(self.sync_environment_table)
         self.assist_channel_table_checkbox.stateChanged.connect(self.assist_channel_table_init)
@@ -506,6 +509,35 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         """Callback to synchronize scrolling between channel tables"""
         self.channel_table.verticalScrollBar().setValue(self.environment_channel_table.verticalScrollBar().value())
 
+    def add_empty_channel_table_rows(self, item=None):
+        self.channel_table.blockSignals(True)
+        num_rows = self.channel_table.rowCount()
+        last_row = -1
+        for row_idx in reversed(range(num_rows)):
+            channel = self.get_channel(row_idx)
+
+            if not channel.is_empty:
+                last_row = row_idx + 1
+                break
+
+        desired_rows = max(last_row + BUFFER_ROWS, MIN_ROWS)
+        if self.channel_table.rowCount() != desired_rows:
+            self.channel_table.setRowCount(desired_rows)
+            self.set_environment_channel_table_row_count(desired_rows)
+
+        self.channel_table.blockSignals(False)
+
+    def set_environment_channel_table_row_count(self, row_count):
+        old_row_count = self.environment_channel_table.rowCount()
+        col_count = self.environment_channel_table.columnCount()
+        self.environment_channel_table.setRowCount(row_count)
+        if row_count > old_row_count:
+            for row in range(old_row_count, row_count):
+                for col in range(col_count):
+                    checkbox = QtWidgets.QCheckBox()
+                    checkbox.setChecked(False)
+                    self.environment_channel_table.setCellWidget(row, col, checkbox)
+
     def copy_channel_table(self):
         """Function to copy text from channel table in a format that Excel recognizes"""
         if self.assist_channel_table_checkbox.isChecked():
@@ -537,6 +569,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.display_error("Please remove assist mode for paste functionality")
             return
 
+        self.channel_table.blockSignals(True)
         selection_range = self.channel_table.selectedRanges()
         self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
         if selection_range:
@@ -551,6 +584,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 rows = clipboard_text.splitlines()
                 # Split clipboard text with tabs between columns
                 array_text = [row.split("\t") for row in rows]
+                num_row = len(array_text)
+                bottom_row = top_left_row + num_row
+                if self.channel_table.rowCount() < bottom_row:
+                    self.channel_table.setRowCount(bottom_row)
                 # Paste the text into the table
                 for i, row in enumerate(array_text):
                     for j, cell_text in enumerate(row):
@@ -558,6 +595,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                         item = QtWidgets.QTableWidgetItem(cell_text)
                         self.channel_table.setItem(top_left_row + i, top_left_column + j, item)
         self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+        self.channel_table.blockSignals(False)
+        self.add_empty_channel_table_rows()
 
     def delete_channel_table(self):
         """Function to delete text from a channel table when delete is pressed"""
@@ -565,6 +604,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.display_error("Please remove assist mode for delete functionality")
             return
 
+        self.channel_table.blockSignals(True)
         selection_range = self.channel_table.selectedRanges()
         self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
         if selection_range:
@@ -578,6 +618,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     clear_item = QtWidgets.QTableWidgetItem("")
                     self.channel_table.setItem(row, column, clear_item)
         self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+        self.channel_table.blockSignals(False)
+        self.add_empty_channel_table_rows()
 
     def assist_channel_table_init(self, assist_checked):
         # Clear out old widgets:
