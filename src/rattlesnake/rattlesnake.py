@@ -7,6 +7,8 @@ from rattlesnake.profile_manager import ProfileManager, ProfileEvent
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions
 from rattlesnake.environment_manager import EnvironmentManager
+from rattlesnake.load_utilities import load_metadata_from_netcdf4
+import os
 import time
 import multiprocessing as mp
 import threading
@@ -20,7 +22,7 @@ CLOSE_TIMEOUT = 5  # Number of seconds to wait for process to join
 THREADING = True
 
 
-# region: RattlesnakeState
+# region: State
 class RattlesnakeState(Enum):
     # We don't check for stored stream/profiles because they can be left blank
     INIT = 0  # Nothing is stored yet
@@ -209,6 +211,7 @@ class Rattlesnake:
             active_event_list = []
             self.wait_for_events(ready_event_list, active_event_list)
 
+    # region: Properties
     @property
     def state(self) -> RattlesnakeState:
         hardware_store = self.hardware_metadata is not None
@@ -282,6 +285,17 @@ class Rattlesnake:
                     event.set()
                 raise TimeoutError("Timeout waiting for all events to be ready")
 
+    # region: Loading
+    def load_data_from_file(self, filepath):
+        filename, filetype = os.path.splitext(filepath)
+
+        match filetype:
+            case ".nc4":
+                pass
+            case ".xlsx":
+                pass
+
+    # region: Hardware
     def set_hardware(self, hardware_metadata: HardwareMetadata) -> None:
         """Validates hardware_metadata and sends data to relevant processes"""
         # Validate Rattlesnake State
@@ -312,6 +326,7 @@ class Rattlesnake:
             # Update state
             self.hardware_metadata = hardware_metadata
 
+    # region: Environments
     def set_environments(self, environment_metadata_list: List[EnvironmentMetadata]):
         """Validates environment_metadata, starts up environment processes, assigns queues,
         and sends data to relevant processes"""
@@ -345,6 +360,7 @@ class Rattlesnake:
             # Update state
             self.environment_metadata = self.environment_manager.environment_metadata
 
+    # region: Acquisition
     def set_stream_metadata(self, stream_metadata: StreamMetadata):
         """
         This is only used to load a stream_metadata to the controller for UI purposes. Start_acquisition
@@ -413,6 +429,7 @@ class Rattlesnake:
             ]
             self.wait_for_events(ready_event_list, active_event_list, active_event_check=False)
 
+    # region: Active
     def start_environment(self, instructions):
         if self.state not in (RattlesnakeState.HARDWARE_ACTIVE, RattlesnakeState.ENVIRONMENT_ACTIVE):
             raise RuntimeError(f"Invalid state for starting environment: {self.state}")
@@ -454,6 +471,7 @@ class Rattlesnake:
 
         self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.STREAM_AT_TARGET_LEVEL, environment_name))
 
+    # region: Streaming
     def start_streaming(self):
         if self.state not in (RattlesnakeState.HARDWARE_ACTIVE, RattlesnakeState.ENVIRONMENT_ACTIVE):
             raise RuntimeError(f"Invalid state for starting streaming: {self.state}")
@@ -478,6 +496,7 @@ class Rattlesnake:
             active_event_list = [self.event_container.streaming_active_event]
             self.wait_for_events(ready_event_list, active_event_list, active_event_check=False)
 
+    # region: Profile
     def set_profile_event_list(self, profile_event_list: List[ProfileEvent]):
         """
         This is mainly to preload profile event list for UI purposes. You
@@ -525,6 +544,7 @@ class Rattlesnake:
             active_event_list = []
             self.wait_for_events(ready_event_list, active_event_list)
 
+    # region: Shutdown
     def shutdown(self):
         if self.state in (RattlesnakeState.HARDWARE_ACTIVE, RattlesnakeState.ENVIRONMENT_ACTIVE):
             self.stop_acquisition()

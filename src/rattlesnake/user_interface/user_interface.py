@@ -14,6 +14,7 @@ from rattlesnake.user_interface.ui_utilities import (
     ENVIRONMENT_TYPE,
     ui_path,
 )
+from rattlesnake.user_interface.ui_registry import ENVIRONMENT_UIS
 from rattlesnake.hardware.hardware_utilities import HardwareType, HardwareModules, Channel
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.process.streaming import StreamMetadata, StreamType
@@ -139,6 +140,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
     def connect_callbacks(self):
         # Universal
         self.color_theme_combobox.currentTextChanged.connect(self.change_color_theme)
+        # self.load_test_file_button.clicked.connect(self.load_test_file)
 
         # Channel Table
         channel_table_scroll = self.channel_table.verticalScrollBar()
@@ -211,7 +213,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             return True
         return False
 
-    # region: State Loading
+    # region: Data Loading
     def load_from_rattlesnake_state(self):
         state = self.rattlesnake.state
         has_profile = self.rattlesnake.has_profile
@@ -358,6 +360,17 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.streaming_file_display.setText(stream_metadata.stream_file)
 
         self.initialize_profile()
+
+    # def load_test_file(self, filename, hardware=True):
+    #     if not filename:
+    #         filename, _ = QtWidgets.QFileDialog.getOpenFileName(
+    #             self,
+    #             "Load Test NetCDF File",
+    #             filter="NetCDF File (*.nc4);;All Files (*.*)",
+    #         )
+    #         if filename == "":
+    #             return
+    #     load_metadata_from_file(filename)
 
     # region: Channel Table
     def get_channel(self, row):
@@ -716,33 +729,18 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         if isinstance(environment_type, str):
             environment_type = ENVIRONMENT_TYPE[environment_type]
 
-        match environment_type:
-            case "Select":
-                return
-            case ControlTypes.RANDOM:
-                return
-            case ControlTypes.TRANSIENT:
-                return
-            case ControlTypes.SINE:
-                return
-            case ControlTypes.TIME:
-                from rattlesnake.user_interface.time_ui import TimeUI
+        if environment_type == "Select":
+            return
 
-                # Create a unique name
-                idx = 0
-                environment_name = f"Time Environment {idx}"
-                while environment_name in self.environment_uis.keys():
-                    idx += 1
-                    environment_name = f"Time Environment {idx}"
+        idx = 0
+        environment_name = f"{ControlTypes.name} {idx}"
+        while environment_name in self.environment_uis.keys():
+            idx += 1
+            environment_name = f"{ControlTypes.name} {idx}"
 
-                environment_ui = TimeUI(environment_name, self.rattlesnake)
-            case ControlTypes.MODAL:
-                return
-            case ControlTypes.READ:
-                return
-            case _:
-                self.display_error("Environment type does not exist. How did you get here?")
-                return
+        if environment_type not in ENVIRONMENT_UIS.keys():
+            raise TypeError(f"{environment_type} has not been implemented yet")
+        environment_ui = ENVIRONMENT_UIS(environment_name, self.rattlesnake)
 
         # Update environment UIs and channel table
         self.environment_uis[environment_name] = environment_ui
@@ -1523,7 +1521,7 @@ if __name__ == "__main__":
     rattlesnake.set_environments([environment_metadata])
     rattlesnake.set_profile_event_list(profile_event_list)
     rattlesnake.set_stream_metadata(stream_metadata)
-    # rattlesnake.start_acquisition(stream_metadata)
+    rattlesnake.start_acquisition(stream_metadata)
     # rattlesnake.start_environment(environment_instructions)
 
     # This is a fix for scaling Rattlesnake to different resolution monitors
