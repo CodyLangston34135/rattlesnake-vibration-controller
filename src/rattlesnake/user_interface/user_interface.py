@@ -19,7 +19,14 @@ from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.environment.abstract_environment import EnvironmentInstructions
 from rattlesnake.process.streaming import StreamMetadata, StreamType
 from rattlesnake.profile_manager import VALID_COMMANDS
-from rattlesnake.load_manager import load_channel_list_from_netcdf, load_channel_list_from_worksheet, save_rattlesnake_template
+from rattlesnake.load_manager import (
+    load_channel_table_from_netcdf,
+    load_channel_table_from_worksheet,
+    save_channel_table_worksheet,
+    load_profile_from_worksheet,
+    save_profile_worksheet,
+    save_rattlesnake_template,
+)
 from qtpy import QtWidgets, QtGui, QtCore, uic
 import traceback
 import ctypes
@@ -152,8 +159,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.channel_table.itemChanged.connect(self.add_empty_channel_table_rows)
         channel_table_scroll = self.channel_table.verticalScrollBar()
         channel_table_scroll.valueChanged.connect(self.sync_environment_table)
-        self.assist_channel_table_checkbox.stateChanged.connect(self.assist_channel_table_init)
         self.load_channel_table_button.clicked.connect(self.load_channel_table)
+        self.save_channel_table_button.clicked.connect(self.save_channel_table)
+        self.assist_channel_table_checkbox.stateChanged.connect(self.assist_channel_table_init)
         # Copy
         self.channel_table_action_copy = QtWidgets.QAction("Copy", self.channel_table)
         self.channel_table_action_copy.setShortcut("Ctrl+C")
@@ -201,6 +209,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # Profiles
         self.add_profile_event_button.clicked.connect(self.add_profile_event)
         self.remove_profile_event_button.clicked.connect(self.remove_profile_event)
+        self.save_profile_button.clicked.connect(self.save_profile_list)
+        self.load_profile_button.clicked.connect(self.load_profile_list)
         self.initialize_profile_button.clicked.connect(self.initialize_profile)
         self.start_profile_button.clicked.connect(self.start_profile)
         self.stop_profile_button.clicked.connect(self.stop_profile)
@@ -394,45 +404,11 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         self.initialize_profile()
 
-    def load_channel_table(self, filepath=None):
-        if not filepath:
-            filepath, _ = QtWidgets.QFileDialog.getOpenFileName(
-                self,
-                "Load Test NetCDF File",
-                filter="Rattlesnake Files (*.nc4 *.xlsx);;NetCDF Files (*.nc4);;Excel Files (*.xlsx);;All Files (*.*)",
-            )
-            if filepath == "":
-                return
-
-        filename, filetype = os.path.splitext(filepath)
-
-        if not os.access(filepath, os.R_OK):
-            raise PermissionError("You do not have permissions to open {filepath}")
-
-        match filetype:
-            case ".nc4":
-                channel_list = load_channel_list_from_netcdf(filepath)
-            case ".xlsx":
-                channel_list = load_channel_list_from_worksheet(filepath)
-
-        self.channel_table.blockSignals(True)
-        self.channel_table.setRowCount(len(channel_list))
-        attr_list = Channel().channel_attr_list
-        for row, channel in enumerate(channel_list):
-            for col, attr_name in enumerate(attr_list):
-                value = getattr(channel, attr_name)
-                value = str(value) if value else None
-
-                item = QtWidgets.QTableWidgetItem(value)
-                self.channel_table.setItem(row, col, item)
-        self.channel_table.blockSignals(False)
-        self.add_empty_channel_table_rows()
-
     def load_test_file(self, filepath=None):
         if not filepath:
             filepath, _ = QtWidgets.QFileDialog.getOpenFileName(
                 self,
-                "Load Test NetCDF File",
+                "Load Rattlesnake Template File",
                 filter="Rattlesnake Files (*.nc4 *.xlsx);;NetCDF Files (*.nc4);;Excel Files (*.xlsx);;All Files (*.*)",
             )
             if filepath == "":
@@ -688,6 +664,50 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.environment_channel_table.removeRow(row_idx)
 
         self.add_empty_channel_table_rows()
+
+    def load_channel_table(self, filepath=None):
+        if not filepath:
+            filepath, _ = QtWidgets.QFileDialog.getOpenFileName(
+                self,
+                "Load Rattlesnake Template File",
+                filter="Rattlesnake Files (*.nc4 *.xlsx);;NetCDF Files (*.nc4);;Excel Files (*.xlsx);;All Files (*.*)",
+            )
+            if filepath == "":
+                return
+
+        if not os.access(filepath, os.R_OK):
+            self.display_error(f"You do not have permissions to open {filepath}")
+            return
+
+        filename, filetype = os.path.splitext(filepath)
+        match filetype:
+            case ".nc4":
+                channel_list = load_channel_table_from_netcdf(filepath)
+            case ".xlsx":
+                channel_list = load_channel_table_from_worksheet(filepath)
+
+        self.channel_table.blockSignals(True)
+        self.channel_table.setRowCount(len(channel_list))
+        attr_list = Channel().channel_attr_list
+        for row, channel in enumerate(channel_list):
+            for col, attr_name in enumerate(attr_list):
+                value = getattr(channel, attr_name)
+                value = str(value) if value else None
+
+                item = QtWidgets.QTableWidgetItem(value)
+                self.channel_table.setItem(row, col, item)
+        self.channel_table.blockSignals(False)
+        self.add_empty_channel_table_rows()
+
+    def save_channel_table(self, filepath=None):
+        if not filepath:
+            filepath, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save Combined Environments Template", filter="Excel File (*.xlsx)")
+        if filepath == "":
+            return
+
+        channel_list = self.get_channel_list()
+
+        save_channel_table_worksheet(filepath, channel_list)
 
     def assist_channel_table_init(self, assist_checked, edit_rows=[]):
         # Clear out old widgets:
@@ -1322,6 +1342,57 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.display_acquisition_ended()
 
     # region: Profile
+    def load_profile_list(self, filepath=None):
+        if not filepath:
+            filepath, _ = QtWidgets.QFileDialog.getOpenFileName(
+                self,
+                "Load Profile Excel File",
+                filter="Excel Files (*.xlsx);;All Files (*.*)",
+            )
+            if filepath == "":
+                return
+
+        if not os.access(filepath, os.R_OK):
+            self.display_error(f"You do not have permissions to open {filepath}")
+            return
+
+        environment_types = {
+            environment_name: self.environment_uis[environment_name].environment_type for environment_name in self.environment_uis.keys()
+        }
+        filename, filetype = os.path.splitext(filepath)
+        match filetype:
+            case ".nc4":
+                self.display_error(f"Netcdf files do not store profile lists")
+            case ".xlsx":
+                profile_event_list = load_profile_from_worksheet(filepath, environment_types)
+                self.rattlesnake.set_profile_event_list(profile_event_list)
+                self.load_stored_profile()
+
+    def save_profile_list(self, filepath=None):
+        if not filepath:
+            filepath, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save Combined Environments Template", filter="Excel File (*.xlsx)")
+        if filepath == "":
+            return
+
+        profile_event_list = []
+        num_rows = self.profile_table.rowCount()
+        for row in range(num_rows):
+            timestamp = self.profile_table.cellWidget(row, 0).value()
+            environment_name = self.profile_table.cellWidget(row, 1).currentText()
+            command = self.profile_table.cellWidget(row, 2).currentData()
+            data_item = self.profile_table.item(row, 3)
+            data_text = data_item.text() if data_item is not None else ""
+
+            # Skip environment instructions
+            if command == "Set Environment Instructions":
+                continue
+
+            event = ProfileEvent(timestamp, environment_name, command, data_text)
+
+            profile_event_list.append(event)
+
+        save_profile_worksheet(filepath, profile_event_list)
+
     def add_profile_event(self, clicked=None):
         # Create new row in profile table
         selected_row = self.profile_table.rowCount()

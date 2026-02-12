@@ -404,18 +404,9 @@ As an example, if NI is used, and Analog Output ao0 on device PXI1Slot4 is teed 
            <item>
             <layout class="QHBoxLayout" name="channel_table_button_layout">
              <item>
-              <widget class="QPushButton" name="load_test_file_button">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="toolTip">
-                <string>Loads a NetCDF4 file containing test data to replicate the parameters in that test.</string>
-               </property>
+              <widget class="QPushButton" name="save_channel_table_button">
                <property name="text">
-                <string>Load Test from File</string>
+                <string>Save Channel Table</string>
                </property>
               </widget>
              </item>
@@ -1456,6 +1447,22 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
         </property>
         <property name="text">
          <string>Save Template</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="load_test_file_button">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="toolTip">
+         <string>Loads a NetCDF4 file containing test data to replicate the parameters in that test.</string>
+        </property>
+        <property name="text">
+         <string>Load Template</string>
         </property>
        </widget>
       </item>

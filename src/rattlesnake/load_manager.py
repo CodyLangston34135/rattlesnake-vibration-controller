@@ -7,7 +7,8 @@ import netCDF4
 import openpyxl
 
 
-def load_channel_list_from_netcdf(filepath):
+# region: Channel Table
+def load_channel_table_from_netcdf(filepath):
     dataset = netCDF4.Dataset(filepath)
     channel_table = dataset["channels"]
     channel_list = []
@@ -26,7 +27,7 @@ def load_channel_list_from_netcdf(filepath):
     return channel_list
 
 
-def load_channel_list_from_worksheet(filepath):
+def load_channel_table_from_worksheet(filepath):
     workbook = openpyxl.load_workbook(filepath, read_only=True)
     sheets = workbook.sheetnames
 
@@ -55,13 +56,124 @@ def load_channel_list_from_worksheet(filepath):
     return channel_list
 
 
-# region: Data Loading
+def save_channel_table_worksheet(filepath, channel_list):
+    workbook = openpyxl.Workbook()
+    worksheet = workbook.active
+    worksheet.title = "Channel Table"
+    worksheet.cell(row=1, column=2, value="Test Article Definition")
+    worksheet.merge_cells(start_row=1, start_column=2, end_row=1, end_column=4)
+    worksheet.cell(row=1, column=5, value="Instrument Definition")
+    worksheet.merge_cells(start_row=1, start_column=5, end_row=1, end_column=11)
+    worksheet.cell(row=1, column=12, value="Channel Definition")
+    worksheet.merge_cells(start_row=1, start_column=12, end_row=1, end_column=19)
+    worksheet.cell(row=1, column=20, value="Output Feedback")
+    worksheet.merge_cells(start_row=1, start_column=20, end_row=1, end_column=21)
+    worksheet.cell(row=1, column=22, value="Limits")
+    worksheet.merge_cells(start_row=1, start_column=22, end_row=1, end_column=23)
+    for col_idx, val in enumerate(
+        [
+            "Channel Index",
+            "Node Number",
+            "Node Direction",
+            "Comment",
+            "Serial Number",
+            "Triax DoF",
+            "Sensitivity (mV/EU)",
+            "Engineering Unit",
+            "Make",
+            "Model",
+            "Calibration Exp Date",
+            "Physical Device",
+            "Physical Channel",
+            "Type",
+            "Minimum Value (V)",
+            "Maximum Value (V)",
+            "Coupling",
+            "Current Excitation Source",
+            "Current Excitation Value",
+            "Physical Device",
+            "Physical Channel",
+            "Warning Level (EU)",
+            "Abort Level (EU)",
+        ]
+    ):
+        worksheet.cell(row=2, column=1 + col_idx, value=val)
+    # Fill out values
+    channel_attr_list = Channel().channel_attr_list
+    for row, channel in enumerate(channel_list):
+        row_idx = row + 3
+        worksheet.cell(row=row_idx, column=1, value=row)
+        for col, attr in enumerate(channel_attr_list):
+            col_idx = col + 2
+            val = getattr(channel, attr)
+            val = str(val) if val is not None else ""
+            worksheet.cell(row=row_idx, column=col_idx, value=val)
+
+    workbook.save(filepath)
+
+
+# region: Profiles
+def load_profile_from_worksheet(filepath, environment_types):
+    workbook = openpyxl.load_workbook(filepath, read_only=True)
+    profile_sheet = workbook["Test Profile"]
+    index = 2
+    profile_event_list = []
+    while True:
+        timestamp = profile_sheet.cell(index, 1).value
+        if timestamp is None or (isinstance(timestamp, str) and timestamp.strip() == ""):
+            break
+        timestamp = float(timestamp)
+
+        environment_name = profile_sheet.cell(index, 2).value
+        environment_type = environment_types[environment_name]
+
+        # I have to conver the command string to an actual command
+        command = profile_sheet.cell(index, 3).value
+        command = str(command).upper().strip().replace(" ", "_")
+        if command in GlobalCommands.__members__:
+            command = GlobalCommands[command]
+        elif command in ENVIRONMENT_COMMANDS[environment_type].__members__:
+            command = ENVIRONMENT_COMMANDS[environment_type][command]
+        else:
+            raise TypeError(f"Invalid command: {command} for {environment_name} | {environment_type}")
+
+        data = profile_sheet.cell(index, 4).value
+        data = None if isinstance(data, str) and not data.strip() else data
+
+        event = ProfileEvent(timestamp, environment_name, command, data)
+        profile_event_list.append(event)
+        index += 1
+    workbook.close()
+
+    return profile_event_list
+
+
+def save_profile_worksheet(filepath, profile_event_list):
+    workbook = openpyxl.Workbook()
+    profile_sheet = workbook.active
+    profile_sheet.title = "Test Profile"
+    profile_sheet.cell(1, 1, "Time (s)")
+    profile_sheet.cell(1, 2, "Environment")
+    profile_sheet.cell(1, 3, "Operation")
+    profile_sheet.cell(1, 4, "Data")
+    # Fill out values
+    if profile_event_list:
+        for row, event in enumerate(profile_event_list):
+            row_idx = row + 2
+            profile_sheet.cell(row_idx, 1, str(event.timestamp))
+            profile_sheet.cell(row_idx, 2, event.environment_name)
+            profile_sheet.cell(row_idx, 3, event.command.label)
+            profile_sheet.cell(row_idx, 4, str(event.data))
+    workbook.save(filepath)
+
+
+# region: Full Template
 def load_metadata_from_netcdf(filepath):
     """Loads a test file using a file dialog"""
     dataset = netCDF4.Dataset(filepath)
 
     # Channel Table
-    channel_list = load_channel_list_from_netcdf(filepath)
+    channel_list = load_channel_table_from_netcdf(filepath)
 
     # Hardware
 
@@ -114,7 +226,7 @@ def load_metadata_from_worksheet(filepath):
     workbook = openpyxl.load_workbook(filepath, read_only=True)
 
     # Channel table
-    channel_list = load_channel_list_from_worksheet(filepath)
+    channel_list = load_channel_table_from_worksheet(filepath)
 
     # Hardware
     hardware_sheet = workbook["Hardware"]
