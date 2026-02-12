@@ -148,6 +148,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.save_template_button.clicked.connect(self.save_template)
 
         # Channel Table
+        self.channel_table.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
         self.channel_table.itemChanged.connect(self.add_empty_channel_table_rows)
         channel_table_scroll = self.channel_table.verticalScrollBar()
         channel_table_scroll.valueChanged.connect(self.sync_environment_table)
@@ -168,6 +169,14 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.channel_table_action_delete.setShortcut("Del")
         self.channel_table_action_delete.triggered.connect(self.delete_channel_table)
         self.channel_table.addAction(self.channel_table_action_delete)
+        # Insert Row
+        self.channel_table_action_insert_row = QtWidgets.QAction("Insert Row", self.channel_table)
+        self.channel_table_action_insert_row.triggered.connect(self.channel_table_insert_row)
+        self.channel_table.addAction(self.channel_table_action_insert_row)
+        # Delete Row
+        self.channel_table_action_delete_row = QtWidgets.QAction("Delete Row", self.channel_table)
+        self.channel_table_action_delete_row.triggered.connect(self.channel_table_delete_row)
+        self.channel_table.addAction(self.channel_table_action_delete_row)
 
         # Hardware
         self.hardware_selector.currentTextChanged.connect(self.update_hardware)
@@ -619,6 +628,50 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     self.channel_table.setItem(row, column, clear_item)
         self.channel_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self.channel_table.blockSignals(False)
+        self.add_empty_channel_table_rows()
+
+    def channel_table_insert_row(self):
+        """Function to insert row in right click menu on channel table"""
+        if self.assist_channel_table_checkbox.isChecked():
+            self.display_error("Please remove assist mode for insert functionality")
+            return
+
+        selection_range = self.channel_table.selectedRanges()
+
+        if selection_range:
+            # Find the top row and insert row above it
+            top_row = selection_range[0].topRow()
+            self.channel_table.insertRow(top_row)
+            self.environment_channel_table.insertRow(top_row)
+            num_col = self.environment_channel_table.columnCount()
+            for col in range(num_col):
+                checkbox = QtWidgets.QCheckBox()
+                checkbox.setChecked(False)
+                self.environment_channel_table.setCellWidget(top_row, col, checkbox)
+
+            # Update vertical header for both tables
+            row_count = self.channel_table.rowCount()
+            indices = [str(i + 1) for i in range(row_count)]
+            self.channel_table.setVerticalHeaderLabels(indices)
+            self.environment_channel_table.setVerticalHeaderLabels(indices)
+
+        self.add_empty_channel_table_rows()
+
+    def channel_table_delete_row(self):
+        """Function to delete row in right click menu on channel table"""
+        if self.assist_channel_table_checkbox.isChecked():
+            self.display_error("Please remove assist mode for delete functionality")
+            return
+
+        selected_ranges = self.channel_table.selectedRanges()
+        # If channel table is clicked delete rows starting from highest index
+        if selected_ranges:
+            selected_range = selected_ranges[0]
+            rows = range(selected_range.topRow(), selected_range.bottomRow() + 1)
+            for row_idx in reversed(rows):
+                self.channel_table.removeRow(row_idx)
+                self.environment_channel_table.removeRow(row_idx)
+
         self.add_empty_channel_table_rows()
 
     def assist_channel_table_init(self, assist_checked):
