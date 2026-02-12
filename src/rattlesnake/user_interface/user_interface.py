@@ -19,7 +19,7 @@ from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.environment.abstract_environment import EnvironmentInstructions
 from rattlesnake.process.streaming import StreamMetadata, StreamType
 from rattlesnake.profile_manager import VALID_COMMANDS
-from rattlesnake.load_utilities import load_channel_list_from_netcdf, load_channel_list_from_worksheet
+from rattlesnake.load_manager import load_channel_list_from_netcdf, load_channel_list_from_worksheet, save_rattlesnake_template
 from qtpy import QtWidgets, QtGui, QtCore, uic
 import traceback
 import ctypes
@@ -143,6 +143,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         # Universal
         self.color_theme_combobox.currentTextChanged.connect(self.change_color_theme)
         self.load_test_file_button.clicked.connect(self.load_test_file)
+        self.save_template_button.clicked.connect(self.save_template)
 
         # Channel Table
         channel_table_scroll = self.channel_table.verticalScrollBar()
@@ -222,6 +223,19 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         has_profile = self.rattlesnake.has_profile
         has_streamed = self.rattlesnake.has_streamed
 
+        # Reset UI
+        for i in range(1, self.rattlesnake_tabs.count() - 1):
+            self.rattlesnake_tabs.setTabEnabled(i, False)
+        self.rattlesnake_tabs.tabBar().setTabVisible(2, False)
+        self.rattlesnake_tabs.tabBar().setTabVisible(3, False)
+
+        environment_names = list(self.environment_uis.keys())
+        for environment_name in environment_names:
+            self.remove_environment(None, environment_name)
+
+        for event_idx in reversed(range(self.profile_table.rowCount())):
+            self.remove_profile_event(None, event_idx)
+
         match state:
             case RattlesnakeState.INIT:
                 return
@@ -281,10 +295,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 self.display_error(f"{hardware_metadata.hardware_type} is not yet implemented")
 
     def load_stored_environments(self):
-        environment_names = list(self.environment_uis.keys())
-        for environment_name in environment_names:
-            self.remove_environment(None, environment_name)
-
         hardware_metadata = self.rattlesnake.hardware_metadata
         environment_metadata_dict = self.rattlesnake.environment_metadata
 
@@ -307,9 +317,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.rattlesnake_tabs.setCurrentIndex(1)
 
     def load_stored_profile(self):
-        for event_idx in reversed(range(self.profile_table.rowCount())):
-            self.remove_profile_event(None, event_idx)
-
         profile_event_list = self.rattlesnake.last_profile_event_list
 
         for profile_event in profile_event_list:
@@ -420,6 +427,48 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             return
 
         self.load_from_rattlesnake_state()
+
+    def save_template(self, filepath=None):
+        if not filepath:
+            filepath, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save Combined Environments Template", filter="Excel File (*.xlsx)")
+        if filepath == "":
+            return
+
+        try:
+            # Hardware
+            hardware_metadata = self.get_hardware_metadata_no_channels()
+            channel_list = self.get_channel_list()
+            hardware_metadata.channel_list = channel_list
+
+            # Environments
+            environment_metadata_list = []
+            for environment_ui in self.environment_uis.values():
+                metadata = environment_ui.get_environment_metadata()
+                environment_metadata_list.append(metadata)
+
+            # Profiles
+            profile_event_list = []
+            num_rows = self.profile_table.rowCount()
+            for row in range(num_rows):
+                timestamp = self.profile_table.cellWidget(row, 0).value()
+                environment_name = self.profile_table.cellWidget(row, 1).currentText()
+                command = self.profile_table.cellWidget(row, 2).currentData()
+                data_item = self.profile_table.item(row, 3)
+                data_text = data_item.text() if data_item is not None else ""
+
+                # Skip environment instructions
+                if command == "Set Environment Instructions":
+                    continue
+
+                event = ProfileEvent(timestamp, environment_name, command, data_text)
+
+                profile_event_list.append(event)
+
+            save_rattlesnake_template(filepath, hardware_metadata, environment_metadata_list, profile_event_list)
+        except Exception:  # pylint: disable=broad-exception-caught
+            tb = traceback.format_exc()
+            self.display_error(tb)
+            return
 
     # region: Channel Table
     def get_channel(self, row):

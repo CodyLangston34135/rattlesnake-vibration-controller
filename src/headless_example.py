@@ -1,5 +1,5 @@
 from rattlesnake.rattlesnake import Rattlesnake
-from rattlesnake.utilities import GlobalCommands
+from rattlesnake.utilities import GlobalCommands, db2scale
 from rattlesnake.hardware.hardware_utilities import Channel
 from rattlesnake.hardware.nidaqmx import NIDAQmxMetadata
 from rattlesnake.hardware.sdynpy_system import SDynPySystemMetadata
@@ -7,7 +7,6 @@ from rattlesnake.environment.time_environment import TimeMetadata, TimeInstructi
 from rattlesnake.environment.read_environment import ReadMetadata
 from rattlesnake.process.streaming import StreamType, StreamMetadata
 from rattlesnake.profile_manager import ProfileEvent, TimeCommands
-from rattlesnake.math_utilities import db2scale
 import sys
 import time
 import numpy as np

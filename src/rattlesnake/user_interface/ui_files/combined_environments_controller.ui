@@ -1444,7 +1444,7 @@ https://github.com/sandialabs/rattlesnake-vibration-controller</string>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="save_rattlesnake_template_button">
+       <widget class="QPushButton" name="save_template_button">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
           <horstretch>0</horstretch>

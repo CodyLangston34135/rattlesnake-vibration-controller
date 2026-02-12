@@ -23,13 +23,11 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands
-from rattlesnake.math_utilities import db2scale
+from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands, load_time_history, db2scale
 from rattlesnake.environment.abstract_environment import EnvironmentCommands, EnvironmentMetadata, EnvironmentInstructions, EnvironmentProcess
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.load_utilities import load_time_history
 import copy
 import openpyxl
 import queue as thqueue
@@ -95,6 +93,7 @@ class TimeMetadata(EnvironmentMetadata):
         self.sample_rate = None
         self.output_signal = None
         self.cancel_rampdown_time = None
+        self._signal_file = None  # This is only used for saving purposes
 
     @property
     def signal_samples(self):
@@ -119,6 +118,13 @@ class TimeMetadata(EnvironmentMetadata):
     @property
     def num_output_channels(self):
         return len([channel for channel in self.channel_list if channel.is_output_channel()])
+
+    @property
+    def signal_file(self):
+        return self._signal_file
+
+    def set_file(self, filepath):
+        self._signal_file = filepath
 
     def validate(self):
         # Prevent duplicate entries
@@ -191,7 +197,28 @@ class TimeMetadata(EnvironmentMetadata):
         self.cancel_rampdown_time = group.cancel_rampdown_time
 
     def store_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
-        pass
+        worksheet.cell(1, 1, "Control Type")
+        worksheet.cell(1, 2, "Time")
+        worksheet.cell(
+            1,
+            4,
+            "Note: Replace cells with hash marks (#) to provide the requested parameters.",
+        )
+        worksheet.cell(2, 1, "Signal File")
+        worksheet.cell(2, 2, "# Path to the file that contains the time signal that will be output")
+        worksheet.cell(3, 1, "Cancel Rampdown Time")
+        worksheet.cell(
+            3,
+            2,
+            "# Time for the environment to ramp to zero if the environment is cancelled.",
+        )
+
+        if self._signal_file:
+            worksheet.cell(2, 2, str(self._signal_file))
+        if self.signal_file:
+            worksheet.cell(2, 2, str(self.signal_file))
+        if self.cancel_rampdown_time:
+            worksheet.cell(3, 2, str(self.cancel_rampdown_time))
 
     def retrieve_metadata_from_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
         for row in worksheet.rows:
@@ -203,8 +230,9 @@ class TimeMetadata(EnvironmentMetadata):
                 case "signal_file":
                     signal_file = value
                     self.output_signal = load_time_history(signal_file, self.sample_rate)
+                    self.set_file(signal_file)
                 case "cancel_rampdown_time":
-                    self.cancel_rampdown_time = value
+                    self.cancel_rampdown_time = float(value)
                 case "":
                     continue
                 case _:

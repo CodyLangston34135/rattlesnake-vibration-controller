@@ -1,9 +1,7 @@
 from rattlesnake.rattlesnake import Rattlesnake
 from rattlesnake.user_interface.abstract_user_interface import AbstractUI
 from rattlesnake.user_interface.ui_utilities import environment_definition_ui_paths, environment_run_ui_paths, multiline_plotter
-from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands
-from rattlesnake.math_utilities import rms_time, db2scale
-from rattlesnake.load_utilities import load_time_history
+from rattlesnake.utilities import load_time_history, rms_time
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.environment.time_environment import TimeMetadata, TimeInstructions, TimeCommands, TimeUICommands
@@ -214,10 +212,15 @@ class TimeUI(AbstractUI):
         """
         # return TimeParameters.from_ui(self)
         metadata = TimeMetadata(self.environment_name)
-        metadata.channel_list = self.hardware_metadata.channel_list
+        metadata.channel_list = []
+        if self.hardware_metadata:
+            metadata.channel_list = self.hardware_metadata.channel_list
         metadata.sample_rate = self.definition_widget.output_sample_rate_display.value()
         metadata.output_signal = self.signal
         metadata.cancel_rampdown_time = self.definition_widget.cancel_rampdown_selector.value()
+        signal_filepath = self.definition_widget.signal_file_name_display.text()
+        if signal_filepath:
+            metadata.set_file(signal_filepath)
 
         return metadata
 
@@ -241,6 +244,8 @@ class TimeUI(AbstractUI):
             raise ValueError("Output Signal is not defined!")
 
         self.signal = metadata.output_signal
+        if metadata.signal_file:
+            self.definition_widget.signal_file_name_display.setText(metadata.signal_file)
 
         self.show_signal()
 
