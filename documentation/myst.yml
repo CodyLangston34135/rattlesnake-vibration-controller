@@ -102,6 +102,7 @@ project:
     - mdbook/bibliography.bib
 site:
   template: book-theme
+  base_url: https://sandialabs.github.io/rattlesnake-vibration-controller/
   options:
     favicon: mdbook/src/figures/Rattlesnake_Icon.ico
     logo: mdbook/src/figures/Rattlesnake_Icon.ico
