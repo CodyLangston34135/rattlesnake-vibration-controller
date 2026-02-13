@@ -181,6 +181,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Echo BASE_URL from env
+        run: |
+          echo "BASE_URL from env: $BASE_URL"
+
       - name: Set up Python 3.11
         uses: actions/setup-python@v3
         with:
