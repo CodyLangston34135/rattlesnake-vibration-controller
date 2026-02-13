@@ -1,1 +1,1 @@
-import{a}from"/rattlesnake-vibration-controller/build/_shared/chunk-Z2C4HDRK.js";import"/rattlesnake-vibration-controller/build/_shared/chunk-OZE3FFNP.js";export default a();
+import{a}from"/rattlesnake-vibration-controller/book/jupyter//build/_shared/chunk-Z2C4HDRK.js";import"/rattlesnake-vibration-controller/book/jupyter//build/_shared/chunk-OZE3FFNP.js";export default a();
