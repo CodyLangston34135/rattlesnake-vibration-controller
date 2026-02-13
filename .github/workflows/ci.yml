@@ -100,19 +100,21 @@ jobs:
         # Create a timestamp for the output file
         TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
         PYLINT_OUTPUT_FILE="pylint_output_${TIMESTAMP}.txt"
-        
-        # Generate text report
-        pylint src/rattlesnake/**/*.py --output-format=text --reports=yes > "$PYLINT_OUTPUT_FILE" || true
-        
-        # Extract the score from pylint output
-        SCORE=$(grep "Your code has been rated at" "$PYLINT_OUTPUT_FILE" | awk '{print $7}' | cut -d'/' -f1 || echo "0")
-        
+
+        # Run pylint once, capturing the output to a variable.
+        # This avoids reading the file twice.
+        PYLINT_OUTPUT=$(pylint src/rattlesnake/**/*.py --output-format=text --reports=yes || true)
+        echo "$PYLINT_OUTPUT" > "$PYLINT_OUTPUT_FILE"
+
+        # Extract the score from the captured output
+        SCORE=$(echo "$PYLINT_OUTPUT" | grep "Your code has been rated at" | awk '{print $7}' | cut -d'/' -f1 || echo "0")
+
         # Output the score and file name
         echo "🏁 Pylint analysis completed. 🏁"
         echo "    📄 Output file: $PYLINT_OUTPUT_FILE"
         echo "    🏆 Pylint score: $SCORE out of 10"
 
-        # Read the pylint output and create a custom HTML report.
+        # The report_pylint.py script still needs the file, which we created above.
         python src/rattlesnake/cicd/report_pylint.py \
           --input_file "$PYLINT_OUTPUT_FILE" \
           --output_file pylint_report.html \
