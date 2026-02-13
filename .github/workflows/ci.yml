@@ -194,15 +194,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.12"
+
       - name: Install uv
         uses: astral-sh/setup-uv@v1
-        with:
-          # Keep this commented. This job does not need a separate uv cache.
-          # enable-cache: true 
-          python-version: "3.12"
 
       - name: Install dependencies
         run: |
+          uv venv
           uv pip install "jupyter-book>=2.0.0"
 
       - name: Build the book
