@@ -32,7 +32,7 @@ Running Rattlesnake from an executable is as simple as running any other program
 
 As with any other executable program, users may create links to the program to put on the desktop or in the start menu to make accessing the program easier.
 
-It may be beneficial to run the executable through the command terminal, as otherwise if an error occurs in the program, the program may simply disappear without the user being aware of any errors.  When running through the command terminal, the user will be able to view any error messages if the program unexpectedly exits, which will be useful in diagnosing the issue if submitted to the issue tracker in the [GitHub Issues](https://github.com/sandialabs/rattlesnake-vibration-controller/issues) (See [Obtaining Support](@sec:obtaining_support) for more information).
+It may be beneficial to run the executable through the command terminal, as otherwise if an error occurs in the program, the program may simply disappear without the user being aware of any errors.  When running through the command terminal, the user will be able to view any error messages if the program unexpectedly exits, which will be useful in diagnosing the issue if submitted to the issue tracker in the [GitHub Issues](https://github.com/sandialabs/rattlesnake-vibration-controller/issues) (See @sec:obtaining_support for more information).
 
 ## Running from the Python script
 
