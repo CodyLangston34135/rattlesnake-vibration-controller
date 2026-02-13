@@ -320,7 +320,7 @@ jobs:
           mkdir -p pages/book/jupyter
           mv pylint-report/pylint_report.html pages/reports/pylint/index.html
           mv pytest-report/pytest_report.html pages/reports/coverage/index.html
-          mv pytest-report/htmlcov/* pages/reports/coverage/
+          mv pytest-report/htmlcov/ pages/reports/coverage/
           mv jupyter-book-report/* pages/book/jupyter/
           cat > pages/index.html << 'EOF'
           <!DOCTYPE html>
