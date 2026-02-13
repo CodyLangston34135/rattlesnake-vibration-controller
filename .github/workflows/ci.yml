@@ -1,55 +1,3 @@
-# Overview:
-# Triggers
-# * The workflow runs automatically on any push or pull_request to the main and dev branches.
-# * It explicitly ignores any branches that have "doc" in their name.
-#
-# Jobs
-# The workflow consists of four main jobs:
-#
-#
-#  1. `lint`:
-#      * Purpose: To analyze the Python code for style issues and potential errors.
-#      * Process:
-#          * It runs on an Ubuntu machine with Python 3.11.
-#          * It installs all project dependencies.
-#          * It runs pylint on the src/rattlesnake directory.
-#          * It generates a custom HTML report from the pylint output.
-#          * It uploads the HTML report and the raw text output as an artifact named pylint-report.
-#
-#
-#  2. `coverage`:
-#      * Purpose: To run the test suite and measure how much of the code is covered by tests.
-#      * Process:
-#          * It runs on an Ubuntu machine with Python 3.11.
-#          * It installs all project dependencies.
-#          * It runs pytest to execute tests and generate coverage reports in XML and HTML formats.
-#          * It creates a custom HTML report from the coverage data.
-#          * It uploads the custom report, the standard htmlcov directory, and the coverage.xml file as an artifact named
-#            pytest-report.
-#
-#
-#  3. `deploy`:
-#      * Purpose: To publish the analysis and coverage reports to a public website using GitHub Pages.
-#      * Conditions: This job only runs if:
-#          * The lint and coverage jobs complete successfully.
-#          * The event that triggered the workflow was a push to the dev branch.
-#      * Process:
-#          * It downloads the artifacts from the lint and coverage jobs.
-#          * It generates SVG status badges for both the pylint score and test coverage percentage.
-#          * It assembles a pages directory containing the HTML reports and a main index.html landing page.
-#          * It deploys the contents of the pages directory to the gh-pages branch, which makes the reports accessible online.
-#      * Note: A step to commit the generated badges back to the repository is included but is currently commented out and
-#        therefore inactive.
-#
-#
-#  4. `matrix`:
-#      * Purpose: To ensure the tests pass on a variety of different environments.
-#      * Process:
-#          * It runs the test suite (pytest -v) on a matrix of operating systems (macOS, ubuntu, windows) and Python versions
-#            (3.11, 3.12).
-#          * This helps confirm that the code is compatible across different platforms.
-
-
 # name: CI
 # name: # keep this field blank to automatically show the filename that triggers it in the CD/CD web UI
 name: ci.yml
@@ -65,6 +13,10 @@ on:
       - main
       - dev
       - "doc*" # Explicitly include branches with "doc" in the name
+env:
+  # `BASE_URL` determines the website is served from, including CSS & JS assets
+  # You may need to change this to `BASE_URL: ''`
+  BASE_URL: /${{ github.event.repository.name }}
 
 jobs:
   lint:
