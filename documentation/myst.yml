@@ -62,6 +62,11 @@ project:
         - file: mdbook/src/appendix_d.md
     - file: mdbook/src/notation.md
     - file: mdbook/src/SUMMARY.md
+    - file: mdbook/src/ui_documentation.md
+      children:
+        - file: mdbook/src/_generated/random_vibration_definition_doc.md
+        - file: mdbook/src/_generated/random_vibration_prediction_doc.md
+        - file: mdbook/src/_generated/random_vibration_run_doc.md
   numbering:
     headings: true
     heading_1:
