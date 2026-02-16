@@ -358,8 +358,8 @@ class UIAnalyzer(QtWidgets.QMainWindow):
                 figure_file_name = self.name + "__" + struct["name"] + ".png"
                 figure_full_path = os.path.join(
                     "mdbook", "src", "_generated", "figures", figure_file_name
-                )
-                figure_rel_path = os.path.join("figures", figure_file_name)
+                ).replace('\\','/')
+                figure_rel_path = os.path.join("figures", figure_file_name).replace('\\','/')
                 figure_ref_name = "fig:" + self.name + ":" + struct["name"]
                 label, message = self.parse_tooltip(struct["tooltip"])
                 px = self.generate_documentation_figure(struct["widget"])
