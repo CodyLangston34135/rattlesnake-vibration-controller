@@ -41,7 +41,7 @@ numbering:
 
 
 
-:::{figure} figures\random_vibration_run__test_output_voltages_groupbox.png
+:::{figure} figures/random_vibration_run__test_output_voltages_groupbox.png
 :label: fig:random_vibration_run:test_output_voltages_groupbox
  Output Voltages (RMS) Settings
 :::
@@ -51,7 +51,7 @@ numbering:
  **Output Voltages (RMS)** Current excitation voltages being output from the controller.
 :::
 
-:::{figure} figures\random_vibration_run__test_response_error_groupbox.png
+:::{figure} figures/random_vibration_run__test_response_error_groupbox.png
 :label: fig:random_vibration_run:test_response_error_groupbox
  Response Error (dB) Settings
 :::
@@ -126,7 +126,7 @@ numbering:
  **Sum of ASDs Display** This plot shows the trace of the response CPSD matrix compared to the specification.  This is essentially an "average" quantity, and individual channels may be higher or lower at each frequency line.
 :::
 
-:::{figure} figures\random_vibration_run__data_display_groupbox.png
+:::{figure} figures/random_vibration_run__data_display_groupbox.png
 :label: fig:random_vibration_run:data_display_groupbox
  Data Display Settings
 :::

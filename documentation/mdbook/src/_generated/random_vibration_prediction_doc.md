@@ -27,7 +27,7 @@ numbering:
 
 
 
-:::{figure} figures\random_vibration_prediction__excitation_voltage_groupbox.png
+:::{figure} figures/random_vibration_prediction__excitation_voltage_groupbox.png
 :label: fig:random_vibration_prediction:excitation_voltage_groupbox
  Output Voltages (RMS) Settings
 :::
@@ -62,7 +62,7 @@ numbering:
  **Excitation CPSD Column Channel** Select the column of the excitation CPSD matrix to visualize
 :::
 
-:::{figure} figures\random_vibration_prediction__response_error_groupbox.png
+:::{figure} figures/random_vibration_prediction__response_error_groupbox.png
 :label: fig:random_vibration_prediction:response_error_groupbox
  Response Error (dB) Settings
 :::

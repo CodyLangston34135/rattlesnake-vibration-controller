@@ -77,7 +77,7 @@ numbering:
 
 
 
-:::{figure} figures\random_vibration_definition__sampling_parameters_groupbox.png
+:::{figure} figures/random_vibration_definition__sampling_parameters_groupbox.png
 :label: fig:random_vibration_definition:sampling_parameters_groupbox
  Sampling Parameters Settings
 :::
@@ -122,7 +122,7 @@ numbering:
  **Test Level Ramp Time** Time in seconds that the controller takes to change the test level. The test level is changed smoothly to prevent damaging the excitation hardware or part under test. Larger numbers will result in a more smooth transition between test levels, while smaller numbers will make the test level change more quickly.
 :::
 
-:::{figure} figures\random_vibration_definition__signal_generation_groupbox.png
+:::{figure} figures/random_vibration_definition__signal_generation_groupbox.png
 :label: fig:random_vibration_definition:signal_generation_groupbox
  Signal Generation Parameters Settings
 :::
@@ -152,7 +152,7 @@ numbering:
  **Sigma Clipping** Number of standard deviations to include in the output signal. A value of 5 corresponds to effectively no clipping. A value of 3 is commonly used to reduce peak displacement.  Setting this value too low will result in loss of dynamic range and non-gaussian output signals.
 :::
 
-:::{figure} figures\random_vibration_definition__cpsd_parameters_groupbox.png
+:::{figure} figures/random_vibration_definition__cpsd_parameters_groupbox.png
 :label: fig:random_vibration_definition:cpsd_parameters_groupbox
  CPSD Parameters Settings
 :::
@@ -172,7 +172,7 @@ numbering:
  **CPSD Overlap** Percentage overlap between measurements when constructing CPSDs.
 :::
 
-:::{figure} figures\random_vibration_definition__tolerances_groupbox.png
+:::{figure} figures/random_vibration_definition__tolerances_groupbox.png
 :label: fig:random_vibration_definition:tolerances_groupbox
  Tolerances Settings
 :::
@@ -182,7 +182,7 @@ numbering:
  **Frequency Lines Out** Percentage of control frequency lines that can fall outside of limits before triggering warnings/aborts.
 :::
 
-:::{figure} figures\random_vibration_definition__options_groupbox.png
+:::{figure} figures/random_vibration_definition__options_groupbox.png
 :label: fig:random_vibration_definition:options_groupbox
  Options Settings
 :::
@@ -197,7 +197,7 @@ numbering:
  **Update Sys ID During Control?** Checking this box will allow the controller to continually update the system identification to perhaps get a better control for nonlinear structures.  Use with caution! If, for example, a shaker becomes disconnected, the controller will see the system identification between that shaker and the control channels become very small, and it will therefore try to push the shaker harder to make up for the poor transfer function, so the problem could explode.
 :::
 
-:::{figure} figures\random_vibration_definition__control_parameters_groupbox.png
+:::{figure} figures/random_vibration_definition__control_parameters_groupbox.png
 :label: fig:random_vibration_definition:control_parameters_groupbox
  Control Parameters Settings
 :::
@@ -227,7 +227,7 @@ numbering:
  **Control Parameters** Any additional parameters needed by the control law are entered in this text box. It is up to the control law to prescribe what is needed to be defined in this box. The data entered into this box will be passed to the control law as a string to the "extra_parameters" argument. Control laws should parse this string to extract needed information.
 :::
 
-:::{figure} figures\random_vibration_definition__control_channels_groupbox.png
+:::{figure} figures/random_vibration_definition__control_channels_groupbox.png
 :label: fig:random_vibration_definition:control_channels_groupbox
  Control Channels Settings
 :::
@@ -247,7 +247,7 @@ numbering:
  **Uncheck Selected** When clicked, any selected channels in the Control Channels list will be unchecked, and therefore not used as control channels in the environment.
 :::
 
-:::{figure} figures\random_vibration_definition__io_groupbox.png
+:::{figure} figures/random_vibration_definition__io_groupbox.png
 :label: fig:random_vibration_definition:io_groupbox
  Channel I/O Settings
 :::
@@ -267,7 +267,7 @@ numbering:
  **Control Channels** A display showing the total number of physical channels this environment is controlling to.
 :::
 
-:::{figure} figures\random_vibration_definition__transformation_matrices_groupbox.png
+:::{figure} figures/random_vibration_definition__transformation_matrices_groupbox.png
 :label: fig:random_vibration_definition:transformation_matrices_groupbox
  Control and Drive Transforms Settings
 :::
@@ -287,7 +287,7 @@ numbering:
  **Transform Outputs** A display showing the number of virtual excitation channels in the environment due to transformation matrices applied to the physical excitation channels.
 :::
 
-:::{figure} figures\random_vibration_definition__test_specification_groupbox.png
+:::{figure} figures/random_vibration_definition__test_specification_groupbox.png
 :label: fig:random_vibration_definition:test_specification_groupbox
  Test Specification Settings
 :::

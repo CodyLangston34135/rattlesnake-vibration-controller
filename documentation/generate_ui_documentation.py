@@ -343,12 +343,12 @@ class UIAnalyzer(QtWidgets.QMainWindow):
                 figure_file_name = self.name + "__" + struct["name"] + ".png"
                 figure_full_path = os.path.join(
                     "mdbook", "src", "_generated", "figures", figure_file_name
-                )
-                figure_rel_path = os.path.join("figures", figure_file_name)
+                ).replace("\\", "/")
+                figure_rel_path = os.path.join("figures", figure_file_name).replace("\\", "/")
                 figure_ref_name = "fig:" + self.name + ":" + struct["name"]
                 px = self.generate_documentation_figure(struct["widget"])
                 px.save(figure_full_path)
-                
+
                 block_label = "sec:" + self.name + ":" + struct["name"]
                 this_text_markdown = this_text_markdown + f"\n\n({block_label})="
                 this_figure_markdown += f"\n\n:::{{figure}} {figure_rel_path}\n:label: {figure_ref_name}\n {name} Settings\n:::"
