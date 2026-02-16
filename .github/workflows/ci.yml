@@ -302,8 +302,8 @@ jobs:
                   <ul>
                       <li><a href="reports/pylint/index.html">Pylint Report</a></li>
                       <li><a href="reports/coverage/index.html">Pytest Coverage Report</a></li>
-                      <li><a href="book/index.html">mdBook</a></li>
                       <li><a href="book/jupyter/index.html">Jupyter Book</a></li>
+                      <li><a href="book/index.html">mdBook</a>(deprecated 2026-12-16)</li>
                   </ul>
               </div>
           </body>
