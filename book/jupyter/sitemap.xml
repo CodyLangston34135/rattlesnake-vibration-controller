@@ -82,4 +82,16 @@
   <url>
     <loc>http://localhost:3000/summary</loc>
   </url>
+  <url>
+    <loc>http://localhost:3000/ui-documentation</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/random-vibration-definition-doc</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/random-vibration-prediction-doc</loc>
+  </url>
+  <url>
+    <loc>http://localhost:3000/random-vibration-run-doc</loc>
+  </url>
 </urlset>
