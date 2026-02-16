@@ -24,7 +24,7 @@ Rattlesnake can be run as a Python script using the code from this repository, o
 See the documentation for more information:
 
 * [Rattlesnake User's Manual](https://sandialabs.github.io/rattlesnake-vibration-controller/book/jupyter/index.html) ![](https://img.shields.io/badge/🌱_new-_online-d4edda?style=flat&labelColor=d4edda&color=155724)
-* Rattlesnake User's Manual, Version 3, SAND2024-14378, Oct 2024. [Download](https://github.com/sandialabs/rattlesnake-vibration-controller/releases/download/v3.0.0/Rattlesnake.pdf) (78 MB)  [![book](https://img.shields.io/badge/Documentation-SAND2025--14378-blue?logo=mdbook&logoColor=000000)](https://sandialabs.github.io/rattlesnake-vibration-controller/book/)
+* Rattlesnake User's Manual, Version 3, SAND2024-14378, Oct 2024. [Download](https://github.com/sandialabs/rattlesnake-vibration-controller/releases/download/v3.0.0/Rattlesnake.pdf) (78 MB)
 
 ### Flexible
 
@@ -40,4 +40,3 @@ Rattlesnake has been run with over 50 control channels and 12 shaker drives whil
 
 To facilitate MIMO vibration research and development, users can program their own control laws to load into the controller at runtime.
 See [Control Laws](https://github.com/sandialabs/rattlesnake-vibration-controller/tree/main/control_laws) for examples.
-
