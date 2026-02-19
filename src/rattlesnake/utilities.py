@@ -3,6 +3,7 @@ import os
 import string
 import random
 import time
+import importlib.util
 import numpy as np
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
@@ -417,7 +418,29 @@ def load_time_history(signal_path, sample_rate):
     return signal
 
 
-# reigon: Math Operations
+def load_python_module(module_path):
+    """Loads in the Python file at the specified path as a module at runtime
+
+    Parameters
+    ----------
+    module_path : str:
+        Path to the module to be loaded
+
+
+    Returns
+    -------
+    module : module:
+        A reference to the loaded module
+    """
+    _, file = os.path.split(module_path)
+    file, _ = os.path.splitext(file)
+    spec = importlib.util.spec_from_file_location(file, module_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+# region: Math Operations
 def align_signals(
     measurement_buffer,
     specification,

@@ -1805,8 +1805,8 @@ if __name__ == "__main__":
     environment_instructions = make_time_environment_instructions()
 
     rattlesnake = Rattlesnake(threaded=True, timeout=10)
-    # rattlesnake.set_hardware(hardware_metadata)
-    # rattlesnake.set_environments([environment_metadata])
+    rattlesnake.set_hardware(hardware_metadata)
+    rattlesnake.set_environments([environment_metadata])
     # rattlesnake.set_profile_event_list(profile_event_list)
     # rattlesnake.set_stream_metadata(stream_metadata)
     # rattlesnake.start_acquisition(stream_metadata)
@@ -1814,8 +1814,10 @@ if __name__ == "__main__":
 
     # This is a fix for scaling Rattlesnake to different resolution monitors
     font_size = 10  # pt size
-    QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
-    QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
+    if hasattr(QtCore.Qt, "AA_EnableHighDpiScaling"):
+        QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
+    if hasattr(QtCore.Qt, "AA_UseHighDpiPixmaps"):
+        QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
     QtWidgets.QApplication.setHighDpiScaleFactorRoundingPolicy(QtCore.Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     app = QtWidgets.QApplication(sys.argv)
     screen = app.primaryScreen()

@@ -255,7 +255,6 @@ class TimeQueues:
         self,
         environment_command_queue: VerboseMessageQueue,
         gui_update_queue: mp.Queue,
-        controller_communication_queue: VerboseMessageQueue,
         data_in_queue: mp.Queue,
         data_out_queue: mp.Queue,
         log_file_queue: VerboseMessageQueue,
@@ -269,8 +268,6 @@ class TimeQueues:
             Queue from which the environment will receive instructions.
         gui_update_queue : mp.Queue
             Queue to which the environment will put GUI updates.
-        controller_communication_queue : VerboseMessageQueue
-            Queue to which the environment will put global contorller instructions.
         data_in_queue : mp.Queue
             Queue from which the environment will receive data from acquisition.
         data_out_queue : mp.Queue
@@ -280,7 +277,6 @@ class TimeQueues:
         """
         self.environment_command_queue = environment_command_queue
         self.gui_update_queue = gui_update_queue
-        self.controller_communication_queue = controller_communication_queue
         self.data_in_queue = data_in_queue
         self.data_out_queue = data_out_queue
         self.log_file_queue = log_file_queue
@@ -319,7 +315,6 @@ class TimeEnvironment(EnvironmentProcess):
             queue_name,
             queue_container.environment_command_queue,
             queue_container.gui_update_queue,
-            queue_container.controller_communication_queue,
             queue_container.log_file_queue,
             queue_container.data_in_queue,
             queue_container.data_out_queue,
@@ -557,7 +552,6 @@ def time_process(
     queue_name: str,
     input_queue: VerboseMessageQueue,
     gui_update_queue: mp.Queue,
-    controller_command_queue: VerboseMessageQueue,
     log_file_queue: mp.Queue,
     data_in_queue: mp.Queue,
     data_out_queue: mp.Queue,
@@ -581,8 +575,6 @@ def time_process(
         Queue containing instructions for the environment
     gui_update_queue : Queue :
         Queue where GUI updates are put
-    controller_command_queue : Queue :
-        Queue for global communications with the controller
     log_file_queue : Queue :
         Queue for writing log file messages
     data_in_queue : Queue :
@@ -596,7 +588,6 @@ def time_process(
     queue_container = TimeQueues(
         input_queue,
         gui_update_queue,
-        controller_command_queue,
         data_in_queue,
         data_out_queue,
         log_file_queue,
