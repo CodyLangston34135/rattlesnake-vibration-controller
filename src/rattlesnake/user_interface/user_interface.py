@@ -1195,25 +1195,26 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.rattlesnake.start_streaming()
 
     def get_stream_metadata(self):
-        stream_metadata = StreamMetadata()
-
         stream_file = self.streaming_file_display.text()
 
         if self.no_streaming_radiobutton.isChecked():
-            stream_metadata.stream_type = StreamType.NO_STREAM
+            stream_type = StreamType.NO_STREAM
+            stream_metadata = StreamMetadata(stream_type)
         elif self.profile_streaming_radiobutton.isChecked():
-            stream_metadata.stream_type = StreamType.PROFILE_INSTRUCTION
-            stream_metadata.stream_file = stream_file
+            stream_type = StreamType.PROFILE_INSTRUCTION
+            stream_metadata = StreamMetadata(stream_type, stream_file)
         elif self.test_level_streaming_radiobutton.isChecked():
-            stream_metadata.stream_type = StreamType.TEST_LEVEL
-            stream_metadata.test_level_environment_name = self.streaming_environment_select_combobox.currentText()
-            stream_metadata.stream_file = stream_file
+            stream_type = StreamType.TEST_LEVEL
+            test_level_environment_name = self.streaming_environment_select_combobox.currentText()
+            stream_metadata = StreamMetadata(stream_type, stream_file, test_level_environment_name)
         elif self.immediate_streaming_radiobutton.isChecked():
-            stream_metadata.stream_type = StreamType.IMMEDIATELY
-            stream_metadata.stream_file = stream_file
+            stream_type = StreamType.IMMEDIATELY
+            stream_metadata = StreamMetadata(stream_type, stream_file)
         elif self.manual_streaming_radiobutton.isChecked():
-            stream_metadata.stream_type = StreamType.MANUAL
-            stream_metadata.stream_file = stream_file
+            stream_type = StreamType.MANUAL
+            stream_metadata = StreamMetadata(stream_type, stream_file)
+        else:
+            stream_metadata = StreamMetadata()  # Default incase of error
 
         return stream_metadata
 

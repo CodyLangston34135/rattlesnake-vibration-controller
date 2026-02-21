@@ -45,10 +45,10 @@ class StreamType(Enum):
 
 # region: StreamMetadata
 class StreamMetadata:
-    def __init__(self):
-        self.stream_type = StreamType.NO_STREAM
-        self.stream_file = None
-        self.test_level_environment_name = None
+    def __init__(self, stream_type=StreamType.NO_STREAM, stream_file=None, test_level_environment_name=None):
+        self.stream_type = stream_type
+        self.stream_file = stream_file
+        self.test_level_environment_name = test_level_environment_name
 
     def validate(self):
         if self.stream_type != StreamType.NO_STREAM:
