@@ -71,7 +71,14 @@ class TimeUICommands(Enum):
 class TimeMetadata(EnvironmentMetadata):
     """Storage container for parameters used by the Time Environment"""
 
-    def __init__(self, environment_name: str = "Time"):
+    def __init__(
+        self,
+        environment_name: str = "Time",
+        channel_list_bools: list = [],
+        sample_rate: int = None,
+        output_signal: np.array = None,
+        cancel_rampdown_time: float = None,
+    ):
         """
         Container to hold signal processing parameters for the Time environment
 
@@ -89,10 +96,10 @@ class TimeMetadata(EnvironmentMetadata):
             Prevents "hard stops" from damaging equipment.
 
         """
-        super().__init__(CONTROL_TYPE, environment_name)
-        self.sample_rate = None
-        self.output_signal = None
-        self.cancel_rampdown_time = None
+        super().__init__(CONTROL_TYPE, environment_name, channel_list_bools)
+        self.sample_rate = sample_rate
+        self.output_signal = output_signal
+        self.cancel_rampdown_time = cancel_rampdown_time
         self._signal_file = None  # This is only used for saving purposes
 
     @property
@@ -116,19 +123,15 @@ class TimeMetadata(EnvironmentMetadata):
         return int(self.cancel_rampdown_time * self.sample_rate)
 
     @property
-    def num_output_channels(self):
-        return len([channel for channel in self.channel_list if channel.is_output_channel()])
-
-    @property
     def signal_file(self):
         return self._signal_file
 
     def set_file(self, filepath):
         self._signal_file = filepath
 
-    def validate(self):
+    def validate(self, hardware_metadata):
         # Prevent duplicate entries
-        super().validate()
+        super().validate(hardware_metadata)
 
         if not isinstance(self.cancel_rampdown_time, (int, float)) or self.cancel_rampdown_time <= 0:
             raise ValueError(f"{self.environment_name} cancel_rampdown_time must be a number greater than 0")
@@ -142,9 +145,11 @@ class TimeMetadata(EnvironmentMetadata):
         if self.output_signal.ndim != 2:
             raise TypeError(f"{self.environment_name} output_signal must be a 2D numpy array")
 
+        environment_channels = [channel for channel, channel_bool in zip(hardware_metadata.channel_list, self.channel_list_bools) if channel_bool]
+        num_output_channels = len([channel for channel in environment_channels if channel.is_output_channel()])
         num_output = self.output_signal.shape[0]
-        if num_output != self.num_output_channels:
-            raise ValueError(f"{self.environment_name}, {num_output} signals defined for {self.num_output_channels} channels")
+        if num_output != num_output_channels:
+            raise ValueError(f"{self.environment_name}, {num_output} signals defined for {num_output_channels} channels")
 
         return True
 

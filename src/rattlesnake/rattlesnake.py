@@ -360,7 +360,7 @@ class Rattlesnake:
         if self.state not in (RattlesnakeState.HARDWARE_STORE, RattlesnakeState.ENVIRONMENT_STORE):
             raise RuntimeError(f"Invalid state for setting environment: {self.state}")
         # Validate environment metadata list
-        self.environment_manager.validate_environment_metadata(environment_metadata_list)
+        self.environment_manager.validate_environment_metadata(environment_metadata_list, self.hardware_metadata)
 
         # Send environment meetadata to correct processes
         self.log("Setting Environment")

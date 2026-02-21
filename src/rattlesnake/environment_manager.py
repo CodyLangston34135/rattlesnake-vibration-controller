@@ -118,10 +118,6 @@ class EnvironmentManager:
         # Check if there is an existing process that maps to this environment type
         # If there is, hijack it and give it new metadata
         for metadata in metadata_list:
-            valid_environment = metadata.validate()
-            if not valid_environment:
-                raise TypeError("Rattlesnake.set_environment requires a valid EnvironmentMetadata class")
-
             environment_type = metadata.environment_type
             environment_name = metadata.environment_name
 
@@ -154,7 +150,7 @@ class EnvironmentManager:
         for metadata in extra_metadata:
             self.add_environment(metadata, hardware_metadata)
 
-    def validate_environment_metadata(self, metadata_list: List[EnvironmentMetadata]):
+    def validate_environment_metadata(self, metadata_list: List[EnvironmentMetadata], hardware_metadata: HardwareMetadata):
         # Check if there are available queues
         if len(metadata_list) > self.num_queues:
             raise IndexError("Not enough environment command queues. Increase max_environments in rattlesnake.py")
@@ -171,7 +167,7 @@ class EnvironmentManager:
                 raise ValueError("Environment names must be unique")
             environment_name_set.add(environment_name)
             # Validate metadata
-            valid_metadata = metadata.validate()
+            valid_metadata = metadata.validate(hardware_metadata)
             if not valid_metadata:
                 raise ValueError(f"Invalid metadata for {environment_name}")
 

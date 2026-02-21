@@ -165,7 +165,7 @@ class StreamingProcess(AbstractMessageProcess):
         environment_booleans = []
         for i, metadata in enumerate(environment_metadata_dict.values()):
             var[i] = metadata.environment_name
-            environment_booleans.append(metadata.map_channel_bools(hardware_metadata.channel_list))
+            environment_booleans.append(metadata.channel_list_bools)
         var = self.netcdf_handle.createVariable("environment_types", int, ("num_environments",))
         for i, metadata in enumerate(environment_metadata_dict.values()):
             var[i] = metadata.environment_type.value

@@ -73,7 +73,6 @@ class TimeUI(AbstractUI):
         uic.loadUi(environment_run_ui_paths[CONTROL_TYPE], self.run_widget)
 
         # Set up some persistent data
-        self.hardware_metadata = None
         self.signal = None
         self.physical_output_names = None
         self.physical_measurement_names = None
@@ -201,7 +200,7 @@ class TimeUI(AbstractUI):
 
         self.hardware_metadata = hardware_metadata
 
-    def get_environment_metadata(self) -> TimeMetadata:
+    def get_environment_metadata(self, hardware_channel_list) -> TimeMetadata:
         """Collect the parameters from the user interface defining the environment
 
         Returns
@@ -211,13 +210,14 @@ class TimeUI(AbstractUI):
             the corresponding environment.
         """
         # return TimeParameters.from_ui(self)
-        metadata = TimeMetadata(self.environment_name)
-        metadata.channel_list = []
+
         if self.hardware_metadata:
-            metadata.channel_list = self.hardware_metadata.channel_list
-        metadata.sample_rate = self.definition_widget.output_sample_rate_display.value()
-        metadata.output_signal = self.signal
-        metadata.cancel_rampdown_time = self.definition_widget.cancel_rampdown_selector.value()
+            channel_list_bools = self.get_channel_list_bools(hardware_channel_list)
+        sample_rate = self.definition_widget.output_sample_rate_display.value()
+        output_signal = self.signal
+        cancel_rampdown_time = self.definition_widget.cancel_rampdown_selector.value()
+        metadata = TimeMetadata(self.environment_name, channel_list_bools, sample_rate, output_signal, cancel_rampdown_time)
+
         signal_filepath = self.definition_widget.signal_file_name_display.text()
         if signal_filepath:
             metadata.set_file(signal_filepath)

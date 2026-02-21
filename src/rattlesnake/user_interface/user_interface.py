@@ -441,7 +441,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             # Environments
             environment_metadata_list = []
             for environment_ui in self.environment_uis.values():
-                metadata = environment_ui.get_environment_metadata()
+                metadata = environment_ui.get_environment_metadata(channel_list)
                 environment_metadata_list.append(metadata)
 
             # Profiles
@@ -1114,7 +1114,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             # Build environment metadata list
             environment_metadata_list = []
             for environment_ui in self.environment_uis.values():
-                metadata = environment_ui.get_environment_metadata()
+                metadata = environment_ui.get_environment_metadata(self.rattlesnake.hardware_metadata.channel_list)
                 environment_metadata_list.append(metadata)
 
             # Send hardware metadata to rattlesnake

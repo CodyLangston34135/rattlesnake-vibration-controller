@@ -76,11 +76,10 @@ def make_time_environment_metadata(hardware_metadata, environment_name=TIME_ENVI
     signal = np.zeros((num_rows, num_samples))
     signal[0, :] = np.sin(2 * np.pi * frequency * t)  # sine wave in first row
 
-    time_metadata = TimeMetadata(environment_name)
-    time_metadata.channel_list = hardware_metadata.channel_list
-    time_metadata.sample_rate = 1000
-    time_metadata.output_signal = signal
-    time_metadata.cancel_rampdown_time = 0.5
+    channel_list_bools = [True, True, True, True, True, True]
+    sample_rate = 1000
+    cancel_rampdown_time = 0.5
+    time_metadata = TimeMetadata(environment_name, channel_list_bools, sample_rate, signal, cancel_rampdown_time)
 
     return time_metadata
 

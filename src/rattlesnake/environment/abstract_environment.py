@@ -68,7 +68,7 @@ class EnvironmentMetadata(ABC):
     class.
     """
 
-    def __init__(self, environment_type, environment_name):
+    def __init__(self, environment_type, environment_name, channel_list_bools):
         """
         Initializes the environment metadata class with all attributes
         required to fully define environment.
@@ -81,35 +81,34 @@ class EnvironmentMetadata(ABC):
         """
         self.environment_type = environment_type
         self.environment_name = environment_name  # Name used for logging TASK_NAMES, UI, etc.
+        self.channel_list_bools = channel_list_bools
         self.queue_name = None  # Unique name used to track specific environment. Used for queues.
-        self.channel_list = []
 
-    def map_channel_bools(self, hardware_channel_list: List[Channel]):
-        """Method to check environment_channel_list against hardware_channel_list
-        and return a list of True/False based on whether or not the hardware channel
-        was in the environment_channel_list."""
-        # Check for channels that are not in the hardware_channel_list
-        hardware_channel_set = set(hardware_channel_list)
-        missing_channels = set(self.channel_list) - hardware_channel_set
-        if missing_channels:
-            raise ValueError(f"{self.environment_name} channel_list contains channels not in hardware_channel_list: " f"{missing_channels}")
+    # def map_channel_bools(self, hardware_channel_list: List[Channel]):
+    #     """Method to check environment_channel_list against hardware_channel_list
+    #     and return a list of True/False based on whether or not the hardware channel
+    #     was in the environment_channel_list."""
+    #     # Check for channels that are not in the hardware_channel_list
+    #     hardware_channel_set = set(hardware_channel_list)
+    #     missing_channels = set(self.channel_list) - hardware_channel_set
+    #     if missing_channels:
+    #         raise ValueError(f"{self.environment_name} channel_list contains channels not in hardware_channel_list: " f"{missing_channels}")
 
-        # Create boolean map
-        channel_set = set(self.channel_list)
-        channel_list_bools = [channel in channel_set for channel in hardware_channel_list]
+    #     # Create boolean map
+    #     channel_set = set(self.channel_list)
+    #     channel_list_bools = [channel in channel_set for channel in hardware_channel_list]
 
-        return channel_list_bools
+    #     return channel_list_bools
 
     def map_channel_indices(self, hardware_channel_list):
         """Method to return the row indices of the hardware_channel_list that
         contains channels in the environment_channel_list"""
-        channel_bools = self.map_channel_bools(hardware_channel_list)
-
+        channel_bools = self.channel_list_bools
         channel_indices = [index for index, environment_bool in enumerate(channel_bools) if environment_bool]
         return channel_indices
 
     @abstractmethod
-    def validate(self) -> True:
+    def validate(self, hardware_metadata) -> True:
         """
         Validate whether the metadata will work for that environment. Return True if valid
 
@@ -123,8 +122,8 @@ class EnvironmentMetadata(ABC):
         if not isinstance(self.environment_name, str):
             raise TypeError(f"{self.environment_name} must be a string")
 
-        if len(self.channel_list) != len(set(self.channel_list)):
-            raise ValueError(f"Duplicate channels found in {self.environment_name} channel_list")
+        if len(self.channel_list_bools) != len(hardware_metadata.channel_list):
+            raise ValueError(f"{self.environment_name} channel list bools is not the same length as channel list")
 
         return True
 

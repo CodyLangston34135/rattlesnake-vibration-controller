@@ -53,6 +53,7 @@ class AbstractUI(ABC):
         self.environment_type = environment_type
         self.environment_name = environment_name
         self.rattlesnake = rattlesnake
+        self.hardware_metadata = None
         self.definition_widget = None
         self.system_id_widget = None
         self.prediction_widget = None
@@ -95,9 +96,15 @@ class AbstractUI(ABC):
             channel table and sampling information.
 
         """
+        self.hardware_metadata = hardware_metadata
+
+    def get_channel_list_bools(self, hardware_channel_list):
+        channel_set = set(self.hardware_metadata.channel_list)
+        channel_list_bools = [channel in channel_set for channel in hardware_channel_list]
+        return channel_list_bools
 
     @abstractmethod
-    def get_environment_metadata(self) -> EnvironmentMetadata:
+    def get_environment_metadata(self, hardware_metadata: HardwareMetadata) -> EnvironmentMetadata:
         """
         Collect the parameters from the user interface defining the environment
 

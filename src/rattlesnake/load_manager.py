@@ -197,20 +197,18 @@ def load_metadata_from_netcdf(filepath):
         dataset.variables["environment_names"][...],
     ):
         environment_active_channels = dataset.variables["environment_active_channels"][:, environment_index]
-        environment_channel_list = [channel for channel, channel_bool in zip(channel_list, environment_active_channels) if channel_bool == 1]
         environment_type_int = dataset.variables["environment_types"][environment_index]
         environment_type = ControlTypes(environment_type_int)
         environment_group = dataset.groups[environment_name]
 
         environment_metadata_class = ENVIRONMENT_METADATA[environment_type]
-        environment_metadata = environment_metadata_class(environment_name)
+        channel_list_bools = environment_active_channels
         match environment_type:
             case ControlTypes.TIME:
-                environment_metadata.sample_rate = hardware_metadata.sample_rate  # This is rough
+                sample_rate = hardware_metadata.sample_rate
+                environment_metadata = environment_metadata_class(environment_name, channel_list_bools, sample_rate)
 
-        environment_metadata.channel_list = environment_channel_list
         environment_metadata.retrieve_metadata_from_netcdf(environment_group)
-
         environment_metadata_list.append(environment_metadata)
 
     return (hardware_metadata, environment_metadata_list)
@@ -271,7 +269,7 @@ def load_metadata_from_worksheet(filepath):
 
     # Environment
     environment_names = []
-    environment_channel_list = {}
+    environment_channel_list_bools = {}
     sheets = workbook.sheetnames
     if len(sheets) > 1:
         sheets = [sheet for sheet in sheets if "channel" in sheet.lower()]
@@ -286,17 +284,16 @@ def load_metadata_from_worksheet(filepath):
             break
 
         # Build environment channel list
-        environment_active_channels = [0] * num_channels
+        environment_active_channels = [False] * num_channels
         for i in range(num_channels):
             row = 3 + i
             value = channel_sheet.cell(row=row, column=col).value
 
             if value is not None and str(value).strip() != "":
-                environment_active_channels[i] = 1
-        environment_channels = [channel for channel, channel_bool in zip(channel_list, environment_active_channels) if channel_bool == 1]
+                environment_active_channels[i] = True
 
         environment_names.append(environment_name)
-        environment_channel_list[environment_name] = environment_channels
+        environment_channel_list_bools[environment_name] = environment_active_channels
         col += 1
 
     environment_metadata_list = []
@@ -309,13 +306,12 @@ def load_metadata_from_worksheet(filepath):
         environment_types[environment_name] = environment_type
 
         environment_metadata_class = ENVIRONMENT_METADATA[environment_type]
-        environment_metadata = environment_metadata_class(environment_name)
-
+        channel_list_bools = environment_channel_list_bools[environment_name]
         match environment_type:
             case ControlTypes.TIME:
-                environment_metadata.sample_rate = int(sample_rate)
+                sample_rate = int(sample_rate)
+                environment_metadata = environment_metadata_class(environment_name, channel_list_bools, sample_rate)
 
-        environment_metadata.channel_list = environment_channel_list[environment_name]
         environment_metadata.retrieve_metadata_from_worksheet(environment_sheet)
         environment_metadata_list.append(environment_metadata)
 
