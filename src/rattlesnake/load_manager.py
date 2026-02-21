@@ -179,7 +179,7 @@ def load_metadata_from_netcdf(filepath):
     # Hardware
 
     hardware_type = HardwareType(dataset.hardware)
-    hardware_metadata_class = HARDWARE_METADATA(hardware_type)
+    hardware_metadata_class = HARDWARE_METADATA[hardware_type]
     hardware_metadata = hardware_metadata_class()
     match hardware_type:
         case HardwareType.SDYNPY_SYSTEM:
@@ -254,7 +254,7 @@ def load_metadata_from_worksheet(filepath):
                 print(f"Hardware sheet entry {row[0].value} not recognized")
 
     hardware_type = HardwareType(hardware_type_int)
-    hardware_metadata_class = HARDWARE_METADATA(hardware_type)
+    hardware_metadata_class = HARDWARE_METADATA[hardware_type]
     hardware_metadata = hardware_metadata_class()
     match hardware_type:
         case HardwareType.SDYNPY_SYSTEM:

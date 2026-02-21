@@ -32,7 +32,6 @@ class EnvironmentManager:
         event_container: EventContainer,
         threaded: bool,
     ):
-        self.hardware_metadata = None
         self.queue_names = []  # Static name for dictionary keys, process names, etc
         self.environment_names = {}  # Name of environment for Ui purposes
         self.environment_types = {}
@@ -111,9 +110,7 @@ class EnvironmentManager:
             self.environment_ready_events[queue_name].clear()
             self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata))
 
-        self.hardware_metadata = hardware_metadata
-
-    def initialize_environments(self, metadata_list: List[EnvironmentMetadata]):
+    def initialize_environments(self, metadata_list: List[EnvironmentMetadata], hardware_metadata: HardwareMetadata):
         self.log("Initializing Environments")
         mapped_queue_names = set()
         extra_metadata = []
@@ -141,7 +138,7 @@ class EnvironmentManager:
             self.environment_types[queue_name] = environment_type
             self.environment_names[queue_name] = environment_name
             self.environment_metadata[queue_name] = metadata
-            self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, self.hardware_metadata))
+            self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata))
             self.environment_ready_events[queue_name].clear()
             self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata))
 
@@ -155,7 +152,7 @@ class EnvironmentManager:
         # Add process for metadata that needs a new process. Could do this in loop above
         # but I want to clear up queue_names before assigning new ones
         for metadata in extra_metadata:
-            self.add_environment(metadata)
+            self.add_environment(metadata, hardware_metadata)
 
     def validate_environment_metadata(self, metadata_list: List[EnvironmentMetadata]):
         # Check if there are available queues
@@ -233,7 +230,7 @@ class EnvironmentManager:
         self.close_environments()
         self.environment_processes = {}
 
-    def add_environment(self, metadata: EnvironmentMetadata):
+    def add_environment(self, metadata: EnvironmentMetadata, hardware_metadata: HardwareMetadata):
         """Adds environment to container with unique name"""
         # Find the first available queue for the environment
         queue_name = None
@@ -252,7 +249,7 @@ class EnvironmentManager:
         self.environment_close_events[queue_name].clear()
 
         # Figure out what type of environment to add
-        environment_process_function = ENVIRONMENT_PROCESS(environment_type)
+        environment_process_function = ENVIRONMENT_PROCESS[environment_type]
         self.queue_container.environment_command_queues[queue_name].assign_environment(environment_name)
         environment_process = self.new_process(
             target=environment_process_function,
@@ -281,7 +278,7 @@ class EnvironmentManager:
         self.environment_types[queue_name] = environment_type
         self.environment_processes[queue_name] = environment_process
         self.environment_metadata[queue_name] = metadata
-        self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, self.hardware_metadata))
+        self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata))
         self.environment_ready_events[queue_name].clear()  # This looks weird, the event is set in the next line
         self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata))
         self.environment_active_events[queue_name].clear()

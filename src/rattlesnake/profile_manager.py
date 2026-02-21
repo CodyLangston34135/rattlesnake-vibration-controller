@@ -84,7 +84,6 @@ class ProfileManager:
         self._log_file_queue = queue_container.log_file_queue
         self._controller_command_queue = queue_container.controller_command_queue
 
-        self.profile_event_list = []
         self.profile_timers = []
         self.gui_timer = None
 
@@ -126,10 +125,9 @@ class ProfileManager:
 
     def start_profile(self, profile_event_list: List[ProfileEvent]):
         self.log("Starting Profile")
-        self.profile_event_list = profile_event_list
         self.profile_timers = []
         max_timestamp = 0
-        for profile_event in self.profile_event_list:
+        for profile_event in profile_event_list:
             # Expand data
             timestamp = profile_event.timestamp
             queue_name = profile_event.queue_name
