@@ -14,7 +14,10 @@ from rattlesnake.user_interface.ui_utilities import (
     ENVIRONMENT_TYPE,
     ui_path,
 )
+from rattlesnake.user_interface.ui_registry import ENVIRONMENT_UIS
+from rattlesnake.hardware.abstract_hardware import NullHardwareMetadata
 from rattlesnake.hardware.hardware_utilities import HardwareType, HardwareModules, Channel
+from rattlesnake.hardware.hardware_registry import HARDWARE_METADATA
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.environment.abstract_environment import EnvironmentInstructions
 from rattlesnake.process.streaming import StreamMetadata, StreamType
@@ -787,15 +790,13 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         hardware_text = self.hardware_selector.currentText()
         hardware_type = HARDWARE_TYPE[hardware_text]
+        if hardware_type == "Select":
+            return NullHardwareMetadata("Select")
+
+        hardware_metadata_class = HARDWARE_METADATA[hardware_type]
+        hardware_metadata = hardware_metadata_class()
         match hardware_type:
-            case "Select":
-                from rattlesnake.hardware.abstract_hardware import NullHardwareMetadata
-
-                hardware_metadata = NullHardwareMetadata("Select")
             case HardwareType.NI_DAQMX:
-                from rattlesnake.hardware.nidaqmx import NIDAQmxMetadata
-
-                hardware_metadata = NIDAQmxMetadata()
                 hardware_metadata.sample_rate = self.sample_rate_selector.value()
                 hardware_metadata.time_per_read = self.buffer_size_selector.value()
                 hardware_metadata.time_per_write = self.buffer_size_selector.value()
@@ -812,9 +813,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             case HardwareType.STATE_SPACE:
                 return
             case HardwareType.SDYNPY_SYSTEM:
-                from rattlesnake.hardware.sdynpy_system import SDynPySystemMetadata
-
-                hardware_metadata = SDynPySystemMetadata()
                 hardware_metadata.sample_rate = self.sample_rate_selector.value()
                 hardware_metadata.time_per_read = self.buffer_size_selector.value()
                 hardware_metadata.time_per_write = self.buffer_size_selector.value()
@@ -965,11 +963,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             idx += 1
             environment_name = f"{environment_type.name} {idx}"
 
-        match environment_type:
-            case ControlTypes.TIME:
-                from rattlesnake.user_interface.time_ui import TimeUI
-
-                environment_ui = TimeUI(environment_name, self.rattlesnake)
+        environment_ui_class = ENVIRONMENT_UIS[environment_type]
+        environment_ui = environment_ui_class(environment_name, self.rattlesnake)
 
         # Update environment UIs and channel table
         self.environment_uis[environment_name] = environment_ui

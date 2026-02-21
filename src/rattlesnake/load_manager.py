@@ -1,7 +1,8 @@
 from rattlesnake.utilities import GlobalCommands
 from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
+from rattlesnake.hardware.hardware_registry import HARDWARE_METADATA
 from rattlesnake.environment.environment_utilities import ControlTypes
-from rattlesnake.environment.environment_registry import ENVIRONMENT_COMMANDS
+from rattlesnake.environment.environment_registry import ENVIRONMENT_METADATA, ENVIRONMENT_COMMANDS
 from rattlesnake.profile_manager import ProfileEvent
 import netCDF4
 import openpyxl
@@ -178,15 +179,11 @@ def load_metadata_from_netcdf(filepath):
     # Hardware
 
     hardware_type = HardwareType(dataset.hardware)
+    hardware_metadata_class = HARDWARE_METADATA(hardware_type)
+    hardware_metadata = hardware_metadata_class()
     match hardware_type:
         case HardwareType.SDYNPY_SYSTEM:
-            from rattlesnake.hardware.sdynpy_system import SDynPySystemMetadata
-
-            hardware_metadata = SDynPySystemMetadata()
             hardware_metadata.hardware_file = dataset.hardware_file
-
-        case _:
-            raise ValueError(f"{hardware_type} has not been implemented yet")
 
     hardware_metadata.channel_list = channel_list
     hardware_metadata.sample_rate = int(dataset.sample_rate)
@@ -205,14 +202,11 @@ def load_metadata_from_netcdf(filepath):
         environment_type = ControlTypes(environment_type_int)
         environment_group = dataset.groups[environment_name]
 
+        environment_metadata_class = ENVIRONMENT_METADATA[environment_type]
+        environment_metadata = environment_metadata_class(environment_name)
         match environment_type:
             case ControlTypes.TIME:
-                from rattlesnake.environment.time_environment import TimeMetadata
-
-                environment_metadata = TimeMetadata(environment_name)
                 environment_metadata.sample_rate = hardware_metadata.sample_rate  # This is rough
-            case _:
-                raise TypeError(f"{environment_type} has not been implemented yet")
 
         environment_metadata.channel_list = environment_channel_list
         environment_metadata.retrieve_metadata_from_netcdf(environment_group)
@@ -260,11 +254,10 @@ def load_metadata_from_worksheet(filepath):
                 print(f"Hardware sheet entry {row[0].value} not recognized")
 
     hardware_type = HardwareType(hardware_type_int)
+    hardware_metadata_class = HARDWARE_METADATA(hardware_type)
+    hardware_metadata = hardware_metadata_class()
     match hardware_type:
         case HardwareType.SDYNPY_SYSTEM:
-            from rattlesnake.hardware.sdynpy_system import SDynPySystemMetadata
-
-            hardware_metadata = SDynPySystemMetadata()
             hardware_metadata.hardware_file = hardware_file
             hardware_metadata.output_oversample = output_oversample
         case _:
@@ -314,14 +307,12 @@ def load_metadata_from_worksheet(filepath):
         environment_type = ControlTypes[environment_type_name]
         environment_types[environment_name] = environment_type
 
+        environment_metadata_class = ENVIRONMENT_METADATA[environment_type]
+        environment_metadata = environment_metadata_class(environment_name)
+
         match environment_type:
             case ControlTypes.TIME:
-                from rattlesnake.environment.time_environment import TimeMetadata
-
-                environment_metadata = TimeMetadata(environment_name)
                 environment_metadata.sample_rate = int(sample_rate)
-            case _:
-                raise TypeError(f"{environment_type} has not been implemented yet")
 
         environment_metadata.channel_list = environment_channel_list[environment_name]
         environment_metadata.retrieve_metadata_from_worksheet(environment_sheet)

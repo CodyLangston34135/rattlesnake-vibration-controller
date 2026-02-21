@@ -26,6 +26,7 @@ from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.utilities import GlobalCommands, QueueContainer, flush_queue, rms_time
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.hardware.hardware_registry import HARDWARE_OUTPUT
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
@@ -142,11 +143,10 @@ class OutputProcess(AbstractMessageProcess):
         if self.hardware is not None:
             self.hardware.close()
 
+        hardware_output_class = HARDWARE_OUTPUT[metadata.hardware_type]
         match metadata.hardware_type:
             case HardwareType.NI_DAQMX:
-                from ..hardware.nidaqmx import NIDAQmxOutput
-
-                self.hardware = NIDAQmxOutput(
+                self.hardware = hardware_output_class(
                     metadata.task_trigger,
                     metadata.output_trigger_generator,
                 )
@@ -178,9 +178,7 @@ class OutputProcess(AbstractMessageProcess):
                 # self.hardware = StateSpaceOutput(self.queue_container.single_process_hardware_queue)
                 pass
             case HardwareType.SDYNPY_SYSTEM:
-                from ..hardware.sdynpy_system import SDynPySystemOutput
-
-                self.hardware = SDynPySystemOutput(self.queue_container.single_process_hardware_queue)
+                self.hardware = hardware_output_class(self.queue_container.single_process_hardware_queue)
             case HardwareType.SDYNPY_FRF:
                 # from .sdynpy_frf_virtual_hardware import SDynPyFRFOutput
 

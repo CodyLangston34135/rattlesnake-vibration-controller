@@ -25,6 +25,7 @@ from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.utilities import GlobalCommands, QueueContainer, flush_queue, align_signals, correlation_norm_signal_spec_ratio
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.hardware.hardware_registry import HARDWARE_ACQUISITION
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata
 from rattlesnake.user_interface.ui_utilities import UICommands
 import multiprocessing as mp
@@ -163,11 +164,10 @@ class AcquisitionProcess(AbstractMessageProcess):
         if self.hardware is not None:
             self.hardware.close()
 
+        hardware_acquisition_class = HARDWARE_ACQUISITION[metadata.hardware_type]
         match metadata.hardware_type:
             case HardwareType.NI_DAQMX:
-                from ..hardware.nidaqmx import NIDAQmxAcquisition
-
-                self.hardware = NIDAQmxAcquisition(metadata.task_trigger, metadata.output_trigger_generator)
+                self.hardware = hardware_acquisition_class(metadata.task_trigger, metadata.output_trigger_generator)
 
             case HardwareType.LAN_XI:
                 # from .lanxi_hardware_multiprocessing import LanXIAcquisition
@@ -211,9 +211,7 @@ class AcquisitionProcess(AbstractMessageProcess):
                 # )
                 pass
             case HardwareType.SDYNPY_SYSTEM:
-                from ..hardware.sdynpy_system import SDynPySystemAcquisition
-
-                self.hardware = SDynPySystemAcquisition(
+                self.hardware = hardware_acquisition_class(
                     metadata.hardware_file,
                     self.queue_container.single_process_hardware_queue,
                 )
