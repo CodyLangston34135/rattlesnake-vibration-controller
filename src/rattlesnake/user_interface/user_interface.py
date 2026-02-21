@@ -793,15 +793,19 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         if hardware_type == "Select":
             return NullHardwareMetadata("Select")
 
+        channel_list = []
         hardware_metadata_class = HARDWARE_METADATA[hardware_type]
-        hardware_metadata = hardware_metadata_class()
         match hardware_type:
             case HardwareType.NI_DAQMX:
-                hardware_metadata.sample_rate = self.sample_rate_selector.value()
-                hardware_metadata.time_per_read = self.buffer_size_selector.value()
-                hardware_metadata.time_per_write = self.buffer_size_selector.value()
-                hardware_metadata.task_trigger = self.task_trigger_selector.text()
-                hardware_metadata.output_trigger_generator = self.trigger_output_selector.value()
+                return
+
+                sample_rate = self.sample_rate_selector.value()
+                time_per_read = self.buffer_size_selector.value()
+                time_per_write = self.buffer_size_selector.value()
+                task_trigger = self.task_trigger_selector.text()
+                output_trigger_generator = self.trigger_output_selector.value()
+                hardware_metadata = hardware_metadata_class()
+
             case HardwareType.LAN_XI:
                 return
             case HardwareType.DP_QUATTRO:
@@ -813,11 +817,14 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             case HardwareType.STATE_SPACE:
                 return
             case HardwareType.SDYNPY_SYSTEM:
-                hardware_metadata.sample_rate = self.sample_rate_selector.value()
-                hardware_metadata.time_per_read = self.buffer_size_selector.value()
-                hardware_metadata.time_per_write = self.buffer_size_selector.value()
-                hardware_metadata.output_oversample = self.integration_oversample_selector.value()
-                hardware_metadata.hardware_file = self.hardware_file
+                sample_rate = self.sample_rate_selector.value()
+                time_per_read = self.buffer_size_selector.value()
+                time_per_write = self.buffer_size_selector.value()
+                output_oversample = self.integration_oversample_selector.value()
+                hardware_file = self.hardware_file
+                hardware_metadata = hardware_metadata_class(
+                    channel_list, sample_rate, time_per_read, time_per_write, output_oversample, hardware_file
+                )
             case HardwareType.SDYNPY_FRF:
                 return
 

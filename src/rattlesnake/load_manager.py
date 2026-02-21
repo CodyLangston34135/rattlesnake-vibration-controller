@@ -179,17 +179,17 @@ def load_metadata_from_netcdf(filepath):
     # Hardware
 
     hardware_type = HardwareType(dataset.hardware)
+    channel_list = channel_list
+    sample_rate = int(dataset.sample_rate)
+    time_per_read = float(dataset.time_per_read)
+    time_per_write = float(dataset.time_per_write)
+    output_oversample = int(dataset.output_oversample)
+
     hardware_metadata_class = HARDWARE_METADATA[hardware_type]
-    hardware_metadata = hardware_metadata_class()
     match hardware_type:
         case HardwareType.SDYNPY_SYSTEM:
-            hardware_metadata.hardware_file = dataset.hardware_file
-
-    hardware_metadata.channel_list = channel_list
-    hardware_metadata.sample_rate = int(dataset.sample_rate)
-    hardware_metadata.time_per_read = float(dataset.time_per_read)
-    hardware_metadata.time_per_write = float(dataset.time_per_write)
-    hardware_metadata.output_oversample = int(dataset.output_oversample)
+            hardware_file = dataset.hardware_file
+            hardware_metadata = hardware_metadata_class(channel_list, sample_rate, time_per_read, time_per_write, output_oversample, hardware_file)
 
     # Environments
     environment_metadata_list = []
@@ -254,19 +254,20 @@ def load_metadata_from_worksheet(filepath):
                 print(f"Hardware sheet entry {row[0].value} not recognized")
 
     hardware_type = HardwareType(hardware_type_int)
+
+    channel_list = channel_list
+    sample_rate = int(sample_rate)
+    time_per_read = float(time_per_read)
+    time_per_write = float(time_per_write)
+
     hardware_metadata_class = HARDWARE_METADATA[hardware_type]
     hardware_metadata = hardware_metadata_class()
     match hardware_type:
         case HardwareType.SDYNPY_SYSTEM:
-            hardware_metadata.hardware_file = hardware_file
-            hardware_metadata.output_oversample = output_oversample
-        case _:
-            raise TypeError(f"{hardware_type} has not been implemented yet")
+            hardware_file = hardware_file
+            output_oversample = output_oversample
 
-    hardware_metadata.channel_list = channel_list
-    hardware_metadata.sample_rate = int(sample_rate)
-    hardware_metadata.time_per_read = float(time_per_read)
-    hardware_metadata.time_per_write = float(time_per_write)
+            hardware_metadata = hardware_metadata_class(channel_list, sample_rate, time_per_read, time_per_write, output_oversample, hardware_file)
 
     # Environment
     environment_names = []

@@ -14,7 +14,16 @@ class HardwareMetadata(ABC):
     HardwareAcquisition and HardwareOutput class specific to that HardwareType.
     """
 
-    def __init__(self, hardware_type):
+    def __init__(
+        self,
+        hardware_type,
+        channel_list,
+        sample_rate,
+        time_per_read,
+        time_per_write,
+        *,
+        output_oversample=1,
+    ):
         """
         Initializes the hardware metadata with default values and stores hardware_type
 
@@ -23,11 +32,11 @@ class HardwareMetadata(ABC):
         enum as a input to super().__init__() when you define the specific hardware.
         """
         self.hardware_type = hardware_type
-        self.channel_list = []
-        self.sample_rate = 1000
-        self.time_per_read = 0.25
-        self.time_per_write = 0.25
-        self.output_oversample = 1  # This is only used in virtual hardware
+        self.channel_list = channel_list
+        self.sample_rate = sample_rate
+        self.time_per_read = time_per_read
+        self.time_per_write = time_per_write
+        self.output_oversample = output_oversample  # This is only used in virtual hardware
 
     @property
     def samples_per_read(self):

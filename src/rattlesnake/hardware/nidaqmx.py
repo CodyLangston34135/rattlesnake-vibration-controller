@@ -14,8 +14,24 @@ BUFFER_SIZE_FACTOR = 3
 
 # region: NIDAQmxMetadata
 class NIDAQmxMetadata(HardwareMetadata):
-    def __init__(self):
-        super().__init__(HARDWARE_TYPE)
+    def __init__(
+        self,
+        channel_list,
+        sample_rate,
+        time_per_read,
+        time_per_write,
+        task_trigger,
+        output_trigger_generator,
+    ):
+        super().__init__(
+            HARDWARE_TYPE,
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            task_trigger,
+            output_trigger_generator,
+        )
         self.task_trigger = 0
         self.output_trigger_generator = ""
 

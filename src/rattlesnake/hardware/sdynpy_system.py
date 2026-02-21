@@ -91,9 +91,24 @@ if DEBUG:
 
 # region: SDynPySystemMetadata
 class SDynPySystemMetadata(HardwareMetadata):
-    def __init__(self):
-        super().__init__(HARDWARE_TYPE)
-        self.hardware_file = None
+    def __init__(
+        self,
+        channel_list,
+        sample_rate,
+        time_per_read,
+        time_per_write,
+        output_oversample,
+        hardware_file,
+    ):
+        super().__init__(
+            HARDWARE_TYPE,
+            channel_list,
+            sample_rate,
+            time_per_read,
+            time_per_write,
+            output_oversample=output_oversample,
+        )
+        self.hardware_file = hardware_file
         self._node_dict = None  # Dont set this
 
     @property

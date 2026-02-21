@@ -52,13 +52,14 @@ def make_sdynpy_system_metadata():
     force_3.feedback_device = "Virtual"
     channel_list = [excitation_1, excitation_2, excitation_3, force_1, force_2, force_3]
 
-    hardware_metadata = SDynPySystemMetadata()
-    hardware_metadata.channel_list = channel_list
-    hardware_metadata.sample_rate = 1000
-    hardware_metadata.time_per_read = BUFFER_SIZE
-    hardware_metadata.time_per_write = BUFFER_SIZE
-    hardware_metadata.hardware_file = "E:/Rattlesnake/SampleData/sample_system.npz"
-
+    hardware_metadata = SDynPySystemMetadata(
+        channel_list,
+        sample_rate=1000,
+        time_per_read=BUFFER_SIZE,
+        time_per_write=BUFFER_SIZE,
+        output_oversample=1,
+        hardware_file="E:/Rattlesnake/SampleData/sample_system.npz",
+    )
     return hardware_metadata
 
 
