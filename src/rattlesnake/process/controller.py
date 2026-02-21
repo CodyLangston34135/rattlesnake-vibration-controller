@@ -106,14 +106,14 @@ class ControllerProcess(AbstractMessageProcess):
             self.stop_streaming()
         if self.stream_metadata.stream_type is not StreamType.NO_STREAM:
             self.queue_container.streaming_command_queue.put(self.process_name, (GlobalCommands.FINALIZE_STREAMING, None))
-        # Stop acquisition
+
+        # Stop acquisition. I flip these for error handling
+        self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))
+        self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))
         if not self.acquisition_active:
             raise RuntimeError("Tried to stop hardware when acquisition was not running")
-        self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))
-        # Stop output
         if not self.output_active:
             raise RuntimeError("Tried to start hardware when output was not running")
-        self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))
 
     def start_environment(self, data: tuple[str, EnvironmentInstructions]):
         queue_name, instruction = data

@@ -442,6 +442,9 @@ class Rattlesnake:
         self.log("Disarming Test Hardware")
         self.event_container.acquisition_ready_event.clear()
         self.event_container.output_ready_event.clear()
+        # Stop profile
+        self.profile_manager.stop_profile()
+        # Send stop to contoller -Stop Environment > Stop Streaming > Stop Hardware
         self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_HARDWARE, None))
 
         if self.blocking:

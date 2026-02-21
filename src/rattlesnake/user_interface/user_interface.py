@@ -1298,6 +1298,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.display_acquisition_ended()
 
     def stop_acquisition(self):
+        # Stop acquisition is a special case where this needs to stop the test no matter what
+        self.stop_profile()
         self.log("Stopping hardware acquisition")
         self.disarm_test_button.setEnabled(False)
         for i in range(self.run_environment_tabs.count()):
@@ -1592,7 +1594,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         instructions so that the event list is adaptive to the user's inputs into the run tab UI.
         """
         self.start_profile_button.setEnabled(False)
-        self.disarm_test_button.setEnabled(False)
         for i in range(self.run_environment_tabs.count()):
             self.run_environment_tabs.widget(i).setEnabled(False)
         try:
@@ -1667,7 +1668,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         for i in range(self.run_environment_tabs.count()):
             self.run_environment_tabs.widget(i).setEnabled(True)
-        self.disarm_test_button.setEnabled(True)
         self.start_profile_button.setEnabled(True)
         self.stop_profile_button.setEnabled(False)
 
@@ -1678,7 +1678,6 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.display_error(error)
 
         # Unlock UI
-        self.disarm_test_button.setEnabled(True)
         self.start_profile_button.setEnabled(True)
         for i in range(self.run_environment_tabs.count()):
             self.run_environment_tabs.widget(i).setEnabled(True)
@@ -1805,11 +1804,11 @@ if __name__ == "__main__":
     environment_instructions = make_time_environment_instructions()
 
     rattlesnake = Rattlesnake(threaded=True, timeout=10)
-    # rattlesnake.set_hardware(hardware_metadata)
-    # rattlesnake.set_environments([environment_metadata])
-    # rattlesnake.set_profile_event_list(profile_event_list)
-    # rattlesnake.set_stream_metadata(stream_metadata)
-    # rattlesnake.start_acquisition(stream_metadata)
+    rattlesnake.set_hardware(hardware_metadata)
+    rattlesnake.set_environments([environment_metadata])
+    rattlesnake.set_profile_event_list(profile_event_list)
+    rattlesnake.set_stream_metadata(stream_metadata)
+    rattlesnake.start_acquisition(stream_metadata)
     # rattlesnake.start_environment(environment_instructions)
 
     # This is a fix for scaling Rattlesnake to different resolution monitors
