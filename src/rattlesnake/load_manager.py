@@ -197,9 +197,15 @@ def load_metadata_from_netcdf(filepath):
         dataset.variables["environment_names"][...],
     ):
         environment_active_channels = dataset.variables["environment_active_channels"][:, environment_index]
-        environment_type_int = dataset.variables["environment_types"][environment_index]
-        environment_type = ControlTypes(environment_type_int)
+
+        # Discover environment type
         environment_group = dataset.groups[environment_name]
+
+        try:
+            environment_type_int = dataset.variables["environment_types"][environment_index]
+            environment_type = ControlTypes(environment_type_int)
+        except:
+            environment_type = discover_environment_type_in_old_netcdf(environment_group)
 
         environment_metadata_class = ENVIRONMENT_METADATA[environment_type]
         channel_list_bools = environment_active_channels
@@ -212,6 +218,11 @@ def load_metadata_from_netcdf(filepath):
         environment_metadata_list.append(environment_metadata)
 
     return (hardware_metadata, environment_metadata_list)
+
+
+def discover_environment_type_in_old_netcdf(environment_group):
+    if hasattr(environment_group, "cancel_rampdown_time"):
+        return ControlTypes.TIME
 
 
 def load_metadata_from_worksheet(filepath):
