@@ -223,6 +223,8 @@ def load_metadata_from_netcdf(filepath):
 def discover_environment_type_in_old_netcdf(environment_group):
     if hasattr(environment_group, "cancel_rampdown_time"):
         return ControlTypes.TIME
+    else:
+        raise ValueError("Invalid netcdf4 file")
 
 
 def load_metadata_from_worksheet(filepath):
