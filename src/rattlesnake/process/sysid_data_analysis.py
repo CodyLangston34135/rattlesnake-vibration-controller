@@ -1,0 +1,429 @@
+"""
+Defines data analysis performed for environments that use system identification
+
+Abstract environment that can be used to create new environment control strategies
+in the controller that use system identification.
+
+Rattlesnake Vibration Control Software
+Copyright (C) 2021  National Technology & Engineering Solutions of Sandia, LLC
+(NTESS). Under the terms of Contract DE-NA0003525 with NTESS, the U.S.
+Government retains certain rights in this software.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+"""
+
+from rattlesnake.process.abstract_message_process import AbstractMessageProcess
+from rattlesnake.utilities import VerboseMessageQueue, flush_queue
+import multiprocessing as mp
+import numpy as np
+import netCDF4 as nc4
+from enum import Enum
+
+
+class SysIdDataAnalysisCommands(Enum):
+    """Valid commands to send to the data analysis process of an environment using system id"""
+
+    INITIALIZE_PARAMETERS = 0
+    RUN_NOISE = 1
+    RUN_TRANSFER_FUNCTION = 2
+    START_SHUTDOWN = 3
+    STOP_SYSTEM_ID = 4
+    SHUTDOWN_ACHIEVED = 5
+    SYSTEM_ID_COMPLETE = 6
+    LOAD_TRANSFER_FUNCTION = 7
+    LOAD_NOISE = 8
+
+
+class SysIdMetadata:
+    """Abstract class for storing metadata for an environment.
+
+    This class is used as a storage container for parameters used by an
+    environment.  It is returned by the environment UI's
+    ``collect_environment_definition_parameters`` function as well as its
+    ``initialize_environment`` function.  Various parts of the controller and
+    environment will query the class's data members for parameter values.
+
+    Classes inheriting from AbstractMetadata must define:
+      1. store_to_netcdf - A function defining the way the parameters are
+         stored to a netCDF file saved during streaming operations.
+    """
+
+    def __init__(self):
+        self.sample_rate = None
+        self.sysid_frame_size = None
+        self.sysid_averaging_type = None
+        self.sysid_noise_averages = None
+        self.sysid_averages = None
+        self.sysid_exponential_averaging_coefficient = None
+        self.sysid_estimator = None
+        self.sysid_level = None
+        self.sysid_level_ramp_time = None
+        self.sysid_signal_type = None
+        self.sysid_window = None
+        self.sysid_overlap = None
+        self.sysid_burst_on = None
+        self.sysid_pretrigger = None
+        self.sysid_burst_ramp_fraction = None
+        self.sysid_low_frequency_cutoff = None
+        self.sysid_high_frequency_cutoff = None
+        self.stream_file = None
+        self.auto_shutdown = False
+
+    @property
+    def sysid_frequency_spacing(self):
+        """Frequency spacing in spectral quantities computed by system identification"""
+        return self.sample_rate / self.sysid_frame_size
+
+    @property
+    def sysid_fft_lines(self):
+        """Number of frequency lines in the FFT"""
+        return self.sysid_frame_size // 2 + 1
+
+    @property
+    def sysid_skip_frames(self):
+        """Number of frames to skip in the time stream due to ramp time"""
+        return int(np.ceil(self.sysid_level_ramp_time * self.sample_rate / (self.sysid_frame_size * (1 - self.sysid_overlap))))
+
+    def store_to_netcdf(self, netcdf_group_handle: nc4._netCDF4.Group):  # pylint: disable=c-extension-no-member
+        """Store parameters to a group in a netCDF streaming file.
+
+        This function stores parameters from the environment into the netCDF
+        file in a group with the environment's name as its name.  The function
+        will receive a reference to the group within the dataset and should
+        store the environment's parameters into that group in the form of
+        attributes, dimensions, or variables.
+
+        This function is the "write" counterpart to the retrieve_metadata
+        function in the AbstractUI class, which will read parameters from
+        the netCDF file to populate the parameters in the user interface.
+
+        Parameters
+        ----------
+        netcdf_group_handle : nc4._netCDF4.Group
+            A reference to the Group within the netCDF dataset where the
+            environment's metadata is stored.
+        """
+        netcdf_group_handle.sysid_frame_size = self.sysid_frame_size
+        netcdf_group_handle.sysid_averaging_type = self.sysid_averaging_type
+        netcdf_group_handle.sysid_noise_averages = self.sysid_noise_averages
+        netcdf_group_handle.sysid_averages = self.sysid_averages
+        netcdf_group_handle.sysid_exponential_averaging_coefficient = self.sysid_exponential_averaging_coefficient
+        netcdf_group_handle.sysid_estimator = self.sysid_estimator
+        netcdf_group_handle.sysid_level = self.sysid_level
+        netcdf_group_handle.sysid_level_ramp_time = self.sysid_level_ramp_time
+        netcdf_group_handle.sysid_signal_type = self.sysid_signal_type
+        netcdf_group_handle.sysid_window = self.sysid_window
+        netcdf_group_handle.sysid_overlap = self.sysid_overlap
+        netcdf_group_handle.sysid_burst_on = self.sysid_burst_on
+        netcdf_group_handle.sysid_pretrigger = self.sysid_pretrigger
+        netcdf_group_handle.sysid_burst_ramp_fraction = self.sysid_burst_ramp_fraction
+        netcdf_group_handle.sysid_low_frequency_cutoff = self.sysid_low_frequency_cutoff
+        netcdf_group_handle.sysid_high_frequency_cutoff = self.sysid_high_frequency_cutoff
+
+    def validate(self):
+        return True
+
+    def __eq__(self, other):
+        try:
+            return np.all([np.all(value == other.__dict__[field]) for field, value in self.__dict__.items()])
+        except (AttributeError, KeyError):
+            return False
+
+
+class SysIDAnalysisProcess(AbstractMessageProcess):
+    """Process to perform data analysis and control calculations in an environment
+    using system id"""
+
+    def __init__(
+        self,
+        process_name: str,
+        command_queue: VerboseMessageQueue,
+        data_in_queue: mp.queues.Queue,
+        data_out_queue: mp.queues.Queue,
+        environment_command_queue: VerboseMessageQueue,
+        log_file_queue: mp.queues.Queue,
+        gui_update_queue: mp.queues.Queue,
+        environment_name: str,
+    ):
+        """Initialize the environment process
+
+        Parameters
+        ----------
+        process_name : str
+            The name of the process
+        command_queue : VerboseMessageQueue
+            A queue used to send commands to this process
+        data_in_queue : mp.queues.Queue
+            A queue receiving frames of data from the data collector
+        data_out_queue : mp.queues.Queue
+            A queue to put the next output or analysis results for the environment to use
+        environment_command_queue : VerboseMessageQueue
+            A queue used to send commands to the main environment process
+        log_file_queue : mp.queues.Queue
+            A queue used to send log file strings
+        gui_update_queue : mp.queues.Queue
+            A queue used to send updates back to the graphical user interface
+        environment_name : str
+            The name of the environment owning this process
+        """
+        super().__init__(process_name, log_file_queue, command_queue, gui_update_queue)
+        self.map_command(SysIdDataAnalysisCommands.INITIALIZE_PARAMETERS, self.initialize_sysid_parameters)
+        self.map_command(SysIdDataAnalysisCommands.RUN_NOISE, self.run_sysid_noise)
+        self.map_command(SysIdDataAnalysisCommands.RUN_TRANSFER_FUNCTION, self.run_sysid_transfer_function)
+        self.map_command(SysIdDataAnalysisCommands.STOP_SYSTEM_ID, self.stop_sysid)
+        self.map_command(SysIdDataAnalysisCommands.LOAD_NOISE, self.load_sysid_noise)
+        self.map_command(SysIdDataAnalysisCommands.LOAD_TRANSFER_FUNCTION, self.load_sysid_transfer_function)
+        self.environment_name = environment_name
+        self.environment_command_queue = environment_command_queue
+        self.data_in_queue = data_in_queue
+        self.data_out_queue = data_out_queue
+        self.parameters = None
+        self.frames = None
+        self.frequencies = None
+        self.sysid_frf = None
+        self.sysid_coherence = None
+        self.sysid_response_cpsd = None
+        self.sysid_reference_cpsd = None
+        self.sysid_response_noise = None
+        self.sysid_reference_noise = None
+        self.sysid_condition = None
+        self.startup = True
+
+    def initialize_sysid_parameters(self, data: SysIdMetadata):
+        """Stores parameters describing the system identification into the object
+
+        Parameters
+        ----------
+        data : AbstractSysIdMetadata
+            A metadata object containing the parameters to define the system identification
+        """
+        self.parameters = data
+
+    def load_sysid_noise(self, spectral_data):
+        """Loads noise data from a previous system identification
+
+        Parameters
+        ----------
+        spectral_data : tuple
+            A tuple containing frames, frequencies, system id FRFs, coherence, response cpsd,
+            reference_cpsd and condition number
+        """
+        self.log("Obtained Spectral Data")
+        (
+            self.frames,
+            self.frequencies,
+            _,
+            _,
+            self.sysid_response_noise,
+            self.sysid_reference_noise,
+            _,
+        ) = spectral_data
+
+    def load_sysid_transfer_function(self, spectral_data, skip_sysid=True):
+        """Loads system ID data from a previous system identification
+
+        Parameters
+        ----------
+        spectral_data : tuple
+            A tuple containing frames, frequencies, system id FRFs, coherence, response cpsd,
+            reference_cpsd and condition number
+        skip_sysid : bool, optional
+            If True, send the system identification complete flag to the controller. By default True
+        """
+        self.log("Obtained Spectral Data")
+        (
+            self.frames,
+            self.frequencies,
+            self.sysid_frf,
+            self.sysid_coherence,
+            self.sysid_response_cpsd,
+            self.sysid_reference_cpsd,
+            self.sysid_condition,
+        ) = spectral_data
+        if skip_sysid:
+            self.environment_command_queue.put(
+                self.process_name,
+                (
+                    SysIdDataAnalysisCommands.SYSTEM_ID_COMPLETE,
+                    (
+                        self.frames,
+                        0,
+                        self.frequencies,
+                        self.sysid_frf,
+                        self.sysid_coherence,
+                        self.sysid_response_cpsd,
+                        self.sysid_reference_cpsd,
+                        self.sysid_condition,
+                        self.sysid_response_noise,
+                        self.sysid_reference_noise,
+                    ),
+                ),
+            )
+
+    def run_sysid_noise(self, auto_shutdown):
+        """Starts and runs the system identification noise phase.
+
+        Parameters
+        ----------
+        auto_shutdown : bool
+            If True, the environment will automatically shut down when the requested number of
+            frames is reached.  If False, the noise characterization will run until manually
+            stopped.
+        """
+        if self.startup:
+            self.startup = False
+            self.frames = 0
+        spectral_data = flush_queue(self.data_in_queue)
+        if len(spectral_data) > 0:
+            self.load_sysid_noise(spectral_data[-1])
+            self.gui_update_queue.put(
+                (
+                    self.environment_name,
+                    (
+                        "noise_update",
+                        (
+                            self.frames,
+                            self.parameters.sysid_noise_averages,
+                            self.frequencies,
+                            self.sysid_response_noise,
+                            self.sysid_reference_noise,
+                        ),
+                    ),
+                )
+            )
+        if auto_shutdown and self.parameters.sysid_noise_averages == self.frames:
+            self.environment_command_queue.put(
+                self.process_name,
+                (SysIdDataAnalysisCommands.START_SHUTDOWN, False),
+            )
+            self.stop_sysid(None)
+        else:
+            self.command_queue.put(self.process_name, (SysIdDataAnalysisCommands.RUN_NOISE, auto_shutdown))
+
+    def run_sysid_transfer_function(self, auto_shutdown):
+        """Starts and runs the system identification
+
+        Parameters
+        ----------
+        auto_shutdown : bool
+            If True, the system identification will stop automatically upon reaching the requested
+            number of measurement frames.  If False, it will run indefinitely until manually
+            stopped.
+        """
+        if self.startup:
+            self.startup = False
+            self.frames = 0
+        spectral_data = flush_queue(self.data_in_queue)
+        if len(spectral_data) > 0:
+            self.load_sysid_transfer_function(spectral_data[-1], skip_sysid=False)
+            self.gui_update_queue.put(
+                (
+                    self.environment_name,
+                    (
+                        "sysid_update",
+                        (
+                            self.frames,
+                            self.parameters.sysid_averages,
+                            self.frequencies,
+                            self.sysid_frf,
+                            self.sysid_coherence,
+                            self.sysid_response_cpsd,
+                            self.sysid_reference_cpsd,
+                            self.sysid_condition,
+                        ),
+                    ),
+                )
+            )
+        if auto_shutdown and self.parameters.sysid_averages == self.frames:
+            self.environment_command_queue.put(
+                self.process_name,
+                (SysIdDataAnalysisCommands.START_SHUTDOWN, False),
+            )
+            self.stop_sysid(None)
+        else:
+            self.command_queue.put(
+                self.process_name,
+                (SysIdDataAnalysisCommands.RUN_TRANSFER_FUNCTION, auto_shutdown),
+            )
+
+    def stop_sysid(self, data):  # pylint: disable=unused-argument
+        """Stops the currently running system identification phase
+
+        Parameters
+        ----------
+        data : ignored
+            This argument is not used, but is required by the calling signature of functions
+            that get called via the command map.
+        """
+        # Remove any run_transfer_function or run_control from the queue
+        instructions = self.command_queue.flush(self.process_name)
+        for instruction in instructions:
+            if not instruction[0] in [
+                SysIdDataAnalysisCommands.RUN_NOISE,
+                SysIdDataAnalysisCommands.RUN_TRANSFER_FUNCTION,
+            ]:
+                self.command_queue.put(self.process_name, instruction)
+        flush_queue(self.data_out_queue)
+        self.startup = True
+        self.environment_command_queue.put(self.process_name, (SysIdDataAnalysisCommands.SHUTDOWN_ACHIEVED, None))
+
+
+def sysid_data_analysis_process(
+    environment_name: str,
+    command_queue: VerboseMessageQueue,
+    data_in_queue: mp.queues.Queue,
+    data_out_queue: mp.queues.Queue,
+    environment_command_queue: VerboseMessageQueue,
+    gui_update_queue: mp.queues.Queue,
+    log_file_queue: mp.queues.Queue,
+    process_name=None,
+):
+    """An function called by multiprocessing to start up the system identification analysis
+    process.
+
+    Some environments may override the AbstractSysIDAnalysisProcess class and therefore should
+    redefine this function to call that class.
+
+    Parameters
+    ----------
+    environment_name : str
+        The name of the environment
+    command_queue : VerboseMessageQueue
+        A queue used to send commands to this process
+    data_in_queue : mp.queues.Queue
+        A queue used to send frames of data and spectral quantities to the data analysis process
+    data_out_queue : mp.queues.Queue
+        A queue used to send control and analysis results back to the environment
+    environment_command_queue : VerboseMessageQueue
+        A queue used to send commands to the environment
+    gui_update_queue : mp.queues.Queue
+        A queue used to send updates to the graphical user interface
+    log_file_queue : mp.queues.Queue
+        A queue used to send log file messages
+    process_name : _type_, optional
+        A name for the process.  If not specified, it will be the environment name appended with
+        Data Analysis.
+    """
+    data_analysis_instance = SysIDAnalysisProcess(
+        environment_name + " Data Analysis" if process_name is None else process_name,
+        command_queue,
+        data_in_queue,
+        data_out_queue,
+        environment_command_queue,
+        log_file_queue,
+        gui_update_queue,
+        environment_name,
+    )
+
+    data_analysis_instance.run()

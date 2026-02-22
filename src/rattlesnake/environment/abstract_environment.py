@@ -3,7 +3,6 @@ from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.hardware.hardware_utilities import Channel
 from rattlesnake.user_interface.ui_utilities import UICommands
-from abc import ABC, abstractmethod
 import traceback
 import os
 import openpyxl
@@ -12,6 +11,7 @@ import multiprocessing as mp
 import multiprocessing.synchronize  # pylint: disable=unused-import
 import multiprocessing.queues as mpqueue
 import queue as thqueue
+from abc import ABC, abstractmethod
 from enum import Enum
 from datetime import datetime
 from typing import List
@@ -68,7 +68,7 @@ class EnvironmentMetadata(ABC):
     class.
     """
 
-    def __init__(self, environment_type, environment_name, channel_list_bools):
+    def __init__(self, environment_type, environment_name, sample_rate, channel_list_bools):
         """
         Initializes the environment metadata class with all attributes
         required to fully define environment.
@@ -81,6 +81,7 @@ class EnvironmentMetadata(ABC):
         """
         self.environment_type = environment_type
         self.environment_name = environment_name  # Name used for logging TASK_NAMES, UI, etc.
+        self.sample_rate = sample_rate
         self.channel_list_bools = channel_list_bools
         self.queue_name = None  # Unique name used to track specific environment. Used for queues.
 

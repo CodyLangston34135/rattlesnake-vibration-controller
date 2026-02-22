@@ -62,6 +62,9 @@ class ControllerProcess(AbstractMessageProcess):
         self.stream_metadata = StreamMetadata()
         self.map_command(GlobalCommands.RUN_HARDWARE, self.run_hardware)
         self.map_command(GlobalCommands.STOP_HARDWARE, self.stop_hardware)
+        self.map_command(GlobalCommands.START_SYSTEM_ID_NOISE, self.start_system_id_noise)
+        self.map_command(GlobalCommands.START_SYSTEM_ID_TRANSFER, self.start_system_id_transfer)
+        self.map_command(GlobalCommands.STOP_SYSTEM_ID, self.stop_system_id)
         self.map_command(GlobalCommands.START_ENVIRONMENT, self.start_environment)
         self.map_command(GlobalCommands.STOP_ENVIRONMENT, self.stop_environment)
         self.map_command(GlobalCommands.START_STREAMING, self.start_streaming)
@@ -115,6 +118,22 @@ class ControllerProcess(AbstractMessageProcess):
         if not self.output_active:
             raise RuntimeError("Tried to start hardware when output was not running")
 
+    def start_system_id_noise(self, data):
+        queue_name = data
+
+        # Have output send data to environment
+        self.queue_container.output_command_queue.put(GlobalCommands.START_ENVIRONMENT, queue_name)
+        self.queue_container.environment_command_queues[queue_name].put(GlobalCommands.START_SYSTEM_ID_NOISE, None)
+
+    def start_system_id_transfer(self, data):
+        queue_name = data
+        self.queue_container.output_command_queue.put(GlobalCommands.START_ENVIRONMENT, queue_name)
+        self.queue_container.environment_command_queues[queue_name].put(GlobalCommands.START_SYSTEM_ID_TRANSFER, None)
+
+    def stop_system_id(self, data):
+        queue_name = data
+        self.queue_container.environment_command_queues[queue_name].put(GlobalCommands.STOP_SYSTEM_ID, None)
+
     def start_environment(self, data: tuple[str, EnvironmentInstructions]):
         queue_name, instruction = data
         if queue_name in self.environments_active:
@@ -129,8 +148,7 @@ class ControllerProcess(AbstractMessageProcess):
         self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.STOP_ENVIRONMENT, None))
 
     def start_streaming(self, data: bool = False):
-        # This function has an override so that the controller
-        # can still start streaming through this even if the stream_type
+        # This function has an override so that the controller can still start streaming through this even if the stream_type
         # is not STREAM_TYPE.PROFILE_INSTRUCTION
         override = data
         # I split these up for debugging purposes

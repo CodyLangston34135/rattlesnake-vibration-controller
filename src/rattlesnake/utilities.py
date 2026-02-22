@@ -3,6 +3,7 @@ import os
 import string
 import random
 import time
+import importlib.util
 import numpy as np
 import multiprocessing as mp
 import multiprocessing.queues as mpqueue
@@ -25,19 +26,23 @@ class GlobalCommands(Enum):
     INITIALIZE_ENVIRONMENT = 4  # Stores metadata to processes
     START_ENVIRONMENT = 5  # Tells output to start that environment
     STOP_ENVIRONMENT = 6  # Tells output to stop that environment
-    INITIALIZE_STREAMING = 7  # Creates stream file to store to
-    CREATE_NEW_STREAM = 8  # Create new stream of data in file
-    START_STREAMING = 9  # Acquisition sends data to stream process
-    STREAMING_DATA = 10  # Continue storing data
-    STOP_STREAMING = 11  # Acquisition stops sending data to stream process
-    FINALIZE_STREAMING = 12  # Close out of stream file
-    INITIALIZE_PROFILE = 13  # Send profile metadata to controller
-    START_PROFILE = 14  # Start test from profile
-    STOP_PROFILE = 15  # Stop test from profile
-    PROFILE_CLOSEOUT = 16  # Tells controller the profile events are over
-    STREAM_AT_TARGET_LEVEL = 17  # Notifies controller that environment has hit its target level
-    STREAM_MANUAL = 18  # Notifies controller that manual streaming has been enabled
-    SEND_ENVIRONMENT_COMMAND = 19  # Sends environment specific command to environment
+    INITIALIZE_SYSTEM_ID = 7  # Stores system id metadata to environment and system id process
+    START_SYSTEM_ID_NOISE = 7  # Start up system identification noise
+    START_SYSTEM_ID_TRANSFER = 8  # Start up system identification transfer function
+    STOP_SYSTEM_ID = 9  # Stop system identification process
+    INITIALIZE_STREAMING = 10  # Creates stream file to store to
+    CREATE_NEW_STREAM = 11  # Create new stream of data in file
+    START_STREAMING = 12  # Acquisition sends data to stream process
+    STREAMING_DATA = 13  # Continue storing data
+    STOP_STREAMING = 14  # Acquisition stops sending data to stream process
+    FINALIZE_STREAMING = 15  # Close out of stream file
+    INITIALIZE_PROFILE = 16  # Send profile metadata to controller
+    START_PROFILE = 17  # Start test from profile
+    STOP_PROFILE = 18  # Stop test from profile
+    PROFILE_CLOSEOUT = 19  # Tells controller the profile events are over
+    STREAM_AT_TARGET_LEVEL = 20  # Notifies controller that environment has hit its target level
+    STREAM_MANUAL = 21  # Notifies controller that manual streaming has been enabled
+    SEND_ENVIRONMENT_COMMAND = 22  # Sends environment specific command to environment
 
     @property
     def label(self):
@@ -356,6 +361,26 @@ def flush_queue(queue, timeout=None):
 
 
 # region: Loading
+def load_python_module(module_path):
+    """Loads in the Python file at the specified path as a module at runtime
+
+    Parameters
+    ----------
+    module_path : str:
+        Path to the module to be loaded
+
+
+    Returns
+    -------
+    module : module:
+        A reference to the loaded module
+    """
+    _, file = os.path.split(module_path)
+    file, _ = os.path.splitext(file)
+    spec = importlib.util.spec_from_file_location(file, module_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def load_time_history(signal_path, sample_rate):
@@ -417,7 +442,7 @@ def load_time_history(signal_path, sample_rate):
     return signal
 
 
-# reigon: Math Operations
+# region: Math
 def align_signals(
     measurement_buffer,
     specification,

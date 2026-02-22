@@ -96,8 +96,7 @@ class TimeMetadata(EnvironmentMetadata):
             Prevents "hard stops" from damaging equipment.
 
         """
-        super().__init__(CONTROL_TYPE, environment_name, channel_list_bools)
-        self.sample_rate = sample_rate
+        super().__init__(CONTROL_TYPE, environment_name, channel_list_bools, sample_rate)
         self.output_signal = output_signal
         self.cancel_rampdown_time = cancel_rampdown_time
         self._signal_file = None  # This is only used for saving purposes

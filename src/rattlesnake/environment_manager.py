@@ -1,12 +1,14 @@
 from rattlesnake.utilities import QueueContainer, EventContainer, GlobalCommands
 from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions
-from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.environment_utilities import ControlTypes, SYS_ID_ENVIRONMENTS
 from rattlesnake.environment.environment_registry import ENVIRONMENT_PROCESS
+from rattlesnake.process.sysid_data_analysis import SysIdMetadata
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 import multiprocessing as mp
 import multiprocessing.synchronize  # pylint: disable=unused-import
 import threading
+import copy
 from datetime import datetime
 from typing import List
 
@@ -35,7 +37,7 @@ class EnvironmentManager:
         self.queue_names = []  # Static name for dictionary keys, process names, etc
         self.environment_names = {}  # Name of environment for Ui purposes
         self.environment_types = {}
-        self.environment_metadata = {}
+        self._environment_metadata = {}
         self.environment_processes = {}
         self.queue_container = queue_container
         self.event_container = event_container
@@ -62,6 +64,14 @@ class EnvironmentManager:
     @property
     def queue_names_dict(self):
         return {self.environment_names[queue_name]: queue_name for queue_name in self.queue_names}
+
+    @property
+    def environment_metadata(self):
+        return self._environment_metadata
+
+    @environment_metadata.setter
+    def environment_metadata(self, value):
+        self._environment_metadata = value
 
     @property
     def threaded(self):
@@ -104,6 +114,7 @@ class EnvironmentManager:
         """
         self.queue_container.log_file_queue.put(f"{datetime.now()}: {TASK_NAME} -- {message}\n")
 
+    # region: Initialize
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         self.log("Initializing Hardware")
         for queue_name in self.queue_names:
@@ -114,6 +125,7 @@ class EnvironmentManager:
         self.log("Initializing Environments")
         mapped_queue_names = set()
         extra_metadata = []
+        environment_metadata_dict = {}
 
         # Check if there is an existing process that maps to this environment type
         # If there is, hijack it and give it new metadata
@@ -133,7 +145,6 @@ class EnvironmentManager:
             self.log(f"Assigning {environment_name} to {queue_name} Queue")
             self.environment_types[queue_name] = environment_type
             self.environment_names[queue_name] = environment_name
-            self.environment_metadata[queue_name] = metadata
             self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata))
             self.environment_ready_events[queue_name].clear()
             self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata))
@@ -150,6 +161,18 @@ class EnvironmentManager:
         for metadata in extra_metadata:
             self.add_environment(metadata, hardware_metadata)
 
+        return environment_metadata_dict
+
+    def initialize_system_id(self, sysid_metadata, queue_name):
+        environment_metadata_dict = copy.deepcopy(self.environment_metadata)
+        environment_metadata = environment_metadata_dict[queue_name]
+        environment_metadata.sysid_metadata = sysid_metadata
+
+        self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_SYSTEM_ID, sysid_metadata))
+
+        return environment_metadata_dict
+
+    # region: Validate
     def validate_environment_metadata(self, metadata_list: List[EnvironmentMetadata], hardware_metadata: HardwareMetadata):
         # Check if there are available queues
         if len(metadata_list) > self.num_queues:
@@ -172,6 +195,19 @@ class EnvironmentManager:
                 raise ValueError(f"Invalid metadata for {environment_name}")
 
         return True
+
+    def validate_system_id_metadata(self, sysid_metadata, hardware_metadata, environment_name):
+        if not isinstance(sysid_metadata, SysIdMetadata):
+            raise TypeError("Rattlesnake.initialize_system_id was not given a SysIdMetadata object")
+        try:
+            queue_name = self.queue_names_dict[environment_name]
+        except KeyError:
+            raise KeyError(f"No environments exist for {environment_name} instruction")
+        environment_type = self.environment_types[queue_name]
+        if environment_type not in SYS_ID_ENVIRONMENTS:
+            raise TypeError(f"{environment_name} is a {environment_type} environment which does not require system identification")
+
+        return queue_name
 
     def validate_environment_instructions(self, instructions: EnvironmentInstructions):
         """Validate the instructions"""
@@ -218,6 +254,7 @@ class EnvironmentManager:
 
         return True
 
+    # region: Processses
     def clear_environments(self):
         self.queue_names = []
         self.environment_types = {}

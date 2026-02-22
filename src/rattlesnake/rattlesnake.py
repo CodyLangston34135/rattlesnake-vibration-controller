@@ -2,7 +2,8 @@ from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue, QueueCont
 from rattlesnake.process.controller import controller_process
 from rattlesnake.process.acquisition import acquisition_process
 from rattlesnake.process.output import output_process
-from rattlesnake.process.streaming import StreamMetadata, streaming_process
+from rattlesnake.process.sysid_data_analysis import SysIdMetadata
+from rattlesnake.process.streaming import StreamMetadata, StreamType, streaming_process
 from rattlesnake.profile_manager import ProfileManager, ProfileEvent
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions
@@ -30,6 +31,7 @@ class RattlesnakeState(Enum):
     ENVIRONMENT_STORE = 2  # Environments have been stored
     HARDWARE_ACTIVE = 3  # Acquisition is running
     ENVIRONMENT_ACTIVE = 4  # Environment output is running
+    SYS_ID_ACTIVE = 5  # System identification is being performed
 
 
 # region: Rattlesnake
@@ -137,6 +139,7 @@ class Rattlesnake:
             streaming_active_event,
             environment_active_events,
         )
+        self.sys_id_active = False
 
         # Controller
         self.controller_proc = new_process(
@@ -194,7 +197,6 @@ class Rattlesnake:
         )
         self.profile_manager = ProfileManager(self.queue_container)  # Contains instructions/profile events
         self.hardware_metadata = None
-        self.environment_metadata = {}
         # These are only used for UI to pull from if they have already been set to the controller. These
         # are not used for any logic in this controller
         self.last_stream_metadata = None
@@ -213,12 +215,24 @@ class Rattlesnake:
 
     # region: Properties
     @property
+    def environment_metadata(self):
+        return self.environment_manager.environment_metadata
+
+    @environment_metadata.setter
+    def environment_metadata(self, value):
+        self.environment_manager.environment_metadata = value
+
+    @property
     def state(self) -> RattlesnakeState:
         hardware_store = self.hardware_metadata is not None
         environment_store = self.environment_metadata != {}
         acquisition_active = self.event_container.acquisition_active_event.is_set()
         output_active = self.event_container.output_active_event.is_set()
         environment_active = any(event.is_set() for event in self.event_container.environment_active_events.values())
+        sys_id_active = self.sys_id_active
+
+        if hardware_store and environment_store and acquisition_active and output_active and environment_active and sys_id_active:
+            return RattlesnakeState.SYS_ID_ACTIVE
 
         if hardware_store and environment_store and acquisition_active and output_active and environment_active:
             return RattlesnakeState.ENVIRONMENT_ACTIVE
@@ -364,15 +378,11 @@ class Rattlesnake:
 
         # Send environment meetadata to correct processes
         self.log("Setting Environment")
-        self.environment_manager.initialize_environments(environment_metadata_list, self.hardware_metadata)
+        environment_metadata = self.environment_manager.initialize_environments(environment_metadata_list, self.hardware_metadata)
         self.event_container.acquisition_ready_event.clear()
-        self.queue_container.acquisition_command_queue.put(
-            TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_manager.environment_metadata)
-        )
+        self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, environment_metadata))
         self.event_container.output_ready_event.clear()
-        self.queue_container.output_command_queue.put(
-            TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_manager.environment_metadata)
-        )
+        self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, environment_metadata))
 
         if self.blocking:
             ready_event_list = [
@@ -383,8 +393,8 @@ class Rattlesnake:
             active_event_list = []
             self.wait_for_events(ready_event_list, active_event_list)
 
-            # Update state
-            self.environment_metadata = self.environment_manager.environment_metadata
+        # Update state
+        self.environment_metadata = environment_metadata
 
     # region: Acquisition
     def set_stream_metadata(self, stream_metadata: StreamMetadata):
@@ -458,7 +468,136 @@ class Rattlesnake:
             ]
             self.wait_for_events(ready_event_list, active_event_list, active_event_check=False)
 
-    # region: Active
+    # region: System Identification
+    def initialize_system_id(self, sysid_metadata, environment_name):
+        if self.state not in (RattlesnakeState.HARDWARE_ACTIVE, RattlesnakeState.ENVIRONMENT_ACTIVE):
+            raise RuntimeError(f"Invalid state for storing system identification metadata: {self.state}")
+        queue_name = self.environment_manager.validate_system_id_metadata(sysid_metadata, self.hardware_metadata, environment_name)
+
+        self.event_container.environment_ready_events[queue_name].clear()
+        environment_metadata = self.environment_manager.initialize_system_id(sysid_metadata, queue_name)
+
+        if self.blocking:
+            ready_event_list = [self.event_container.environment_ready_events[queue_name]]
+            active_event_list = []
+            self.wait_for_events(ready_event_list, active_event_list, active_event_check=False)
+
+        self.environment_metadata = environment_metadata
+
+    def start_system_id_noise(self, environment_name):
+        if self.state not in (RattlesnakeState.HARDWARE_ACTIVE):
+            raise RuntimeError(f"Invalid state for starting system identification: {self.state}")
+        try:
+            queue_name = self.environment_manager.queue_names_dict[environment_name]
+        except KeyError:
+            raise KeyError(f"No environments exist for {environment_name} name")
+
+        self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.START_SYSTEM_ID_NOISE, queue_name))
+
+        if self.blocking:
+            ready_event_list = []
+            active_event_list = [self.event_container.environment_active_events[queue_name]]
+            self.wait_for_events(ready_event_list, active_event_list, active_event_check=True)
+
+        self.sys_id_active = True
+
+    def start_system_id_transfer_function(self, environment_name):
+        if self.state not in (RattlesnakeState.HARDWARE_ACTIVE):
+            raise RuntimeError(f"Invalid state for starting system identification: {self.state}")
+        try:
+            queue_name = self.environment_manager.queue_names_dict[environment_name]
+        except KeyError:
+            raise KeyError(f"No environments exist for {environment_name} name")
+
+        self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.START_SYSTEM_ID_TRANSFER, queue_name))
+
+        if self.blocking:
+            ready_event_list = []
+            active_event_list = [self.event_container.environment_active_events[queue_name]]
+            self.wait_for_events(ready_event_list, active_event_list, active_event_check=True)
+
+        self.sys_id_active = True
+
+    def stop_system_id(self, environment_name):
+        if self.state not in (RattlesnakeState.SYS_ID_ACTIVE):
+            raise RuntimeError(f"Invalid state for stopping system identification {self.state}")
+        try:
+            queue_name = self.environment_manager.queue_names_dict[environment_name]
+        except KeyError:
+            raise KeyError(f"No environments exist for {environment_name} name")
+
+        self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.STOP_SYSTEM_ID, queue_name))
+
+        if self.blocking:
+            ready_event_list = []
+            active_event_list = [self.event_container.environment_active_events[queue_name]]
+            self.wait_for_events(ready_event_list, active_event_list, active_event_check=False)
+
+        self.sys_id_active = False
+
+    def preview_sys_id_noise(self, sysid_metadata: SysIdMetadata, environment_name):
+        if self.state not in (RattlesnakeState.ENVIRONMENT_STORE):
+            raise RuntimeError(f"Invalid state for starting system identification: {self.state}")
+
+        sysid_metadata.auto_shutdown = True
+        self.initialize_system_id(sysid_metadata, environment_name)
+
+        stream_metadata = StreamMetadata(StreamType.NO_STREAM)
+
+        self.start_acquisition(stream_metadata)
+        self.start_system_id_noise(environment_name)
+
+    def preview_sys_id_transfer(self, sysid_metadata: SysIdMetadata, environment_name):
+        if self.state not in (RattlesnakeState.ENVIRONMENT_STORE):
+            raise RuntimeError(f"Invalid state for starting system identification: {self.state}")
+
+        sysid_metadata.auto_shutdown = True
+        self.initialize_system_id(sysid_metadata, environment_name)
+
+        stream_metadata = StreamMetadata(StreamType.NO_STREAM)
+
+        self.start_acquisition(stream_metadata)
+        self.start_system_id_transfer_function(environment_name)
+
+    def run_system_id(self, sysid_metadata: SysIdMetadata, environment_name):
+        if self.state not in (RattlesnakeState.ENVIRONMENT_STORE):
+            raise RuntimeError(f"Invalid state for starting system identification: {self.state}")
+
+        # Store metadata to environment
+        sysid_metadata.auto_shutdown = True
+        self.initialize_system_id(sysid_metadata, environment_name)
+        queue_name = self.environment_manager.queue_names_dict[environment_name]
+
+        if not sysid_metadata.stream_file:
+            stream_metadata = StreamMetadata(StreamType.MANUAL, sysid_metadata.stream_file)
+        else:
+            stream_metadata = StreamMetadata(StreamType.NO_STREAM)
+
+        self.start_acquisition(stream_metadata)
+        self.start_streaming()
+        self.start_system_id_noise(environment_name)
+
+        # Wait for automatic shutdown
+        if self.blocking:
+            ready_event_list = []
+            active_event_list = [self.event_container.environment_active_events[queue_name]]
+            self.wait_for_events(ready_event_list, active_event_list, active_event_check=False)
+
+        self.stop_streaming()
+        self.start_system_id_transfer_function(environment_name)
+
+        # Wait for automatic shutdown
+        if self.blocking:
+            ready_event_list = []
+            active_event_list = [self.event_container.environment_active_events[queue_name]]
+            self.wait_for_events(ready_event_list, active_event_list, active_event_check=False)
+
+        self.sys_id_active = False
+
+        self.stop_streaming()
+        self.stop_acquisition()
+
+    # region: Environment Active
     def start_environment(self, instructions):
         if self.state not in (RattlesnakeState.HARDWARE_ACTIVE, RattlesnakeState.ENVIRONMENT_ACTIVE):
             raise RuntimeError(f"Invalid state for starting environment: {self.state}")

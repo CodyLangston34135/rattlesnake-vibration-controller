@@ -1674,6 +1674,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.cleanup_event_watcher()
 
         self.reset_profile_ui_timers()
+        self.profile_list_update_timer.stop()
 
         for i in range(self.run_environment_tabs.count()):
             self.run_environment_tabs.widget(i).setEnabled(True)
