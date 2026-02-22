@@ -246,10 +246,10 @@ class TimeMetadata(EnvironmentMetadata):
 
 # region: TimeInstructions
 class TimeInstructions(EnvironmentInstructions):
-    def __init__(self, environment_name):
+    def __init__(self, environment_name, current_test_level: float, repeat: bool):
         super().__init__(CONTROL_TYPE, environment_name)
-        self.current_test_level = 0
-        self.repeat = False
+        self.current_test_level = current_test_level
+        self.repeat = repeat
 
 
 # region: TimeQueues

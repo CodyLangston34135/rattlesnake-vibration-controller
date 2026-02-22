@@ -84,22 +84,6 @@ class EnvironmentMetadata(ABC):
         self.channel_list_bools = channel_list_bools
         self.queue_name = None  # Unique name used to track specific environment. Used for queues.
 
-    # def map_channel_bools(self, hardware_channel_list: List[Channel]):
-    #     """Method to check environment_channel_list against hardware_channel_list
-    #     and return a list of True/False based on whether or not the hardware channel
-    #     was in the environment_channel_list."""
-    #     # Check for channels that are not in the hardware_channel_list
-    #     hardware_channel_set = set(hardware_channel_list)
-    #     missing_channels = set(self.channel_list) - hardware_channel_set
-    #     if missing_channels:
-    #         raise ValueError(f"{self.environment_name} channel_list contains channels not in hardware_channel_list: " f"{missing_channels}")
-
-    #     # Create boolean map
-    #     channel_set = set(self.channel_list)
-    #     channel_list_bools = [channel in channel_set for channel in hardware_channel_list]
-
-    #     return channel_list_bools
-
     def map_channel_indices(self, hardware_channel_list):
         """Method to return the row indices of the hardware_channel_list that
         contains channels in the environment_channel_list"""

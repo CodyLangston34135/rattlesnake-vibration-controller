@@ -121,7 +121,8 @@ def make_time_environment_stream_metadata(environment_name=TIME_ENVIRONMENT_NAME
 
 
 def make_time_environment_instructions(environment_name=TIME_ENVIRONMENT_NAME):
-    time_instructions = TimeInstructions(environment_name)
-    time_instructions.current_test_level = 1
-    time_instructions.repeat = True
+    current_test_level = 1
+    repeat = True
+    time_instructions = TimeInstructions(environment_name, current_test_level, repeat)
+
     return time_instructions

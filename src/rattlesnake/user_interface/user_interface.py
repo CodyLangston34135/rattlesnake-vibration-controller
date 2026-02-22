@@ -1399,6 +1399,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         save_profile_worksheet(filepath, profile_event_list)
 
     def add_profile_event(self, clicked=None):
+        # Dont let user run profile until they intialize
+        self.run_profile_widget.hide()
         # Create new row in profile table
         selected_row = self.profile_table.rowCount()
         self.profile_table.insertRow(selected_row)
@@ -1431,9 +1433,14 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         self.update_profile_plot()
 
     def remove_profile_event(self, clicked=None, selected_row=None):
+        # Dont let user run profile until they intialize
+        self.run_profile_widget.hide()
+
+        # Find selected row
         if selected_row is None:
             selected_row = self.profile_table.currentRow()
 
+        # Remove selected row
         if selected_row >= 0:
             self.profile_table.removeRow(selected_row)
 
@@ -1546,10 +1553,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         self.upcoming_instructions_list.clear()
         self.upcoming_instructions_list.addItems(event_string_list)
-        if len(event_string_list) != 0:
-            self.profile_list_update_timer.start(250)
-        else:
+        if not event_string_list:
             self.reset_profile_ui_timers()
+            self.profile_list_update_timer.stop()
 
     def switch_profile_environment(self, environment_name):
         if self.show_profile_change_checkbox.isChecked():

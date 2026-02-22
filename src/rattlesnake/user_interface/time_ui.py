@@ -250,9 +250,9 @@ class TimeUI(AbstractUI):
         self.show_signal()
 
     def get_environment_instructions(self):
-        instruction = TimeInstructions(self.environment_name)
-        instruction.current_test_level = self.run_widget.test_level_selector.value()
-        instruction.repeat = self.run_widget.repeat_signal_checkbox.isChecked()
+        current_test_level = self.run_widget.test_level_selector.value()
+        repeat = self.run_widget.repeat_signal_checkbox.isChecked()
+        instruction = TimeInstructions(self.environment_name, current_test_level, repeat)
 
         return instruction
 
