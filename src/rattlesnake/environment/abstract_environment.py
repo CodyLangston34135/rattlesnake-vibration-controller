@@ -84,7 +84,7 @@ class EnvironmentMetadata(ABC):
         self.channel_list_bools = channel_list_bools
         self.queue_name = None  # Unique name used to track specific environment. Used for queues.
 
-    def map_channel_indices(self, hardware_channel_list):
+    def map_channel_indices(self):
         """Method to return the row indices of the hardware_channel_list that
         contains channels in the environment_channel_list"""
         channel_bools = self.channel_list_bools
