@@ -68,7 +68,13 @@ class EnvironmentMetadata(ABC):
     class.
     """
 
-    def __init__(self, environment_type, environment_name, sample_rate, channel_list_bools):
+    def __init__(
+        self,
+        environment_type: ControlTypes,
+        environment_name: str,
+        channel_list_bools: list = [],
+        sample_rate: int = None,
+    ):
         """
         Initializes the environment metadata class with all attributes
         required to fully define environment.

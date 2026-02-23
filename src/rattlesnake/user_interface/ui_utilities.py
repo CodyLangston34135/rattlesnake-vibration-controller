@@ -1,12 +1,14 @@
-from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands
+from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands, load_csv_matrix, save_csv_matrix
 from rattlesnake.hardware.hardware_utilities import HardwareType
 from rattlesnake.environment.environment_utilities import ControlTypes
 import traceback
 import sys
 import os
 import time
+import numpy as np
+from scipy.io import loadmat
 from enum import Enum
-from qtpy import QtWidgets, QtCore, QtGui
+from qtpy import QtWidgets, QtCore, QtGui, uic
 
 this_path = os.path.split(__file__)[0]
 
@@ -31,10 +33,6 @@ class UICommands(Enum):
     def label(self):
         """Used by UI as names for"""
         return self.name.replace("_", " ").title()
-
-
-class ReadUICommands(Enum):
-    TIME_DATA = 0
 
 
 VISIBLE_HARDWARE_WIDGETS = {
@@ -425,3 +423,552 @@ def multiline_plotter(
         return curve_list
     else:
         raise ValueError("Either Widget or list of curves must be specified")
+
+
+def blended_scatter_plot(xy, widget=None, curve_list=None, names=None, symbol="o"):
+    """Creates a scatter plot with the specified symbols"""
+    if widget is not None:
+        plot_item = widget.getPlotItem()
+        handles = []
+        for index, (x, y) in enumerate(xy):
+            c = (1 - (index + 1) / len(xy)) * 255
+            handles.append(
+                plot_item.plot(
+                    [x],
+                    [y],
+                    symbolBrush=(c, c, c),
+                    name=None if names is None else names[index],
+                    symbol=symbol,
+                )
+            )
+        return handles
+    elif curve_list is not None:
+        for (x, y), curve in zip(xy, curve_list):
+            curve.setData([x], [y])
+        return curve_list
+    else:
+        raise ValueError("Either Widget or list of curves must be specified")
+
+
+class VaryingNumberOfLinePlot:
+    """A plot that can have a dynamic number of lines assigned,
+    adding or removing lines as necessary"""
+
+    def __init__(self, plot_item, initial_abscissa=None, initial_ordinate=None):
+        self.plot_item = plot_item
+        self.lines = []
+        if initial_abscissa is not None and initial_ordinate is not None:
+            self.set_data(initial_abscissa, initial_ordinate)
+
+    def set_data(self, abscissa, ordinate):
+        """Sets the data of the plot
+
+        Parameters
+        ----------
+        abscissa : np.ndarray
+            A 2D dataset where each row is a different plot and the columns are the abscissa values
+            of each curve
+        ordinate : np.ndarray
+            A 2D dataset where each row is a different plot and the columns are the ordinate values
+            of each curve
+        """
+        for i, (this_ordinate, this_abscissa) in enumerate(zip(ordinate, abscissa)):
+            try:
+                self.lines[i].setData(this_abscissa, this_ordinate)
+            except IndexError:
+                pen = {"color": colororder[i % len(colororder)]}
+                self.lines.append(self.plot_item.plot(this_abscissa, this_ordinate, pen=pen))
+
+        # Remove extra lines
+        extra_lines = len(self.lines) - len(ordinate)
+        for i in range(extra_lines):
+            line = self.lines.pop()
+            self.plot_item.removeItem(line)
+
+    def clear(self):
+        """Clears all data from the plots"""
+        self.lines = []
+        self.plot_item.clear()
+
+
+def get_table_strings(tablewidget: QtWidgets.QTableWidget):
+    """Collect a table of strings from a QTableWidget
+
+    Parameters
+    ----------
+    tablewidget : QtWidgets.QTableWidget
+        A table widget to pull the strings from
+
+    Returns
+    -------
+    string_array : list[list[str]]
+        A nested list of strings from the table items
+
+    """
+    string_array = []
+    for row_idx in range(tablewidget.rowCount()):
+        string_array.append([])
+        for col_idx in range(tablewidget.columnCount()):
+            value = tablewidget.item(row_idx, col_idx).text()
+            string_array[-1].append(value)
+    return string_array
+
+
+class TransformationMatrixWindow(QtWidgets.QDialog):
+    """Dialog box for specifying transformation matrices"""
+
+    def __init__(
+        self,
+        parent,
+        current_response_transformation_matrix,
+        num_responses,
+        current_output_transformation_matrix,
+        num_outputs,
+    ):
+        """
+        Creates a dialog box for specifying response and output transformations
+
+        Parameters
+        ----------
+        parent : QWidget
+            Parent to the dialog box.
+        current_response_transformation_matrix : np.ndarray
+            The current value of the transformation matrix that will be used to
+            populate the entries in the table.
+        num_responses : int
+            Number of physical responses in the transformation.
+        current_output_transformation_matrix : np.ndarray
+            The current value of the transformation matrix that will be used to
+            populate the entries in the table.
+        num_outputs : int
+            Number of physical outputs in the transformation.
+
+        """
+        super().__init__(parent)
+        uic.loadUi(transformation_matrices_ui_path, self)
+        self.setWindowTitle("Transformation Matrix Definition")
+
+        self.response_transformation_matrix.setColumnCount(num_responses)
+        self.output_transformation_matrix.setColumnCount(num_outputs)
+
+        if current_response_transformation_matrix is None:
+            self.set_response_transformation_identity()
+        else:
+            self.response_transformation_matrix.setRowCount(current_response_transformation_matrix.shape[0])
+            for row_idx, row in enumerate(current_response_transformation_matrix):
+                for col_idx, col in enumerate(row):
+                    try:
+                        self.response_transformation_matrix.item(row_idx, col_idx).setText(str(col))
+                    except AttributeError:
+                        item = QtWidgets.QTableWidgetItem(str(col))
+                        self.response_transformation_matrix.setItem(row_idx, col_idx, item)
+        if current_output_transformation_matrix is None:
+            self.set_output_transformation_identity()
+        else:
+            self.output_transformation_matrix.setRowCount(current_output_transformation_matrix.shape[0])
+            for row_idx, row in enumerate(current_output_transformation_matrix):
+                for col_idx, col in enumerate(row):
+                    try:
+                        self.output_transformation_matrix.item(row_idx, col_idx).setText(str(col))
+                    except AttributeError:
+                        item = QtWidgets.QTableWidgetItem(str(col))
+                        self.output_transformation_matrix.setItem(row_idx, col_idx, item)
+
+        # Callbacks
+        self.ok_button.clicked.connect(self.accept)
+        self.cancel_button.clicked.connect(self.reject)
+
+        self.response_transformation_add_row_button.clicked.connect(self.response_transformation_add_row)
+        self.response_transformation_remove_row_button.clicked.connect(self.response_transformation_remove_row)
+        self.response_transformation_save_matrix_button.clicked.connect(self.save_response_transformation_matrix)
+        self.response_transformation_load_matrix_button.clicked.connect(self.load_response_transformation_matrix)
+        self.response_transformation_identity_button.clicked.connect(self.set_response_transformation_identity)
+        self.response_transformation_6dof_kinematic_button.clicked.connect(self.set_response_transformation_6dof)
+        self.response_transformation_reversed_6dof_kinematic_button.clicked.connect(self.set_response_transformation_6dof_reversed)
+
+        self.output_transformation_add_row_button.clicked.connect(self.output_transformation_add_row)
+        self.output_transformation_remove_row_button.clicked.connect(self.output_transformation_remove_row)
+        self.output_transformation_save_matrix_button.clicked.connect(self.save_output_transformation_matrix)
+        self.output_transformation_load_matrix_button.clicked.connect(self.load_output_transformation_matrix)
+        self.output_transformation_identity_button.clicked.connect(self.set_output_transformation_identity)
+        self.output_transformation_6dof_kinematic_button.clicked.connect(self.set_output_transformation_6dof)
+        self.output_transformation_reversed_6dof_kinematic_button.clicked.connect(self.set_output_transformation_6dof_reversed)
+
+    @staticmethod
+    def define_transformation_matrices(
+        current_response_transformation_matrix,
+        num_responses,
+        current_output_transformation_matrix,
+        num_outputs,
+        parent=None,
+    ):
+        """
+        Shows the dialog and returns the transformation matrices
+
+        Parameters
+        ----------
+        current_response_transformation_matrix : np.ndarray
+            The current value of the transformation matrix that will be used to
+            populate the entries in the table.
+        num_responses : int
+            Number of physical responses in the transformation.
+        current_output_transformation_matrix : np.ndarray
+            The current value of the transformation matrix that will be used to
+            populate the entries in the table.
+        num_outputs : int
+            Number of physical outputs in the transformation.
+        parent : QWidget
+            Parent to the dialog box. (Default value = None)
+
+        Returns
+        -------
+        response_transformation : np.ndarray
+            Response transformation (or None if Identity)
+        output_transformation : np.ndarray
+            Output transformation (or None if Identity)
+        result : bool
+            True if dialog was accepted, false if cancelled.
+        """
+        dialog = TransformationMatrixWindow(
+            parent,
+            current_response_transformation_matrix,
+            num_responses,
+            current_output_transformation_matrix,
+            num_outputs,
+        )
+        result = dialog.exec_() == QtWidgets.QDialog.Accepted
+        response_transformation = np.array([[float(val) for val in row] for row in get_table_strings(dialog.response_transformation_matrix)])
+        if all(val == response_transformation.shape[0] for val in response_transformation.shape) and np.allclose(
+            response_transformation, np.eye(response_transformation.shape[0])
+        ):
+            response_transformation = None
+        output_transformation = np.array([[float(val) for val in row] for row in get_table_strings(dialog.output_transformation_matrix)])
+        if all(val == output_transformation.shape[0] for val in output_transformation.shape) and np.allclose(
+            output_transformation, np.eye(output_transformation.shape[0])
+        ):
+            output_transformation = None
+        return (response_transformation, output_transformation, result)
+
+    def response_transformation_add_row(self):
+        """Adds a row to the response transformation"""
+        num_rows = self.response_transformation_matrix.rowCount()
+        self.response_transformation_matrix.insertRow(num_rows)
+        for col_idx in range(self.response_transformation_matrix.columnCount()):
+            item = QtWidgets.QTableWidgetItem("0.0")
+            self.response_transformation_matrix.setItem(num_rows, col_idx, item)
+
+    def response_transformation_remove_row(self):
+        """Removes a row from the response transformation"""
+        num_rows = self.response_transformation_matrix.rowCount()
+        self.response_transformation_matrix.removeRow(num_rows - 1)
+
+    def save_response_transformation_matrix(self):
+        """Saves the response transformation matrix to a csv file"""
+        string_array = self.get_table_strings(self.response_transformation_matrix)
+        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Save Response Transformation",
+            filter="Comma-separated Values (*.csv)",
+        )
+        if filename == "":
+            return
+        save_csv_matrix(string_array, filename)
+
+    def load_response_transformation_matrix(self):
+        """Loads the response transformation from a csv file"""
+        filename, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self,
+            "Load Response Transformation",
+            filter="Comma-separated values (*.csv *.txt);;" "Numpy Files (*.npy *.npz);;Matlab Files (*.mat)",
+        )
+        if filename == "":
+            return
+        _, extension = os.path.splitext(filename)
+        string_array = None
+        if extension.lower() == ".npy":
+            string_array = np.load(filename).astype("U")
+        elif extension.lower() == ".npz":
+            data = np.load(filename)
+            for key, array in data.items():
+                string_array = array.astype("U")
+                break
+        elif extension.lower() == ".mat":
+            data = loadmat(filename)
+            for key, array in data.items():
+                if "__" in key:
+                    continue
+                string_array = array.astype("U")
+                break
+        else:
+            string_array = load_csv_matrix(filename)
+        if string_array is None:
+            return
+        # Set the number of rows
+        self.response_transformation_matrix.setRowCount(len(string_array))
+        num_rows = self.response_transformation_matrix.rowCount()
+        num_cols = self.response_transformation_matrix.columnCount()
+        for row_idx, row in enumerate(string_array):
+            if row_idx == num_rows:
+                break
+            for col_idx, value in enumerate(row):
+                if col_idx == num_cols:
+                    break
+                try:
+                    self.response_transformation_matrix.item(row_idx, col_idx).setText(value)
+                except AttributeError:
+                    item = QtWidgets.QTableWidgetItem(value)
+                    self.response_transformation_matrix.setItem(row_idx, col_idx, item)
+
+    def set_response_transformation_identity(self):
+        """Sets the response transformation to identity matrix (no transform)"""
+        num_columns = self.response_transformation_matrix.columnCount()
+        self.response_transformation_matrix.setRowCount(num_columns)
+        for row_idx in range(num_columns):
+            for col_idx in range(num_columns):
+                if row_idx == col_idx:
+                    value = 1.0
+                else:
+                    value = 0.0
+                try:
+                    self.response_transformation_matrix.item(row_idx, col_idx).setText(str(value))
+                except AttributeError:
+                    item = QtWidgets.QTableWidgetItem(str(value))
+                    self.response_transformation_matrix.setItem(row_idx, col_idx, item)
+
+    def set_response_transformation_6dof(self):
+        """Sets the response transformation matrix to the 6DoF table"""
+        num_columns = self.response_transformation_matrix.columnCount()
+        if num_columns != 12:
+            error_message_qt(
+                "Invalid Number of Control Channels.",
+                "Invalid Number of Control Channels.  " "6DoF Transform assumes 12 control accelerometer channels.",
+            )
+            return
+        self.response_transformation_matrix.setRowCount(6)
+        matrix = [
+            [0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0],
+            [0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0],
+            [0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25],
+            [0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, -0.25, 0.0, 0.0, -0.25],
+            [0.0, 0.0, -0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, -0.25],
+            [
+                -0.125,
+                0.125,
+                0.0,
+                -0.125,
+                -0.125,
+                0.0,
+                0.125,
+                -0.125,
+                0.0,
+                0.125,
+                0.125,
+                0.0,
+            ],
+        ]
+        for row_idx, row in enumerate(matrix):
+            for col_idx, value in enumerate(row):
+                try:
+                    self.response_transformation_matrix.item(row_idx, col_idx).setText(str(value))
+                except AttributeError:
+                    item = QtWidgets.QTableWidgetItem(str(value))
+                    self.response_transformation_matrix.setItem(row_idx, col_idx, item)
+
+    def set_response_transformation_6dof_reversed(self):
+        """Sets the response transformation matrix to the 6DoF table"""
+        num_columns = self.response_transformation_matrix.columnCount()
+        if num_columns != 12:
+            error_message_qt(
+                "Invalid Number of Control Channels.",
+                "Invalid Number of Control Channels.  " "6DoF Transform assumes 12 control accelerometer channels.",
+            )
+            return
+        self.response_transformation_matrix.setRowCount(6)
+        matrix = [
+            [0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0],
+            [0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0],
+            [0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25],
+            [0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, -0.25, 0.0, 0.0, -0.25],
+            [0.0, 0.0, -0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, -0.25],
+            [
+                -0.125,
+                0.125,
+                0.0,
+                -0.125,
+                -0.125,
+                0.0,
+                0.125,
+                -0.125,
+                0.0,
+                0.125,
+                0.125,
+                0.0,
+            ],
+        ]
+        for row_idx, row in enumerate(matrix):
+            for col_idx, value in enumerate(row):
+                try:
+                    self.response_transformation_matrix.item(row_idx, col_idx).setText(str(value))
+                except AttributeError:
+                    item = QtWidgets.QTableWidgetItem(str(value))
+                    self.response_transformation_matrix.setItem(row_idx, col_idx, item)
+
+    def output_transformation_add_row(self):
+        """Adds a row to the output transformation"""
+        num_rows = self.output_transformation_matrix.rowCount()
+        self.output_transformation_matrix.insertRow(num_rows)
+        for col_idx in range(self.output_transformation_matrix.columnCount()):
+            item = QtWidgets.QTableWidgetItem("0.0")
+            self.output_transformation_matrix.setItem(num_rows, col_idx, item)
+
+    def output_transformation_remove_row(self):
+        """Removes a row from the output tranformation"""
+        num_rows = self.output_transformation_matrix.rowCount()
+        self.output_transformation_matrix.removeRow(num_rows - 1)
+
+    def save_output_transformation_matrix(self):
+        """Saves output transformation matrix to a CSV file"""
+        string_array = self.get_table_strings(self.output_transformation_matrix)
+        filename, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save Output Transformation", filter="Comma-separated Values (*.csv)")
+        if filename == "":
+            return
+        save_csv_matrix(string_array, filename)
+
+    def load_output_transformation_matrix(self):
+        """Loads the output transformation from a CSV file"""
+        filename, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self,
+            "Load Output Transformation",
+            filter="Comma-separated values (*.csv *.txt);;" "Numpy Files (*.npy *.npz);;Matlab Files (*.mat)",
+        )
+        if filename == "":
+            return
+        _, extension = os.path.splitext(filename)
+        string_array = None
+        if extension.lower() == ".npy":
+            string_array = np.load(filename).astype("U")
+        elif extension.lower() == ".npz":
+            data = np.load(filename)
+            for key, array in data.items():
+                string_array = array.astype("U")
+                break
+        elif extension.lower() == ".mat":
+            data = loadmat(filename)
+            for key, array in data.items():
+                if "__" in key:
+                    continue
+                string_array = array.astype("U")
+                break
+        else:
+            string_array = load_csv_matrix(filename)
+        if string_array is None:
+            return
+        # Set the number of rows
+        self.output_transformation_matrix.setRowCount(len(string_array))
+        num_rows = self.output_transformation_matrix.rowCount()
+        num_cols = self.output_transformation_matrix.columnCount()
+        for row_idx, row in enumerate(string_array):
+            if row_idx == num_rows:
+                break
+            for col_idx, value in enumerate(row):
+                if col_idx == num_cols:
+                    break
+                try:
+                    self.output_transformation_matrix.item(row_idx, col_idx).setText(value)
+                except AttributeError:
+                    item = QtWidgets.QTableWidgetItem(value)
+                    self.output_transformation_matrix.setItem(row_idx, col_idx, item)
+
+    def set_output_transformation_identity(self):
+        """Sets the output transformation to identity (no transform)"""
+        num_columns = self.output_transformation_matrix.columnCount()
+        self.output_transformation_matrix.setRowCount(num_columns)
+        for row_idx in range(num_columns):
+            for col_idx in range(num_columns):
+                if row_idx == col_idx:
+                    value = 1.0
+                else:
+                    value = 0.0
+                try:
+                    self.output_transformation_matrix.item(row_idx, col_idx).setText(str(value))
+                except AttributeError:
+                    item = QtWidgets.QTableWidgetItem(str(value))
+                    self.output_transformation_matrix.setItem(row_idx, col_idx, item)
+
+    def set_output_transformation_6dof(self):
+        """Sets the output transformation matrix to the 6DoF table"""
+        num_columns = self.output_transformation_matrix.columnCount()
+        if num_columns != 12:
+            error_message_qt(
+                "Invalid Number of Output Signals.",
+                "Invalid Number of Output Signals.  6DoF Transform assumes 12 drive channels.",
+            )
+            return
+        self.output_transformation_matrix.setRowCount(6)
+        matrix = [
+            [0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0],
+            [0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0],
+            [0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25],
+            [0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, -0.25, 0.0, 0.0, -0.25],
+            [0.0, 0.0, -0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, -0.25],
+            [
+                -0.125,
+                0.125,
+                0.0,
+                -0.125,
+                -0.125,
+                0.0,
+                0.125,
+                -0.125,
+                0.0,
+                0.125,
+                0.125,
+                0.0,
+            ],
+        ]
+        for row_idx, row in enumerate(matrix):
+            for col_idx, value in enumerate(row):
+                try:
+                    self.output_transformation_matrix.item(row_idx, col_idx).setText(str(value))
+                except AttributeError:
+                    item = QtWidgets.QTableWidgetItem(str(value))
+                    self.output_transformation_matrix.setItem(row_idx, col_idx, item)
+
+    def set_output_transformation_6dof_reversed(self):
+        """Sets the output transformation matrix to the 6DoF table"""
+        num_columns = self.output_transformation_matrix.columnCount()
+        if num_columns != 12:
+            error_message_qt(
+                "Invalid Number of Output Signals.",
+                "Invalid Number of Output Signals.  6DoF Transform assumes 12 drive channels.",
+            )
+            return
+        self.output_transformation_matrix.setRowCount(6)
+        matrix = [
+            [0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0],
+            [0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0],
+            [0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25],
+            [0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, -0.25, 0.0, 0.0, -0.25],
+            [0.0, 0.0, -0.25, 0.0, 0.0, 0.25, 0.0, 0.0, 0.25, 0.0, 0.0, -0.25],
+            [
+                -0.125,
+                0.125,
+                0.0,
+                -0.125,
+                -0.125,
+                0.0,
+                0.125,
+                -0.125,
+                0.0,
+                0.125,
+                0.125,
+                0.0,
+            ],
+        ]
+        for row_idx, row in enumerate(matrix):
+            for col_idx, value in enumerate(row):
+                try:
+                    self.output_transformation_matrix.item(row_idx, col_idx).setText(str(value))
+                except AttributeError:
+                    item = QtWidgets.QTableWidgetItem(str(value))
+                    self.output_transformation_matrix.setItem(row_idx, col_idx, item)

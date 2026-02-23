@@ -224,7 +224,7 @@ class TimeUI(AbstractUI):
 
         return metadata
 
-    def display_metadata(self, metadata: TimeMetadata):
+    def display_environment_metadata(self, metadata: TimeMetadata):
         """Update the user interface with environment parameters
 
         This function is called when the Environment parameters are initialized.

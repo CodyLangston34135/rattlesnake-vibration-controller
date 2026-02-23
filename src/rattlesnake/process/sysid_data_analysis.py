@@ -59,26 +59,47 @@ class SysIdMetadata:
          stored to a netCDF file saved during streaming operations.
     """
 
-    def __init__(self):
-        self.sample_rate = None
-        self.sysid_frame_size = None
-        self.sysid_averaging_type = None
-        self.sysid_noise_averages = None
-        self.sysid_averages = None
-        self.sysid_exponential_averaging_coefficient = None
-        self.sysid_estimator = None
-        self.sysid_level = None
-        self.sysid_level_ramp_time = None
-        self.sysid_signal_type = None
-        self.sysid_window = None
-        self.sysid_overlap = None
-        self.sysid_burst_on = None
-        self.sysid_pretrigger = None
-        self.sysid_burst_ramp_fraction = None
-        self.sysid_low_frequency_cutoff = None
-        self.sysid_high_frequency_cutoff = None
-        self.stream_file = None
-        self.auto_shutdown = False
+    def __init__(
+        self,
+        sample_rate=None,
+        sysid_frame_size=None,
+        sysid_averaging_type=None,
+        sysid_noise_averages=None,
+        sysid_averages=None,
+        sysid_exponential_averaging_coefficient=None,
+        sysid_estimator=None,
+        sysid_level=None,
+        sysid_level_ramp_time=None,
+        sysid_signal_type=None,
+        sysid_window=None,
+        sysid_overlap=None,
+        sysid_burst_on=None,
+        sysid_pretrigger=None,
+        sysid_burst_ramp_fraction=None,
+        sysid_low_frequency_cutoff=None,
+        sysid_high_frequency_cutoff=None,
+        stream_file=None,
+        auto_shutdown=False,
+    ):
+        self.sample_rate = sample_rate
+        self.sysid_frame_size = sysid_frame_size
+        self.sysid_averaging_type = sysid_averaging_type
+        self.sysid_noise_averages = sysid_noise_averages
+        self.sysid_averages = sysid_averages
+        self.sysid_exponential_averaging_coefficient = sysid_exponential_averaging_coefficient
+        self.sysid_estimator = sysid_estimator
+        self.sysid_level = sysid_level
+        self.sysid_level_ramp_time = sysid_level_ramp_time
+        self.sysid_signal_type = sysid_signal_type
+        self.sysid_window = sysid_window
+        self.sysid_overlap = sysid_overlap
+        self.sysid_burst_on = sysid_burst_on
+        self.sysid_pretrigger = sysid_pretrigger
+        self.sysid_burst_ramp_fraction = sysid_burst_ramp_fraction
+        self.sysid_low_frequency_cutoff = sysid_low_frequency_cutoff
+        self.sysid_high_frequency_cutoff = sysid_high_frequency_cutoff
+        self.stream_file = stream_file
+        self.auto_shutdown = auto_shutdown
 
     @property
     def sysid_frequency_spacing(self):

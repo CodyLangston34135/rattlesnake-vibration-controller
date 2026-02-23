@@ -1,4 +1,5 @@
 from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.sine_environment import SineCommands, SineMetadata, SineEnvironment, sine_process
 from rattlesnake.environment.time_environment import TimeCommands, TimeMetadata, TimeInstructions, TimeEnvironment, time_process
 
 ENVIRONMENT_COMMANDS = {}
@@ -13,3 +14,9 @@ ENVIRONMENT_METADATA[ControlTypes.TIME] = TimeMetadata
 ENVIRONMENT_INSTRUCTIONS[ControlTypes.TIME] = TimeInstructions
 ENVIRONMENT_CLASS[ControlTypes.TIME] = TimeEnvironment
 ENVIRONMENT_PROCESS[ControlTypes.TIME] = time_process
+
+# Sine Environment
+ENVIRONMENT_COMMANDS[ControlTypes.SINE] = SineCommands
+ENVIRONMENT_METADATA[ControlTypes.SINE] = SineMetadata
+ENVIRONMENT_CLASS[ControlTypes.SINE] = SineEnvironment
+ENVIRONMENT_PROCESS[ControlTypes.SINE] = sine_process

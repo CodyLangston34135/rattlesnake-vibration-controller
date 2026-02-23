@@ -336,7 +336,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.rename_environment(environment_idx, environment_name)
 
             self.environment_uis[environment_name].initialize_hardware(hardware_metadata)
-            self.environment_uis[environment_name].display_metadata(environment_metadata)
+            self.environment_uis[environment_name].display_environment_metadata(environment_metadata)
 
         self.update_environment_tabs()
         streaming_environment_items = [""] + list(self.environment_uis.keys())

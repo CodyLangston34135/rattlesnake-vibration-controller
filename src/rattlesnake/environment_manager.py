@@ -145,6 +145,7 @@ class EnvironmentManager:
             self.log(f"Assigning {environment_name} to {queue_name} Queue")
             self.environment_types[queue_name] = environment_type
             self.environment_names[queue_name] = environment_name
+            self.environment_metadata[queue_name] = metadata
             self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_HARDWARE, hardware_metadata))
             self.environment_ready_events[queue_name].clear()
             self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata))
@@ -160,8 +161,6 @@ class EnvironmentManager:
         # but I want to clear up queue_names before assigning new ones
         for metadata in extra_metadata:
             self.add_environment(metadata, hardware_metadata)
-
-        return environment_metadata_dict
 
     def initialize_system_id(self, sysid_metadata, queue_name):
         environment_metadata_dict = copy.deepcopy(self.environment_metadata)

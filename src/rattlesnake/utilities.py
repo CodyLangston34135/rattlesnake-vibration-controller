@@ -442,6 +442,46 @@ def load_time_history(signal_path, sample_rate):
     return signal
 
 
+def load_csv_matrix(file):
+    """Loads a matrix from a CSV file
+
+    Parameters
+    ----------
+    file : str :
+        Path to the file that will be loaded
+
+
+    Returns
+    -------
+    data : list[list[str]]
+        A 2D nested list of strings containing the matrix in the CSV file.
+
+    """
+    with open(file, "r", encoding="utf-8") as f:
+        data = []
+        for line in f:
+            data.append([])
+            for v in line.split(","):
+                data[-1].append(v.strip())
+    return data
+
+
+def save_csv_matrix(data, file):
+    """Saves 2D matrix data to a file
+
+    Parameters
+    ----------
+    data : 2D iterable of str:
+        A 2D nested iterable of strings that will be written to a file
+    file : str :
+        The path to a file where the data will be written.
+
+    """
+    text = "\n".join([",".join(row) for row in data])
+    with open(file, "w", encoding="utf-8") as f:
+        f.write(text)
+
+
 # region: Math
 def align_signals(
     measurement_buffer,
@@ -617,3 +657,13 @@ def db2scale(decibel):
 
     """
     return 10 ** (decibel / 20)
+
+
+def scale2db(scale):
+    """Converts a scale quantity to decibels"""
+    return 20 * np.log10(scale)
+
+
+def wrap(data, period=2 * np.pi):
+    """Wraps angle data between -pi/2 and pi/2"""
+    return (data + period / 2) % period - period / 2

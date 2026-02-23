@@ -378,11 +378,11 @@ class Rattlesnake:
 
         # Send environment meetadata to correct processes
         self.log("Setting Environment")
-        environment_metadata = self.environment_manager.initialize_environments(environment_metadata_list, self.hardware_metadata)
+        self.environment_manager.initialize_environments(environment_metadata_list, self.hardware_metadata)
         self.event_container.acquisition_ready_event.clear()
-        self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, environment_metadata))
+        self.queue_container.acquisition_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_metadata))
         self.event_container.output_ready_event.clear()
-        self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, environment_metadata))
+        self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, self.environment_metadata))
 
         if self.blocking:
             ready_event_list = [
@@ -392,9 +392,6 @@ class Rattlesnake:
             ]
             active_event_list = []
             self.wait_for_events(ready_event_list, active_event_list)
-
-        # Update state
-        self.environment_metadata = environment_metadata
 
     # region: Acquisition
     def set_stream_metadata(self, stream_metadata: StreamMetadata):

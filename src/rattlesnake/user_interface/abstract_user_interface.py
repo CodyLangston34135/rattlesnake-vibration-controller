@@ -116,7 +116,7 @@ class AbstractUI(ABC):
         """
 
     @abstractmethod
-    def display_metadata(self, metadata: EnvironmentMetadata):
+    def display_environment_metadata(self, metadata: EnvironmentMetadata):
         """
         Update the user interface from environment metadata
 

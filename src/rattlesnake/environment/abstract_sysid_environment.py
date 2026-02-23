@@ -72,6 +72,20 @@ class SystemIdCommands(Enum):
     CHECK_FOR_COMPLETE_SHUTDOWN = 0
 
 
+class SysIdUICommands(Enum):
+    TIME_FRAME = 0
+    KURTOSIS = 1
+    NOISE_UPDATE = 2
+    SYSID_UPDATE = 3
+    ENABLE_SYSTEM_ID = 4
+    DISABLE_SYSTEM_ID = 5
+
+    @property
+    def label(self):
+        """Used by UI as names for"""
+        return self.name.replace("_", " ").title()
+
+
 class SysIdEnvironmentMetadata(EnvironmentMetadata):
     def __init__(
         self,
@@ -207,9 +221,10 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
     def __init__(
         self,
         environment_name: str,
+        queue_name: str,
         command_queue: VerboseMessageQueue,
         gui_update_queue: Queue,
-        controller_communication_queue: VerboseMessageQueue,
+        controller_command_queue: VerboseMessageQueue,
         log_file_queue: Queue,
         collector_command_queue: VerboseMessageQueue,
         signal_generator_command_queue: VerboseMessageQueue,
@@ -217,19 +232,24 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
         data_analysis_command_queue: VerboseMessageQueue,
         data_in_queue: Queue,
         data_out_queue: Queue,
-        acquisition_active: mp.sharedctypes.Synchronized,
-        output_active: mp.sharedctypes.Synchronized,
+        acquisition_active_event: mp.sharedctypes.Synchronized,
+        output_active_event: mp.sharedctypes.Synchronized,
+        active_event: mp.synchronize.Event,
+        ready_event: mp.synchronize.Event,
     ):
         super().__init__(
             environment_name,
+            queue_name,
             command_queue,
             gui_update_queue,
-            controller_communication_queue,
+            controller_command_queue,
             log_file_queue,
             data_in_queue,
             data_out_queue,
-            acquisition_active,
-            output_active,
+            acquisition_active_event,
+            output_active_event,
+            active_event,
+            ready_event,
         )
         # self.map_command(SystemIdCommands.PREVIEW_NOISE, self.preview_noise)
         # self.map_command(SystemIdCommands.PREVIEW_TRANSFER_FUNCTION, self.preview_transfer_function)
@@ -257,6 +277,7 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
         self.siggen_shutdown_achieved = True
         self.analysis_shutdown_achieved = True
 
+    @abstractmethod
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         """Initialize the data acquisition parameters in the environment.
 
@@ -270,8 +291,9 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
             channels active in the environment as well as sampling parameters.
         """
         self.hardware_metadata = hardware_metadata
-        self.set_ready()
+        super().initialize_hardware()
 
+    @abstractmethod
     def initialize_environment(self, environment_metadata: SysIdEnvironmentMetadata):
         """
         Initialize the environment parameters specific to this environment
@@ -286,8 +308,9 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
 
         """
         self.environment_metadata = environment_metadata
-        self.set_ready()
+        super().initialize_environment()
 
+    @abstractmethod
     def initialize_sysid(self, sysid_metadata: SysIdMetadata):
         self.environment_metadata.sysid_metadata = sysid_metadata
         self.set_ready()
