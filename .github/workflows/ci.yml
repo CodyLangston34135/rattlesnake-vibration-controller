@@ -174,8 +174,8 @@ jobs:
   deploy:
     needs: [lint, coverage, jupyter_book]
     runs-on: ubuntu-latest
-    # if: github.ref == 'refs/heads/dev'
-    if: github.ref == 'refs/heads/documentation-update' # Temporary condition for testing - change back to dev after testing
+    if: github.ref == 'refs/heads/dev'
+    # if: github.ref == 'refs/heads/documentation-update' # Temporary condition for testing - change back to dev after testing
 
     steps:
       - name: Checkout code
