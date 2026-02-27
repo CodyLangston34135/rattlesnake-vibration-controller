@@ -80,7 +80,7 @@
     <loc>http://localhost:3000/notation</loc>
   </url>
   <url>
-    <loc>http://localhost:3000/summary</loc>
+    <loc>http://localhost:3000/development</loc>
   </url>
   <url>
     <loc>http://localhost:3000/ui-documentation</loc>
