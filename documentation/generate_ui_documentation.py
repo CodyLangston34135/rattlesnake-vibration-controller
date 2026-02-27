@@ -342,7 +342,7 @@ class UIAnalyzer(QtWidgets.QMainWindow):
             if isinstance(struct["widget"], QtWidgets.QGroupBox):
                 figure_file_name = self.name + "__" + struct["name"] + ".png"
                 figure_full_path = os.path.join(
-                    "mdbook", "src", "_generated", "figures", figure_file_name
+                    "book", "src", "_generated", "figures", figure_file_name
                 ).replace("\\", "/")
                 figure_rel_path = os.path.join("figures", figure_file_name).replace("\\", "/")
                 figure_ref_name = "fig:" + self.name + ":" + struct["name"]
@@ -357,7 +357,7 @@ class UIAnalyzer(QtWidgets.QMainWindow):
                 # This means we would like to build documentation with this widget
                 figure_file_name = self.name + "__" + struct["name"] + ".png"
                 figure_full_path = os.path.join(
-                    "mdbook", "src", "_generated", "figures", figure_file_name
+                    "book", "src", "_generated", "figures", figure_file_name
                 ).replace('\\','/')
                 figure_rel_path = os.path.join("figures", figure_file_name).replace('\\','/')
                 figure_ref_name = "fig:" + self.name + ":" + struct["name"]
@@ -433,6 +433,6 @@ for file in files:
     markdown_text = ui.generate_markdown()
     filename = os.path.splitext(os.path.split(file)[1])[0]
     with open(
-        dir_path + "/" + f"mdbook/src/_generated/{filename}_doc.md", "w", encoding="utf-8"
+        dir_path + "/" + f"book/src/_generated/{filename}_doc.md", "w", encoding="utf-8"
     ) as f:
         f.write(markdown_text)
