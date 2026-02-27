@@ -7,12 +7,16 @@ on:
     branches:
       - main
       - dev
-      - "!*doc*" # Explicitly ignores branches with "doc" in the name
+      - "doc*" # Explicitly include branches with "doc" in the name
   pull_request:
     branches:
       - main
       - dev
-      - "!*doc*" # Explicitly ignores branches with "doc" in the name
+      - "doc*" # Explicitly include branches with "doc" in the name
+env:
+  # `BASE_URL` determines the website is served from, including CSS & JS assets
+  # You may need to change this to `BASE_URL: ''`
+  BASE_URL: /${{ github.event.repository.name }}/book/jupyter/
 
 jobs:
   lint:
@@ -48,19 +52,21 @@ jobs:
         # Create a timestamp for the output file
         TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
         PYLINT_OUTPUT_FILE="pylint_output_${TIMESTAMP}.txt"
-        
-        # Generate text report
-        pylint src/rattlesnake/**/*.py --output-format=text --reports=yes > "$PYLINT_OUTPUT_FILE" || true
-        
-        # Extract the score from pylint output
-        SCORE=$(grep "Your code has been rated at" "$PYLINT_OUTPUT_FILE" | awk '{print $7}' | cut -d'/' -f1 || echo "0")
-        
+
+        # Run pylint once, capturing the output to a variable.
+        # This avoids reading the file twice.
+        PYLINT_OUTPUT=$(pylint src/rattlesnake/**/*.py --output-format=text --reports=yes || true)
+        echo "$PYLINT_OUTPUT" > "$PYLINT_OUTPUT_FILE"
+
+        # Extract the score from the captured output
+        SCORE=$(echo "$PYLINT_OUTPUT" | grep "Your code has been rated at" | awk '{print $7}' | cut -d'/' -f1 || echo "0")
+
         # Output the score and file name
         echo "🏁 Pylint analysis completed. 🏁"
         echo "    📄 Output file: $PYLINT_OUTPUT_FILE"
         echo "    🏆 Pylint score: $SCORE out of 10"
 
-        # Read the pylint output and create a custom HTML report.
+        # The report_pylint.py script still needs the file, which we created above.
         python src/rattlesnake/cicd/report_pylint.py \
           --input_file "$PYLINT_OUTPUT_FILE" \
           --output_file pylint_report.html \
@@ -132,14 +138,52 @@ jobs:
             htmlcov/
             coverage.xml
 
+  # This job builds the Jupyter Book documentation and uploads it as an artifact. It runs on Ubuntu with Python 3.12.
+  # To test locally:
+  # 1. Install uv: https://astral.sh/uv/installation/
+  # 2. Run `uv pip install "jupyter-book>=2.0.0"`
+  # 3. Run `cd documentation && uv run jupyter book build --html --strict && cd ..` from the root of the repository to build the book. The output will be in documentation/_build/html
+  jupyter_book:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v1
+
+      - name: Install dependencies
+        run: |
+          uv venv
+          uv pip install "jupyter-book>=2.0.0"
+
+      - name: Build the book
+        run: |
+          cd documentation && uv run jupyter book build --html --strict && cd ..
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: jupyter-book-report
+          path: documentation/_build/html
+
   deploy:
-    needs: [lint, coverage]
+    needs: [lint, coverage, jupyter_book]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/dev'
+    # if: github.ref == 'refs/heads/documentation-update' # Temporary condition for testing - change back to dev after testing
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Echo BASE_URL from env
+        run: |
+          echo "BASE_URL from env: $BASE_URL"
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v3
@@ -170,6 +214,12 @@ jobs:
         with:
           name: pytest-report
           path: pytest-report
+
+      - name: Download jupyter book artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: jupyter-book-report
+          path: jupyter-book-report
 
       - name: Create badges
         run: |
@@ -223,9 +273,11 @@ jobs:
         run: |
           mkdir -p pages/reports/pylint
           mkdir -p pages/reports/coverage
+          mkdir -p pages/book/jupyter
           mv pylint-report/pylint_report.html pages/reports/pylint/index.html
           mv pytest-report/pytest_report.html pages/reports/coverage/index.html
-          mv pytest-report/htmlcov pages/reports/coverage/
+          mv pytest-report/htmlcov/ pages/reports/coverage/
+          mv jupyter-book-report/* pages/book/jupyter/
           cat > pages/index.html << 'EOF'
           <!DOCTYPE html>
           <html lang="en">
@@ -250,7 +302,8 @@ jobs:
                   <ul>
                       <li><a href="reports/pylint/index.html">Pylint Report</a></li>
                       <li><a href="reports/coverage/index.html">Pytest Coverage Report</a></li>
-                      <li><a href="book/index.html">mdBook</a></li>
+                      <li><a href="book/jupyter/index.html">Jupyter Book</a></li>
+                      <li><a href="book/index.html">mdBook</a> (deprecated 2026-12-16)</li>
                   </ul>
               </div>
           </body>

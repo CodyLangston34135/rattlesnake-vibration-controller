@@ -2,7 +2,6 @@
 
 # Rattlesnake Vibration Controller
 
-[![book](https://img.shields.io/badge/Documentation-SAND2025--14378-blue?logo=mdbook&logoColor=000000)](https://sandialabs.github.io/rattlesnake-vibration-controller/book/)
 [![CI](https://github.com/sandialabs/rattlesnake-vibration-controller/actions/workflows/ci.yml/badge.svg)](https://github.com/sandialabs/rattlesnake-vibration-controller/actions/workflows/ci.yml)
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-blue)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
@@ -22,7 +21,10 @@ and New Mexico (the location of the main Sandia National Laboratories campus, wh
 
 Rattlesnake can be run as a Python script using the code from this repository, or an executable can be downloaded from the [Releases](https://github.com/sandialabs/rattlesnake-vibration-controller/releases) page.
 
-See the [User's Manual](https://github.com/sandialabs/rattlesnake-vibration-controller/releases/download/v3.0.0/Rattlesnake.pdf) for more information.
+See the documentation for more information:
+
+* [Rattlesnake User's Manual](https://sandialabs.github.io/rattlesnake-vibration-controller/book/jupyter/index.html) ![](https://img.shields.io/badge/🌱_new-_online-d4edda?style=flat&labelColor=d4edda&color=155724)
+* Rattlesnake User's Manual, Version 3, SAND2024-14378, Oct 2024. [Download](https://github.com/sandialabs/rattlesnake-vibration-controller/releases/download/v3.0.0/Rattlesnake.pdf) (78 MB)
 
 ### Flexible
 
@@ -38,4 +40,3 @@ Rattlesnake has been run with over 50 control channels and 12 shaker drives whil
 
 To facilitate MIMO vibration research and development, users can program their own control laws to load into the controller at runtime.
 See [Control Laws](https://github.com/sandialabs/rattlesnake-vibration-controller/tree/main/control_laws) for examples.
-
