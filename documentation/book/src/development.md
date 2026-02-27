@@ -67,7 +67,7 @@ The ouput will be similar to:
         👉  http://localhost:3000  👈
 ```
 
-In a local web browser, navigate to the web address indicated (http://localhost:3000 is indicated above).
+In a local web browser, navigate to the web address indicated above.
 
 #### Bibliography
 
