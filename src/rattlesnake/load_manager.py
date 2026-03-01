@@ -209,9 +209,22 @@ def load_metadata_from_netcdf(filepath):
 
         environment_metadata_class = ENVIRONMENT_METADATA[environment_type]
         channel_list_bools = environment_active_channels
-        environment_metadata = environment_metadata_class.retrieve_metadata_from_netcdf(
-            environment_group, environment_name, channel_list_bools, sample_rate
-        )
+        match environment_type:
+            case ControlTypes.TIME:
+                environment_metadata = environment_metadata_class.retrieve_metadata_from_netcdf(
+                    environment_group,
+                    environment_name,
+                    channel_list_bools,
+                    sample_rate,
+                )
+            case ControlTypes.MODAL:
+                environment_metadata = environment_metadata_class.retrieve_metadata_from_netcdf(
+                    environment_group,
+                    environment_name,
+                    channel_list_bools,
+                    sample_rate,
+                )
+
         environment_metadata_list.append(environment_metadata)
 
     return (hardware_metadata, environment_metadata_list)

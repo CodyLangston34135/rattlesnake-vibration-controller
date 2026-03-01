@@ -62,6 +62,7 @@ from glob import glob
 import netCDF4 as nc4
 import numpy as np
 from multiprocessing.queues import Queue
+from typing import List
 
 
 CONTROL_TYPE = ControlTypes.MODAL
@@ -135,7 +136,7 @@ class ModalMetadata(EnvironmentMetadata):
         reference_channel_indices,
         response_channel_indices,
         output_channel_indices,
-        hardware_metadata: HardwareMetadata,
+        output_oversample: int,
         exponential_window_value_at_frame_end: float,
     ):
         super().__init__(CONTROL_TYPE, environment_name, channel_list_bools, sample_rate)
@@ -166,7 +167,7 @@ class ModalMetadata(EnvironmentMetadata):
         self.output_channel_indices = output_channel_indices
         self.exponential_window_value_at_frame_end = exponential_window_value_at_frame_end
         # Set up signal generator
-        self.output_oversample = hardware_metadata.output_oversample
+        self.output_oversample = output_oversample
         self.signal_generator = self.get_signal_generator()
 
     def validate(self, hardware_metadata):
@@ -402,7 +403,16 @@ class ModalMetadata(EnvironmentMetadata):
         var = netcdf_group_handle.createVariable("response_channel_indices", "i4", ("response_channels"))
         var[...] = self.response_channel_indices
 
-    def retrieve_metadata_from_netcdf(self, netcdf_handle):
+    @classmethod
+    def retrieve_metadata_from_netcdf(
+        cls,
+        netcdf_group_handle: nc4._netCDF4.Dataset,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        sample_rate: float,
+        output_oversample: int,
+        channel_list,
+    ):
         """Collects environment parameters from a netCDF dataset.
 
         This function retrieves parameters from a netCDF dataset that was written
@@ -427,86 +437,69 @@ class ModalMetadata(EnvironmentMetadata):
             a group name with the enviroment's name.
 
         """
-        netcdf_group_handle = netcdf_handle[self.environment_name]
-        self.definition_widget.samples_per_frame_selector.setValue(netcdf_group_handle.samples_per_frame)
-        self.definition_widget.system_id_averaging_scheme_selector.setCurrentIndex(
-            self.definition_widget.system_id_averaging_scheme_selector.findText(netcdf_group_handle.averaging_type)
-        )
-        self.definition_widget.system_id_frames_to_average_selector.setValue(netcdf_group_handle.num_averages)
-        self.definition_widget.system_id_averaging_coefficient_selector.setValue(netcdf_group_handle.averaging_coefficient)
-        self.definition_widget.system_id_frf_technique_selector.setCurrentIndex(
-            self.definition_widget.system_id_frf_technique_selector.findText(netcdf_group_handle.frf_technique)
-        )
-        self.definition_widget.system_id_transfer_function_computation_window_selector.setCurrentIndex(
-            self.definition_widget.system_id_transfer_function_computation_window_selector.findText(netcdf_group_handle.frf_window.capitalize())
-        )
-        self.definition_widget.system_id_overlap_percentage_selector.setValue(netcdf_group_handle.overlap * 100)
-        self.definition_widget.triggering_type_selector.setCurrentIndex(
-            self.definition_widget.triggering_type_selector.findText(netcdf_group_handle.trigger_type)
-        )
-        acceptance = netcdf_group_handle.accept_type
-        self.definition_widget.acceptance_selector.blockSignals(True)
-        self.definition_widget.acceptance_selector.setCurrentIndex(self.definition_widget.acceptance_selector.findText(acceptance))
-        self.definition_widget.acceptance_selector.blockSignals(False)
-        if acceptance == "Autoreject...":
-            self.acceptance_function = netcdf_group_handle.acceptance_function.split(":")
+        samples_per_frame = netcdf_group_handle.samples_per_frame
+        averaging_type = netcdf_group_handle.averaging_type
+        num_averages = netcdf_group_handle.num_averages
+        averaging_coefficient = netcdf_group_handle.averaging_coefficient
+        frf_technique = netcdf_group_handle.frf_technique
+        frf_window = netcdf_group_handle.frf_window
+        overlap_percent = netcdf_group_handle.overlap
+        trigger_type = netcdf_group_handle.trigger_type
+        accept_type = netcdf_group_handle.accept_type
+        if accept_type == "Autoreject...":
+            acceptance_function = netcdf_group_handle.acceptance_function.split(":")
         else:
-            self.acceptance_function = None
-        self.definition_widget.wait_for_steady_selector.setValue(netcdf_group_handle.wait_for_steady_state)
-        self.definition_widget.trigger_channel_selector.setCurrentIndex(netcdf_group_handle.trigger_channel)
-        self.definition_widget.pretrigger_selector.setValue(netcdf_group_handle.pretrigger * 100)
-        self.definition_widget.trigger_slope_selector.setCurrentIndex(0 if netcdf_group_handle.trigger_slope_positive == 1 else 1)
-        self.definition_widget.trigger_level_selector.setValue(100 * netcdf_group_handle.trigger_level)
-        self.definition_widget.hysteresis_selector.setValue(100 * netcdf_group_handle.hysteresis_level)
-        self.definition_widget.hysteresis_length_selector.setValue(100 * netcdf_group_handle.hysteresis_length)
-        self.definition_widget.signal_generator_selector.setCurrentIndex(
-            [
-                "none",
-                "random",
-                "burst",
-                "pseudorandom",
-                "chirp",
-                "square",
-                "sine",
-            ].index(netcdf_group_handle.signal_generator_type)
+            acceptance_function = None
+        wait_for_steady_state = netcdf_group_handle.wait_for_steady_state
+        trigger_channel = netcdf_group_handle.trigger_channel
+        pretrigger_percent = netcdf_group_handle.pretrigger
+        trigger_slope_positive = netcdf_group_handle.trigger_slope_positive
+        trigger_level_percent = netcdf_group_handle.trigger_level
+        hysteresis_level_percent = netcdf_group_handle.hysteresis_level
+        hysteresis_frame_percent = netcdf_group_handle.hysteresis_length
+        signal_generator_type = netcdf_group_handle.signal_generator_type
+        signal_generator_level = netcdf_group_handle.signal_generator_level
+        signal_generator_min_frequency = netcdf_group_handle.signal_generator_min_frequency
+        signal_generator_max_frequency = netcdf_group_handle.signal_generator_max_frequency
+        signal_generator_on_percent = netcdf_group_handle.signal_generator_level
+        reference_channel_indices = netcdf_group_handle.variables["response_channel_indices"][...]
+        response_channel_indices = netcdf_group_handle.variables["reference_channel_indices"][...]
+        environment_channel_list = [channel for channel, channel_bool in zip(channel_list, channel_list_bools) if channel_bool]
+        output_channel_indices = [index for index, channel in enumerate(environment_channel_list) if channel.feedback_device is not None]
+        exponential_window_value_at_frame_end = netcdf_group_handle.exponential_window_value_at_frame_end
+
+        return cls(
+            environment_name,
+            channel_list_bools,
+            sample_rate,
+            samples_per_frame,
+            averaging_type,
+            num_averages,
+            averaging_coefficient,
+            frf_technique,
+            frf_window,
+            overlap_percent,
+            trigger_type,
+            accept_type,
+            wait_for_steady_state,
+            trigger_channel,
+            pretrigger_percent,
+            trigger_slope_positive,
+            trigger_level_percent,
+            hysteresis_level_percent,
+            hysteresis_frame_percent,
+            signal_generator_type,
+            signal_generator_level,
+            signal_generator_min_frequency,
+            signal_generator_max_frequency,
+            signal_generator_on_percent,
+            acceptance_function,
+            reference_channel_indices,
+            response_channel_indices,
+            output_channel_indices,
+            output_oversample,
+            exponential_window_value_at_frame_end,
         )
-        self.definition_widget.random_rms_selector.setValue(netcdf_group_handle.signal_generator_level)
-        self.definition_widget.random_min_frequency_selector.setValue(netcdf_group_handle.signal_generator_min_frequency)
-        self.definition_widget.random_max_frequency_selector.setValue(netcdf_group_handle.signal_generator_max_frequency)
-        self.definition_widget.burst_rms_selector.setValue(netcdf_group_handle.signal_generator_level)
-        self.definition_widget.burst_min_frequency_selector.setValue(netcdf_group_handle.signal_generator_min_frequency)
-        self.definition_widget.burst_max_frequency_selector.setValue(netcdf_group_handle.signal_generator_max_frequency)
-        self.definition_widget.burst_on_percentage_selector.setValue(100 * netcdf_group_handle.signal_generator_on_fraction)
-        self.definition_widget.pseudorandom_rms_selector.setValue(netcdf_group_handle.signal_generator_level)
-        self.definition_widget.pseudorandom_min_frequency_selector.setValue(netcdf_group_handle.signal_generator_min_frequency)
-        self.definition_widget.pseudorandom_max_frequency_selector.setValue(netcdf_group_handle.signal_generator_max_frequency)
-        self.definition_widget.chirp_level_selector.setValue(netcdf_group_handle.signal_generator_level)
-        self.definition_widget.chirp_min_frequency_selector.setValue(netcdf_group_handle.signal_generator_min_frequency)
-        self.definition_widget.chirp_max_frequency_selector.setValue(netcdf_group_handle.signal_generator_max_frequency)
-        self.definition_widget.square_level_selector.setValue(netcdf_group_handle.signal_generator_level)
-        self.definition_widget.square_frequency_selector.setValue(netcdf_group_handle.signal_generator_min_frequency)
-        self.definition_widget.square_percent_on_selector.setValue(100 * netcdf_group_handle.signal_generator_on_fraction)
-        self.definition_widget.sine_level_selector.setValue(netcdf_group_handle.signal_generator_level)
-        self.definition_widget.sine_frequency_selector.setValue(netcdf_group_handle.signal_generator_min_frequency)
-        self.definition_widget.window_value_selector.setValue(netcdf_group_handle.exponential_window_value_at_frame_end * 100)
-        response_inds = netcdf_group_handle.variables["response_channel_indices"][...]
-        reference_inds = netcdf_group_handle.variables["reference_channel_indices"][...]
-        for row in range(self.definition_widget.reference_channels_selector.rowCount()):
-            if row in reference_inds:
-                widget = self.definition_widget.reference_channels_selector.cellWidget(row, 1)
-                widget.setChecked(True)
-                widget = self.definition_widget.reference_channels_selector.cellWidget(row, 0)
-                widget.setChecked(True)
-            elif row in response_inds:
-                widget = self.definition_widget.reference_channels_selector.cellWidget(row, 0)
-                widget.setChecked(True)
-                widget = self.definition_widget.reference_channels_selector.cellWidget(row, 1)
-                widget.setChecked(False)
-            else:
-                widget = self.definition_widget.reference_channels_selector.cellWidget(row, 0)
-                widget.setChecked(False)
-                widget = self.definition_widget.reference_channels_selector.cellWidget(row, 1)
-                widget.setChecked(False)
 
     def store_to_worksheet(self, worksheet):
         return super().store_to_worksheet(worksheet)
@@ -528,7 +521,8 @@ class ModalMetadata(EnvironmentMetadata):
 
 
 class ModalInstructions(EnvironmentInstructions):
-    pass
+    def __init__(self, environment_name):
+        super().__init__(CONTROL_TYPE, environment_name)
 
 
 class ModalQueues:
@@ -613,9 +607,8 @@ class ModalEnvironment(EnvironmentProcess):
 
         # Map commands
         self.map_command(ModalCommands.ACCEPT_FRAME, self.accept_frame)
-        self.map_command(ModalCommands.START_CONTROL, self.start_environment)
+        self.map_command(GlobalCommands.START_ENVIRONMENT, self.start_environment)
         self.map_command(ModalCommands.RUN_CONTROL, self.run_control)
-        self.map_command(ModalCommands.STOP_CONTROL, self.stop_environment)
         self.map_command(ModalCommands.CHECK_FOR_COMPLETE_SHUTDOWN, self.check_for_shutdown)
         self.map_command(SignalGenerationCommands.SHUTDOWN_ACHIEVED, self.siggen_shutdown_achieved_fn)
         self.map_command(DataCollectorCommands.SHUTDOWN_ACHIEVED, self.collector_shutdown_achieved_fn)

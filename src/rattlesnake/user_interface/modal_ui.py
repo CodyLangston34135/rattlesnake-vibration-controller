@@ -1,3 +1,4 @@
+from rattlesnake.rattlesnake import Rattlesnake
 from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue, load_python_module
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_utilities import ControlTypes
@@ -29,13 +30,7 @@ class ModalUI(AbstractUI):
     def __init__(
         self,
         environment_name: str,
-        definition_tabwidget: QtWidgets.QTabWidget,
-        system_id_tabwidget: QtWidgets.QTabWidget,  # pylint: disable=unused-argument
-        test_predictions_tabwidget: QtWidgets.QTabWidget,  # pylint: disable=unused-argument
-        run_tabwidget: QtWidgets.QTabWidget,
-        environment_command_queue: VerboseMessageQueue,
-        controller_communication_queue: VerboseMessageQueue,
-        log_file_queue: mp.Queue,
+        rattlesnake: Rattlesnake,
     ):
         """
         Constructs a Modal User Interface
@@ -66,12 +61,7 @@ class ModalUI(AbstractUI):
             Queue where log file messages can be written.
 
         """
-        super().__init__(
-            environment_name,
-            environment_command_queue,
-            controller_communication_queue,
-            log_file_queue,
-        )
+        super().__init__(CONTROL_TYPE, environment_name, rattlesnake)
         # Add the page to the control definition tabwidget
         self.definition_widget = QtWidgets.QWidget()
         uic.loadUi(environment_definition_ui_paths[CONTROL_TYPE], self.definition_widget)
@@ -258,7 +248,7 @@ class ModalUI(AbstractUI):
             self.definition_widget.samples_per_frame_selector.blockSignals(True)
             self.definition_widget.samples_per_frame_selector.setValue(self.definition_widget.samples_per_frame_selector.value() + 1)
             self.definition_widget.samples_per_frame_selector.blockSignals(False)
-        data = self.collect_environment_definition_parameters()
+        data = self.get_environment_metadata()
         self.definition_widget.samples_per_acquire_display.setValue(data.samples_per_acquire)
         self.definition_widget.frame_time_display.setValue(data.frame_time)
         self.definition_widget.nyquist_frequency_display.setValue(data.nyquist_frequency)
@@ -348,7 +338,7 @@ class ModalUI(AbstractUI):
 
     def update_trigger_levels(self):
         """Updates trigger levels based on selected widget values"""
-        data = self.collect_environment_definition_parameters()
+        data = self.get_environment_metadata()
         t_v, t_eu, h_v, h_eu = data.get_trigger_levels(self.hardware_metadata.channel_list)
         self.definition_widget.trigger_level_voltage_display.setValue(t_v)
         self.definition_widget.trigger_level_eu_display.setValue(t_eu)
@@ -360,7 +350,7 @@ class ModalUI(AbstractUI):
 
     def update_hysteresis_length(self):
         """Updates hysterisis length based on the selected trigger parameters"""
-        data = self.collect_environment_definition_parameters()
+        data = self.get_environment_metadata()
         self.definition_widget.hysteresis_samples_display.setValue(data.hysteresis_samples)
         self.definition_widget.hysteresis_time_display.setValue(data.hysteresis_samples / data.sample_rate)
 
@@ -375,7 +365,7 @@ class ModalUI(AbstractUI):
             return
         output_oversample = self.hardware_metadata.output_oversample
         output_rate = self.hardware_metadata.output_sample_rate
-        data = self.collect_environment_definition_parameters()
+        data = self.get_environment_metadata()
         frame_output_samples = int(data.samples_per_frame * output_oversample)
         signal = data.generate_signal()
         # Reduce down to just one frame
@@ -838,11 +828,51 @@ class ModalUI(AbstractUI):
             widget.setMaximum(self.hardware_metadata.sample_rate / 2)
 
     def initialize_environment(self, environment_metadata):
-        return
+        self.metadata = environment_metadata
+        self.reference_channel_indices = self.metadata.reference_channel_indices
+        self.response_channel_indices = self.metadata.response_channel_indices
+        self.run_widget.channel_display_area.reference_channel_indices = self.reference_channel_indices
+        self.run_widget.channel_display_area.response_channel_indices = self.response_channel_indices
+        for window in self.run_widget.channel_display_area.subWindowList():
+            widget = window.widget()
+            current_response = widget.response_coordinate_selector.currentIndex()
+            current_reference = widget.reference_coordinate_selector.currentIndex()
+            current_data_type = widget.data_type_selector.currentIndex()
+            widget.reference_names = np.array([widget.channel_names[i] for i in self.run_widget.channel_display_area.reference_channel_indices])
+            widget.response_names = np.array([widget.channel_names[i] for i in self.run_widget.channel_display_area.response_channel_indices])
+            widget.update_ui()
+            widget.response_coordinate_selector.setCurrentIndex(current_response)
+            widget.reference_coordinate_selector.setCurrentIndex(current_reference)
+            widget.data_type_selector.setCurrentIndex(current_data_type)
+        self.run_widget.total_averages_display.setValue(self.metadata.num_averages)
+        self.run_widget.channel_display_area.time_abscissa = np.arange(self.metadata.samples_per_frame) / self.metadata.sample_rate
+        self.run_widget.channel_display_area.frequency_abscissa = np.fft.rfftfreq(
+            self.metadata.samples_per_frame,
+            1 / self.metadata.sample_rate,
+        )
+        if self.metadata.frf_window == "rectangle":
+            window = 1
+        elif self.metadata.frf_window == "exponential":
+            window_parameter = -(self.metadata.samples_per_frame) / np.log(self.metadata.exponential_window_value_at_frame_end)
+            window = sig.get_window(
+                ("exponential", 0, window_parameter),
+                self.metadata.samples_per_frame,
+                fftbins=True,
+            )
+        else:
+            window = sig.get_window(
+                self.metadata.frf_window,
+                self.metadata.samples_per_frame,
+                fftbins=True,
+            )
+        self.run_widget.channel_display_area.window_function = window
+        self.run_widget.channel_display_area.reciprocal_responses = self.get_reciprocal_measurements()
 
-    def get_environment_metadata(self, global_channel_list):
-        if self.hardware_metadata:
+    def get_environment_metadata(self, global_channel_list=None):
+        if self.hardware_metadata and global_channel_list:
             channel_list_bools = self.get_channel_list_bools(global_channel_list)
+        else:
+            channel_list_bools = []
 
         signal_generator_level = 0
         signal_generator_min_frequency = 0
@@ -916,7 +946,7 @@ class ModalUI(AbstractUI):
             self.reference_indices,
             self.response_indices,
             self.all_output_channel_indices,
-            self.hardware_metadata,
+            self.hardware_metadata.output_oversample,
             self.definition_widget.window_value_selector.value() / 100,
         )
 
@@ -935,45 +965,85 @@ class ModalUI(AbstractUI):
             defining the environment.
 
         """
-        self.metadata = metadata
-        self.reference_channel_indices = self.metadata.reference_channel_indices
-        self.response_channel_indices = self.metadata.response_channel_indices
-        self.run_widget.channel_display_area.reference_channel_indices = self.reference_channel_indices
-        self.run_widget.channel_display_area.response_channel_indices = self.response_channel_indices
-        for window in self.run_widget.channel_display_area.subWindowList():
-            widget = window.widget()
-            current_response = widget.response_coordinate_selector.currentIndex()
-            current_reference = widget.reference_coordinate_selector.currentIndex()
-            current_data_type = widget.data_type_selector.currentIndex()
-            widget.reference_names = np.array([widget.channel_names[i] for i in self.run_widget.channel_display_area.reference_channel_indices])
-            widget.response_names = np.array([widget.channel_names[i] for i in self.run_widget.channel_display_area.response_channel_indices])
-            widget.update_ui()
-            widget.response_coordinate_selector.setCurrentIndex(current_response)
-            widget.reference_coordinate_selector.setCurrentIndex(current_reference)
-            widget.data_type_selector.setCurrentIndex(current_data_type)
-        self.run_widget.total_averages_display.setValue(self.metadata.num_averages)
-        self.run_widget.channel_display_area.time_abscissa = np.arange(self.metadata.samples_per_frame) / self.metadata.sample_rate
-        self.run_widget.channel_display_area.frequency_abscissa = np.fft.rfftfreq(
-            self.metadata.samples_per_frame,
-            1 / self.metadata.sample_rate,
+        self.definition_widget.samples_per_frame_selector.setValue(metadata.samples_per_frame)
+        self.definition_widget.system_id_averaging_scheme_selector.setCurrentIndex(
+            self.definition_widget.system_id_averaging_scheme_selector.findText(metadata.averaging_type)
         )
-        if self.metadata.frf_window == "rectangle":
-            window = 1
-        elif self.metadata.frf_window == "exponential":
-            window_parameter = -(self.metadata.samples_per_frame) / np.log(self.metadata.exponential_window_value_at_frame_end)
-            window = sig.get_window(
-                ("exponential", 0, window_parameter),
-                self.metadata.samples_per_frame,
-                fftbins=True,
-            )
+        self.definition_widget.system_id_frames_to_average_selector.setValue(metadata.num_averages)
+        self.definition_widget.system_id_averaging_coefficient_selector.setValue(metadata.averaging_coefficient)
+        self.definition_widget.system_id_frf_technique_selector.setCurrentIndex(
+            self.definition_widget.system_id_frf_technique_selector.findText(metadata.frf_technique)
+        )
+        self.definition_widget.system_id_transfer_function_computation_window_selector.setCurrentIndex(
+            self.definition_widget.system_id_transfer_function_computation_window_selector.findText(metadata.frf_window.capitalize())
+        )
+        self.definition_widget.system_id_overlap_percentage_selector.setValue(metadata.overlap * 100)
+        self.definition_widget.triggering_type_selector.setCurrentIndex(
+            self.definition_widget.triggering_type_selector.findText(metadata.trigger_type)
+        )
+        acceptance = metadata.accept_type
+        self.definition_widget.acceptance_selector.blockSignals(True)
+        self.definition_widget.acceptance_selector.setCurrentIndex(self.definition_widget.acceptance_selector.findText(acceptance))
+        self.definition_widget.acceptance_selector.blockSignals(False)
+        if acceptance == "Autoreject...":
+            self.acceptance_function = metadata.acceptance_function.split(":")
         else:
-            window = sig.get_window(
-                self.metadata.frf_window,
-                self.metadata.samples_per_frame,
-                fftbins=True,
-            )
-        self.run_widget.channel_display_area.window_function = window
-        self.run_widget.channel_display_area.reciprocal_responses = self.get_reciprocal_measurements()
+            self.acceptance_function = None
+        self.definition_widget.wait_for_steady_selector.setValue(metadata.wait_for_steady_state)
+        self.definition_widget.trigger_channel_selector.setCurrentIndex(metadata.trigger_channel)
+        self.definition_widget.pretrigger_selector.setValue(metadata.pretrigger * 100)
+        self.definition_widget.trigger_slope_selector.setCurrentIndex(0 if metadata.trigger_slope_positive == 1 else 1)
+        self.definition_widget.trigger_level_selector.setValue(100 * metadata.trigger_level)
+        self.definition_widget.hysteresis_selector.setValue(100 * metadata.hysteresis_level)
+        self.definition_widget.hysteresis_length_selector.setValue(100 * metadata.hysteresis_length)
+        self.definition_widget.signal_generator_selector.setCurrentIndex(
+            [
+                "none",
+                "random",
+                "burst",
+                "pseudorandom",
+                "chirp",
+                "square",
+                "sine",
+            ].index(metadata.signal_generator_type)
+        )
+        self.definition_widget.random_rms_selector.setValue(metadata.signal_generator_level)
+        self.definition_widget.random_min_frequency_selector.setValue(metadata.signal_generator_min_frequency)
+        self.definition_widget.random_max_frequency_selector.setValue(metadata.signal_generator_max_frequency)
+        self.definition_widget.burst_rms_selector.setValue(metadata.signal_generator_level)
+        self.definition_widget.burst_min_frequency_selector.setValue(metadata.signal_generator_min_frequency)
+        self.definition_widget.burst_max_frequency_selector.setValue(metadata.signal_generator_max_frequency)
+        self.definition_widget.burst_on_percentage_selector.setValue(100 * metadata.signal_generator_on_fraction)
+        self.definition_widget.pseudorandom_rms_selector.setValue(metadata.signal_generator_level)
+        self.definition_widget.pseudorandom_min_frequency_selector.setValue(metadata.signal_generator_min_frequency)
+        self.definition_widget.pseudorandom_max_frequency_selector.setValue(metadata.signal_generator_max_frequency)
+        self.definition_widget.chirp_level_selector.setValue(metadata.signal_generator_level)
+        self.definition_widget.chirp_min_frequency_selector.setValue(metadata.signal_generator_min_frequency)
+        self.definition_widget.chirp_max_frequency_selector.setValue(metadata.signal_generator_max_frequency)
+        self.definition_widget.square_level_selector.setValue(metadata.signal_generator_level)
+        self.definition_widget.square_frequency_selector.setValue(metadata.signal_generator_min_frequency)
+        self.definition_widget.square_percent_on_selector.setValue(100 * metadata.signal_generator_on_fraction)
+        self.definition_widget.sine_level_selector.setValue(metadata.signal_generator_level)
+        self.definition_widget.sine_frequency_selector.setValue(metadata.signal_generator_min_frequency)
+        self.definition_widget.window_value_selector.setValue(metadata.exponential_window_value_at_frame_end * 100)
+        response_inds = metadata.variables["response_channel_indices"][...]
+        reference_inds = metadata.variables["reference_channel_indices"][...]
+        for row in range(self.definition_widget.reference_channels_selector.rowCount()):
+            if row in reference_inds:
+                widget = self.definition_widget.reference_channels_selector.cellWidget(row, 1)
+                widget.setChecked(True)
+                widget = self.definition_widget.reference_channels_selector.cellWidget(row, 0)
+                widget.setChecked(True)
+            elif row in response_inds:
+                widget = self.definition_widget.reference_channels_selector.cellWidget(row, 0)
+                widget.setChecked(True)
+                widget = self.definition_widget.reference_channels_selector.cellWidget(row, 1)
+                widget.setChecked(False)
+            else:
+                widget = self.definition_widget.reference_channels_selector.cellWidget(row, 0)
+                widget.setChecked(False)
+                widget = self.definition_widget.reference_channels_selector.cellWidget(row, 1)
+                widget.setChecked(False)
 
     def update_gui(self, queue_data: tuple):
         """Update the environment's graphical user interface
@@ -992,8 +1062,8 @@ class ModalUI(AbstractUI):
             the data used to perform the operation.
         """
         # print('Got GUI Update {:}'.format(queue_data[0]))
-        message, data = queue_data
-        if message == ModalUICommands.SPECTRAL_UPDATE:
+        command, data = queue_data
+        if command == ModalUICommands.SPECTRAL_UPDATE:
             (
                 frames,
                 _,
@@ -1038,6 +1108,8 @@ class ModalUI(AbstractUI):
             if self.acquiring and frames >= self.metadata.num_averages:
                 self.stop_control()
                 self.acquiring = False
+        else:
+            self.display_error(f"Unknown Modal UI Command {command}")
 
     @staticmethod
     def create_environment_template(environment_name: str, workbook: openpyxl.workbook.workbook.Workbook):
@@ -1280,3 +1352,33 @@ class ModalUI(AbstractUI):
             widget = self.definition_widget.reference_channels_selector.cellWidget(int(value) - 1, 0)
             widget.setChecked(False)
             column_index += 1
+
+    def display_environment_ended(self):
+        return super().display_environment_ended()
+
+    def display_environment_started(self):
+        return super().display_environment_started()
+
+    def get_environment_instructions(self):
+        return super().get_environment_instructions()
+
+    def set_environment_instructions(self, instructions):
+        return super().set_environment_instructions(instructions)
+
+    def start_environment(self):
+        return super().start_environment()
+
+    def start_environment_ready(self):
+        return super().start_environment_ready()
+
+    def start_environment_error(self, error):
+        return super().start_environment_error(error)
+
+    def stop_environment(self):
+        return super().stop_environment()
+
+    def stop_environment_error(self, error):
+        return super().stop_environment_error(error)
+
+    def stop_environment_ready(self):
+        return super().stop_environment_ready()

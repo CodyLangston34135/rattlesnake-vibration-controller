@@ -64,7 +64,7 @@ class TimeUI(AbstractUI):
             Queue where log file messages can be written.
 
         """
-        super().__init__(ControlTypes.TIME, environment_name, rattlesnake)
+        super().__init__(CONTROL_TYPE, environment_name, rattlesnake)
         # Add the page to the control definition tabwidget
         self.definition_widget = QtWidgets.QWidget()
         uic.loadUi(environment_definition_ui_paths[CONTROL_TYPE], self.definition_widget)
