@@ -336,7 +336,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.rename_environment(environment_idx, environment_name)
 
             self.environment_uis[environment_name].initialize_hardware(hardware_metadata)
-            self.environment_uis[environment_name].display_environment_metadata(environment_metadata)
+            self.environment_uis[environment_name].set_environment_metadata(environment_metadata)
+            self.environment_uis[environment_name].initialize_environment(environment_metadata)
 
         self.update_environment_tabs()
         streaming_environment_items = [""] + list(self.environment_uis.keys())
@@ -1115,6 +1116,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             environment_metadata_list = []
             for environment_ui in self.environment_uis.values():
                 metadata = environment_ui.get_environment_metadata(self.rattlesnake.hardware_metadata.channel_list)
+                environment_ui.initialize_environment(metadata)
                 environment_metadata_list.append(metadata)
 
             # Send hardware metadata to rattlesnake
@@ -1626,7 +1628,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     data = self.environment_uis[environment_name].get_environment_instructions()
                 elif command is UICommands.SET_ENVIRONMENT_INSTRUCTIONS:  # Store data to the UI but dont add it as an event
                     data = data_item.data(QtCore.Qt.ItemDataRole.UserRole)
-                    self.environment_uis[environment_name].display_environment_instructions(data)
+                    self.environment_uis[environment_name].set_environment_instructions(data)
                     continue
                 elif isinstance(command, GlobalCommands):
                     data = None
@@ -1652,7 +1654,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
             # Reset UI to initial UI
             for environment_name, instruction in initial_instructions.items():
-                self.environment_uis[environment_name].display_environment_instructions(instruction)
+                self.environment_uis[environment_name].set_environment_instructions(instruction)
 
             # Start Rattlesnake from profile_event_list
             self.rattlesnake.start_profile(profile_event_list)

@@ -273,8 +273,7 @@ class AbstractSysIdUI(AbstractUI):
         """
 
     @abstractmethod
-    def initialize_environment(self, hardware_metadata, environment_metadata):
-        self.update_sysid_metadata(environment_metadata)
+    def initialize_environment(self, environment_metadata):
         self.system_id_widget.reference_selector.blockSignals(True)
         self.system_id_widget.response_selector.blockSignals(True)
         self.system_id_widget.reference_selector.clear()
@@ -289,7 +288,6 @@ class AbstractSysIdUI(AbstractUI):
         self.system_id_widget.response_selector.setCurrentRow(0)
         self.update_signal_type()
 
-    @abstractmethod
     def get_sysid_metadata(self, hardware_metadata: HardwareMetadata):
         """Updates the provided system identification metadata based on current UI widget values"""
         sysid_frame_size = self.system_id_widget.samplesPerFrameSpinBox.value()
@@ -332,7 +330,6 @@ class AbstractSysIdUI(AbstractUI):
         )
         return sysid_metadata
 
-    @abstractmethod
     def set_sysid_metadata(self, sysid_metadata: SysIdMetadata):
         """
         Update the user interface with sysid parameters
@@ -363,7 +360,7 @@ class AbstractSysIdUI(AbstractUI):
     def preview_noise(self):
         # """Starts the noise preview"""
         # self.log("Starting Noise Preview")
-        # self.update_sysid_metadata(self.environment_parameters)
+        # self.update_sysid_metadata(self.environment_metadata)
         # for widget in [
         #     self.system_id_widget.preview_noise_button,
         #     self.system_id_widget.preview_system_id_button,
@@ -393,13 +390,13 @@ class AbstractSysIdUI(AbstractUI):
         #     widget.setEnabled(False)
         # for widget in [self.system_id_widget.stop_button]:
         #     widget.setEnabled(True)
-        # self.environment_command_queue.put(self.log_name, (SystemIdCommands.PREVIEW_NOISE, self.environment_parameters))
+        # self.environment_command_queue.put(self.log_name, (SystemIdCommands.PREVIEW_NOISE, self.environment_metadata))
         pass
 
     def preview_transfer_function(self):
         # """Starts previewing the system identification transfer function calculation"""
         # self.log("Starting System ID Preview")
-        # self.update_sysid_metadata(self.environment_parameters)
+        # self.update_sysid_metadata(self.environment_metadata)
         # for widget in [
         #     self.system_id_widget.preview_noise_button,
         #     self.system_id_widget.preview_system_id_button,
@@ -431,14 +428,14 @@ class AbstractSysIdUI(AbstractUI):
         #     widget.setEnabled(True)
         # self.environment_command_queue.put(
         #     self.log_name,
-        #     (SystemIdCommands.PREVIEW_TRANSFER_FUNCTION, (self.environment_parameters)),
+        #     (SystemIdCommands.PREVIEW_TRANSFER_FUNCTION, (self.environment_metadata)),
         # )
         pass
 
     def acquire_transfer_function(self):
         # """Starts the acquisition phase of the controller"""
         # self.log("Starting System ID")
-        # self.update_sysid_metadata(self.environment_parameters)
+        # self.update_sysid_metadata(self.environment_metadata)
         # for widget in [
         #     self.system_id_widget.preview_noise_button,
         #     self.system_id_widget.preview_system_id_button,
@@ -476,7 +473,7 @@ class AbstractSysIdUI(AbstractUI):
         #     self.log_name,
         #     (
         #         SystemIdCommands.START_SYSTEM_ID,
-        #         (self.environment_parameters, stream_name),
+        #         (self.environment_metadata, stream_name),
         #     ),
         # )
         pass
@@ -534,8 +531,8 @@ class AbstractSysIdUI(AbstractUI):
             self.time_response_plot.clear()
             self.time_reference_plot.clear()
             if self.last_time_response is not None:
-                response_frame_indices = np.array(self.environment_parameters.response_channel_indices)[response_indices]
-                reference_frame_indices = np.array(self.environment_parameters.reference_channel_indices)[reference_indices]
+                response_frame_indices = np.array(self.environment_metadata.response_channel_indices)[response_indices]
+                reference_frame_indices = np.array(self.environment_metadata.reference_channel_indices)[reference_indices]
                 response_time_data = self.last_time_response[response_frame_indices]
                 reference_time_data = self.last_time_response[reference_frame_indices]
                 times = np.arange(response_time_data.shape[-1]) / self.hardware_metadata.sample_rate
@@ -566,7 +563,7 @@ class AbstractSysIdUI(AbstractUI):
                     self.transfer_function_phase_plot.plot(self.frequencies, np.angle(frf) * 180 / np.pi, pen=i)
                     self.transfer_function_magnitude_plot.plot(self.frequencies, np.abs(frf), pen=i)
                     self.impulse_response_plot.plot(
-                        np.arange(imp.size) / self.environment_parameters.sample_rate,
+                        np.arange(imp.size) / self.environment_metadata.sample_rate,
                         imp,
                         pen=i,
                     )
@@ -962,7 +959,7 @@ class AbstractSysIdUI(AbstractUI):
         #         for i, cd in enumerate(channel_data):
         #             var[i] = cd
         #     group_handle = netcdf_handle.createGroup(self.environment_name)
-        #     self.environment_parameters.store_to_netcdf(group_handle)
+        #     self.environment_metadata.store_to_netcdf(group_handle)
         #     try:
         #         group_handle.createDimension("sysid_control_channels", self.last_transfer_function.shape[1])
         #     except RuntimeError:
@@ -1052,21 +1049,21 @@ class AbstractSysIdUI(AbstractUI):
         #     field_dict["coherence"] = self.last_coherence
         #     field_dict["response_noise_cpsd"] = self.last_response_noise
         #     field_dict["reference_noise_cpsd"] = self.last_reference_noise
-        #     field_dict["response_indices"] = self.environment_parameters.response_channel_indices
-        #     field_dict["reference_indices"] = self.environment_parameters.reference_channel_indices
+        #     field_dict["response_indices"] = self.environment_metadata.response_channel_indices
+        #     field_dict["reference_indices"] = self.environment_metadata.reference_channel_indices
         #     field_dict["response_transformation_matrix"] = (
         #         np.nan
-        #         if self.environment_parameters.response_transformation_matrix is None
-        #         else self.environment_parameters.response_transformation_matrix
+        #         if self.environment_metadata.response_transformation_matrix is None
+        #         else self.environment_metadata.response_transformation_matrix
         #     )
         #     field_dict["reference_transformation_matrix"] = (
         #         np.nan
-        #         if self.environment_parameters.reference_transformation_matrix is None
-        #         else self.environment_parameters.reference_transformation_matrix
+        #         if self.environment_metadata.reference_transformation_matrix is None
+        #         else self.environment_metadata.reference_transformation_matrix
         #     )
-        #     field_dict["sysid_frequency_spacing"] = self.environment_parameters.sysid_frequency_spacing
+        #     field_dict["sysid_frequency_spacing"] = self.environment_metadata.sysid_frequency_spacing
         #     field_dict.update(self.hardware_metadata.extra_parameters)
-        #     for key, value in self.environment_parameters.__dict__.items():
+        #     for key, value in self.environment_metadata.__dict__.items():
         #         try:
         #             if "sysid_" in key:
         #                 field_dict[key] = np.array(value)

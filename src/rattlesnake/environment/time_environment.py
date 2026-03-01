@@ -37,6 +37,7 @@ import multiprocessing.synchronize  # pylint: disable=unused-import
 import netCDF4 as nc4
 import numpy as np
 from enum import Enum
+from typing import List
 
 
 CONTROL_TYPE = ControlTypes.TIME
@@ -173,7 +174,10 @@ class TimeMetadata(EnvironmentMetadata):
         var = netcdf_group_handle.createVariable("output_signal", "f8", ("output_channels", "signal_samples"))
         var[...] = self.output_signal
 
-    def retrieve_metadata_from_netcdf(self, group: nc4._netCDF4.Dataset):  # pylint: disable=c-extension-no-member
+    @classmethod
+    def retrieve_metadata_from_netcdf(
+        cls, group: nc4._netCDF4.Dataset, environment_name: str, channel_list_bools: List[bool], sample_rate: float
+    ):  # pylint: disable=c-extension-no-member
         """Collects environment parameters from a netCDF dataset.
 
         This function retrieves parameters from a netCDF dataset that was written
@@ -197,8 +201,10 @@ class TimeMetadata(EnvironmentMetadata):
             The netCDF dataset from which the data will be read.  It should have
             a group name with the enviroment's name.
         """
-        self.output_signal = group.variables["output_signal"][...].data
-        self.cancel_rampdown_time = group.cancel_rampdown_time
+        output_signal = group.variables["output_signal"][...].data
+        cancel_rampdown_time = group.cancel_rampdown_time
+
+        return cls(environment_name, channel_list_bools, sample_rate, output_signal, cancel_rampdown_time)
 
     def store_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
         worksheet.cell(1, 1, "Control Type")
@@ -224,7 +230,10 @@ class TimeMetadata(EnvironmentMetadata):
         if self.cancel_rampdown_time:
             worksheet.cell(3, 2, str(self.cancel_rampdown_time))
 
-    def retrieve_metadata_from_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+    @classmethod
+    def retrieve_metadata_from_worksheet(
+        cls, worksheet: openpyxl.worksheet.worksheet.Worksheet, environment_name: str, channel_list_bools: List[bool], sample_rate: float
+    ):
         for row in worksheet.rows:
             name = str(row[0].value).lower().strip().replace(" ", "_")
             value = row[1].value
@@ -233,14 +242,19 @@ class TimeMetadata(EnvironmentMetadata):
                     continue
                 case "signal_file":
                     signal_file = value
-                    self.output_signal = load_time_history(signal_file, self.sample_rate)
-                    self.set_file(signal_file)
+                    output_signal = load_time_history(signal_file, sample_rate)
                 case "cancel_rampdown_time":
-                    self.cancel_rampdown_time = float(value)
+                    cancel_rampdown_time = float(value)
                 case "":
                     continue
                 case _:
-                    raise RattlesnakeError(f"{name} does not go with {self.environment_type} environment")
+                    raise RattlesnakeError(f"{name} does not go with {CONTROL_TYPE} environment")
+
+        metadata = cls(environment_name, channel_list_bools, sample_rate, output_signal, cancel_rampdown_time)
+        if signal_file:
+            metadata.set_file(signal_file)
+
+        return metadata
 
 
 # region: TimeInstructions

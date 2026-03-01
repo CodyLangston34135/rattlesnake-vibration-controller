@@ -140,8 +140,11 @@ class EnvironmentMetadata(ABC):
             environment's metadata is stored.
         """
 
+    @classmethod
     @abstractmethod
-    def retrieve_metadata_from_netcdf(self, netcdf_handle: nc4._netCDF4.Dataset):  # pylint: disable=c-extension-no-member
+    def retrieve_metadata_from_netcdf(
+        cls, netcdf_handle: nc4._netCDF4.Dataset, environment_name: str, channel_list_bools: List[bool], sample_rate: float
+    ):  # pylint: disable=c-extension-no-member
         """Collects environment parameters from a netCDF dataset.
 
         This function retrieves parameters from a netCDF dataset that was written
@@ -189,8 +192,11 @@ class EnvironmentMetadata(ABC):
             environment's metadata is stored.
         """
 
+    @classmethod
     @abstractmethod
-    def retrieve_metadata_from_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):  # pylint: disable=c-extension-no-member
+    def retrieve_metadata_from_worksheet(
+        cls, worksheet: openpyxl.worksheet.worksheet.Worksheet, environment_name: str, channel_list_bools: List[bool], sample_rate: float
+    ):  # pylint: disable=c-extension-no-member
         """Collects environment parameters from an Excel worksheet.
 
         This function retrieves parameters from an Excel worksheet that was written

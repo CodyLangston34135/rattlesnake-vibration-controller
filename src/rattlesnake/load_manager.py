@@ -209,12 +209,9 @@ def load_metadata_from_netcdf(filepath):
 
         environment_metadata_class = ENVIRONMENT_METADATA[environment_type]
         channel_list_bools = environment_active_channels
-        match environment_type:
-            case ControlTypes.TIME:
-                sample_rate = hardware_metadata.sample_rate
-                environment_metadata = environment_metadata_class(environment_name, channel_list_bools, sample_rate)
-
-        environment_metadata.retrieve_metadata_from_netcdf(environment_group)
+        environment_metadata = environment_metadata_class.retrieve_metadata_from_netcdf(
+            environment_group, environment_name, channel_list_bools, sample_rate
+        )
         environment_metadata_list.append(environment_metadata)
 
     return (hardware_metadata, environment_metadata_list)
@@ -272,7 +269,6 @@ def load_metadata_from_worksheet(filepath):
     time_per_write = float(time_per_write)
 
     hardware_metadata_class = HARDWARE_METADATA[hardware_type]
-    hardware_metadata = hardware_metadata_class()
     match hardware_type:
         case HardwareType.SDYNPY_SYSTEM:
             hardware_file = hardware_file
@@ -320,12 +316,9 @@ def load_metadata_from_worksheet(filepath):
 
         environment_metadata_class = ENVIRONMENT_METADATA[environment_type]
         channel_list_bools = environment_channel_list_bools[environment_name]
-        match environment_type:
-            case ControlTypes.TIME:
-                sample_rate = int(sample_rate)
-                environment_metadata = environment_metadata_class(environment_name, channel_list_bools, sample_rate)
-
-        environment_metadata.retrieve_metadata_from_worksheet(environment_sheet)
+        environment_metadata = environment_metadata_class.retrieve_metadata_from_worksheet(
+            environment_sheet, environment_name, channel_list_bools, sample_rate
+        )
         environment_metadata_list.append(environment_metadata)
 
     profile_sheet = workbook["Test Profile"]

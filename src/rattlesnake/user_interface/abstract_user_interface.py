@@ -90,6 +90,14 @@ class AbstractUI(ABC):
         self.hardware_metadata = hardware_metadata
 
     @abstractmethod
+    def initialize_environment(self, environment_metadata: EnvironmentMetadata):
+        """Updates the later environment tabs with environment metadata. This is called after
+        get_environment_metadata when initializing from UI. If loading from a template or
+        existing rattlesnake state, this will be called after set_environment_metadata.
+        This allows you to update the system id, test predictions, and run tab with data from
+        the environment definitions tab."""
+
+    @abstractmethod
     def get_environment_metadata(self, global_channel_list) -> EnvironmentMetadata:
         """
         Collect the parameters from the user interface defining the environment

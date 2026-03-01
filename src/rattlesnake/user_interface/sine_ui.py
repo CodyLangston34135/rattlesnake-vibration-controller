@@ -146,12 +146,7 @@ class SineUI(AbstractSysIdUI):
         plotitem.setLabel("left", "Phase (deg)")
 
         self.change_filter_setting_visibility()
-
         self.connect_callbacks()
-
-        # Complete the profile commands
-        self.command_map["Set Test Level"] = self.change_test_level_from_profile
-        self.command_map["Save Control Data"] = self.save_control_data_from_profile
 
     def connect_callbacks(self):
         """Connects UI callbacks to object methods"""
@@ -186,8 +181,7 @@ class SineUI(AbstractSysIdUI):
         self.run_widget.save_control_data_button.clicked.connect(self.save_control_data)
         self.run_widget.partial_environment_selector.stateChanged.connect(self.enable_disable_partial_environment)
 
-    # %% Data Acquisition
-
+    # region: Hardware
     def initialize_hardware(self, hardware_metadata):
         super().initialize_hardware(hardware_metadata)
         # Initialize Plots
@@ -284,8 +278,7 @@ class SineUI(AbstractSysIdUI):
         """Defines names of the physical drive channels"""
         return [self.physical_channel_names[i] for i in self.physical_output_indices]
 
-    # %% Environment
-
+    # region: Environment
     @property
     def physical_control_indices(self):
         """Gets the physical control indices currently checked"""
@@ -308,17 +301,17 @@ class SineUI(AbstractSysIdUI):
     @property
     def initialized_control_names(self):
         """Gets the names of the control channels that have been initialized"""
-        if self.environment_parameters.response_transformation_matrix is None:
-            return [self.physical_channel_names[i] for i in self.environment_parameters.control_channel_indices]
-        return [f"Transformed Response {i + 1}" for i in range(self.environment_parameters.response_transformation_matrix.shape[0])]
+        if self.environment_metadata.response_transformation_matrix is None:
+            return [self.physical_channel_names[i] for i in self.environment_metadata.control_channel_indices]
+        return [f"Transformed Response {i + 1}" for i in range(self.environment_metadata.response_transformation_matrix.shape[0])]
 
     @property
     def initialized_output_names(self):
         """Gets the names of the drive channels that have been initialized"""
-        if self.environment_parameters.reference_transformation_matrix is None:
+        if self.environment_metadata.reference_transformation_matrix is None:
             return self.physical_output_names
         else:
-            return [f"Transformed Drive {i + 1}" for i in range(self.environment_parameters.reference_transformation_matrix.shape[0])]
+            return [f"Transformed Drive {i + 1}" for i in range(self.environment_metadata.reference_transformation_matrix.shape[0])]
 
     def update_control_channels(self):
         """Updates the control channels due to selection changes"""
@@ -560,44 +553,8 @@ class SineUI(AbstractSysIdUI):
         for control_class in classes:
             self.definition_widget.python_class_input.addItem(control_class[0])
 
-    def collect_environment_definition_parameters(self):
-        if self.python_control_module is None:
-            control_module = None
-            control_class = None
-            control_class_parameters = self.definition_widget.control_parameters_text_input.toPlainText()
-        else:
-            control_module = self.definition_widget.script_file_path_input.text()
-            control_class = self.definition_widget.python_class_input.itemText(self.definition_widget.python_class_input.currentIndex())
-            control_class_parameters = self.definition_widget.control_parameters_text_input.toPlainText()
-        return SineMetadata(
-            sample_rate=self.definition_widget.sample_rate_display.value(),
-            samples_per_frame=self.definition_widget.samples_per_acquire_display.value(),
-            number_of_channels=len(self.hardware_metadata.channel_list),
-            specifications=self.collect_specification(),
-            ramp_time=self.definition_widget.ramp_time_spinbox.value(),
-            buffer_blocks=self.definition_widget.buffer_blocks_selector.value(),
-            control_convergence=self.definition_widget.control_convergence_selector.value(),
-            update_drives_after_environment=self.definition_widget.update_drives_after_environment_selector.isChecked(),
-            phase_fit=self.definition_widget.best_fit_phase_checkbox.isChecked(),
-            allow_automatic_aborts=self.definition_widget.auto_abort_checkbox.isChecked(),
-            tracking_filter_type=self.definition_widget.filter_type_selector.currentIndex(),
-            tracking_filter_cutoff=self.definition_widget.tracking_filter_cutoff_selector.value() / 100,
-            tracking_filter_order=self.definition_widget.tracking_filter_order_selector.value(),
-            vk_filter_order=self.definition_widget.vk_filter_order_selector.currentIndex() + 1,
-            vk_filter_bandwidth=self.definition_widget.vk_filter_bandwidth_selector.value(),
-            vk_filter_blocksize=self.definition_widget.vk_filter_block_size_selector.value(),
-            vk_filter_overlap=self.definition_widget.vk_filter_block_overlap_selector.value(),
-            control_python_script=control_module,
-            control_python_class=control_class,
-            control_python_parameters=control_class_parameters,
-            control_channel_indices=self.physical_control_indices,
-            output_channel_indices=self.physical_output_indices,
-            response_transformation_matrix=self.response_transformation_matrix,
-            output_transformation_matrix=self.output_transformation_matrix,
-        )
-
-    def initialize_environment(self):
-        super().initialize_environment()
+    def initialize_environment(self, environment_metadata):
+        super().initialize_environment(environment_metadata)
         # Set up channel names in selectors
         for widget in [
             self.prediction_widget.response_selector,
@@ -755,7 +712,47 @@ class SineUI(AbstractSysIdUI):
             widget.setMaximum(self.spec_time)
         self.run_widget.stop_time_selector.setValue(self.spec_time)
 
-        return self.environment_parameters
+        return self.environment_metadata
+
+    def get_environment_metadata(self, global_channel_list):
+        return super().get_environment_metadata(global_channel_list)
+        if self.python_control_module is None:
+            control_module = None
+            control_class = None
+            control_class_parameters = self.definition_widget.control_parameters_text_input.toPlainText()
+        else:
+            control_module = self.definition_widget.script_file_path_input.text()
+            control_class = self.definition_widget.python_class_input.itemText(self.definition_widget.python_class_input.currentIndex())
+            control_class_parameters = self.definition_widget.control_parameters_text_input.toPlainText()
+        return SineMetadata(
+            sample_rate=self.definition_widget.sample_rate_display.value(),
+            samples_per_frame=self.definition_widget.samples_per_acquire_display.value(),
+            number_of_channels=len(self.hardware_metadata.channel_list),
+            specifications=self.collect_specification(),
+            ramp_time=self.definition_widget.ramp_time_spinbox.value(),
+            buffer_blocks=self.definition_widget.buffer_blocks_selector.value(),
+            control_convergence=self.definition_widget.control_convergence_selector.value(),
+            update_drives_after_environment=self.definition_widget.update_drives_after_environment_selector.isChecked(),
+            phase_fit=self.definition_widget.best_fit_phase_checkbox.isChecked(),
+            allow_automatic_aborts=self.definition_widget.auto_abort_checkbox.isChecked(),
+            tracking_filter_type=self.definition_widget.filter_type_selector.currentIndex(),
+            tracking_filter_cutoff=self.definition_widget.tracking_filter_cutoff_selector.value() / 100,
+            tracking_filter_order=self.definition_widget.tracking_filter_order_selector.value(),
+            vk_filter_order=self.definition_widget.vk_filter_order_selector.currentIndex() + 1,
+            vk_filter_bandwidth=self.definition_widget.vk_filter_bandwidth_selector.value(),
+            vk_filter_blocksize=self.definition_widget.vk_filter_block_size_selector.value(),
+            vk_filter_overlap=self.definition_widget.vk_filter_block_overlap_selector.value(),
+            control_python_script=control_module,
+            control_python_class=control_class,
+            control_python_parameters=control_class_parameters,
+            control_channel_indices=self.physical_control_indices,
+            output_channel_indices=self.physical_output_indices,
+            response_transformation_matrix=self.response_transformation_matrix,
+            output_transformation_matrix=self.output_transformation_matrix,
+        )
+
+    def set_environment_metadata(self, metadata):
+        return super().set_environment_metadata(metadata)
 
     def define_transformation_matrices(self, clicked, dialog=True):  # pylint: disable=unused-argument
         """Defines the transformation matrices using the dialog box"""
@@ -808,8 +805,7 @@ class SineUI(AbstractSysIdUI):
             self.output_transformation_matrix = output_transformation
             self.clear_and_update_specification_table()
 
-    # %% Predictions
-
+    # region: Predictions
     def update_response_prediction_tone(self):
         """Called when the tone is changed, sends selection to environment"""
         type_index = self.prediction_widget.response_display_type.currentIndex()
@@ -883,7 +879,7 @@ class SineUI(AbstractSysIdUI):
         """Adds warning and aborts to the prediction tab"""
         if self.prediction_widget.response_display_type.currentIndex() == 3:
             # Plot the response
-            specs = self.environment_parameters.specifications
+            specs = self.environment_metadata.specifications
             table_index = self.prediction_widget.response_display_tone.currentIndex() - 1
             control_index = self.prediction_widget.response_selector.currentIndex()
             self.plot_data_items["prediction_warning_lower"].setData(
@@ -978,7 +974,13 @@ class SineUI(AbstractSysIdUI):
             widget.blockSignals(False)
         self.send_excitation_prediction_plot_choices()
 
-    # %% Control
+    # region: Run
+
+    def get_environment_instructions(self):
+        return super().get_environment_instructions()
+
+    def set_environment_instructions(self, instructions):
+        return super().set_environment_instructions(instructions)
 
     def start_control(self):
         """Sets itself up to start controlling and sends a signal to the environment to start"""
@@ -1017,6 +1019,30 @@ class SineUI(AbstractSysIdUI):
         )
         if self.run_widget.test_level_selector.value() >= 0:
             self.controller_communication_queue.put(self.log_name, (GlobalCommands.AT_TARGET_LEVEL, self.environment_name))
+
+    def start_environment(self):
+        return super().start_environment()
+
+    def start_environment_ready(self):
+        return super().start_environment_ready()
+
+    def start_environment_error(self, error):
+        return super().start_environment_error(error)
+
+    def display_environment_started(self):
+        return super().display_environment_started()
+
+    def display_environment_ended(self):
+        return super().display_environment_ended()
+
+    def stop_environment(self):
+        return super().stop_environment()
+
+    def stop_environment_ready(self):
+        return super().stop_environment_ready()
+
+    def stop_environment_error(self, error):
+        return super().stop_environment_error(error)
 
     def enable_control(self, enabled):
         """Enables or disables the widgets to start or modify the control
@@ -1180,7 +1206,7 @@ class SineUI(AbstractSysIdUI):
             spec_phase = self.specification_phases[tone_index, channel_index]
             self.plot_data_items["control_phase"][1].setData(spec_frequency, spec_phase)
             # Get the warning and abort limits
-            spec = self.environment_parameters.specifications[tone_index]
+            spec = self.environment_metadata.specifications[tone_index]
             self.plot_data_items["control_warning_lower"].setData(
                 np.repeat(spec.breakpoint_table["frequency"], 2),
                 spec.breakpoint_table["warning"][:, 0, :, channel_index].flatten(),
@@ -1232,7 +1258,7 @@ class SineUI(AbstractSysIdUI):
                 else:
                     item.setBackground(QColor(255, 255, 255))
                 item.setText(f"{last_errors[i, j]:0.3f}")
-        if np.any(last_abort_flags) and self.environment_parameters.allow_automatic_aborts and not self.shutdown_sent:
+        if np.any(last_abort_flags) and self.environment_metadata.allow_automatic_aborts and not self.shutdown_sent:
             self.log("Sending Abort Signal!")
             self.stop_control()
 
@@ -1245,8 +1271,7 @@ class SineUI(AbstractSysIdUI):
         ]:
             widget.setEnabled(self.run_widget.partial_environment_selector.isChecked())
 
-    # %% Misc
-
+    # region: Misc
     def retrieve_metadata(
         self,
         netcdf_handle: nc4._netCDF4.Dataset,  # pylint: disable=c-extension-no-member
@@ -1637,125 +1662,3 @@ class SineUI(AbstractSysIdUI):
             "Otherwise, make this a 2D array in the spreadsheet.  The number of columns should be "
             "the number of physical output channels in the environment.",
         )
-
-    def start_environment(self):
-        """
-        This method in the UI class should follow this structure:
-        1. Disable start_environment button
-        2. Call super().start_environment
-        """
-        try:
-            instructions = self.get_environment_instructions()
-            queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
-            self.rattlesnake.start_environment(instructions)
-        except Exception as e:
-            self.start_environment_error(e)
-            return
-
-        ready_event_list = []
-        active_event_list = [self.rattlesnake.event_container.environment_active_events[queue_name]]
-        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
-        self.event_watcher.ready.connect(self.start_environment_ready)
-        self.event_watcher.error.connect(self.start_environment_error)
-        self.event_thread.start()
-
-    def start_environment_ready(self):
-        self.clean_up_event_watcher()
-
-    def start_environment_error(self, error):
-        """
-        This method defines how to recover UI if the instruction/environment did
-        not start up correctly. Should follow this structure:
-        1. Enable stop_environment and start_environment button
-        2. Call super().start_environment_error or display error some other way
-        """
-        self.clean_up_event_watcher()
-        self.display_error(error)
-
-    def stop_environment(self):
-        """
-        This method in the UI class should follow this structure:
-        1. Disable stop_environment button
-        2. Call super().stop_environment
-        """
-        try:
-            queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
-            self.rattlesnake.stop_environment(self.environment_name)
-        except Exception as e:
-            self.stop_environment_error(e)
-            return
-
-        ready_event_list = []
-        active_event_list = [self.rattlesnake.event_container.environment_active_events[queue_name]]
-        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=False)
-        self.event_watcher.ready.connect(self.stop_environment_ready)
-        self.event_watcher.error.connect(self.stop_environment_error)
-        self.event_thread.start()
-
-    def stop_environment_ready(self):
-        self.clean_up_event_watcher()
-
-    def stop_environment_error(self, error):
-        """
-        This method defines how to recover UI if the instruction/environment did
-        not start up correctly. Should follow this structure:
-        1. Enable stop_environment and start_environment button
-        2. Call super().start_environment_error or display error some other way
-        """
-        self.clean_up_event_watcher()
-        self.display_error(error)
-
-    def get_environment_metadata(self, hardware_metadata):
-        """
-        Collect the parameters from the user interface defining the environment
-
-        Returns
-        -------
-        EnvironmentMetadata
-            An EnvironmentMetadata-inheriting object that contains the parameters
-            defining the environment.
-        """
-
-    def display_environment_metadata(self, metadata):
-        """
-        Update the user interface from environment metadata
-
-        This function is called when the Environment parameters are initialized.
-        This function should set up the user interface accordingly.  It must
-        return the parameters class of the environment that inherits from
-        AbstractMetadata.
-        """
-
-    def get_environment_instructions(self):
-        """
-        Compiles environment instructions to give to the main environment class
-        when start_environment is called
-
-        Returns
-        -------
-        EnvironmentInstructions
-            An EnvironmentInstructions-inheriting object that contians parameters
-            in the environment likely to change between runs
-        """
-
-    def display_environment_instructions(self, instructions):
-        """
-        Updates the user interface with environment instructions
-
-        This function is called when wanting to sync the environment ui with an
-        EnvironmentInstructions object. This will most likely set widgets in the
-        environment's run_tab to the values in the EnvironmentInstructions
-        """
-
-    def display_environment_started(self):
-        """
-        This command is called when the environment process officially
-        starts up. Needs to prevent user from starting environment again until
-        display_environment ended has been called.
-        """
-
-    def display_environment_ended(self):
-        """
-        This command is called when the environment process has officially
-        shut down. Needs to enable the user to start up the process again.
-        """
