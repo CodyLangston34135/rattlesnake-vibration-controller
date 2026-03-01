@@ -737,7 +737,17 @@
           </property>
           <layout class="QHBoxLayout" name="horizontalLayout_5">
            <item>
-            <widget class="GraphicsLayoutWidget" name="time_data_graphicslayout"/>
+            <widget class="GraphicsLayoutWidget" name="time_data_graphicslayout">
+             <property name="backgroundBrush">
+              <brush brushstyle="NoBrush">
+               <color alpha="255">
+                <red>255</red>
+                <green>255</green>
+                <blue>255</blue>
+               </color>
+              </brush>
+             </property>
+            </widget>
            </item>
           </layout>
          </widget>
@@ -749,7 +759,17 @@
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_10">
            <item>
-            <widget class="GraphicsLayoutWidget" name="transfer_function_graphics_layout"/>
+            <widget class="GraphicsLayoutWidget" name="transfer_function_graphics_layout">
+             <property name="backgroundBrush">
+              <brush brushstyle="NoBrush">
+               <color alpha="255">
+                <red>255</red>
+                <green>255</green>
+                <blue>255</blue>
+               </color>
+              </brush>
+             </property>
+            </widget>
            </item>
           </layout>
          </widget>
@@ -761,7 +781,17 @@
           </property>
           <layout class="QHBoxLayout" name="horizontalLayout_8">
            <item>
-            <widget class="GraphicsLayoutWidget" name="impulse_graphicslayout"/>
+            <widget class="GraphicsLayoutWidget" name="impulse_graphicslayout">
+             <property name="backgroundBrush">
+              <brush brushstyle="NoBrush">
+               <color alpha="255">
+                <red>255</red>
+                <green>255</green>
+                <blue>255</blue>
+               </color>
+              </brush>
+             </property>
+            </widget>
            </item>
           </layout>
          </widget>
@@ -773,7 +803,17 @@
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_11">
            <item>
-            <widget class="GraphicsLayoutWidget" name="coherence_graphicslayout"/>
+            <widget class="GraphicsLayoutWidget" name="coherence_graphicslayout">
+             <property name="backgroundBrush">
+              <brush brushstyle="NoBrush">
+               <color alpha="255">
+                <red>255</red>
+                <green>255</green>
+                <blue>255</blue>
+               </color>
+              </brush>
+             </property>
+            </widget>
            </item>
           </layout>
          </widget>
@@ -785,7 +825,17 @@
           </property>
           <layout class="QHBoxLayout" name="horizontalLayout_7">
            <item>
-            <widget class="GraphicsLayoutWidget" name="levels_graphicslayout"/>
+            <widget class="GraphicsLayoutWidget" name="levels_graphicslayout">
+             <property name="backgroundBrush">
+              <brush brushstyle="NoBrush">
+               <color alpha="255">
+                <red>255</red>
+                <green>255</green>
+                <blue>255</blue>
+               </color>
+              </brush>
+             </property>
+            </widget>
            </item>
           </layout>
          </widget>
@@ -797,7 +847,17 @@
           </property>
           <layout class="QHBoxLayout" name="horizontalLayout">
            <item>
-            <widget class="GraphicsLayoutWidget" name="kurtosis_graphicslayout"/>
+            <widget class="GraphicsLayoutWidget" name="kurtosis_graphicslayout">
+             <property name="backgroundBrush">
+              <brush brushstyle="NoBrush">
+               <color alpha="255">
+                <red>255</red>
+                <green>255</green>
+                <blue>255</blue>
+               </color>
+              </brush>
+             </property>
+            </widget>
            </item>
           </layout>
          </widget>

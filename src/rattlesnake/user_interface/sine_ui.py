@@ -188,8 +188,8 @@ class SineUI(AbstractSysIdUI):
 
     # %% Data Acquisition
 
-    def initialize_data_acquisition(self, data_acquisition_parameters):
-        super().initialize_data_acquisition(data_acquisition_parameters)
+    def initialize_hardware(self, hardware_metadata):
+        super().initialize_hardware(hardware_metadata)
         # Initialize Plots
         for plotwidget in self.spec_display_plotwidgets:
             plotwidget.clear()
@@ -239,17 +239,17 @@ class SineUI(AbstractSysIdUI):
                 f"{channel.node_number} "
                 f"{'' if channel.node_direction is None else channel.node_direction}"
             )[:MAXIMUM_NAME_LENGTH]
-            for channel in data_acquisition_parameters.channel_list
+            for channel in hardware_metadata.channel_list
         ]
-        self.physical_unit_names = [f"{'-' if channel.unit is None else channel.unit}" for channel in data_acquisition_parameters.channel_list]
-        self.physical_output_indices = [i for i, channel in enumerate(data_acquisition_parameters.channel_list) if channel.feedback_device]
+        self.physical_unit_names = [f"{'-' if channel.unit is None else channel.unit}" for channel in hardware_metadata.channel_list]
+        self.physical_output_indices = [i for i, channel in enumerate(hardware_metadata.channel_list) if channel.feedback_device]
         # Set up widgets
-        self.definition_widget.sample_rate_display.setValue(data_acquisition_parameters.sample_rate)
-        self.system_id_widget.samplesPerFrameSpinBox.setValue(data_acquisition_parameters.sample_rate)
-        self.definition_widget.samples_per_acquire_display.setValue(data_acquisition_parameters.samples_per_read)
-        self.definition_widget.samples_per_write_display.setValue(data_acquisition_parameters.samples_per_write)
-        self.definition_widget.frame_time_display.setValue(data_acquisition_parameters.samples_per_read / data_acquisition_parameters.sample_rate)
-        self.definition_widget.nyquist_frequency_display.setValue(data_acquisition_parameters.sample_rate / 2)
+        self.definition_widget.sample_rate_display.setValue(hardware_metadata.sample_rate)
+        self.system_id_widget.samplesPerFrameSpinBox.setValue(hardware_metadata.sample_rate)
+        self.definition_widget.samples_per_acquire_display.setValue(hardware_metadata.samples_per_read)
+        self.definition_widget.samples_per_write_display.setValue(hardware_metadata.samples_per_write)
+        self.definition_widget.frame_time_display.setValue(hardware_metadata.samples_per_read / hardware_metadata.sample_rate)
+        self.definition_widget.nyquist_frequency_display.setValue(hardware_metadata.sample_rate / 2)
         self.definition_widget.control_channels_selector.clear()
         for channel_name in self.physical_channel_names:
             item = QtWidgets.QListWidgetItem()
@@ -274,7 +274,7 @@ class SineUI(AbstractSysIdUI):
                         if self.response_transformation_matrix is None
                         else [f"Transformed Response {i}" for i in range(self.response_transformation_matrix.shape[0])]
                     ),
-                    self.data_acquisition_parameters,
+                    self.hardware_metadata,
                 )
             )
         self.clear_and_update_specification_table()
@@ -361,7 +361,7 @@ class SineUI(AbstractSysIdUI):
                     if self.response_transformation_matrix is None
                     else [f"Transformed Response {i}" for i in range(self.response_transformation_matrix.shape[0])]
                 ),
-                self.data_acquisition_parameters,
+                self.hardware_metadata,
             )
         )
         self.definition_widget.sine_table_tab_widget.blockSignals(False)
@@ -447,7 +447,7 @@ class SineUI(AbstractSysIdUI):
                 _,
                 _,
             ) = spec.create_signal(
-                self.data_acquisition_parameters.sample_rate,
+                self.hardware_metadata.sample_rate,
                 control_index=control_index,
                 ignore_start_time=True,
                 only_breakpoints=True,
@@ -514,9 +514,9 @@ class SineUI(AbstractSysIdUI):
             self.definition_widget.vk_filter_bandwidth_selector.value(),
             self.definition_widget.vk_filter_block_size_selector.value(),
             self.definition_widget.vk_filter_block_overlap_selector.value(),
-            self.data_acquisition_parameters.sample_rate,
+            self.hardware_metadata.sample_rate,
             self.definition_widget.ramp_time_spinbox.value(),
-            self.data_acquisition_parameters.samples_per_read,
+            self.hardware_metadata.samples_per_read,
             self.definition_widget,
         )
         if result:
@@ -572,7 +572,7 @@ class SineUI(AbstractSysIdUI):
         return SineMetadata(
             sample_rate=self.definition_widget.sample_rate_display.value(),
             samples_per_frame=self.definition_widget.samples_per_acquire_display.value(),
-            number_of_channels=len(self.data_acquisition_parameters.channel_list),
+            number_of_channels=len(self.hardware_metadata.channel_list),
             specifications=self.collect_specification(),
             ramp_time=self.definition_widget.ramp_time_spinbox.value(),
             buffer_blocks=self.definition_widget.buffer_blocks_selector.value(),

@@ -31,10 +31,7 @@ class AbstractUI(ABC):
         This class stores data required by the controller to interact with the
         user interface for a given environment.  This includes the environment
         name and queues to pass information between the controller and
-        environment.  It additionally initializes the ``command_map`` which is
-        used by the Test Profile functionality to map profile instructions to
-        operations on the user interface.
-
+        environment.
 
         Parameters
         ----------
@@ -60,11 +57,6 @@ class AbstractUI(ABC):
         self.run_widget = None
         self.event_thread = None
         self.event_watcher = None
-        self._command_map = {
-            UICommands.ENVIRONMENT_STARTED: self.display_environment_started,
-            UICommands.ENVIRONMENT_ENDED: self.display_environment_ended,
-            UICommands.SET_ENVIRONMENT_INSTRUCTIONS: self.display_environment_instructions,
-        }
 
     @property
     def active(self):
@@ -74,11 +66,10 @@ class AbstractUI(ABC):
         except:
             return False
 
-    @property
-    def command_map(self) -> dict:
-        """Dictionary mapping profile instructions to functions of the UI that
-        are called when the instruction is executed."""
-        return self._command_map
+    def get_channel_list_bools(self, global_channel_list):
+        channel_set = set(self.hardware_metadata.channel_list)
+        channel_list_bools = [channel in channel_set for channel in global_channel_list]
+        return channel_list_bools
 
     # region: Metadata
     @abstractmethod
@@ -98,15 +89,16 @@ class AbstractUI(ABC):
         """
         self.hardware_metadata = hardware_metadata
 
-    def get_channel_list_bools(self, hardware_channel_list):
-        channel_set = set(self.hardware_metadata.channel_list)
-        channel_list_bools = [channel in channel_set for channel in hardware_channel_list]
-        return channel_list_bools
-
     @abstractmethod
-    def get_environment_metadata(self, hardware_metadata: HardwareMetadata) -> EnvironmentMetadata:
+    def get_environment_metadata(self, global_channel_list) -> EnvironmentMetadata:
         """
         Collect the parameters from the user interface defining the environment
+
+        Parameters
+        ----------
+        global_channel_list : List[Channel] :
+            List of all hardware channels. Since environments deal with subsets of channel list,
+            this is required to build channel list bools
 
         Returns
         -------
@@ -116,7 +108,7 @@ class AbstractUI(ABC):
         """
 
     @abstractmethod
-    def display_environment_metadata(self, metadata: EnvironmentMetadata):
+    def set_environment_metadata(self, metadata: EnvironmentMetadata):
         """
         Update the user interface from environment metadata
 
@@ -139,9 +131,8 @@ class AbstractUI(ABC):
             in the environment likely to change between runs
         """
 
-    # region: Commands
     @abstractmethod
-    def display_environment_instructions(self, instructions: EnvironmentInstructions):
+    def set_environment_instructions(self, instructions: EnvironmentInstructions):
         """
         Updates the user interface with environment instructions
 
@@ -150,6 +141,7 @@ class AbstractUI(ABC):
         environment's run_tab to the values in the EnvironmentInstructions
         """
 
+    # region: Commands
     @abstractmethod
     def display_environment_started(self):
         """
@@ -165,29 +157,31 @@ class AbstractUI(ABC):
         shut down. Needs to enable the user to start up the process again.
         """
 
-    def map_command(self, key, function):
-        """Maps commands to instructions
+    @abstractmethod
+    def update_gui(self, queue_data: tuple):
+        """Update the environment's graphical user interface
 
-        Maps the instruction ``key`` to the function ``function`` so when
-        ``(key,data)`` pairs are pulled from the ``command_queue``, the function
-        ``function`` is called with argument ``data``.
+        This function will receive data from the gui_update_queue that
+        specifies how the user interface should be updated.  Data will usually
+        be received as ``(instruction,data)`` pairs, where the ``instruction`` notes
+        what operation should be taken or which widget should be modified, and
+        the ``data`` notes what data should be used in the update.
 
         Parameters
         ----------
-        key :
-            Instruction pulled from the command queue
-
-        function :
-            Function to be called when the given ``key`` is pulled from the
-            ``command_queue``
-
+        queue_data : tuple
+            A tuple containing ``(instruction,data)`` pairs where ``instruction``
+            defines and operation or widget to be modified and ``data`` contains
+            the data used to perform the operation.
         """
-        self._command_map[key] = function
-
-    @property
-    def command_map(self) -> dict:
-        """A dictionary that maps commands received by the ``command_queue`` to functions in the class."""
-        return self._command_map
+        command, data = queue_data
+        match command:
+            case UICommands.ENVIRONMENT_STARTED:
+                self.display_environment_started(data)
+            case UICommands.ENVIRONMENT_ENDED:
+                self.display_environment_ended(data)
+            case UICommands.SET_ENVIRONMENT_INSTRUCTIONS:
+                self.set_environment_instructions(data)
 
     # region: Processes
     @abstractmethod

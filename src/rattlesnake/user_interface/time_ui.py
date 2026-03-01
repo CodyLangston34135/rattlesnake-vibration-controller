@@ -80,10 +80,6 @@ class TimeUI(AbstractUI):
         self.plot_data_items = {}
 
         # Map commands
-        self.map_command(TimeUICommands.TIME_DATA, self.plot_time_data)
-        self.map_command(TimeCommands.SET_TEST_LEVEL, self.set_test_level)
-        self.map_command(TimeCommands.SET_NO_REPEAT, self.set_no_repeat)
-        self.map_command(TimeCommands.SET_REPEAT, self.set_repeat)
 
         self.complete_ui()
         self.connect_callbacks()
@@ -200,7 +196,7 @@ class TimeUI(AbstractUI):
 
         self.hardware_metadata = hardware_metadata
 
-    def get_environment_metadata(self, hardware_channel_list) -> TimeMetadata:
+    def get_environment_metadata(self, global_channel_list) -> TimeMetadata:
         """Collect the parameters from the user interface defining the environment
 
         Returns
@@ -209,10 +205,8 @@ class TimeUI(AbstractUI):
             A metadata or parameters object containing the parameters defining
             the corresponding environment.
         """
-        # return TimeParameters.from_ui(self)
-
         if self.hardware_metadata:
-            channel_list_bools = self.get_channel_list_bools(hardware_channel_list)
+            channel_list_bools = self.get_channel_list_bools(global_channel_list)
         sample_rate = self.definition_widget.output_sample_rate_display.value()
         output_signal = self.signal
         cancel_rampdown_time = self.definition_widget.cancel_rampdown_selector.value()
@@ -224,7 +218,7 @@ class TimeUI(AbstractUI):
 
         return metadata
 
-    def display_environment_metadata(self, metadata: TimeMetadata):
+    def set_environment_metadata(self, metadata: TimeMetadata):
         """Update the user interface with environment parameters
 
         This function is called when the Environment parameters are initialized.
@@ -256,12 +250,34 @@ class TimeUI(AbstractUI):
 
         return instruction
 
-    # region: Commands
-    def display_environment_instructions(self, data: TimeInstructions):
+    def set_environment_instructions(self, data: TimeInstructions):
         instructions = data
         self.run_widget.test_level_selector.setValue(instructions.current_test_level)
         self.run_widget.repeat_signal_checkbox.setChecked(instructions.repeat)
 
+    def update_gui(self, queue_data):
+        """Update the graphical interface for the environment
+
+        Parameters
+        ----------
+        queue_data :
+            A 2-tuple consisting of ``(message,data)`` pairs where the message
+            denotes what to change and the data contains the information needed
+            to be displayed.
+        """
+        super().update_gui(queue_data)
+        command, data = queue_data
+        match command:
+            case TimeUICommands.TIME_DATA:
+                self.plot_time_data(data)
+            case TimeCommands.SET_TEST_LEVEL:
+                self.set_test_level(data)
+            case TimeCommands.SET_NO_REPEAT:
+                self.set_no_repeat(data)
+            case TimeCommands.SET_REPEAT:
+                self.set_repeat(data)
+
+    # region: Commands
     def display_environment_started(self, data=None):
         self.run_widget.stop_test_button.setEnabled(True)
         self.run_widget.start_test_button.setEnabled(False)

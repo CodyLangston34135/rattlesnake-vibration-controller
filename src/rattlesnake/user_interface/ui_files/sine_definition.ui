@@ -954,16 +954,56 @@ Matrices...</string>
         <item>
          <layout class="QGridLayout" name="gridLayout">
           <item row="0" column="1">
-           <widget class="PlotWidget" name="specification_channel_amplitude_plot"/>
+           <widget class="PlotWidget" name="specification_channel_amplitude_plot">
+            <property name="backgroundBrush">
+             <brush brushstyle="NoBrush">
+              <color alpha="255">
+               <red>255</red>
+               <green>255</green>
+               <blue>255</blue>
+              </color>
+             </brush>
+            </property>
+           </widget>
           </item>
           <item row="2" column="1">
-           <widget class="PlotWidget" name="specification_channel_phase_plot"/>
+           <widget class="PlotWidget" name="specification_channel_phase_plot">
+            <property name="backgroundBrush">
+             <brush brushstyle="NoBrush">
+              <color alpha="255">
+               <red>255</red>
+               <green>255</green>
+               <blue>255</blue>
+              </color>
+             </brush>
+            </property>
+           </widget>
           </item>
           <item row="2" column="0">
-           <widget class="PlotWidget" name="specification_all_amplitudes_plot"/>
+           <widget class="PlotWidget" name="specification_all_amplitudes_plot">
+            <property name="backgroundBrush">
+             <brush brushstyle="NoBrush">
+              <color alpha="255">
+               <red>255</red>
+               <green>255</green>
+               <blue>255</blue>
+              </color>
+             </brush>
+            </property>
+           </widget>
           </item>
           <item row="0" column="0">
-           <widget class="PlotWidget" name="specification_all_frequencies_plot"/>
+           <widget class="PlotWidget" name="specification_all_frequencies_plot">
+            <property name="backgroundBrush">
+             <brush brushstyle="NoBrush">
+              <color alpha="255">
+               <red>255</red>
+               <green>255</green>
+               <blue>255</blue>
+              </color>
+             </brush>
+            </property>
+           </widget>
           </item>
          </layout>
         </item>

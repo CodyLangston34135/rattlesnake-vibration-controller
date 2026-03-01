@@ -1773,8 +1773,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             dialog_title, error_message = data
             error_message_qt(dialog_title, error_message)
         elif message in self.environment_uis.keys():
-            command, environment_data = data
-            self.environment_uis[message].command_map[command](environment_data)
+            self.environment_uis[message].update_gui(data)
         elif message == UICommands.MONITOR:
             pass
         elif message == UICommands.ENABLE:

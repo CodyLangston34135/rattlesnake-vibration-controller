@@ -109,6 +109,7 @@ class AbstractSysIdUI(AbstractUI):
         self.system_id_widget = QtWidgets.QWidget()
         uic.loadUi(system_identification_ui_path, self.system_id_widget)
         self.connect_sysid_callbacks()
+        self.complete_ui()
 
         self.frequencies = None
         self.last_time_response = None
@@ -211,6 +212,7 @@ class AbstractSysIdUI(AbstractUI):
         """Names of output channels that have been initialized and will be used in displays"""
 
     # region: Metadata
+    @abstractmethod
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         """Update the user interface with data acquisition parameters
 
@@ -250,7 +252,7 @@ class AbstractSysIdUI(AbstractUI):
         )
 
     @abstractmethod
-    def get_environment_metadata(self, hardware_metadata: HardwareMetadata) -> SysIdEnvironmentMetadata:
+    def get_environment_metadata(self, global_channel_list) -> SysIdEnvironmentMetadata:
         """
         Collect the parameters from the user interface defining the environment
 
@@ -262,7 +264,7 @@ class AbstractSysIdUI(AbstractUI):
         """
 
     @abstractmethod
-    def display_environment_metadata(self, metadata: SysIdEnvironmentMetadata):
+    def set_environment_metadata(self, metadata: SysIdEnvironmentMetadata):
         """
         Update the user interface from environment metadata
 
@@ -270,6 +272,7 @@ class AbstractSysIdUI(AbstractUI):
         This function should set up the user interface accordingly.
         """
 
+    @abstractmethod
     def initialize_environment(self, hardware_metadata, environment_metadata):
         self.update_sysid_metadata(environment_metadata)
         self.system_id_widget.reference_selector.blockSignals(True)
@@ -286,6 +289,7 @@ class AbstractSysIdUI(AbstractUI):
         self.system_id_widget.response_selector.setCurrentRow(0)
         self.update_signal_type()
 
+    @abstractmethod
     def get_sysid_metadata(self, hardware_metadata: HardwareMetadata):
         """Updates the provided system identification metadata based on current UI widget values"""
         sysid_frame_size = self.system_id_widget.samplesPerFrameSpinBox.value()
@@ -328,7 +332,8 @@ class AbstractSysIdUI(AbstractUI):
         )
         return sysid_metadata
 
-    def display_sysid_metadata(self, sysid_metadata: SysIdMetadata):
+    @abstractmethod
+    def set_sysid_metadata(self, sysid_metadata: SysIdMetadata):
         """
         Update the user interface with sysid parameters
 
@@ -346,6 +351,15 @@ class AbstractSysIdUI(AbstractUI):
         """
         pass
 
+    @abstractmethod
+    def get_environment_instructions(self):
+        return
+
+    @abstractmethod
+    def set_environment_instructions(self, instructions):
+        return
+
+    # region: Callbacks
     def preview_noise(self):
         # """Starts the noise preview"""
         # self.log("Starting Noise Preview")
@@ -486,6 +500,7 @@ class AbstractSysIdUI(AbstractUI):
         self.system_id_widget.transfer_function_stream_file_display.setText(filename)
         self.system_id_widget.stream_transfer_function_data_checkbox.setChecked(True)
 
+    # region: Updates
     def update_sysid_plots(
         self,
         update_time=True,
