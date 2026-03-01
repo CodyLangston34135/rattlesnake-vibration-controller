@@ -17,6 +17,11 @@ from enum import Enum
 from typing import Dict
 
 
+# region: Error
+class RattlesnakeError(Exception):
+    pass
+
+
 # region: GlobalCommands
 class GlobalCommands(Enum):
     QUIT = 0  # Stop individual processes

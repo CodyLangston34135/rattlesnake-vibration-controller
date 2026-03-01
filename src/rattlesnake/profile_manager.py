@@ -1,4 +1,4 @@
-from rattlesnake.utilities import QueueContainer, GlobalCommands
+from rattlesnake.utilities import RattlesnakeError, QueueContainer, GlobalCommands
 from rattlesnake.environment.abstract_environment import EnvironmentInstructions
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.environment.time_environment import TimeCommands
@@ -50,30 +50,30 @@ class ProfileEvent:
     def validate(self):
         # Check if environment_name is a string
         if not isinstance(self.environment_name, str):
-            raise TypeError(f"{self.environment_name} is not a valid environment_name for a profile event")
+            raise RattlesnakeError(f"{self.environment_name} is not a valid environment_name for a profile event")
         # Check if timestamp is a number
         if not isinstance(self.timestamp, (int, float)) or self.timestamp < 0:
-            raise ValueError(f"{self.environment_name} profile event was not given a valid timestamp")
+            raise RattlesnakeError(f"{self.environment_name} profile event was not given a valid timestamp")
         # Check if a valid environment_type was given
         if self.environment_type not in VALID_COMMANDS.keys():
-            raise TypeError(f"{self.environment_name} not given a valid environment type: {self.environment_type}")
+            raise RattlesnakeError(f"{self.environment_name} not given a valid environment type: {self.environment_type}")
         # Check if the environment_type has logic for that given command
         if self.command not in VALID_COMMANDS[self.environment_type]:
-            raise TypeError(f"{self.command} is not a valid command for {self.environment_name}")
+            raise RattlesnakeError(f"{self.command} is not a valid command for {self.environment_name}")
         # Check if the environment_manager assigned a queue_name to the event yet
         if not self.queue_name:
-            raise ValueError(f"{self.environment_name} was not given a valid queue_name before assignment")
+            raise RattlesnakeError(f"{self.environment_name} was not given a valid queue_name before assignment")
         # Validate data type going into command
         if self.command in VALID_DATA.keys():
             valid_data_type = VALID_DATA[self.command]
             if not isinstance(self.data, valid_data_type):
-                raise TypeError(f"{self.command} profile event was provided {type(self.data)}, but requires {valid_data_type}.")
+                raise RattlesnakeError(f"{self.command} profile event was provided {type(self.data)}, but requires {valid_data_type}.")
 
             if valid_data_type is EnvironmentInstructions:
                 if not self.data.environment_name == self.environment_name:
-                    raise TypeError(f"Invalid environment instruction assigned to {self.environment_name} profile event")
+                    raise RattlesnakeError(f"Invalid environment instruction assigned to {self.environment_name} profile event")
                 if not self.data.environment_type == self.environment_type:
-                    raise TypeError(f"Invalid environment instruction assigned to {self.environment_name} profile event")
+                    raise RattlesnakeError(f"Invalid environment instruction assigned to {self.environment_name} profile event")
 
         return True
 
@@ -107,16 +107,16 @@ class ProfileManager:
         """Validate list of profile events. Since each event needs"""
         for profile_event in profile_event_list:
             if not isinstance(profile_event, ProfileEvent):
-                raise TypeError("Profile event list contains invalid type")
+                raise RattlesnakeError("Profile event list contains invalid type")
             # Validate profile event
             valid_profile = profile_event.validate()
             if not valid_profile:
-                raise ValueError("Rattlesnake.set_profile requires a valid list of ProfileEvents")
+                raise RattlesnakeError("Rattlesnake.set_profile requires a valid list of ProfileEvents")
 
             # Validate command has been implemented in profile_manager
             command = profile_event.command
             if command not in self.command_map.keys():
-                raise KeyError(f"No profile event has been implemented for {profile_event.command}")
+                raise RattlesnakeError(f"No profile event has been implemented for {profile_event.command}")
 
         # Sort profile_event_list by timestamp
         profile_event_list.sort(key=lambda event: event.timestamp)

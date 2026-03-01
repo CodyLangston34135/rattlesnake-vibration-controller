@@ -1,4 +1,4 @@
-from rattlesnake.utilities import GlobalCommands
+from rattlesnake.utilities import RattlesnakeError, GlobalCommands
 from rattlesnake.hardware.hardware_utilities import Channel, HardwareType
 from rattlesnake.hardware.hardware_registry import HARDWARE_METADATA
 from rattlesnake.environment.environment_utilities import ControlTypes
@@ -35,9 +35,9 @@ def load_channel_table_from_worksheet(filepath):
     if len(sheets) > 1:
         sheets = [sheet for sheet in sheets if "channel" in sheet.lower()]
     if len(sheets) > 1:
-        raise ValueError("Multiple channel table sheets located in Excel Spreadsheet")
+        raise RattlesnakeError("Multiple channel table sheets located in Excel Spreadsheet")
     if len(sheets) == 0:
-        raise ValueError("Excel Spreadsheet does not contain a channel table sheet")
+        raise RattlesnakeError("Excel Spreadsheet does not contain a channel table sheet")
 
     worksheet = workbook[sheets[0]]
 
@@ -136,7 +136,7 @@ def load_profile_from_worksheet(filepath, environment_types):
         elif command in ENVIRONMENT_COMMANDS[environment_type].__members__:
             command = ENVIRONMENT_COMMANDS[environment_type][command]
         else:
-            raise TypeError(f"Invalid command: {command} for {environment_name} | {environment_type}")
+            raise RattlesnakeError(f"Invalid command: {command} for {environment_name} | {environment_type}")
 
         data = profile_sheet.cell(index, 4).value
         data = None if isinstance(data, str) and not data.strip() else data
@@ -224,7 +224,7 @@ def discover_environment_type_in_old_netcdf(environment_group):
     if hasattr(environment_group, "cancel_rampdown_time"):
         return ControlTypes.TIME
     else:
-        raise ValueError("Invalid netcdf4 file")
+        raise RattlesnakeError("Invalid netcdf4 file")
 
 
 def load_metadata_from_worksheet(filepath):
@@ -348,7 +348,7 @@ def load_metadata_from_worksheet(filepath):
         elif command in ENVIRONMENT_COMMANDS[environment_type].__members__:
             command = ENVIRONMENT_COMMANDS[environment_type][command]
         else:
-            raise TypeError(f"Invalid command: {command} for {environment_name} | {environment_type}")
+            raise RattlesnakeError(f"Invalid command: {command} for {environment_name} | {environment_type}")
 
         data = profile_sheet.cell(index, 4).value
         data = None if isinstance(data, str) and not data.strip() else data

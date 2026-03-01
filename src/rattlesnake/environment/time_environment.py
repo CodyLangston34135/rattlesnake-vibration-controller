@@ -23,7 +23,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands, load_time_history, db2scale
+from rattlesnake.utilities import RattlesnakeError, VerboseMessageQueue, GlobalCommands, load_time_history, db2scale
 from rattlesnake.environment.abstract_environment import EnvironmentCommands, EnvironmentMetadata, EnvironmentInstructions, EnvironmentProcess
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.user_interface.ui_utilities import UICommands
@@ -133,22 +133,22 @@ class TimeMetadata(EnvironmentMetadata):
         super().validate(hardware_metadata)
 
         if not isinstance(self.cancel_rampdown_time, (int, float)) or self.cancel_rampdown_time <= 0:
-            raise ValueError(f"{self.environment_name} cancel_rampdown_time must be a number greater than 0")
+            raise RattlesnakeError(f"{self.environment_name} cancel_rampdown_time must be a number greater than 0")
 
         if not isinstance(self.sample_rate, int) or self.sample_rate <= 0:
-            raise ValueError(f"{self.environment_name} sample_rate must be a number greater than 0")
+            raise RattlesnakeError(f"{self.environment_name} sample_rate must be a number greater than 0")
 
         if not isinstance(self.output_signal, np.ndarray):
-            raise TypeError(f"{self.environment_name} output_singal must be a 2D numpy array")
+            raise RattlesnakeError(f"{self.environment_name} output_singal must be a 2D numpy array")
 
         if self.output_signal.ndim != 2:
-            raise TypeError(f"{self.environment_name} output_signal must be a 2D numpy array")
+            raise RattlesnakeError(f"{self.environment_name} output_signal must be a 2D numpy array")
 
         environment_channels = [channel for channel, channel_bool in zip(hardware_metadata.channel_list, self.channel_list_bools) if channel_bool]
         num_output_channels = len([channel for channel in environment_channels if channel.is_output_channel()])
         num_output = self.output_signal.shape[0]
         if num_output != num_output_channels:
-            raise ValueError(f"{self.environment_name}, {num_output} signals defined for {num_output_channels} channels")
+            raise RattlesnakeError(f"{self.environment_name}, {num_output} signals defined for {num_output_channels} channels")
 
         return True
 
@@ -240,7 +240,7 @@ class TimeMetadata(EnvironmentMetadata):
                 case "":
                     continue
                 case _:
-                    raise TypeError(f"{name} does not go with {self.environment_type} environment")
+                    raise RattlesnakeError(f"{name} does not go with {self.environment_type} environment")
 
 
 # region: TimeInstructions

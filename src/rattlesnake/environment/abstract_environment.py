@@ -1,4 +1,4 @@
-from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands
+from rattlesnake.utilities import RattlesnakeError, VerboseMessageQueue, GlobalCommands
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.hardware.hardware_utilities import Channel
@@ -108,13 +108,13 @@ class EnvironmentMetadata(ABC):
         etc.
         """
         if self.environment_type not in ControlTypes:
-            raise TypeError(f"{self.environment_type} is not a valid ControlType")
+            raise RattlesnakeError(f"{self.environment_type} is not a valid ControlType")
 
         if not isinstance(self.environment_name, str):
-            raise TypeError(f"{self.environment_name} must be a string")
+            raise RattlesnakeError(f"{self.environment_name} must be a string")
 
         if len(self.channel_list_bools) != len(hardware_metadata.channel_list):
-            raise ValueError(f"{self.environment_name} channel list bools is not the same length as channel list")
+            raise RattlesnakeError(f"{self.environment_name} channel list bools is not the same length as channel list")
 
         return True
 

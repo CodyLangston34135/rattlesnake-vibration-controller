@@ -1,4 +1,4 @@
-from rattlesnake.utilities import QueueContainer, EventContainer, GlobalCommands
+from rattlesnake.utilities import RattlesnakeError, QueueContainer, EventContainer, GlobalCommands
 from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions
 from rattlesnake.environment.environment_utilities import ControlTypes, SYS_ID_ENVIRONMENTS
@@ -175,36 +175,36 @@ class EnvironmentManager:
     def validate_environment_metadata(self, metadata_list: List[EnvironmentMetadata], hardware_metadata: HardwareMetadata):
         # Check if there are available queues
         if len(metadata_list) > self.num_queues:
-            raise IndexError("Not enough environment command queues. Increase max_environments in rattlesnake.py")
+            raise RattlesnakeError("Not enough environment command queues. Increase max_environments in rattlesnake.py")
 
         # Validate individual environments
         environment_name_set = set()
         for metadata in metadata_list:
             # Check for valid class
             if not isinstance(metadata, EnvironmentMetadata):
-                raise TypeError("Rattlesnake.set_environment was given an object that is not an EnvironmentMetadata class")
+                raise RattlesnakeError("Rattlesnake.set_environment was given an object that is not an EnvironmentMetadata class")
             # Check for unique name
             environment_name = metadata.environment_name
             if environment_name in environment_name_set:
-                raise ValueError("Environment names must be unique")
+                raise RattlesnakeError("Environment names must be unique")
             environment_name_set.add(environment_name)
             # Validate metadata
             valid_metadata = metadata.validate(hardware_metadata)
             if not valid_metadata:
-                raise ValueError(f"Invalid metadata for {environment_name}")
+                raise RattlesnakeError(f"Invalid metadata for {environment_name}")
 
         return True
 
     def validate_system_id_metadata(self, sysid_metadata, hardware_metadata, environment_name):
         if not isinstance(sysid_metadata, SysIdMetadata):
-            raise TypeError("Rattlesnake.initialize_system_id was not given a SysIdMetadata object")
+            raise RattlesnakeError("Rattlesnake.initialize_system_id was not given a SysIdMetadata object")
         try:
             queue_name = self.queue_names_dict[environment_name]
         except KeyError:
-            raise KeyError(f"No environments exist for {environment_name} instruction")
+            raise RattlesnakeError(f"No environments exist for {environment_name} instruction")
         environment_type = self.environment_types[queue_name]
         if environment_type not in SYS_ID_ENVIRONMENTS:
-            raise TypeError(f"{environment_name} is a {environment_type} environment which does not require system identification")
+            raise RattlesnakeError(f"{environment_name} is a {environment_type} environment which does not require system identification")
 
         return queue_name
 
@@ -212,21 +212,23 @@ class EnvironmentManager:
         """Validate the instructions"""
         # Validate class
         if not isinstance(instructions, EnvironmentInstructions):
-            raise TypeError("Rattlesnake was provided an environment_instruction that was not an EnvironmentInstructions type")
+            raise RattlesnakeError("Rattlesnake was provided an environment_instruction that was not an EnvironmentInstructions type")
         # Validate name
         environment_name = instructions.environment_name
         try:
             queue_name = self.queue_names_dict[environment_name]
         except KeyError:
-            raise KeyError(f"No environments exist for {environment_name} instruction")
+            raise RattlesnakeError(f"No environments exist for {environment_name} instruction")
         # Validate type
         environment_type = instructions.environment_type
         if environment_type != self.environment_types[queue_name]:
-            raise TypeError(f"Instructions for {environment_name} is the wrong type for {environment_type} vs {self.environment_types[queue_name]}")
+            raise RattlesnakeError(
+                f"Instructions for {environment_name} is the wrong type for {environment_type} vs {self.environment_types[queue_name]}"
+            )
         # Validate instruction
         valid_instruction = instructions.validate()
         if not valid_instruction:
-            raise ValueError(f"Invalid instruction for {environment_name}")
+            raise RattlesnakeError(f"Invalid instruction for {environment_name}")
 
         return queue_name
 
@@ -237,7 +239,7 @@ class EnvironmentManager:
         for profile_event in profile_events_list:
             # Validate class
             if not isinstance(profile_event, ProfileEvent):
-                raise TypeError("The profile_events_list contains an object that is not a ProfileEvent type")
+                raise RattlesnakeError("The profile_events_list contains an object that is not a ProfileEvent type")
             # Validate environment_name and assign queue_name and type
             environment_name = profile_event.environment_name
             if environment_name == "Global":
@@ -247,7 +249,7 @@ class EnvironmentManager:
                 try:
                     queue_name = self.queue_names_dict[environment_name]
                 except KeyError:
-                    raise KeyError(f"No environments exist for {environment_name} when validating instruction")
+                    raise RattlesnakeError(f"No environments exist for {environment_name} when validating instruction")
                 profile_event._queue_name = queue_name
                 profile_event._environment_type = self.environment_types[queue_name]
 
@@ -272,7 +274,7 @@ class EnvironmentManager:
                 break
 
         if queue_name is None:
-            raise KeyError("Not enough environment command queues. Increase max_environments in rattlesnake.py")
+            raise RattlesnakeError("Not enough environment command queues. Increase max_environments in rattlesnake.py")
 
         environment_type = metadata.environment_type
         environment_name = metadata.environment_name
@@ -340,7 +342,7 @@ class EnvironmentManager:
             # Remove environment queue and process
             self.environment_processes.pop(queue_name, None)
         else:
-            raise KeyError(f"Invalid control name: {queue_name}. Must be mapped to available queue")
+            raise RattlesnakeError(f"Invalid control name: {queue_name}. Must be mapped to available queue")
 
     def close_environments(self):
         for queue_name, environment_process in self.environment_processes.items():

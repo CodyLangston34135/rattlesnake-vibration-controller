@@ -1,7 +1,7 @@
 from rattlesnake.rattlesnake import Rattlesnake
+from rattlesnake.utilities import RattlesnakeError, load_time_history, rms_time
 from rattlesnake.user_interface.abstract_user_interface import AbstractUI
 from rattlesnake.user_interface.ui_utilities import environment_definition_ui_paths, environment_run_ui_paths, multiline_plotter
-from rattlesnake.utilities import load_time_history, rms_time
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.environment.time_environment import TimeMetadata, TimeInstructions, TimeCommands, TimeUICommands
@@ -241,7 +241,7 @@ class TimeUI(AbstractUI):
         self.log("Initializing Environment Parameters")
         # Make sure everything is defined
         if metadata.output_signal is None:
-            raise ValueError("Output Signal is not defined!")
+            raise RattlesnakeError("Output Signal is not defined!")
 
         self.signal = metadata.output_signal
         if metadata.signal_file:

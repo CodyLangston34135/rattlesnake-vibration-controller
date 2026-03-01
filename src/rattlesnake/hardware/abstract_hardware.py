@@ -1,3 +1,4 @@
+from rattlesnake.utilities import RattlesnakeError
 from rattlesnake.hardware.hardware_utilities import Channel, HardwareModules
 from abc import ABC, abstractmethod
 from typing import List
@@ -82,7 +83,7 @@ class HardwareMetadata(ABC):
         debugging and will not stop the main process from running.
         """
         if len(self.channel_list) != len(set(self.channel_list)):
-            raise ValueError("Duplicate channels found in channel_list")
+            raise RattlesnakeError("Duplicate channels found in channel_list")
 
         return True
 

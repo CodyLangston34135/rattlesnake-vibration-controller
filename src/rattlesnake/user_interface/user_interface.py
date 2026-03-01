@@ -1,6 +1,6 @@
 from rattlesnake.rattlesnake import Rattlesnake, RattlesnakeState
 from rattlesnake.profile_manager import ProfileEvent
-from rattlesnake.utilities import GlobalCommands
+from rattlesnake.utilities import GlobalCommands, RattlesnakeError
 from rattlesnake.user_interface.ui_utilities import (
     UICommands,
     Updater,
@@ -1637,7 +1637,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                     try:
                         data = validator(data)
                     except:
-                        raise ValueError(f"{environment_name} profile event {command} requires {validator} data type")
+                        raise RattlesnakeError(f"{environment_name} profile event {command} requires {validator} data type")
 
                 # Update environment ui
                 if environment_name != "Global" and command in self.environment_uis[environment_name].command_map.keys():
@@ -1736,14 +1736,13 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
         """
         self.log_file_queue.put(f"{datetime.now()}: {TASK_NAME} -- {string}\n")
 
-    def display_error(self, error_message):
-        self.log(f"ERROR\n\n {error_message}")
-        self.gui_update_queue.put(
-            (
-                UICommands.ERROR,
-                ("Rattlesnake Error", f"ERROR:\n\n{error_message}"),
-            )
-        )
+    def display_error(self, error):
+        tb = traceback.format_exc()
+        self.log(f"ERROR\n\n {tb}")
+        if isinstance(error, RattlesnakeError):
+            self.gui_update_queue.put((UICommands.ERROR, ("Rattlesnake Error", f"ERROR:\n\n{error}")))
+        else:
+            self.gui_update_queue.put((UICommands.ERROR, ("Unknown Error", f"ERROR:\n\n{tb}")))
 
     # region: Events
     def create_event_watcher(self, ready_event_list, active_event_list, *, active_event_check: bool = None, timeout: float = None):
@@ -1815,10 +1814,10 @@ if __name__ == "__main__":
 
     rattlesnake = Rattlesnake(threaded=True, timeout=10)
     rattlesnake.set_hardware(hardware_metadata)
-    rattlesnake.set_environments([environment_metadata])
-    rattlesnake.set_profile_event_list(profile_event_list)
-    rattlesnake.set_stream_metadata(stream_metadata)
-    rattlesnake.start_acquisition(stream_metadata)
+    # rattlesnake.set_environments([environment_metadata])
+    # rattlesnake.set_profile_event_list(profile_event_list)
+    # rattlesnake.set_stream_metadata(stream_metadata)
+    # rattlesnake.start_acquisition(stream_metadata)
     # rattlesnake.start_environment(environment_instructions)
 
     # This is a fix for scaling Rattlesnake to different resolution monitors

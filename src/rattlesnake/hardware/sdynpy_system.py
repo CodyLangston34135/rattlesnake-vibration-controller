@@ -23,7 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput, HardwareMetadata
 from rattlesnake.hardware.hardware_utilities import HardwareType, HardwareModules, Channel
-from rattlesnake.utilities import flush_queue
+from rattlesnake.utilities import RattlesnakeError, flush_queue
 import time
 import multiprocessing as mp
 import numpy as np
@@ -123,22 +123,22 @@ class SDynPySystemMetadata(HardwareMetadata):
         has_physical = False
         for row, channel in enumerate(self.channel_list):
             if str(channel.node_number) not in self.valid_node_numbers:
-                raise ValueError(f"Invalid node number in channel table row {row+1}")
+                raise RattlesnakeError(f"Invalid node number in channel table row {row+1}")
             if channel.node_direction not in self.valid_node_directions(str(channel.node_number)):
-                raise ValueError(f"Invalid node direction in channel table row {row+1}")
+                raise RattlesnakeError(f"Invalid node direction in channel table row {row+1}")
             if channel.physical_device is None:
-                raise ValueError(f"Physical device should be 'Virtual' in channel table row {row+1}")
+                raise RattlesnakeError(f"Physical device should be 'Virtual' in channel table row {row+1}")
             if str(channel.channel_type).lower() == "force" and channel.feedback_device is None:
-                raise ValueError(f"Force channel types require 'Virtual' feedback device in channel table row {row+1}")
+                raise RattlesnakeError(f"Force channel types require 'Virtual' feedback device in channel table row {row+1}")
             if str(channel.channel_type).lower() not in self.accepted_channel_type_strings:
-                raise ValueError(
+                raise RattlesnakeError(
                     f"Invalid channel type in channel table row {row+1}. Valid channel types include 'Displacement', 'Velocity', 'Acceleration', 'Force'"
                 )
             if channel.physical_device is not None and channel.feedback_device is None:
                 has_physical = True
 
         if not has_physical:
-            raise ValueError("SDynPy channel table requires atleast 1 physical device without an assigned feedback device")
+            raise RattlesnakeError("SDynPy channel table requires atleast 1 physical device without an assigned feedback device")
 
         return True
 
@@ -171,7 +171,7 @@ class SDynPySystemMetadata(HardwareMetadata):
             sdynpy_system_data = {key: val for key, val in np.load(self.hardware_file).items()}
             channel_indices = {tuple([abs(v) for v in val]) for val in sdynpy_system_data["coordinate"]}
         except:
-            raise ValueError("Invalid SDynPy system file")
+            raise RattlesnakeError("Invalid SDynPy system file")
 
         # Map node directions to node numbers
         self._node_dict = defaultdict(set)
