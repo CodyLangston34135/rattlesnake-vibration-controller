@@ -1,9 +1,10 @@
 from rattlesnake.rattlesnake import Rattlesnake
-from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue, load_python_module
+from rattlesnake.utilities import GlobalCommands, load_python_module
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata
-from rattlesnake.environment.modal_environment import ModalCommands, ModalUICommands, ModalMetadata
+from rattlesnake.environment.modal_environment import ModalCommands, ModalUICommands, ModalMetadata, ModalInstructions
+from rattlesnake.process.data_collector import DataCollectorUICommands
 from rattlesnake.user_interface.abstract_user_interface import AbstractUI
 from rattlesnake.user_interface.ui_utilities import multiline_plotter, error_message_qt, environment_definition_ui_paths, environment_run_ui_paths
 from rattlesnake.user_interface.modal_ui_utilities import ModalMDISubWindow
@@ -226,8 +227,8 @@ class ModalUI(AbstractUI):
         self.definition_widget.system_id_transfer_function_computation_window_selector.currentIndexChanged.connect(self.update_window)
         # Run Callbacks
         self.run_widget.preview_test_button.clicked.connect(self.preview_acquisition)
-        self.run_widget.start_test_button.clicked.connect(self.start_control)
-        self.run_widget.stop_test_button.clicked.connect(self.stop_control)
+        self.run_widget.start_test_button.clicked.connect(self.start_environment)
+        self.run_widget.stop_test_button.clicked.connect(self.stop_environment)
         self.run_widget.select_file_button.clicked.connect(self.select_file)
         self.run_widget.accept_average_button.clicked.connect(self.accept_frame)
         self.run_widget.reject_average_button.clicked.connect(self.reject_frame)
@@ -400,8 +401,8 @@ class ModalUI(AbstractUI):
         self.run_widget.preview_test_button.setEnabled(False)
         self.run_widget.start_test_button.setEnabled(False)
         self.run_widget.select_file_button.setEnabled(False)
-        self.controller_communication_queue.put(self.log_name, (GlobalCommands.START_ENVIRONMENT, self.environment_name))
-        self.environment_command_queue.put(self.log_name, (ModalCommands.START_CONTROL, None))
+        instructions = self.get_environment_instructions()
+        self.controller_communication_queue.put(self.log_name, (GlobalCommands.START_ENVIRONMENT, instructions))
         self.run_widget.dof_override_table.setEnabled(False)
         self.run_widget.add_override_button.setEnabled(False)
         self.run_widget.remove_override_button.setEnabled(False)
@@ -424,7 +425,7 @@ class ModalUI(AbstractUI):
 
     def stop_control(self):
         """Tells the environment process to stop the current measurement"""
-        self.environment_command_queue.put(self.log_name, (ModalCommands.STOP_CONTROL, None))
+        self.controller_communication_queue.put(self.log_name, (GlobalCommands.STOP_ENVIRONMENT, self.environment_name))
 
     def select_file(self):
         """Brings up a file dialog box to select the save file location"""
@@ -633,102 +634,102 @@ class ModalUI(AbstractUI):
         # print(corresponding_drive_responses)
         return corresponding_drive_responses
 
-    def create_netcdf_file(self, filename):
-        """Creates an output NetCDF4 file to save modal data to
+    # def create_netcdf_file(self, filename):
+    #     """Creates an output NetCDF4 file to save modal data to
 
-        Parameters
-        ----------
-        filename : str
-            The file name to which the netCDF4 file will be stored
-        """
-        self.netcdf_handle = nc4.Dataset(filename, "w", format="NETCDF4", clobber=True)  # pylint: disable=no-member
-        # Create dimensions
-        self.netcdf_handle.createDimension("response_channels", len(self.hardware_metadata.channel_list))
-        self.netcdf_handle.createDimension(
-            "output_channels",
-            len([channel for channel in self.hardware_metadata.channel_list if channel.feedback_device is not None]),
-        )
-        self.netcdf_handle.createDimension("num_environments", len(self.hardware_metadata.environment_names))
-        self.netcdf_handle.createDimension("time_samples", None)
-        # Create attributes
-        self.netcdf_handle.sample_rate = self.hardware_metadata.sample_rate
-        self.netcdf_handle.time_per_write = self.hardware_metadata.samples_per_write / self.hardware_metadata.output_sample_rate
-        self.netcdf_handle.time_per_read = self.hardware_metadata.samples_per_read / self.hardware_metadata.sample_rate
-        self.netcdf_handle.hardware = self.hardware_metadata.hardware
-        self.netcdf_handle.hardware_file = "None" if self.hardware_metadata.hardware_file is None else self.hardware_metadata.hardware_file
-        self.netcdf_handle.output_oversample = self.hardware_metadata.output_oversample
-        for name, value in self.hardware_metadata.extra_parameters.items():
-            setattr(self.netcdf_handle, name, value)
-        # Create Variables
-        self.netcdf_handle.createVariable("time_data", "f8", ("response_channels", "time_samples"))
-        var = self.netcdf_handle.createVariable("environment_names", str, ("num_environments",))
-        this_environment_index = None
-        for i, name in enumerate(self.hardware_metadata.environment_names):
-            var[i] = name
-            if name == self.environment_name:
-                this_environment_index = i
-        var = self.netcdf_handle.createVariable(
-            "environment_active_channels",
-            "i1",
-            ("response_channels", "num_environments"),
-        )
-        var[...] = self.hardware_metadata.environment_active_channels.astype("int8")[
-            self.hardware_metadata.environment_active_channels[:, this_environment_index],
-            :,
-        ]
-        # Create channel table variables
-        labels = [
-            ["node_number", str],
-            ["node_direction", str],
-            ["comment", str],
-            ["serial_number", str],
-            ["triax_dof", str],
-            ["sensitivity", str],
-            ["unit", str],
-            ["make", str],
-            ["model", str],
-            ["expiration", str],
-            ["physical_device", str],
-            ["physical_channel", str],
-            ["channel_type", str],
-            ["minimum_value", str],
-            ["maximum_value", str],
-            ["coupling", str],
-            ["excitation_source", str],
-            ["excitation", str],
-            ["feedback_device", str],
-            ["feedback_channel", str],
-            ["warning_level", str],
-            ["abort_level", str],
-        ]
-        for label, netcdf_datatype in labels:
-            var = self.netcdf_handle.createVariable("/channels/" + label, netcdf_datatype, ("response_channels",))
-            channel_data = [getattr(channel, label) for channel in self.hardware_metadata.channel_list]
-            if netcdf_datatype == "i1":
-                channel_data = np.array([1 if val else 0 for val in channel_data])
-            else:
-                channel_data = ["" if val is None else val for val in channel_data]
-            for i, cd in enumerate(channel_data):
-                if label == "node_number" and i in self.override_table:
-                    var[i] = self.override_table[i][0]
-                elif label == "node_direction" and i in self.override_table:
-                    var[i] = self.override_table[i][1]
-                else:
-                    var[i] = cd
-        group_handle = self.netcdf_handle.createGroup(self.environment_name)
-        self.metadata.store_to_netcdf(group_handle)
-        group_handle.createDimension("fft_lines", self.metadata.fft_lines)
-        group_handle.createVariable(
-            "frf_data_real",
-            "f8",
-            ("fft_lines", "response_channels", "reference_channels"),
-        )
-        group_handle.createVariable(
-            "frf_data_imag",
-            "f8",
-            ("fft_lines", "response_channels", "reference_channels"),
-        )
-        group_handle.createVariable("coherence", "f8", ("fft_lines", "response_channels"))
+    #     Parameters
+    #     ----------
+    #     filename : str
+    #         The file name to which the netCDF4 file will be stored
+    #     """
+    #     self.netcdf_handle = nc4.Dataset(filename, "w", format="NETCDF4", clobber=True)  # pylint: disable=no-member
+    #     # Create dimensions
+    #     self.netcdf_handle.createDimension("response_channels", len(self.hardware_metadata.channel_list))
+    #     self.netcdf_handle.createDimension(
+    #         "output_channels",
+    #         len([channel for channel in self.hardware_metadata.channel_list if channel.feedback_device is not None]),
+    #     )
+    #     self.netcdf_handle.createDimension("num_environments", len(self.hardware_metadata.environment_names))
+    #     self.netcdf_handle.createDimension("time_samples", None)
+    #     # Create attributes
+    #     self.netcdf_handle.sample_rate = self.hardware_metadata.sample_rate
+    #     self.netcdf_handle.time_per_write = self.hardware_metadata.samples_per_write / self.hardware_metadata.output_sample_rate
+    #     self.netcdf_handle.time_per_read = self.hardware_metadata.samples_per_read / self.hardware_metadata.sample_rate
+    #     self.netcdf_handle.hardware = self.hardware_metadata.hardware
+    #     self.netcdf_handle.hardware_file = "None" if self.hardware_metadata.hardware_file is None else self.hardware_metadata.hardware_file
+    #     self.netcdf_handle.output_oversample = self.hardware_metadata.output_oversample
+    #     for name, value in self.hardware_metadata.extra_parameters.items():
+    #         setattr(self.netcdf_handle, name, value)
+    #     # Create Variables
+    #     self.netcdf_handle.createVariable("time_data", "f8", ("response_channels", "time_samples"))
+    #     var = self.netcdf_handle.createVariable("environment_names", str, ("num_environments",))
+    #     this_environment_index = None
+    #     for i, name in enumerate(self.hardware_metadata.environment_names):
+    #         var[i] = name
+    #         if name == self.environment_name:
+    #             this_environment_index = i
+    #     var = self.netcdf_handle.createVariable(
+    #         "environment_active_channels",
+    #         "i1",
+    #         ("response_channels", "num_environments"),
+    #     )
+    #     var[...] = self.hardware_metadata.environment_active_channels.astype("int8")[
+    #         self.hardware_metadata.environment_active_channels[:, this_environment_index],
+    #         :,
+    #     ]
+    #     # Create channel table variables
+    #     labels = [
+    #         ["node_number", str],
+    #         ["node_direction", str],
+    #         ["comment", str],
+    #         ["serial_number", str],
+    #         ["triax_dof", str],
+    #         ["sensitivity", str],
+    #         ["unit", str],
+    #         ["make", str],
+    #         ["model", str],
+    #         ["expiration", str],
+    #         ["physical_device", str],
+    #         ["physical_channel", str],
+    #         ["channel_type", str],
+    #         ["minimum_value", str],
+    #         ["maximum_value", str],
+    #         ["coupling", str],
+    #         ["excitation_source", str],
+    #         ["excitation", str],
+    #         ["feedback_device", str],
+    #         ["feedback_channel", str],
+    #         ["warning_level", str],
+    #         ["abort_level", str],
+    #     ]
+    #     for label, netcdf_datatype in labels:
+    #         var = self.netcdf_handle.createVariable("/channels/" + label, netcdf_datatype, ("response_channels",))
+    #         channel_data = [getattr(channel, label) for channel in self.hardware_metadata.channel_list]
+    #         if netcdf_datatype == "i1":
+    #             channel_data = np.array([1 if val else 0 for val in channel_data])
+    #         else:
+    #             channel_data = ["" if val is None else val for val in channel_data]
+    #         for i, cd in enumerate(channel_data):
+    #             if label == "node_number" and i in self.override_table:
+    #                 var[i] = self.override_table[i][0]
+    #             elif label == "node_direction" and i in self.override_table:
+    #                 var[i] = self.override_table[i][1]
+    #             else:
+    #                 var[i] = cd
+    #     group_handle = self.netcdf_handle.createGroup(self.environment_name)
+    #     self.metadata.store_to_netcdf(group_handle)
+    #     group_handle.createDimension("fft_lines", self.metadata.fft_lines)
+    #     group_handle.createVariable(
+    #         "frf_data_real",
+    #         "f8",
+    #         ("fft_lines", "response_channels", "reference_channels"),
+    #     )
+    #     group_handle.createVariable(
+    #         "frf_data_imag",
+    #         "f8",
+    #         ("fft_lines", "response_channels", "reference_channels"),
+    #     )
+    #     group_handle.createVariable("coherence", "f8", ("fft_lines", "response_channels"))
 
     def update_channel_names(self):
         """Updates channel names based on the override channel table"""
@@ -1063,53 +1064,72 @@ class ModalUI(AbstractUI):
         """
         # print('Got GUI Update {:}'.format(queue_data[0]))
         command, data = queue_data
-        if command == ModalUICommands.SPECTRAL_UPDATE:
-            (
-                frames,
-                _,
-                _,
-                self.last_frf,
-                self.last_coherence,
-                last_response_cpsd,
-                last_reference_cpsd,
-                self.last_condition,
-            ) = data
-            self.run_widget.channel_display_area.last_frf = self.last_frf
-            self.run_widget.channel_display_area.last_coh = self.last_coherence.T
-            if last_response_cpsd.ndim == 3:
-                self.last_response_cpsd = np.einsum("fii->fi", last_response_cpsd)
-            else:
-                self.last_response_cpsd = last_response_cpsd
-            if last_reference_cpsd.ndim == 3:
-                self.last_reference_cpsd = np.einsum("fii->fi", last_reference_cpsd)
-            else:
-                self.last_reference_cpsd = last_reference_cpsd
-            # Assemble autospectrum
-            self.run_widget.channel_display_area.last_autospectrum = np.zeros(
+        match command:
+            case ModalUICommands.SPECTRAL_UPDATE:
                 (
-                    len(self.hardware_metadata.channel_list),
-                    self.last_response_cpsd.shape[0],
+                    frames,
+                    _,
+                    _,
+                    self.last_frf,
+                    self.last_coherence,
+                    last_response_cpsd,
+                    last_reference_cpsd,
+                    self.last_condition,
+                ) = data
+                self.run_widget.channel_display_area.last_frf = self.last_frf
+                self.run_widget.channel_display_area.last_coh = self.last_coherence.T
+                if last_response_cpsd.ndim == 3:
+                    self.last_response_cpsd = np.einsum("fii->fi", last_response_cpsd)
+                else:
+                    self.last_response_cpsd = last_response_cpsd
+                if last_reference_cpsd.ndim == 3:
+                    self.last_reference_cpsd = np.einsum("fii->fi", last_reference_cpsd)
+                else:
+                    self.last_reference_cpsd = last_reference_cpsd
+                # Assemble autospectrum
+                self.run_widget.channel_display_area.last_autospectrum = np.zeros(
+                    (
+                        len(self.hardware_metadata.channel_list),
+                        self.last_response_cpsd.shape[0],
+                    )
                 )
-            )
-            for i, index in enumerate(self.metadata.reference_channel_indices):
-                self.run_widget.channel_display_area.last_autospectrum[index, :] = self.last_reference_cpsd[:, i].real
-            for i, index in enumerate(self.metadata.response_channel_indices):
-                self.run_widget.channel_display_area.last_autospectrum[index, :] = self.last_response_cpsd[:, i].real
-            self.run_widget.current_average_display.setValue(frames)
-            for window in self.run_widget.channel_display_area.subWindowList():
-                widget = window.widget()
-                if widget.signal_selector.currentIndex() in [3, 4, 5, 6, 7]:
-                    widget.update_data()
-            if self.acquiring and self.netcdf_handle is not None:
-                group = self.netcdf_handle.groups[self.environment_name]
-                group.variables["frf_data_real"][:] = np.real(self.last_frf)
-                group.variables["frf_data_imag"][:] = np.imag(self.last_frf)
-                group.variables["coherence"][:] = self.last_coherence
-            if self.acquiring and frames >= self.metadata.num_averages:
-                self.stop_control()
-                self.acquiring = False
-        else:
-            self.display_error(f"Unknown Modal UI Command {command}")
+                for i, index in enumerate(self.metadata.reference_channel_indices):
+                    self.run_widget.channel_display_area.last_autospectrum[index, :] = self.last_reference_cpsd[:, i].real
+                for i, index in enumerate(self.metadata.response_channel_indices):
+                    self.run_widget.channel_display_area.last_autospectrum[index, :] = self.last_response_cpsd[:, i].real
+                self.run_widget.current_average_display.setValue(frames)
+                for window in self.run_widget.channel_display_area.subWindowList():
+                    widget = window.widget()
+                    if widget.signal_selector.currentIndex() in [3, 4, 5, 6, 7]:
+                        widget.update_data()
+                if self.acquiring and self.netcdf_handle is not None:
+                    group = self.netcdf_handle.groups[self.environment_name]
+                    group.variables["frf_data_real"][:] = np.real(self.last_frf)
+                    group.variables["frf_data_imag"][:] = np.imag(self.last_frf)
+                    group.variables["coherence"][:] = self.last_coherence
+                if self.acquiring and frames >= self.metadata.num_averages:
+                    self.stop_control()
+                    self.acquiring = False
+            case DataCollectorUICommands.TIME_FRAME:
+                frame, accepted = data
+                self.run_widget.channel_display_area.last_frame = frame
+                self.run_widget.channel_display_area.last_spectrum = np.abs(np.fft.rfft(frame, axis=-1))
+                for window in self.run_widget.channel_display_area.subWindowList():
+                    widget = window.widget()
+                    if widget.signal_selector.currentIndex() not in [3, 4, 5, 6, 7]:
+                        widget.update_data()
+                if self.netcdf_handle is not None and accepted:
+                    # Get current timestep
+                    num_timesteps = self.netcdf_handle.dimensions["time_samples"].size
+                    current_frame = num_timesteps // self.metadata.samples_per_frame
+                    if current_frame < self.metadata.num_averages:
+                        timesteps = slice(num_timesteps, None, None)
+                        self.netcdf_handle.variables["time_data"][:, timesteps] = frame
+                if self.metadata.accept_type == "Manual" and not accepted:
+                    self.run_widget.accept_average_button.setEnabled(True)
+                    self.run_widget.reject_average_button.setEnabled(True)
+            case _:
+                self.display_error(f"Unknown Modal UI Command {command}")
 
     @staticmethod
     def create_environment_template(environment_name: str, workbook: openpyxl.workbook.workbook.Workbook):
@@ -1353,17 +1373,11 @@ class ModalUI(AbstractUI):
             widget.setChecked(False)
             column_index += 1
 
-    def display_environment_ended(self):
-        return super().display_environment_ended()
-
-    def display_environment_started(self):
-        return super().display_environment_started()
-
     def get_environment_instructions(self):
-        return super().get_environment_instructions()
+        return ModalInstructions(self.environment_name)
 
     def set_environment_instructions(self, instructions):
-        return super().set_environment_instructions(instructions)
+        return
 
     def start_environment(self):
         return super().start_environment()
@@ -1375,10 +1389,16 @@ class ModalUI(AbstractUI):
         return super().start_environment_error(error)
 
     def stop_environment(self):
-        return super().stop_environment()
+        self.rattlesnake.stop_environment()
 
     def stop_environment_error(self, error):
         return super().stop_environment_error(error)
 
     def stop_environment_ready(self):
         return super().stop_environment_ready()
+
+    def display_environment_ended(self):
+        return super().display_environment_ended()
+
+    def display_environment_started(self):
+        return super().display_environment_started()

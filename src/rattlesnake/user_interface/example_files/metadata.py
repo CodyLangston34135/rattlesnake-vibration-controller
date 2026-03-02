@@ -8,6 +8,7 @@ import numpy as np
 
 BUFFER_SIZE = 0.05
 TIME_ENVIRONMENT_NAME = "My Time"
+MODAL_ENVIRONMENT_NAME = "My Modal"
 
 
 def make_sdynpy_system_metadata():
@@ -126,3 +127,7 @@ def make_time_environment_instructions(environment_name=TIME_ENVIRONMENT_NAME):
     time_instructions = TimeInstructions(environment_name, current_test_level, repeat)
 
     return time_instructions
+
+
+def make_modal_environment_metadata(environment_name=MODAL_ENVIRONMENT_NAME):
+    return

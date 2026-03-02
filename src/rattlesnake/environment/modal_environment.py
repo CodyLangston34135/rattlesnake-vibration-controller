@@ -91,9 +91,8 @@ class ModalCommands(Enum):
 
 
 class ModalUICommands(Enum):
-    SPECTRAL_UPDATE = 0
-    TIME_FRAME = 1
-    FINISHED = 3
+    SPECTRAL_UPDATE = 1
+    FINISHED = 2
 
 
 class ModalMetadata(EnvironmentMetadata):
@@ -953,7 +952,7 @@ class ModalEnvironment(EnvironmentProcess):
         if self.siggen_shutdown_achieved and self.collector_shutdown_achieved and self.spectral_shutdown_achieved:
             self.log("Shutdown Achieved")
             self.clear_active()
-            self.gui_update_queue.put((self.environment_name, (UICommands.ENVIRONMENT_ENDED, None)))
+            # self.gui_update_queue.put((self.environment_name, (UICommands.ENVIRONMENT_ENDED, None)))
         else:
             # Recheck some time later
             time.sleep(1)
