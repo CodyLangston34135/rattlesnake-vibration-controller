@@ -1642,8 +1642,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                         raise RattlesnakeError(f"{environment_name} profile event {command} requires {validator} data type")
 
                 # Update environment ui
-                if environment_name != "Global" and command in self.environment_uis[environment_name].command_map.keys():
-                    self.environment_uis[environment_name].command_map[command](data)
+                if environment_name != "Global":
+                    self.environment_uis[environment_name].update_gui((command, data))
 
                 # Add to profile_event_list
                 profile_event = ProfileEvent(timestamp, environment_name, command, data)

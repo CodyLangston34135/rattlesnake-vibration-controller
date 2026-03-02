@@ -1129,7 +1129,8 @@ class ModalUI(AbstractUI):
                     self.run_widget.accept_average_button.setEnabled(True)
                     self.run_widget.reject_average_button.setEnabled(True)
             case _:
-                self.display_error(f"Unknown Modal UI Command {command}")
+                if isinstance(command, str):
+                    print(f"Unknown Modal UI Command {command}")
 
     @staticmethod
     def create_environment_template(environment_name: str, workbook: openpyxl.workbook.workbook.Workbook):
