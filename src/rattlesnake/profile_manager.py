@@ -17,6 +17,10 @@ VALID_COMMANDS = {
         UICommands.SET_ENVIRONMENT_INSTRUCTIONS,
         *TimeCommands,
     ),
+    ControlTypes.MODAL: (
+        GlobalCommands.START_ENVIRONMENT,
+        GlobalCommands.STOP_ENVIRONMENT,
+    ),
 }
 VALID_DATA = {
     GlobalCommands.STOP_HARDWARE: type(None),
