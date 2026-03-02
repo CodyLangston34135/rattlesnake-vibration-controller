@@ -565,9 +565,9 @@ class ModalQueues:
         self.data_for_spectral_computation_queue = mp.Queue()
         self.updated_spectral_quantities_queue = mp.Queue()
         self.signal_generation_update_queue = mp.Queue()
-        self.spectral_command_queue = VerboseMessageQueue(log_file_queue, environment_name + " Spectral Computation Command Queue")
-        self.collector_command_queue = VerboseMessageQueue(log_file_queue, environment_name + " Data Collector Command Queue")
-        self.signal_generation_command_queue = VerboseMessageQueue(log_file_queue, environment_name + " Signal Generation Command Queue")
+        self.spectral_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), environment_name + " Spectral Computation Command Queue")
+        self.collector_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), environment_name + " Data Collector Command Queue")
+        self.signal_generation_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), environment_name + " Signal Generation Command Queue")
 
 
 class ModalEnvironment(EnvironmentProcess):
@@ -598,8 +598,8 @@ class ModalEnvironment(EnvironmentProcess):
             ready_event,
         )
         self.queue_container = queue_container
-        self.data_acquisition_parameters = None
-        self.environment_parameters = None
+        self.hardware_metadata = None
+        self.metadata = None
         self.frame_number = 0
         self.siggen_shutdown_achieved = False
         self.collector_shutdown_achieved = False
@@ -675,44 +675,44 @@ class ModalEnvironment(EnvironmentProcess):
 
     def get_data_collector_metadata(self) -> CollectorMetadata:
         """Collects metadata used to define the data collector"""
-        num_channels = len(self.data_acquisition_parameters.channel_list)
-        reference_channel_indices = self.environment_parameters.reference_channel_indices
-        response_channel_indices = self.environment_parameters.response_channel_indices
-        if self.environment_parameters.trigger_type == "Free Run":
+        num_channels = len(self.hardware_metadata.channel_list)
+        reference_channel_indices = self.metadata.reference_channel_indices
+        response_channel_indices = self.metadata.response_channel_indices
+        if self.metadata.trigger_type == "Free Run":
             acquisition_type = AcquisitionType.FREE_RUN
-        elif self.environment_parameters.trigger_type == "First Frame":
+        elif self.metadata.trigger_type == "First Frame":
             acquisition_type = AcquisitionType.TRIGGER_FIRST_FRAME
-        elif self.environment_parameters.trigger_type == "Every Frame":
+        elif self.metadata.trigger_type == "Every Frame":
             acquisition_type = AcquisitionType.TRIGGER_EVERY_FRAME
         else:
-            raise ValueError(f"Invalid Acquisition Type: {self.environment_parameters.trigger_type}")
-        if self.environment_parameters.accept_type == "Accept All":
+            raise ValueError(f"Invalid Acquisition Type: {self.metadata.trigger_type}")
+        if self.metadata.accept_type == "Accept All":
             acceptance = Acceptance.AUTOMATIC
             acceptance_function = None
-        elif self.environment_parameters.accept_type == "Manual":
+        elif self.metadata.accept_type == "Manual":
             acceptance = Acceptance.MANUAL
             acceptance_function = None
-        elif self.environment_parameters.accept_type == "Autoreject...":
+        elif self.metadata.accept_type == "Autoreject...":
             acceptance = Acceptance.AUTOMATIC
-            acceptance_function = self.environment_parameters.acceptance_function
+            acceptance_function = self.metadata.acceptance_function
         else:
-            raise ValueError(f"Invalid Acceptance Type: {self.environment_parameters.accept_type}")
-        overlap_fraction = self.environment_parameters.overlap
-        trigger_channel_index = self.environment_parameters.trigger_channel
-        trigger_slope = TriggerSlope.POSITIVE if self.environment_parameters.trigger_slope_positive else TriggerSlope.NEGATIVE
-        (_, trigger_level, _, trigger_hysteresis) = self.environment_parameters.get_trigger_levels(self.data_acquisition_parameters.channel_list)
-        trigger_hysteresis_samples = self.environment_parameters.hysteresis_samples
-        pretrigger_fraction = self.environment_parameters.pretrigger
-        frame_size = self.environment_parameters.samples_per_frame
-        if self.environment_parameters.frf_window == "hann":
+            raise ValueError(f"Invalid Acceptance Type: {self.metadata.accept_type}")
+        overlap_fraction = self.metadata.overlap
+        trigger_channel_index = self.metadata.trigger_channel
+        trigger_slope = TriggerSlope.POSITIVE if self.metadata.trigger_slope_positive else TriggerSlope.NEGATIVE
+        (_, trigger_level, _, trigger_hysteresis) = self.metadata.get_trigger_levels(self.hardware_metadata.channel_list)
+        trigger_hysteresis_samples = self.metadata.hysteresis_samples
+        pretrigger_fraction = self.metadata.pretrigger
+        frame_size = self.metadata.samples_per_frame
+        if self.metadata.frf_window == "hann":
             window = Window.HANN
-        elif self.environment_parameters.frf_window == "rectangle":
+        elif self.metadata.frf_window == "rectangle":
             window = Window.RECTANGLE
-        elif self.environment_parameters.frf_window == "exponential":
+        elif self.metadata.frf_window == "exponential":
             window = Window.EXPONENTIAL
         else:
-            raise ValueError(f"Invalid Window Type: {self.environment_parameters.frf_window}")
-        window_parameter = -(frame_size) / np.log(self.environment_parameters.exponential_window_value_at_frame_end)
+            raise ValueError(f"Invalid Window Type: {self.metadata.frf_window}")
+        window_parameter = -(frame_size) / np.log(self.metadata.exponential_window_value_at_frame_end)
         return CollectorMetadata(
             num_channels,
             response_channel_indices,
@@ -736,24 +736,24 @@ class ModalEnvironment(EnvironmentProcess):
 
     def get_spectral_processing_metadata(self) -> SpectralProcessingMetadata:
         """Collects metadata to define the spectral processing"""
-        averaging_type = AveragingTypes.LINEAR if self.environment_parameters.averaging_type == "Linear" else AveragingTypes.EXPONENTIAL
-        averages = self.environment_parameters.num_averages
-        exponential_averaging_coefficient = self.environment_parameters.averaging_coefficient
-        if self.environment_parameters.frf_technique == "H1":
+        averaging_type = AveragingTypes.LINEAR if self.metadata.averaging_type == "Linear" else AveragingTypes.EXPONENTIAL
+        averages = self.metadata.num_averages
+        exponential_averaging_coefficient = self.metadata.averaging_coefficient
+        if self.metadata.frf_technique == "H1":
             frf_estimator = Estimator.H1
-        elif self.environment_parameters.frf_technique == "H2":
+        elif self.metadata.frf_technique == "H2":
             frf_estimator = Estimator.H2
-        elif self.environment_parameters.frf_technique == "H3":
+        elif self.metadata.frf_technique == "H3":
             frf_estimator = Estimator.H3
-        elif self.environment_parameters.frf_technique == "Hv":
+        elif self.metadata.frf_technique == "Hv":
             frf_estimator = Estimator.HV
         else:
-            raise ValueError(f"Invalid FRF Estimator {self.environment_parameters.frf_technique}. " "How did you get here?")
-        num_response_channels = len(self.environment_parameters.response_channel_indices)
-        num_reference_channels = len(self.environment_parameters.reference_channel_indices)
-        frequency_spacing = self.environment_parameters.frequency_spacing
-        sample_rate = self.environment_parameters.sample_rate
-        num_frequency_lines = self.environment_parameters.fft_lines
+            raise ValueError(f"Invalid FRF Estimator {self.metadata.frf_technique}. " "How did you get here?")
+        num_response_channels = len(self.metadata.response_channel_indices)
+        num_reference_channels = len(self.metadata.reference_channel_indices)
+        frequency_spacing = self.metadata.frequency_spacing
+        sample_rate = self.metadata.sample_rate
+        num_frequency_lines = self.metadata.fft_lines
         return SpectralProcessingMetadata(
             averaging_type,
             averages,
@@ -771,15 +771,15 @@ class ModalEnvironment(EnvironmentProcess):
     def get_signal_generation_metadata(self) -> SignalGenerationMetadata:
         """Collects metadata to define the signal generator"""
         return SignalGenerationMetadata(
-            samples_per_write=self.data_acquisition_parameters.samples_per_write,
+            samples_per_write=self.hardware_metadata.samples_per_write,
             level_ramp_samples=1,
             output_transformation_matrix=None,
-            disabled_signals=self.environment_parameters.disabled_signals,
+            disabled_signals=self.metadata.disabled_signals,
         )
 
     def get_signal_generator(self):
         """Gets the signal generator object used to generate signals for the environment"""
-        return self.environment_parameters.get_signal_generator()
+        return self.metadata.get_signal_generator()
 
     def start_environment(self, data):  # pylint: disable=unused-argument
         """Starts the environment
@@ -808,7 +808,7 @@ class ModalEnvironment(EnvironmentProcess):
             self.environment_name,
             (
                 DataCollectorCommands.SET_TEST_LEVEL,
-                (self.environment_parameters.skip_frames, 1),
+                (self.metadata.skip_frames, 1),
             ),
         )
         time.sleep(0.01)
@@ -893,7 +893,7 @@ class ModalEnvironment(EnvironmentProcess):
                         ModalUICommands.SPECTRAL_UPDATE,
                         (
                             frames,
-                            self.environment_parameters.num_averages,
+                            self.metadata.num_averages,
                             frequencies,
                             frf,
                             coherence,
@@ -1016,14 +1016,18 @@ class ModalEnvironment(EnvironmentProcess):
 
 def modal_process(
     environment_name: str,
+    queue_name: str,
     input_queue: VerboseMessageQueue,
-    gui_update_queue: Queue,
-    controller_communication_queue: VerboseMessageQueue,
-    log_file_queue: Queue,
-    data_in_queue: Queue,
-    data_out_queue: Queue,
-    acquisition_active: mp.sharedctypes.Synchronized,
-    output_active: mp.sharedctypes.Synchronized,
+    gui_update_queue: mp.Queue,
+    controller_command_queue: VerboseMessageQueue,
+    log_file_queue: mp.Queue,
+    data_in_queue: mp.Queue,
+    data_out_queue: mp.Queue,
+    acquisition_active_event: mp.synchronize.Event,
+    output_active_event: mp.synchronize.Event,
+    active_event: mp.synchronize.Event,
+    ready_event: mp.synchronize.Event,
+    shutdown_event: mp.synchronize.Event,
 ):
     """Modal environment process function called by multiprocessing
 
@@ -1053,7 +1057,7 @@ def modal_process(
         environment_name,
         input_queue,
         gui_update_queue,
-        controller_communication_queue,
+        controller_command_queue,
         data_in_queue,
         data_out_queue,
         log_file_queue,
@@ -1100,8 +1104,10 @@ def modal_process(
 
     collection_proc.start()
 
-    process_class = ModalEnvironment(environment_name, queue_container, acquisition_active, output_active)
-    process_class.run()
+    process_class = ModalEnvironment(
+        environment_name, queue_name, queue_container, acquisition_active_event, output_active_event, active_event, ready_event
+    )
+    process_class.run(shutdown_event)
 
     # Rejoin all the processes
     process_class.log("Joining Subprocesses")

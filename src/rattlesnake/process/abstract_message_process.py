@@ -49,7 +49,7 @@ class AbstractMessageProcess(ABC):
         log_file_queue: mp.Queue,
         command_queue: VerboseMessageQueue,
         gui_update_queue: mp.Queue,
-        ready_event: mp.synchronize.Event,
+        ready_event: mp.synchronize.Event = None,
     ):
         """
         Constructor for the AbstractMessageProcess class.
@@ -73,8 +73,9 @@ class AbstractMessageProcess(ABC):
         self._log_file_queue = log_file_queue
         self._gui_update_queue = gui_update_queue
         self._command_queue = command_queue
-        self._ready_event = ready_event
-        self.set_ready()
+        if ready_event:
+            self._ready_event = ready_event
+            self.set_ready()
         self._command_map = {GlobalCommands.QUIT: self.quit}
 
     def log(self, message):
@@ -115,10 +116,12 @@ class AbstractMessageProcess(ABC):
         return self._ready_event
 
     def set_ready(self):
-        self._ready_event.set()
+        if self._ready_event:
+            self._ready_event.set()
 
     def clear_ready(self):
-        self._ready_event.clear()
+        if self._ready_event:
+            self._ready_event.clear()
 
     def map_command(self, key, function):
         """Maps commands to instructions
@@ -149,7 +152,7 @@ class AbstractMessageProcess(ABC):
         """Queue to which log file messages should be written."""
         return self._log_file_queue
 
-    def run(self, shutdown_event: mp.synchronize.Event):
+    def run(self, shutdown_event: mp.synchronize.Event = None):
         """The main function that is run by the process
 
         A function that is called by the process function that
@@ -165,7 +168,11 @@ class AbstractMessageProcess(ABC):
 
         """
         self.log(f"Starting Process with PID {os.getpid()}")
-        while not shutdown_event.is_set():
+        while True:
+            # Check shutdown event
+            if shutdown_event is not None and shutdown_event.is_set():
+                break
+
             # Get the message from the queue
             try:
                 message, data = self.command_queue.get(self.process_name, timeout=0.1)  # non-blocking-ish

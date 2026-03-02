@@ -80,7 +80,7 @@ def log_file_task(queue: mp.Queue, shutdown_event):
 class VerboseMessageQueue:
     """A queue class that contains automatic logging information"""
 
-    def __init__(self, log_queue, base_queue, name_manager, base_name: str = ""):
+    def __init__(self, log_queue, base_queue, base_name: str = "", name_manager=None):
         """
         A queue class that contains automatic logging information
 
@@ -96,7 +96,10 @@ class VerboseMessageQueue:
         self.base_queue = base_queue
         self.log_queue = log_queue
         self.base_name = base_name
-        self.environment_name = name_manager.Value(str, "")
+        if name_manager:
+            self.environment_name = name_manager.Value(str, "")
+        else:
+            self.environment_name = None
         self.last_put_message = None
         self.last_put_time = -float("inf")
         self.last_get_message = None
@@ -106,8 +109,11 @@ class VerboseMessageQueue:
 
     @property
     def log_name(self):
-        env = self.environment_name.value
-        return f"{self.base_name} | {env}" if env else self.base_name
+        if self.environment_name:
+            env = self.environment_name.value
+            return f"{self.base_name} | {env}" if env else self.base_name
+        else:
+            return {self.base_name}
 
     def assign_environment(self, env_name: str):
         self.environment_name.value = env_name

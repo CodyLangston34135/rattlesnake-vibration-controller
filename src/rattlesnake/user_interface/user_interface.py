@@ -1813,7 +1813,7 @@ if __name__ == "__main__":
     stream_metadata = make_time_environment_stream_metadata()
     environment_instructions = make_time_environment_instructions()
 
-    rattlesnake = Rattlesnake(threaded=True, timeout=10)
+    rattlesnake = Rattlesnake(threaded=False, timeout=10)
     rattlesnake.set_hardware(hardware_metadata)
     # rattlesnake.set_environments([environment_metadata])
     # rattlesnake.set_profile_event_list(profile_event_list)

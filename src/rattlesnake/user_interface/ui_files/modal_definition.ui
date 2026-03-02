@@ -1059,10 +1059,10 @@ Autoreject...: Allows the user to load in a Python function to automatically acc
           <property name="selectionBehavior">
            <enum>QAbstractItemView::SelectRows</enum>
           </property>
-          <attribute name="horizontalHeaderDefaultSectionSize">
+          <attribute name="horizontalHeaderMinimumSectionSize">
            <number>70</number>
           </attribute>
-          <attribute name="horizontalHeaderMinimumSectionSize">
+          <attribute name="horizontalHeaderDefaultSectionSize">
            <number>70</number>
           </attribute>
           <column>
@@ -1887,7 +1887,17 @@ References</string>
            </widget>
           </item>
           <item>
-           <widget class="PlotWidget" name="output_signal_plot"/>
+           <widget class="PlotWidget" name="output_signal_plot">
+            <property name="backgroundBrush">
+             <brush brushstyle="NoBrush">
+              <color alpha="255">
+               <red>255</red>
+               <green>255</green>
+               <blue>255</blue>
+              </color>
+             </brush>
+            </property>
+           </widget>
           </item>
           <item>
            <layout class="QHBoxLayout" name="regenerate_signal_layout">

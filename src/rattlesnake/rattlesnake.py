@@ -64,22 +64,22 @@ class Rattlesnake:
         self.controller_queue_name_manager = mp.Manager()  # Adds minor overhead which is reasonable for COMMAND queues only
         controller_close_event = new_event()
         controller_ready_event = new_event()
-        controller_command_queue = VerboseMessageQueue(log_file_queue, new_queue(), self.controller_queue_name_manager, "Controller Command Queue")
+        controller_command_queue = VerboseMessageQueue(log_file_queue, new_queue(), "Controller Command Queue", self.controller_queue_name_manager)
         acquisition_close_event = new_event()
         acquisition_ready_event = new_event()
         acquisition_active_event = new_event()
         acquisition_active_event.clear()
-        acquisition_command_queue = VerboseMessageQueue(log_file_queue, new_queue(), self.controller_queue_name_manager, "Acquisition Command Queue")
+        acquisition_command_queue = VerboseMessageQueue(log_file_queue, new_queue(), "Acquisition Command Queue", self.controller_queue_name_manager)
         output_close_event = new_event()
         output_ready_event = new_event()
         output_active_event = new_event()
         output_active_event.clear()
-        output_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), self.controller_queue_name_manager, "Output Command Queue")
+        output_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), "Output Command Queue", self.controller_queue_name_manager)
         streaming_close_event = new_event()
         streaming_ready_event = new_event()
         streaming_active_event = new_event()
         streaming_active_event.clear()
-        streaming_command_queue = VerboseMessageQueue(log_file_queue, new_queue(), self.controller_queue_name_manager, "Streaming Command Queue")
+        streaming_command_queue = VerboseMessageQueue(log_file_queue, new_queue(), "Streaming Command Queue", self.controller_queue_name_manager)
 
         # Set up data queue
         input_output_sync_queue = new_queue()
@@ -100,7 +100,10 @@ class Rattlesnake:
             environment_active_events[queue_name] = new_event()
             environment_active_events[queue_name].clear()
             environment_command_queues[queue_name] = VerboseMessageQueue(
-                log_file_queue, mp.Queue(), self.controller_queue_name_manager, queue_name + " Command Queue"
+                log_file_queue,
+                mp.Queue(),
+                queue_name + " Command Queue",
+                self.controller_queue_name_manager,
             )
             environment_data_in_queues[queue_name] = new_queue()
             environment_data_out_queues[queue_name] = new_queue()
