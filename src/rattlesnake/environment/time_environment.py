@@ -584,6 +584,7 @@ def time_process(
     active_event: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
+    threaded: bool,
 ):
     """Time signal generation environment process function called by multiprocessing
 

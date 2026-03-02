@@ -8,7 +8,7 @@ from rattlesnake.profile_manager import ProfileManager, ProfileEvent
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata, EnvironmentInstructions
 from rattlesnake.environment_manager import EnvironmentManager
-from rattlesnake.load_manager import load_metadata_from_netcdf, load_metadata_from_worksheet, save_rattlesnake_template
+from rattlesnake.load_utilities import load_metadata_from_netcdf, load_metadata_from_worksheet, save_rattlesnake_template
 import os
 import time
 import multiprocessing as mp

@@ -220,6 +220,7 @@ class AbstractUI(ABC):
 
     @abstractmethod
     def start_environment_ready(self):
+        self.display_environment_started()
         self.clean_up_event_watcher()
 
     @abstractmethod
@@ -230,6 +231,11 @@ class AbstractUI(ABC):
         1. Enable stop_environment and start_environment button
         2. Call super().start_environment_error or display error some other way
         """
+        if self.active:
+            self.display_environment_started()
+        else:
+            self.display_environment_ended()
+
         self.clean_up_event_watcher()
         self.display_error(error)
 
@@ -256,6 +262,7 @@ class AbstractUI(ABC):
 
     @abstractmethod
     def stop_environment_ready(self):
+        self.display_environment_ended()
         self.clean_up_event_watcher()
 
     @abstractmethod
@@ -266,6 +273,11 @@ class AbstractUI(ABC):
         1. Enable stop_environment and start_environment button
         2. Call super().start_environment_error or display error some other way
         """
+        if self.active:
+            self.display_environment_started()
+        else:
+            self.display_environment_ended()
+
         self.clean_up_event_watcher()
         self.display_error(error)
 

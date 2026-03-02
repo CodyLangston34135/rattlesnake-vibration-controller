@@ -22,7 +22,7 @@ from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.environment.abstract_environment import EnvironmentInstructions
 from rattlesnake.process.streaming import StreamMetadata, StreamType
 from rattlesnake.profile_manager import VALID_COMMANDS
-from rattlesnake.load_manager import (
+from rattlesnake.load_utilities import (
     load_channel_table_from_netcdf,
     load_channel_table_from_worksheet,
     save_channel_table_worksheet,
@@ -333,7 +333,8 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.add_environment(environment_type)
 
             environment_name = environment_metadata.environment_name
-            self.rename_environment(environment_idx, environment_name)
+            if environment_name not in self.environment_uis.keys():  # Dont rename if they were already using default name
+                self.rename_environment(environment_idx, environment_name)
 
             self.environment_uis[environment_name].initialize_hardware(hardware_metadata)
             self.environment_uis[environment_name].set_environment_metadata(environment_metadata)
@@ -1044,11 +1045,7 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
 
         # Make sure name does not already exist
         if new_name in self.environment_uis:
-            QtWidgets.QMessageBox.warning(
-                self,
-                "Error",
-                "The new name already exists. Please choose a different name.",
-            )
+            self.display_error("The new name already exists. Please choose a different name.")
             return
 
         # Replace old name in dict with new name while keeping order
@@ -1813,7 +1810,7 @@ if __name__ == "__main__":
     stream_metadata = make_time_environment_stream_metadata()
     environment_instructions = make_time_environment_instructions()
 
-    rattlesnake = Rattlesnake(threaded=False, timeout=10)
+    rattlesnake = Rattlesnake(threaded=True, timeout=10)
     rattlesnake.set_hardware(hardware_metadata)
     # rattlesnake.set_environments([environment_metadata])
     # rattlesnake.set_profile_event_list(profile_event_list)

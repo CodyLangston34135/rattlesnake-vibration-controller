@@ -389,35 +389,21 @@ class TimeUI(AbstractUI):
         self.run_widget.start_test_button.setEnabled(False)
         self.run_widget.test_level_selector.setEnabled(False)
         self.run_widget.repeat_signal_checkbox.setEnabled(False)
-
         super().start_environment()
 
     def start_environment_ready(self):
         super().start_environment_ready()
 
     def start_environment_error(self, error):
-        self.display_environment_ended()
-
-        if self.active:
-            self.display_environment_started()
-        else:
-            self.display_environment_ended()
-
         super().start_environment_error(error)
 
     def stop_environment(self):
         """Stops running the environment"""
         self.run_widget.stop_test_button.setEnabled(False)
-
         super().stop_environment()
 
     def stop_environment_ready(self):
         super().stop_environment_ready()
 
     def stop_environment_error(self, error):
-        if self.active:
-            self.display_environment_started()
-        else:
-            self.display_environment_ended()
-
         super().stop_environment_error(error)

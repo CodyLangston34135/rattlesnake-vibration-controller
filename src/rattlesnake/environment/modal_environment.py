@@ -56,12 +56,13 @@ from rattlesnake.process.spectral_processing import (  # noqa # pylint: disable=
 )
 from rattlesnake.user_interface.ui_utilities import UICommands
 import multiprocessing as mp
+import threading
+import queue as thqueue
 import time
 from enum import Enum
 from glob import glob
 import netCDF4 as nc4
 import numpy as np
-from multiprocessing.queues import Queue
 from typing import List
 
 
@@ -461,8 +462,8 @@ class ModalMetadata(EnvironmentMetadata):
         signal_generator_min_frequency = netcdf_group_handle.signal_generator_min_frequency
         signal_generator_max_frequency = netcdf_group_handle.signal_generator_max_frequency
         signal_generator_on_percent = netcdf_group_handle.signal_generator_level
-        reference_channel_indices = netcdf_group_handle.variables["response_channel_indices"][...]
-        response_channel_indices = netcdf_group_handle.variables["reference_channel_indices"][...]
+        reference_channel_indices = netcdf_group_handle.variables["reference_channel_indices"][...]
+        response_channel_indices = netcdf_group_handle.variables["response_channel_indices"][...]
         environment_channel_list = [channel for channel, channel_bool in zip(channel_list, channel_list_bools) if channel_bool]
         output_channel_indices = [index for index, channel in enumerate(environment_channel_list) if channel.feedback_device is not None]
         exponential_window_value_at_frame_end = netcdf_group_handle.exponential_window_value_at_frame_end
@@ -629,6 +630,7 @@ class ModalEnvironment(EnvironmentProcess):
             channels active in the environment as well as sampling parameters.
         """
         self.hardware_metadata = hardware_metadata
+        self.set_ready()
 
     def initialize_environment(self, metadata: ModalMetadata):
         """
@@ -1027,6 +1029,7 @@ def modal_process(
     active_event: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
+    threaded: bool,
 ):
     """Modal environment process function called by multiprocessing
 
@@ -1052,6 +1055,11 @@ def modal_process(
         Queue to which data will be written that will be output by the hardware.
 
     """
+    if threaded:
+        new_process = threading.Thread  # worker threads
+    else:
+        new_process = mp.Process  # worker processes
+
     queue_container = ModalQueues(
         environment_name,
         input_queue,
@@ -1062,7 +1070,7 @@ def modal_process(
         log_file_queue,
     )
 
-    spectral_proc = mp.Process(
+    spectral_proc = new_process(
         target=spectral_processing_process,
         args=(
             environment_name,
@@ -1075,7 +1083,8 @@ def modal_process(
         ),
     )
     spectral_proc.start()
-    siggen_proc = mp.Process(
+
+    siggen_proc = new_process(
         target=signal_generation_process,
         args=(
             environment_name,
@@ -1088,7 +1097,8 @@ def modal_process(
         ),
     )
     siggen_proc.start()
-    collection_proc = mp.Process(
+
+    collection_proc = new_process(
         target=data_collector_process,
         args=(
             environment_name,
@@ -1100,7 +1110,6 @@ def modal_process(
             queue_container.gui_update_queue,
         ),
     )
-
     collection_proc.start()
 
     process_class = ModalEnvironment(

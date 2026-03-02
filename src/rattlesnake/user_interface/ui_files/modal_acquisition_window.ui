@@ -141,10 +141,30 @@
     </layout>
    </item>
    <item>
-    <widget class="PlotWidget" name="primary_plot"/>
+    <widget class="PlotWidget" name="primary_plot">
+     <property name="backgroundBrush">
+      <brush brushstyle="NoBrush">
+       <color alpha="255">
+        <red>255</red>
+        <green>255</green>
+        <blue>255</blue>
+       </color>
+      </brush>
+     </property>
+    </widget>
    </item>
    <item>
-    <widget class="PlotWidget" name="secondary_plot"/>
+    <widget class="PlotWidget" name="secondary_plot">
+     <property name="backgroundBrush">
+      <brush brushstyle="NoBrush">
+       <color alpha="255">
+        <red>255</red>
+        <green>255</green>
+        <blue>255</blue>
+       </color>
+      </brush>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>

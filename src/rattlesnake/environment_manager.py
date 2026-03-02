@@ -301,6 +301,7 @@ class EnvironmentManager:
                 self.environment_active_events[queue_name],
                 self.environment_ready_events[queue_name],
                 self.environment_close_events[queue_name],
+                self.threaded,
             ),
         )
         environment_process.start()
@@ -329,7 +330,7 @@ class EnvironmentManager:
 
             # Join environment process
             self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.QUIT, None))
-            self.queue_container.log_file_queue.put("{:}: Joining {:} Process\n".format(datetime.datetime.now(), queue_name))
+            self.queue_container.log_file_queue.put("{:}: Joining {:} Process\n".format(datetime.now(), queue_name))
             self.environment_processes[queue_name].join(timeout=5)
             if self.environment_processes[queue_name].is_alive():
                 self.queue_container.log_file_queue.put(f"{datetime.now()}: Force Closing {queue_name} Process\n")

@@ -21,8 +21,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.utilities import GlobalCommands, QueueContainer
+from rattlesnake.load_utilities import save_rattlesnake_netcdf_template
+from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata
 import multiprocessing as mp
@@ -141,78 +142,7 @@ class StreamingProcess(AbstractMessageProcess):
         self.stream_dimension = "time_samples"
         self.stream_index = 0
         self.netcdf_handle = nc.Dataset(stream_metadata.stream_file, "w", format="NETCDF4", clobber=True)  # pylint: disable=no-member
-        # Create dimensions
-        self.netcdf_handle.createDimension("response_channels", len(hardware_metadata.channel_list))
-        self.netcdf_handle.createDimension(
-            "output_channels",
-            len([channel for channel in hardware_metadata.channel_list if channel.feedback_device is not None]),
-        )
-        self.netcdf_handle.createDimension(self.stream_dimension, None)
-        self.netcdf_handle.createDimension("num_environments", len(environment_metadata_dict))
-        # Create attributes
-        self.netcdf_handle.file_version = "3.0.0"
-        self.netcdf_handle.sample_rate = hardware_metadata.sample_rate
-        self.netcdf_handle.time_per_write = hardware_metadata.samples_per_write / hardware_metadata.output_sample_rate
-        self.netcdf_handle.time_per_read = hardware_metadata.samples_per_read / hardware_metadata.sample_rate
-        self.netcdf_handle.hardware = hardware_metadata.hardware_type.value
-        self.netcdf_handle.output_oversample = hardware_metadata.output_oversample
-        for attr_name in hardware_metadata.extra_attr_list:
-            value = getattr(hardware_metadata, attr_name)
-            setattr(self.netcdf_handle, attr_name, value)
-        # Create Variables
-        self.netcdf_handle.createVariable(self.stream_variable, "f8", ("response_channels", self.stream_dimension))
-        var = self.netcdf_handle.createVariable("environment_names", str, ("num_environments",))
-        environment_booleans = []
-        for i, metadata in enumerate(environment_metadata_dict.values()):
-            var[i] = metadata.environment_name
-            environment_booleans.append(metadata.channel_list_bools)
-        var = self.netcdf_handle.createVariable("environment_types", int, ("num_environments",))
-        for i, metadata in enumerate(environment_metadata_dict.values()):
-            var[i] = metadata.environment_type.value
-        var = self.netcdf_handle.createVariable(
-            "environment_active_channels",
-            "i1",
-            ("response_channels", "num_environments"),
-        )
-        var[...] = np.array(environment_booleans, dtype="int8").T
-        # Create channel table variables
-        labels = [
-            ["node_number", str],
-            ["node_direction", str],
-            ["comment", str],
-            ["serial_number", str],
-            ["triax_dof", str],
-            ["sensitivity", str],
-            ["unit", str],
-            ["make", str],
-            ["model", str],
-            ["expiration", str],
-            ["physical_device", str],
-            ["physical_channel", str],
-            ["channel_type", str],
-            ["minimum_value", str],
-            ["maximum_value", str],
-            ["coupling", str],
-            ["excitation_source", str],
-            ["excitation", str],
-            ["feedback_device", str],
-            ["feedback_channel", str],
-            ["warning_level", str],
-            ["abort_level", str],
-        ]
-        for label, netcdf_datatype in labels:
-            var = self.netcdf_handle.createVariable("/channels/" + label, netcdf_datatype, ("response_channels",))
-            channel_data = [getattr(channel, label) for channel in hardware_metadata.channel_list]
-            if netcdf_datatype == "i1":
-                channel_data = np.array([1 if val else 0 for val in channel_data])
-            else:
-                channel_data = ["" if val is None else val for val in channel_data]
-            for i, cd in enumerate(channel_data):
-                var[i] = str(cd)
-        # Now write all the environment data to the netCDF file
-        for environment_metadata in environment_metadata_dict.values():
-            group_handle = self.netcdf_handle.createGroup(environment_metadata.environment_name)
-            environment_metadata.store_to_netcdf(group_handle)
+        save_rattlesnake_netcdf_template(self.netcdf_handle, hardware_metadata, environment_metadata_dict)
 
         self.set_ready()
 
