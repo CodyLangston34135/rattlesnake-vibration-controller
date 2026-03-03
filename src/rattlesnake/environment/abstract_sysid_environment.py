@@ -588,6 +588,7 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
         self.collector_shutdown_achieved = False
         self.spectral_shutdown_achieved = False
         self.analysis_shutdown_achieved = False
+        store_data = data if data is not None else False
 
         # Set up the collector
         self.collector_command_queue.put(
@@ -646,7 +647,7 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
         # Start the data analysis running
         self.data_analysis_command_queue.put(
             self.environment_name,
-            (SysIdDataAnalysisCommands.RUN_TRANSFER_FUNCTION, self.environment_metadata.sysid_metadata.auto_shutdown),
+            (SysIdDataAnalysisCommands.RUN_TRANSFER_FUNCTION, (self.environment_metadata.sysid_metadata.auto_shutdown, store_data)),
         )
 
         # Set up the spectral processing

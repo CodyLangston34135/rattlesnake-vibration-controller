@@ -494,6 +494,7 @@ class Rattlesnake:
         except KeyError:
             raise RattlesnakeError(f"No environments exist for {environment_name} name")
 
+        self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.STREAM_MANUAL, None))
         self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.START_SYSTEM_ID_NOISE, queue_name))
 
         if self.blocking:
@@ -503,7 +504,7 @@ class Rattlesnake:
 
         self.sys_id_active = True
 
-    def start_system_id_transfer_function(self, environment_name):
+    def start_system_id_transfer_function(self, environment_name, store_data=False):
         if self.state != RattlesnakeState.HARDWARE_ACTIVE:
             raise RattlesnakeError(f"Invalid state for starting system identification: {self.state}")
         try:
@@ -511,7 +512,8 @@ class Rattlesnake:
         except KeyError:
             raise RattlesnakeError(f"No environments exist for {environment_name} name")
 
-        self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.START_SYSTEM_ID_TRANSFER, queue_name))
+        self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.STREAM_MANUAL, None))
+        self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.START_SYSTEM_ID_TRANSFER, (queue_name, store_data)))
 
         if self.blocking:
             ready_event_list = []
@@ -598,7 +600,9 @@ class Rattlesnake:
             self.wait_for_events(ready_event_list, active_event_list, active_event_check=False)
 
         self.stop_streaming()
-        self.start_system_id_transfer_function(environment_name)
+        store_data = True
+        self.start_streaming()
+        self.start_system_id_transfer_function(environment_name, store_data)
 
         # Wait for automatic shutdown
         if self.blocking:

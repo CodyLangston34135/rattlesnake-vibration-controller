@@ -1777,7 +1777,9 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 dialog_title, error_message = data
                 error_message_qt(dialog_title, error_message)
             case UICommands.COMPLETED_SYSTEM_ID:
-                print(f"System Id Completed for {data}")
+                environment, _ = data
+                print(f"System Id Completed for {environment}")
+                self.rattlesnake_tabs.setTabEnabled(3, True)
             case UICommands.MONITOR:
                 pass
             case UICommands.ENABLE:
@@ -1815,7 +1817,7 @@ if __name__ == "__main__":
     stream_metadata = make_time_environment_stream_metadata()
     environment_instructions = make_time_environment_instructions()
 
-    rattlesnake = Rattlesnake(threaded=True, timeout=10)
+    rattlesnake = Rattlesnake(threaded=True, timeout=30)
     rattlesnake.set_hardware(hardware_metadata)
     # rattlesnake.set_environments([environment_metadata])
     # rattlesnake.set_profile_event_list(profile_event_list)
