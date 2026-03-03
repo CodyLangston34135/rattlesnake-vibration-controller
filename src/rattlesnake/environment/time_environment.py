@@ -33,7 +33,6 @@ import openpyxl
 import queue as thqueue
 import multiprocessing.queues as mpqueue
 import multiprocessing as mp
-import multiprocessing.synchronize  # pylint: disable=unused-import
 import netCDF4 as nc4
 import numpy as np
 from enum import Enum
@@ -590,6 +589,7 @@ def time_process(
     active_event: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
+    sysid_event: mp.synchronize.Event,
     threaded: bool,
 ):
     """Time signal generation environment process function called by multiprocessing

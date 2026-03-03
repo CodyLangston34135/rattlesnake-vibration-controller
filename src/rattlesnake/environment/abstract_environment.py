@@ -611,6 +611,8 @@ def run_process(
     active_event: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
+    sysid_event: mp.synchronize.Event,
+    threaded: bool,
 ):
     """A function called by ``multiprocessing.Process`` to start the environment
 

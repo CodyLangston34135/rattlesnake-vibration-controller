@@ -52,18 +52,14 @@ from rattlesnake.process.spectral_processing import (
 )
 from rattlesnake.user_interface.ui_utilities import UICommands
 import multiprocessing as mp
-import multiprocessing.sharedctypes  # pylint: disable=unused-import
 import time
 from abc import abstractmethod
 from copy import deepcopy
 from enum import Enum
 from multiprocessing.queues import Queue
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 import netCDF4 as nc4
 import numpy as np
-import openpyxl
-import pyqtgraph as pg
-from scipy.io import loadmat, savemat
 
 
 # region: Commands
@@ -235,10 +231,11 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
         data_analysis_command_queue: VerboseMessageQueue,
         data_in_queue: Queue,
         data_out_queue: Queue,
-        acquisition_active_event: mp.sharedctypes.Synchronized,
-        output_active_event: mp.sharedctypes.Synchronized,
+        acquisition_active_event: mp.synchronize.Event,
+        output_active_event: mp.synchronize.Event,
         active_event: mp.synchronize.Event,
         ready_event: mp.synchronize.Event,
+        sysid_event: mp.synchronize.Event,
     ):
         super().__init__(
             environment_name,
@@ -254,8 +251,7 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
             active_event,
             ready_event,
         )
-        # self.map_command(SystemIdCommands.PREVIEW_NOISE, self.preview_noise)
-        # self.map_command(SystemIdCommands.PREVIEW_TRANSFER_FUNCTION, self.preview_transfer_function)
+        self._sysid_event = sysid_event
         self.map_command(GlobalCommands.INITIALIZE_SYSTEM_ID, self.initialize_sysid)
         self.map_command(GlobalCommands.START_SYSTEM_ID_NOISE, self.start_noise)
         self.map_command(GlobalCommands.START_SYSTEM_ID_TRANSFER, self.start_transfer_function)
@@ -279,6 +275,16 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
         self.spectral_shutdown_achieved = True
         self.siggen_shutdown_achieved = True
         self.analysis_shutdown_achieved = True
+
+    @property
+    def sysid_active(self):
+        return self._sysid_event.is_set()
+
+    def set_sysid_active(self):
+        self._sysid_event.set()
+
+    def clear_sysid_active(self):
+        self._sysid_event.clear()
 
     # region: Initialize
     @abstractmethod
@@ -578,7 +584,7 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
         # Tell data collector to clear the kurtosis buffer
         self.collector_command_queue.put(self.environment_name, (DataCollectorCommands.CLEAR_KURTOSIS_BUFFER, None))
 
-        self.set_active()
+        self.set_sysid_active()
         self.gui_update_queue.put((self.environment_name, (SysIdUICommands.SYSID_STARTED, None)))
 
     def start_transfer_function(self, data):
@@ -673,7 +679,7 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
         # Tell data collector to clear the kurtosis buffer
         self.collector_command_queue.put(self.environment_name, (DataCollectorCommands.CLEAR_KURTOSIS_BUFFER, None))
 
-        self.set_active()
+        self.set_sysid_active()
         self.gui_update_queue.put((self.environment_name, (SysIdUICommands.SYSID_STARTED, None)))
 
     # region: Shutdown
@@ -717,7 +723,7 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
         """Checks that all of the relevant system identification processes have shut down"""
         if self.siggen_shutdown_achieved and self.collector_shutdown_achieved and self.spectral_shutdown_achieved and self.analysis_shutdown_achieved:
             self._sysid_stream_name = None
-            self.clear_active()
+            self.clear_sysid_active()
             self.gui_update_queue.put((self.environment_name, (SysIdUICommands.SYSID_ENDED, None)))
         else:
             # Recheck some time later

@@ -44,6 +44,7 @@ class EnvironmentManager:
         self.environment_active_events = event_container.environment_active_events
         self.environment_ready_events = event_container.environment_ready_events
         self.environment_close_events = event_container.environment_close_events
+        self.environment_sysid_events = event_container.environment_sysid_events
         self._threaded = threaded
         if threaded:
             self.new_process = threading.Thread
@@ -86,6 +87,11 @@ class EnvironmentManager:
     def active_event_list(self):
         active_event_list = [self.environment_active_events[queue_name] for queue_name in self.queue_names]
         return active_event_list
+
+    @property
+    def sysid_event_list(self):
+        sysid_event_list = [self.environment_sysid_events[queue_name] for queue_name in self.queue_names]
+        return sysid_event_list
 
     def set_ready_events(self):
         """This is used by the main process to ready the events if a timeout
@@ -301,6 +307,7 @@ class EnvironmentManager:
                 self.environment_active_events[queue_name],
                 self.environment_ready_events[queue_name],
                 self.environment_close_events[queue_name],
+                self.environment_sysid_events[queue_name],
                 self.threaded,
             ),
         )
@@ -317,6 +324,7 @@ class EnvironmentManager:
         self.environment_ready_events[queue_name].clear()  # This looks weird, the event is set in the next line
         self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.INITIALIZE_ENVIRONMENT, metadata))
         self.environment_active_events[queue_name].clear()
+        self.environment_sysid_events[queue_name].clear()
 
     def remove_environment(self, queue_name):
         """Removes environment from container"""

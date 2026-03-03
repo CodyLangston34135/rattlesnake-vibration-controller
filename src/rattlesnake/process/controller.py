@@ -32,6 +32,7 @@ class ControllerProcess(AbstractMessageProcess):
         output_active_event: mp.synchronize.Event,
         streaming_active_event: mp.synchronize.Event,
         environment_active_event: mp.synchronize.Event,
+        environment_sysid_event: mp.synchronize.Event,
         ready_event: mp.synchronize.Event,
     ):
         """Constructor for the Controller class
@@ -59,6 +60,7 @@ class ControllerProcess(AbstractMessageProcess):
         self._output_active_event = output_active_event
         self._streaming_active_event = streaming_active_event
         self._environment_active_event = environment_active_event
+        self._environment_sysid_event = environment_sysid_event
         self.stream_metadata = StreamMetadata()
         self.map_command(GlobalCommands.RUN_HARDWARE, self.run_hardware)
         self.map_command(GlobalCommands.STOP_HARDWARE, self.stop_hardware)
@@ -90,6 +92,10 @@ class ControllerProcess(AbstractMessageProcess):
     def environments_active(self):
         return [queue_name for queue_name, active_event in self._environment_active_event.items() if active_event.is_set()]
 
+    @property
+    def environments_sysid_active(self):
+        return [queue_name for queue_name, sysid_event in self._environment_sysid_event.items() if sysid_event.is_set()]
+
     def run_hardware(self, data: StreamMetadata):
         self.stream_metadata = data
         if self.acquisition_active:
@@ -103,6 +109,8 @@ class ControllerProcess(AbstractMessageProcess):
 
     def stop_hardware(self, data: None = None):
         # Stop environments
+        for queue_name in self.environments_sysid_active:
+            self.stop_system_id(queue_name)
         for queue_name in self.environments_active:
             self.stop_environment(queue_name)
         if self.streaming_active:
@@ -184,6 +192,7 @@ def controller_process(
     output_active_event: mp.synchronize.Event,
     streaming_active_event: mp.synchronize.Event,
     environment_active_event: mp.synchronize.Event,
+    environment_sysid_event: mp.synchronize.Event,
     ready_event: mp.synchronize.Event,
     shutdown_event: mp.synchronize.Event,
 ):
@@ -207,6 +216,7 @@ def controller_process(
         output_active_event,
         streaming_active_event,
         environment_active_event,
+        environment_sysid_event,
         ready_event,
     )
 

@@ -213,6 +213,14 @@ class AbstractSysIdUI(AbstractUI):
     def initialized_output_names(self):
         """Names of output channels that have been initialized and will be used in displays"""
 
+    @property
+    def sysid_active(self):
+        try:
+            queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
+            return self.rattlesnake.environment_manager.event_container.environment_sysid_events[queue_name].is_set()
+        except:
+            return False
+
     # region: Hardware
     @abstractmethod
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
@@ -453,14 +461,14 @@ class AbstractSysIdUI(AbstractUI):
             sysid_metadata.auto_shutdown = False
             self.rattlesnake.initialize_system_id(sysid_metadata, self.environment_name)
         except Exception as e:
-            self.system_id_error(e)
+            self.preview_system_id_error(e)
             return
 
         ready_event_list = [self.rattlesnake.event_container.environment_ready_events[queue_name]]
         active_event_list = []
         self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
         self.event_watcher.ready.connect(self.preview_noise_acquisition)
-        self.event_watcher.error.connect(self.system_id_error)
+        self.event_watcher.error.connect(self.preview_system_id_error)
         self.event_thread.start()
 
     def preview_noise_acquisition(self):
@@ -471,7 +479,7 @@ class AbstractSysIdUI(AbstractUI):
             stream_metadata = StreamMetadata(StreamType.NO_STREAM)
             self.rattlesnake.start_acquisition(stream_metadata)
         except Exception as e:
-            self.system_id_error(e)
+            self.preview_system_id_error(e)
             return
 
         ready_event_list = [
@@ -483,7 +491,7 @@ class AbstractSysIdUI(AbstractUI):
         ]
         self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
         self.event_watcher.ready.connect(self.preview_noise_start)
-        self.event_watcher.error.connect(self.system_id_error)
+        self.event_watcher.error.connect(self.preview_system_id_error)
         self.event_thread.start()
 
     def preview_noise_start(self):
@@ -494,14 +502,14 @@ class AbstractSysIdUI(AbstractUI):
             queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
             self.rattlesnake.start_system_id_noise(self.environment_name)
         except Exception as e:
-            self.system_id_error(e)
+            self.preview_system_id_error(e)
             return
 
         ready_event_list = []
-        active_event_list = [self.rattlesnake.event_container.environment_active_events[queue_name]]
+        active_event_list = [self.rattlesnake.event_container.environment_sysid_events[queue_name]]
         self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
-        self.event_watcher.ready.connect(self.system_id_ready)
-        self.event_watcher.error.connect(self.system_id_error)
+        self.event_watcher.ready.connect(self.preview_system_id_ready)
+        self.event_watcher.error.connect(self.preview_system_id_error)
         self.event_thread.start()
 
     # region: Preview Transfer
@@ -544,14 +552,14 @@ class AbstractSysIdUI(AbstractUI):
             sysid_metadata.auto_shutdown = False
             self.rattlesnake.initialize_system_id(sysid_metadata, self.environment_name)
         except Exception as e:
-            self.system_id_error(e)
+            self.preview_system_id_error(e)
             return
 
         ready_event_list = [self.rattlesnake.event_container.environment_ready_events[queue_name]]
         active_event_list = []
         self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
         self.event_watcher.ready.connect(self.preview_transfer_function_acquisition)
-        self.event_watcher.error.connect(self.system_id_error)
+        self.event_watcher.error.connect(self.preview_system_id_error)
         self.event_thread.start()
 
     def preview_transfer_function_acquisition(self):
@@ -562,7 +570,7 @@ class AbstractSysIdUI(AbstractUI):
             stream_metadata = StreamMetadata(StreamType.NO_STREAM)
             self.rattlesnake.start_acquisition(stream_metadata)
         except Exception as e:
-            self.system_id_error(e)
+            self.preview_system_id_error(e)
             return
 
         ready_event_list = [
@@ -574,7 +582,7 @@ class AbstractSysIdUI(AbstractUI):
         ]
         self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
         self.event_watcher.ready.connect(self.preview_transfer_function_start)
-        self.event_watcher.error.connect(self.system_id_error)
+        self.event_watcher.error.connect(self.preview_system_id_error)
         self.event_thread.start()
 
     def preview_transfer_function_start(self):
@@ -585,15 +593,32 @@ class AbstractSysIdUI(AbstractUI):
             queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
             self.rattlesnake.start_system_id_transfer_function(self.environment_name)
         except Exception as e:
-            self.system_id_error(e)
+            self.preview_system_id_error(e)
             return
 
         ready_event_list = []
-        active_event_list = [self.rattlesnake.event_container.environment_active_events[queue_name]]
+        active_event_list = [self.rattlesnake.event_container.environment_sysid_events[queue_name]]
         self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
-        self.event_watcher.ready.connect(self.system_id_ready)
-        self.event_watcher.error.connect(self.system_id_error)
+        self.event_watcher.ready.connect(self.preview_system_id_ready)
+        self.event_watcher.error.connect(self.preview_system_id_error)
         self.event_thread.start()
+
+    def preview_system_id_ready(self):
+        if self.sysid_active:
+            self.display_sys_id_started()
+        else:
+            self.display_sys_id_ended()
+
+        self.clean_up_event_watcher()
+
+    def preview_system_id_error(self, error):
+        if self.sysid_active:
+            self.display_sys_id_started()
+        else:
+            self.display_sys_id_ended()
+
+        self.display_error(error)
+        self.clean_up_event_watcher()
 
     # region: Run SysId
     def run_system_id(self):
@@ -634,14 +659,14 @@ class AbstractSysIdUI(AbstractUI):
             sysid_metadata.auto_shutdown = True
             self.rattlesnake.initialize_system_id(sysid_metadata, self.environment_name)
         except Exception as e:
-            self.system_id_error(e)
+            self.run_system_id_error(e)
             return
 
         ready_event_list = [self.rattlesnake.event_container.environment_ready_events[queue_name]]
         active_event_list = []
         self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
         self.event_watcher.ready.connect(self.run_system_id_acquisition)
-        self.event_watcher.error.connect(self.system_id_error)
+        self.event_watcher.error.connect(self.run_system_id_error)
         self.event_thread.start()
 
     def run_system_id_acquisition(self):
@@ -650,13 +675,10 @@ class AbstractSysIdUI(AbstractUI):
         # Start Acqusition
         try:
             sysid_metadata = self.get_sysid_metadata(self.hardware_metadata)
-            if not sysid_metadata.stream_file:
-                stream_metadata = StreamMetadata(StreamType.MANUAL, sysid_metadata.stream_file)
-            else:
-                stream_metadata = StreamMetadata(StreamType.NO_STREAM)
+            stream_metadata = StreamMetadata(StreamType.MANUAL, sysid_metadata.stream_file)
             self.rattlesnake.start_acquisition(stream_metadata)
         except Exception as e:
-            self.system_id_error(e)
+            self.run_system_id_error(e)
             return
 
         ready_event_list = [
@@ -668,7 +690,7 @@ class AbstractSysIdUI(AbstractUI):
         ]
         self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
         self.event_watcher.ready.connect(self.run_system_id_start_noise)
-        self.event_watcher.error.connect(self.system_id_error)
+        self.event_watcher.error.connect(self.run_system_id_error)
         self.event_thread.start()
 
     def run_system_id_start_noise(self):
@@ -679,14 +701,14 @@ class AbstractSysIdUI(AbstractUI):
             self.rattlesnake.start_streaming()
             self.rattlesnake.start_system_id_noise(self.environment_name)
         except Exception as e:
-            self.system_id_error(e)
+            self.run_system_id_error(e)
             return
 
         ready_event_list = []
-        active_event_list = [self.rattlesnake.event_container.environment_active_events[queue_name]]
+        active_event_list = [self.rattlesnake.event_container.environment_sysid_events[queue_name]]
         self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
         self.event_watcher.ready.connect(self.run_system_id_wait_noise_stop)
-        self.event_watcher.error.connect(self.system_id_error)
+        self.event_watcher.error.connect(self.run_system_id_error)
         self.event_thread.start()
 
     def run_system_id_wait_noise_stop(self):
@@ -695,14 +717,14 @@ class AbstractSysIdUI(AbstractUI):
         try:
             queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
         except Exception as e:
-            self.system_id_error(e)
+            self.run_system_id_error(e)
             return
 
         ready_event_list = []
-        active_event_list = [self.rattlesnake.event_container.environment_active_events[queue_name]]
+        active_event_list = [self.rattlesnake.event_container.environment_sysid_events[queue_name]]
         self.create_event_watcher(ready_event_list, active_event_list, active_event_check=False)
         self.event_watcher.ready.connect(self.run_system_id_start_transfer)
-        self.event_watcher.error.connect(self.system_id_error)
+        self.event_watcher.error.connect(self.run_system_id_error)
         self.event_thread.start()
 
     def run_system_id_start_transfer(self):
@@ -715,14 +737,14 @@ class AbstractSysIdUI(AbstractUI):
             self.rattlesnake.start_streaming()
             self.rattlesnake.start_system_id_transfer_function(self.environment_name, store_data)
         except Exception as e:
-            self.system_id_error(e)
+            self.run_system_id_error(e)
             return
 
         ready_event_list = []
-        active_event_list = [self.rattlesnake.event_container.environment_active_events[queue_name]]
+        active_event_list = [self.rattlesnake.event_container.environment_sysid_events[queue_name]]
         self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
         self.event_watcher.ready.connect(self.run_system_id_wait_transfer_stop)
-        self.event_watcher.error.connect(self.system_id_error)
+        self.event_watcher.error.connect(self.run_system_id_error)
         self.event_thread.start()
 
     def run_system_id_wait_transfer_stop(self):
@@ -731,29 +753,32 @@ class AbstractSysIdUI(AbstractUI):
         try:
             queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
         except Exception as e:
-            self.system_id_error(e)
+            self.run_system_id_error(e)
             return
 
         ready_event_list = []
-        active_event_list = [self.rattlesnake.event_container.environment_active_events[queue_name]]
+        active_event_list = [self.rattlesnake.event_container.environment_sysid_events[queue_name]]
         self.create_event_watcher(ready_event_list, active_event_list, active_event_check=False)
-        self.event_watcher.ready.connect(self.system_id_ready)
-        self.event_watcher.error.connect(self.system_id_error)
+        self.event_watcher.ready.connect(self.run_system_id_ready)
+        self.event_watcher.error.connect(self.run_system_id_error)
         self.event_thread.start()
 
-    def system_id_ready(self):
-        if self.active:
+    def run_system_id_ready(self):
+        if self.sysid_active:
             self.display_sys_id_started()
         else:
             self.display_sys_id_ended()
 
         self.clean_up_event_watcher()
 
-    def system_id_error(self, error):
-        if self.active:
+    def run_system_id_error(self, error):
+        if self.sysid_active:
             self.display_sys_id_started()
         else:
             self.display_sys_id_ended()
+
+        if self.rattlesnake.streaming:
+            self.rattlesnake.stop_streaming()
 
         self.display_error(error)
         self.clean_up_event_watcher()
@@ -766,7 +791,7 @@ class AbstractSysIdUI(AbstractUI):
             widget.setEnabled(True)
 
         try:
-            self.rattlesnake.stop_system_id(self.environment_name)
+            self.rattlesnake.stop_acquisition()
         except Exception as e:
             self.system_id_error(e)
             return

@@ -90,6 +90,7 @@ class Rattlesnake:
         environment_close_events = {}
         environment_ready_events = {}
         environment_active_events = {}
+        environment_sysid_events = {}
         environment_command_queues = {}
         environment_data_in_queues = {}
         environment_data_out_queues = {}
@@ -98,6 +99,7 @@ class Rattlesnake:
             environment_close_events[queue_name] = new_event()
             environment_ready_events[queue_name] = new_event()
             environment_active_events[queue_name] = new_event()
+            environment_sysid_events[queue_name] = new_event()
             environment_active_events[queue_name].clear()
             environment_command_queues[queue_name] = VerboseMessageQueue(
                 log_file_queue,
@@ -141,8 +143,8 @@ class Rattlesnake:
             output_active_event,
             streaming_active_event,
             environment_active_events,
+            environment_sysid_events,
         )
-        self.sys_id_active = False
 
         # Controller
         self.controller_proc = new_process(
@@ -153,6 +155,7 @@ class Rattlesnake:
                 self.event_container.output_active_event,
                 self.event_container.streaming_active_event,
                 self.event_container.environment_active_events,
+                self.event_container.environment_sysid_events,
                 self.event_container.controller_ready_event,
                 self.event_container.controller_close_event,
             ),
@@ -232,9 +235,9 @@ class Rattlesnake:
         acquisition_active = self.event_container.acquisition_active_event.is_set()
         output_active = self.event_container.output_active_event.is_set()
         environment_active = any(event.is_set() for event in self.event_container.environment_active_events.values())
-        sys_id_active = self.sys_id_active
+        sys_id_active = any(event.is_set() for event in self.event_container.environment_sysid_events.values())
 
-        if hardware_store and environment_store and acquisition_active and output_active and environment_active and sys_id_active:
+        if hardware_store and environment_store and acquisition_active and output_active and sys_id_active:
             return RattlesnakeState.SYS_ID_ACTIVE
 
         if hardware_store and environment_store and acquisition_active and output_active and environment_active:
@@ -448,7 +451,7 @@ class Rattlesnake:
 
     def stop_acquisition(self):
         # Validate rattlesnake state (rattlesnake was acquiring data)
-        if self.state not in (RattlesnakeState.HARDWARE_ACTIVE, RattlesnakeState.ENVIRONMENT_ACTIVE):
+        if self.state not in (RattlesnakeState.HARDWARE_ACTIVE, RattlesnakeState.ENVIRONMENT_ACTIVE, RattlesnakeState.SYS_ID_ACTIVE):
             raise RattlesnakeError(f"Invalid state for stopping acquisition: {self.state}")
 
         self.log("Disarming Test Hardware")
@@ -499,10 +502,8 @@ class Rattlesnake:
 
         if self.blocking:
             ready_event_list = []
-            active_event_list = [self.event_container.environment_active_events[queue_name]]
+            active_event_list = [self.event_container.environment_sysid_events[queue_name]]
             self.wait_for_events(ready_event_list, active_event_list, active_event_check=True)
-
-        self.sys_id_active = True
 
     def start_system_id_transfer_function(self, environment_name, store_data=False):
         if self.state != RattlesnakeState.HARDWARE_ACTIVE:
@@ -517,16 +518,10 @@ class Rattlesnake:
 
         if self.blocking:
             ready_event_list = []
-            active_event_list = [self.event_container.environment_active_events[queue_name]]
+            active_event_list = [self.event_container.environment_sysid_events[queue_name]]
             self.wait_for_events(ready_event_list, active_event_list, active_event_check=True)
 
-        self.sys_id_active = True
-
     def stop_system_id(self, environment_name):
-        if self.state == RattlesnakeState.HARDWARE_ACTIVE:
-            self.stop_acquisition()
-            return
-
         if self.state != RattlesnakeState.SYS_ID_ACTIVE:
             raise RattlesnakeError(f"Invalid state for stopping system identification {self.state}")
         try:
@@ -538,13 +533,10 @@ class Rattlesnake:
 
         if self.blocking:
             ready_event_list = []
-            active_event_list = [self.event_container.environment_active_events[queue_name]]
+            active_event_list = [self.event_container.environment_sysid_events[queue_name]]
             self.wait_for_events(ready_event_list, active_event_list, active_event_check=False)
 
-        self.sys_id_active = False
-
-        self.stop_acquisition()
-
+    # region: SysId Headless
     def preview_sys_id_noise(self, sysid_metadata: SysIdMetadata, environment_name):
         if self.state == RattlesnakeState.HARDWARE_ACTIVE:
             self.stop_acquisition()
@@ -561,9 +553,6 @@ class Rattlesnake:
         self.start_system_id_noise(environment_name)
 
     def preview_sys_id_transfer(self, sysid_metadata: SysIdMetadata, environment_name):
-        if self.state == RattlesnakeState.HARDWARE_ACTIVE:
-            self.stop_acquisition()
-
         if self.state != RattlesnakeState.ENVIRONMENT_STORE:
             raise RattlesnakeError(f"Invalid state for previewing system identification transfer function: {self.state}")
 
@@ -596,7 +585,7 @@ class Rattlesnake:
         # Wait for automatic shutdown
         if self.blocking:
             ready_event_list = []
-            active_event_list = [self.event_container.environment_active_events[queue_name]]
+            active_event_list = [self.event_container.environment_sysid_events[queue_name]]
             self.wait_for_events(ready_event_list, active_event_list, active_event_check=False)
 
         self.stop_streaming()
@@ -607,12 +596,17 @@ class Rattlesnake:
         # Wait for automatic shutdown
         if self.blocking:
             ready_event_list = []
-            active_event_list = [self.event_container.environment_active_events[queue_name]]
+            active_event_list = [self.event_container.environment_sysid_events[queue_name]]
             self.wait_for_events(ready_event_list, active_event_list, active_event_check=False)
 
-        self.sys_id_active = False
-
         self.stop_streaming()
+        self.stop_acquisition()
+
+    def stop_system_id_run(self, environment_name):
+        if self.state == RattlesnakeState.HARDWARE_ACTIVE:
+            self.stop_acquisition()
+            return
+        self.stop_system_id(environment_name)
         self.stop_acquisition()
 
     # region: Environment Active
