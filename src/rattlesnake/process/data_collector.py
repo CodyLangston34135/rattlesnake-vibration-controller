@@ -354,7 +354,8 @@ class DataCollectorCommands(Enum):
 
 
 class DataCollectorUICommands(Enum):
-    TIME_FRAME = 1
+    TIME_FRAME = 0
+    KURTOSIS = 1
 
 
 class AcquisitionType(Enum):
@@ -741,7 +742,7 @@ class DataCollectorProcess(AbstractMessageProcess):
                         self.gui_update_queue.put(
                             (
                                 self.environment_name,
-                                ("kurtosis", self.kurtosis_buffer.get_kurtosis()),
+                                (DataCollectorUICommands.KURTOSIS, self.kurtosis_buffer.get_kurtosis()),
                             )
                         )
                     # Separate into response and reference

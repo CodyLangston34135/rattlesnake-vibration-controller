@@ -472,7 +472,7 @@ class Rattlesnake:
 
     # region: System Identification
     def initialize_system_id(self, sysid_metadata, environment_name):
-        if self.state != RattlesnakeState.ENVIRONMENT_STORE:
+        if self.state not in (RattlesnakeState.ENVIRONMENT_STORE, RattlesnakeState.HARDWARE_ACTIVE):
             raise RattlesnakeError(f"Invalid state for storing system identification metadata: {self.state}")
         queue_name = self.environment_manager.validate_system_id_metadata(sysid_metadata, self.hardware_metadata, environment_name)
 
@@ -537,9 +537,11 @@ class Rattlesnake:
 
         self.sys_id_active = False
 
+        self.stop_acquisition()
+
     def preview_sys_id_noise(self, sysid_metadata: SysIdMetadata, environment_name):
         if self.state != RattlesnakeState.ENVIRONMENT_STORE:
-            raise RattlesnakeError(f"Invalid state for starting system identification: {self.state}")
+            raise RattlesnakeError(f"Invalid state for previewing system identification noise: {self.state}")
 
         sysid_metadata.auto_shutdown = False
         self.initialize_system_id(sysid_metadata, environment_name)
@@ -551,7 +553,7 @@ class Rattlesnake:
 
     def preview_sys_id_transfer(self, sysid_metadata: SysIdMetadata, environment_name):
         if self.state != RattlesnakeState.ENVIRONMENT_STORE:
-            raise RattlesnakeError(f"Invalid state for starting system identification: {self.state}")
+            raise RattlesnakeError(f"Invalid state for previewing system identification transfer function: {self.state}")
 
         sysid_metadata.auto_shutdown = False
         self.initialize_system_id(sysid_metadata, environment_name)
@@ -563,7 +565,7 @@ class Rattlesnake:
 
     def run_system_id(self, sysid_metadata: SysIdMetadata, environment_name):
         if self.state != RattlesnakeState.ENVIRONMENT_STORE:
-            raise RattlesnakeError(f"Invalid state for starting system identification: {self.state}")
+            raise RattlesnakeError(f"Invalid state for running system identification: {self.state}")
 
         # Store metadata to environment
         sysid_metadata.auto_shutdown = True

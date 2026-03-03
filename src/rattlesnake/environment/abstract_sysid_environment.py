@@ -74,12 +74,8 @@ class SystemIdCommands(Enum):
 
 
 class SysIdUICommands(Enum):
-    TIME_FRAME = 0
-    KURTOSIS = 1
-    NOISE_UPDATE = 2
-    SYSID_UPDATE = 3
-    ENABLE_SYSTEM_ID = 4
-    DISABLE_SYSTEM_ID = 5
+    SYSID_STARTED = 0
+    SYSID_ENDED = 1
 
     @property
     def label(self):
@@ -581,6 +577,7 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
         self.collector_command_queue.put(self.environment_name, (DataCollectorCommands.CLEAR_KURTOSIS_BUFFER, None))
 
         self.set_active()
+        self.gui_update_queue.put((self.environment_name, (SysIdUICommands.SYSID_STARTED, None)))
 
     def start_transfer_function(self, data):
         """Starts the transfer function measurement with the provided metadata"""
@@ -716,9 +713,9 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
     def check_for_sysid_shutdown(self, data):  # pylint: disable=unused-argument
         """Checks that all of the relevant system identification processes have shut down"""
         if self.siggen_shutdown_achieved and self.collector_shutdown_achieved and self.spectral_shutdown_achieved and self.analysis_shutdown_achieved:
-            self.gui_update_queue.put((self.environment_name, ("enable_system_id", None)))
             self._sysid_stream_name = None
             self.clear_active()
+            self.gui_update_queue.put((self.environment_name, (SysIdUICommands.SYSID_ENDED, None)))
         else:
             # Recheck some time later
             time.sleep(1)
@@ -740,10 +737,7 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
     def system_id_complete(self, data):
         """Sends a message to the controller that this environment has completed system id"""
         self.log("Finished System Identification")
-        self.gui_update_queue.put(
-            self.environment_name,
-            (UICommands.COMPLETED_SYSTEM_ID, (self.environment_name, data)),
-        )
+        self.gui_update_queue.put((self.environment_name, (UICommands.COMPLETED_SYSTEM_ID, (self.environment_name, data))))
 
     @abstractmethod
     def stop_environment(self, data):

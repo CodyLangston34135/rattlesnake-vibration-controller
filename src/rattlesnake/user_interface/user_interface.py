@@ -1767,26 +1767,31 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             self.event_watcher = None
 
     def update_gui(self, queue_data):
-        message, data = queue_data
-        if message == UICommands.ERROR:
-            dialog_title, error_message = data
-            error_message_qt(dialog_title, error_message)
-        elif message in self.environment_uis.keys():
-            self.environment_uis[message].update_gui(data)
-        elif message == UICommands.MONITOR:
-            pass
-        elif message == UICommands.ENABLE:
-            pass
-        elif message == UICommands.DISABLE:
-            pass
-        elif message == UICommands.ENABLE_TAB:
-            pass
-        elif message == UICommands.DISABLE_TAB:
-            pass
-        elif message == UICommands.SET_ATTR:
-            pass
-        else:
-            pass
+        command, data = queue_data
+        if command in self.environment_uis.keys():
+            self.environment_uis[command].update_gui(data)
+            return
+
+        match command:
+            case UICommands.ERROR:
+                dialog_title, error_message = data
+                error_message_qt(dialog_title, error_message)
+            case UICommands.COMPLETED_SYSTEM_ID:
+                print(f"System Id Completed for {data}")
+            case UICommands.MONITOR:
+                pass
+            case UICommands.ENABLE:
+                pass
+            case UICommands.DISABLE:
+                pass
+            case UICommands.ENABLE_TAB:
+                pass
+            case UICommands.DISABLE_TAB:
+                pass
+            case UICommands.SET_ATTR:
+                pass
+            case _:
+                print(f"Uknown UI Command: {command}")
 
     def closeEvent(self, event):
         self.gui_update_queue.put((GlobalCommands.QUIT, None))

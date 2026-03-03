@@ -122,17 +122,17 @@ class ControllerProcess(AbstractMessageProcess):
         queue_name = data
 
         # Have output send data to environment
-        self.queue_container.output_command_queue.put(GlobalCommands.START_ENVIRONMENT, queue_name)
-        self.queue_container.environment_command_queues[queue_name].put(GlobalCommands.START_SYSTEM_ID_NOISE, None)
+        self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.START_ENVIRONMENT, queue_name))
+        self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.START_SYSTEM_ID_NOISE, None))
 
     def start_system_id_transfer(self, data):
         queue_name = data
-        self.queue_container.output_command_queue.put(GlobalCommands.START_ENVIRONMENT, queue_name)
-        self.queue_container.environment_command_queues[queue_name].put(GlobalCommands.START_SYSTEM_ID_TRANSFER, None)
+        self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.START_ENVIRONMENT, queue_name))
+        self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.START_SYSTEM_ID_TRANSFER, None))
 
     def stop_system_id(self, data):
         queue_name = data
-        self.queue_container.environment_command_queues[queue_name].put(GlobalCommands.STOP_SYSTEM_ID, None)
+        self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.STOP_SYSTEM_ID, True))
 
     def start_environment(self, data: tuple[str, EnvironmentInstructions]):
         queue_name, instruction = data

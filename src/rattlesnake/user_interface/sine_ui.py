@@ -1334,6 +1334,7 @@ class SineUI(AbstractSysIdUI):
         elif message == "enable_control":
             self.enable_control(True)
         else:
+            print(f"Unknown Sine UI Command {message}")
             widget = None
             for parent in [
                 self.definition_widget,

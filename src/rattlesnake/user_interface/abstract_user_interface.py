@@ -184,10 +184,6 @@ class AbstractUI(ABC):
         """
         command, data = queue_data
         match command:
-            # case GlobalCommands.START_ENVIRONMENT: I dont think this even works correctly
-            #     self.start_environment_ready()
-            # case GlobalCommands.STOP_ENVIRONMENT:
-            #     self.stop_environment_ready()
             case UICommands.ENVIRONMENT_STARTED:
                 self.display_environment_started()
             case UICommands.ENVIRONMENT_ENDED:

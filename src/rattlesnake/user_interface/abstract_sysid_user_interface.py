@@ -2,7 +2,8 @@ from rattlesnake.rattlesnake import Rattlesnake
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.environment.abstract_sysid_environment import SysIdEnvironmentMetadata, SysIdUICommands
-from rattlesnake.process.sysid_data_analysis import SysIdMetadata
+from rattlesnake.process.sysid_data_analysis import SysIdMetadata, SysIdDataAnalysisUICommands
+from rattlesnake.process.data_collector import DataCollectorUICommands
 from rattlesnake.user_interface.ui_utilities import system_identification_ui_path
 from rattlesnake.user_interface.abstract_user_interface import AbstractUI
 import netCDF4 as nc4
@@ -351,15 +352,7 @@ class AbstractSysIdUI(AbstractUI):
         pass
 
     # region: Callbacks
-    def preview_noise(self):
-        # """Starts the noise preview"""
-        self.rattlesnake.set_blocking()
-        sysid_metadata = self.get_sysid_metadata(self.hardware_metadata)
-        self.rattlesnake.initialize_system_id(sysid_metadata, self.environment_name)
-        self.rattlesnake.clear_blocking()
-
-        # self.log("Starting Noise Preview")
-        # self.update_sysid_metadata(self.environment_metadata)
+    def display_sys_id_started(self):
         for widget in [
             self.system_id_widget.preview_noise_button,
             self.system_id_widget.preview_system_id_button,
@@ -389,8 +382,72 @@ class AbstractSysIdUI(AbstractUI):
             widget.setEnabled(False)
         for widget in [self.system_id_widget.stop_button]:
             widget.setEnabled(True)
-        # self.environment_command_queue.put(self.log_name, (SystemIdCommands.PREVIEW_NOISE, self.environment_metadata))
-        pass
+
+    def display_sys_id_ended(self):
+        for widget in [
+            self.system_id_widget.preview_noise_button,
+            self.system_id_widget.preview_system_id_button,
+            self.system_id_widget.start_button,
+            self.system_id_widget.samplesPerFrameSpinBox,
+            self.system_id_widget.averagingTypeComboBox,
+            self.system_id_widget.noiseAveragesSpinBox,
+            self.system_id_widget.systemIDAveragesSpinBox,
+            self.system_id_widget.averagingCoefficientDoubleSpinBox,
+            self.system_id_widget.estimatorComboBox,
+            self.system_id_widget.levelDoubleSpinBox,
+            self.system_id_widget.signalTypeComboBox,
+            self.system_id_widget.windowComboBox,
+            self.system_id_widget.overlapDoubleSpinBox,
+            self.system_id_widget.onFractionDoubleSpinBox,
+            self.system_id_widget.pretriggerDoubleSpinBox,
+            self.system_id_widget.rampFractionDoubleSpinBox,
+            self.system_id_widget.stream_transfer_function_data_checkbox,
+            self.system_id_widget.select_transfer_function_stream_file_button,
+            self.system_id_widget.transfer_function_stream_file_display,
+            self.system_id_widget.levelRampTimeDoubleSpinBox,
+            self.system_id_widget.save_system_id_matrices_button,
+            self.system_id_widget.load_system_id_matrices_button,
+            self.system_id_widget.lowFreqCutoffSpinBox,
+            self.system_id_widget.highFreqCutoffSpinBox,
+        ]:
+            widget.setEnabled(True)
+        for widget in [self.system_id_widget.stop_button]:
+            widget.setEnabled(False)
+
+    def preview_noise(self):
+        # """Starts the noise preview"""
+        self.rattlesnake.set_blocking()
+        sysid_metadata = self.get_sysid_metadata(self.hardware_metadata)
+        self.rattlesnake.preview_sys_id_noise(sysid_metadata, self.environment_name)
+
+        # self.log("Starting Noise Preview")
+        for widget in [
+            self.system_id_widget.preview_noise_button,
+            self.system_id_widget.preview_system_id_button,
+            self.system_id_widget.start_button,
+            self.system_id_widget.samplesPerFrameSpinBox,
+            self.system_id_widget.averagingTypeComboBox,
+            self.system_id_widget.noiseAveragesSpinBox,
+            self.system_id_widget.systemIDAveragesSpinBox,
+            self.system_id_widget.averagingCoefficientDoubleSpinBox,
+            self.system_id_widget.estimatorComboBox,
+            self.system_id_widget.levelDoubleSpinBox,
+            self.system_id_widget.signalTypeComboBox,
+            self.system_id_widget.windowComboBox,
+            self.system_id_widget.overlapDoubleSpinBox,
+            self.system_id_widget.onFractionDoubleSpinBox,
+            self.system_id_widget.pretriggerDoubleSpinBox,
+            self.system_id_widget.rampFractionDoubleSpinBox,
+            self.system_id_widget.stream_transfer_function_data_checkbox,
+            self.system_id_widget.select_transfer_function_stream_file_button,
+            self.system_id_widget.transfer_function_stream_file_display,
+            self.system_id_widget.levelRampTimeDoubleSpinBox,
+            self.system_id_widget.save_system_id_matrices_button,
+            self.system_id_widget.load_system_id_matrices_button,
+            self.system_id_widget.lowFreqCutoffSpinBox,
+            self.system_id_widget.highFreqCutoffSpinBox,
+        ]:
+            widget.setEnabled(False)
 
     def preview_transfer_function(self):
         # """Starts previewing the system identification transfer function calculation"""
@@ -478,11 +535,9 @@ class AbstractSysIdUI(AbstractUI):
         pass
 
     def stop_system_id(self):
-        # """Stops the system identification"""
-        # self.log("Stopping System ID")
-        # self.system_id_widget.stop_button.setEnabled(False)
-        # self.environment_command_queue.put(self.log_name, (SystemIdCommands.STOP_SYSTEM_ID, (True, True)))
-        pass
+        """Stops the system identification"""
+        self.log("Stopping System ID")
+        self.rattlesnake.stop_system_id(self.environment_name)
 
     def select_transfer_function_stream_file(self):
         """Select a file to save transfer function data to"""
@@ -795,7 +850,11 @@ class AbstractSysIdUI(AbstractUI):
         self.log(f"Got GUI Message {command}")
         # print('Update GUI Got {:}'.format(message))
         match command:
-            case SysIdUICommands.TIME_FRAME:
+            case SysIdUICommands.SYSID_STARTED:
+                self.display_sys_id_started()
+            case SysIdUICommands.SYSID_ENDED:
+                self.display_sys_id_ended()
+            case DataCollectorUICommands.TIME_FRAME:
                 self.last_time_response, accept = data
                 self.update_sysid_plots(
                     update_time=True,
@@ -803,7 +862,7 @@ class AbstractSysIdUI(AbstractUI):
                     update_noise=False,
                     update_kurtosis=False,
                 )
-            case SysIdUICommands.KURTOSIS:
+            case DataCollectorUICommands.KURTOSIS:
                 self.last_kurtosis = data
                 self.update_sysid_plots(
                     update_time=False,
@@ -811,7 +870,7 @@ class AbstractSysIdUI(AbstractUI):
                     update_noise=False,
                     update_kurtosis=True,
                 )
-            case SysIdUICommands.NOISE_UPDATE:
+            case SysIdDataAnalysisUICommands.NOISE_UPDATE:
                 (
                     frames,
                     total_frames,
@@ -828,7 +887,7 @@ class AbstractSysIdUI(AbstractUI):
                 self.system_id_widget.current_frames_spinbox.setValue(frames)
                 self.system_id_widget.total_frames_spinbox.setValue(total_frames)
                 self.system_id_widget.progressBar.setValue(int(frames / total_frames * 100))
-            case SysIdUICommands.SYSID_UPDATE:
+            case SysIdDataAnalysisUICommands.SYSID_UPDATE:
                 (
                     frames,
                     total_frames,
@@ -852,66 +911,6 @@ class AbstractSysIdUI(AbstractUI):
                 self.system_id_widget.current_frames_spinbox.setValue(frames)
                 self.system_id_widget.total_frames_spinbox.setValue(total_frames)
                 self.system_id_widget.progressBar.setValue(int(frames / total_frames * 100))
-            case SysIdUICommands.ENABLE_SYSTEM_ID:
-                for widget in [
-                    self.system_id_widget.preview_noise_button,
-                    self.system_id_widget.preview_system_id_button,
-                    self.system_id_widget.start_button,
-                    self.system_id_widget.samplesPerFrameSpinBox,
-                    self.system_id_widget.averagingTypeComboBox,
-                    self.system_id_widget.noiseAveragesSpinBox,
-                    self.system_id_widget.systemIDAveragesSpinBox,
-                    self.system_id_widget.averagingCoefficientDoubleSpinBox,
-                    self.system_id_widget.estimatorComboBox,
-                    self.system_id_widget.levelDoubleSpinBox,
-                    self.system_id_widget.signalTypeComboBox,
-                    self.system_id_widget.windowComboBox,
-                    self.system_id_widget.overlapDoubleSpinBox,
-                    self.system_id_widget.onFractionDoubleSpinBox,
-                    self.system_id_widget.pretriggerDoubleSpinBox,
-                    self.system_id_widget.rampFractionDoubleSpinBox,
-                    self.system_id_widget.stream_transfer_function_data_checkbox,
-                    self.system_id_widget.select_transfer_function_stream_file_button,
-                    self.system_id_widget.transfer_function_stream_file_display,
-                    self.system_id_widget.levelRampTimeDoubleSpinBox,
-                    self.system_id_widget.save_system_id_matrices_button,
-                    self.system_id_widget.load_system_id_matrices_button,
-                    self.system_id_widget.lowFreqCutoffSpinBox,
-                    self.system_id_widget.highFreqCutoffSpinBox,
-                ]:
-                    widget.setEnabled(True)
-                for widget in [self.system_id_widget.stop_button]:
-                    widget.setEnabled(False)
-            case SysIdUICommands.DISABLE_SYSTEM_ID:
-                for widget in [
-                    self.system_id_widget.preview_noise_button,
-                    self.system_id_widget.preview_system_id_button,
-                    self.system_id_widget.start_button,
-                    self.system_id_widget.samplesPerFrameSpinBox,
-                    self.system_id_widget.averagingTypeComboBox,
-                    self.system_id_widget.noiseAveragesSpinBox,
-                    self.system_id_widget.systemIDAveragesSpinBox,
-                    self.system_id_widget.averagingCoefficientDoubleSpinBox,
-                    self.system_id_widget.estimatorComboBox,
-                    self.system_id_widget.levelDoubleSpinBox,
-                    self.system_id_widget.signalTypeComboBox,
-                    self.system_id_widget.windowComboBox,
-                    self.system_id_widget.overlapDoubleSpinBox,
-                    self.system_id_widget.onFractionDoubleSpinBox,
-                    self.system_id_widget.pretriggerDoubleSpinBox,
-                    self.system_id_widget.rampFractionDoubleSpinBox,
-                    self.system_id_widget.stream_transfer_function_data_checkbox,
-                    self.system_id_widget.select_transfer_function_stream_file_button,
-                    self.system_id_widget.transfer_function_stream_file_display,
-                    self.system_id_widget.levelRampTimeDoubleSpinBox,
-                    self.system_id_widget.save_system_id_matrices_button,
-                    self.system_id_widget.load_system_id_matrices_button,
-                    self.system_id_widget.lowFreqCutoffSpinBox,
-                    self.system_id_widget.highFreqCutoffSpinBox,
-                ]:
-                    widget.setEnabled(False)
-                for widget in [self.system_id_widget.stop_button]:
-                    widget.setEnabled(True)
             case _:
                 return False
         return True

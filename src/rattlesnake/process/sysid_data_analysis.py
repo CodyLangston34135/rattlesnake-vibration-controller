@@ -45,6 +45,11 @@ class SysIdDataAnalysisCommands(Enum):
     LOAD_NOISE = 8
 
 
+class SysIdDataAnalysisUICommands(Enum):
+    NOISE_UPDATE = 1
+    SYSID_UPDATE = 2
+
+
 # region: Metadata
 class SysIdMetadata:
     """Abstract class for storing metadata for an environment.
@@ -338,7 +343,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
                 (
                     self.environment_name,
                     (
-                        "noise_update",
+                        SysIdDataAnalysisUICommands.NOISE_UPDATE,
                         (
                             self.frames,
                             self.parameters.sysid_noise_averages,
@@ -378,7 +383,7 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
                 (
                     self.environment_name,
                     (
-                        "sysid_update",
+                        SysIdDataAnalysisUICommands.SYSID_UPDATE,
                         (
                             self.frames,
                             self.parameters.sysid_averages,
