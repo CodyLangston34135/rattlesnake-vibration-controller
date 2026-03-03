@@ -2,8 +2,9 @@ from rattlesnake.utilities import GlobalCommands
 from rattlesnake.profile_manager import ProfileEvent
 from rattlesnake.hardware.hardware_utilities import Channel
 from rattlesnake.hardware.sdynpy_system import SDynPySystemMetadata
-from rattlesnake.environment.time_environment import TimeMetadata, TimeInstructions, TimeCommands
 from rattlesnake.process.streaming import StreamMetadata, StreamType
+from rattlesnake.environment.time_environment import TimeMetadata, TimeInstructions, TimeCommands
+from rattlesnake.environment.modal_environment import ModalMetadata, ModalInstructions, ModalCommands
 from rattlesnake.environment.sine_environment import SineMetadata
 from rattlesnake.environment.sine_utilities import SineSpecification
 import numpy as np
@@ -14,6 +15,7 @@ MODAL_ENVIRONMENT_NAME = "My Modal"
 SINE_ENVIRONMENT_NAME = "My Sine"
 
 
+# region: Hardware
 def make_sdynpy_system_metadata():
     excitation_1 = Channel()
     excitation_1.node_number = 2000038
@@ -67,6 +69,7 @@ def make_sdynpy_system_metadata():
     return hardware_metadata
 
 
+# region: Time
 def make_time_environment_metadata(hardware_metadata, environment_name=TIME_ENVIRONMENT_NAME):
     num_rows = 3
     num_samples = 10000
@@ -131,17 +134,80 @@ def make_time_environment_instructions(environment_name=TIME_ENVIRONMENT_NAME):
     return time_instructions
 
 
-def make_modal_environment_metadata(environment_name=MODAL_ENVIRONMENT_NAME):
-    return
+# region: Modal
+def make_modal_environment_metadata(hardware_metadata, environment_name=MODAL_ENVIRONMENT_NAME):
+    channel_list_bools = [True, True, True, True, True, True]
+    sample_rate = hardware_metadata.sample_rate
+    samples_per_frame = 1000
+    averaging_type = "Linear"
+    num_averages = 30
+    averaging_coefficient = 0.1
+    frf_technique = "H1"
+    frf_window = "rectangle"
+    overlap_percent = 0
+    trigger_type = "Free Run"
+    accept_type = "Accept All"
+    wait_for_steady_state = 0
+    trigger_channel = 0
+    pretrigger_percent = 0
+    trigger_slope_positive = True
+    trigger_level_percent = 0
+    hysteresis_level_percent = 0
+    hysteresis_frame_percent = 0
+    signal_generator_type = "random"
+    signal_generator_level = 0.01
+    signal_generator_min_frequency = 0
+    signal_generator_max_frequency = 500
+    signal_generator_on_percent = 0
+    acceptance_function = None
+    reference_channel_indices = [3, 4]
+    response_channel_indices = [0, 1, 2, 5]
+    output_channel_indices = [3, 4, 5]
+    output_oversample = hardware_metadata.output_oversample
+    exponential_window_value_at_frame_end = 0.25
+
+    return ModalMetadata(
+        environment_name,
+        channel_list_bools,
+        sample_rate,
+        samples_per_frame,
+        averaging_type,
+        num_averages,
+        averaging_coefficient,
+        frf_technique,
+        frf_window,
+        overlap_percent,
+        trigger_type,
+        accept_type,
+        wait_for_steady_state,
+        trigger_channel,
+        pretrigger_percent,
+        trigger_slope_positive,
+        trigger_level_percent,
+        hysteresis_level_percent,
+        hysteresis_frame_percent,
+        signal_generator_type,
+        signal_generator_level,
+        signal_generator_min_frequency,
+        signal_generator_max_frequency,
+        signal_generator_on_percent,
+        acceptance_function,
+        reference_channel_indices,
+        response_channel_indices,
+        output_channel_indices,
+        output_oversample,
+        exponential_window_value_at_frame_end,
+    )
 
 
+# region: Sine
 def make_sine_environment_metadata(hardware_metadata, environment_name=SINE_ENVIRONMENT_NAME):
     channel_list_bools = [True, True, True, True, True, True]
     sample_rate = hardware_metadata.sample_rate
     samples_per_frame = 50
     number_of_channels = 6
     specification = SineSpecification(
-        name=environment_name,
+        name="Sine Tone 1",
         start_time=0,
         num_control=1,
         num_breakpoints=2,
@@ -186,7 +252,7 @@ def make_sine_environment_metadata(hardware_metadata, environment_name=SINE_ENVI
     control_python_script = None
     control_python_class = None
     control_python_parameters = ""
-    control_channel_indices = [3]
+    control_channel_indices = [1]
     output_channel_indices = [3, 4, 5]
     response_transformation_matrix = None
     output_transformation_matrix = None

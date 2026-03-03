@@ -1809,6 +1809,7 @@ if __name__ == "__main__":
         make_time_environment_event_list,
         make_time_environment_stream_metadata,
         make_time_environment_instructions,
+        make_modal_environment_metadata,
         make_sine_environment_metadata,
     )
 
@@ -1817,11 +1818,12 @@ if __name__ == "__main__":
     time_profile_event_list = make_time_environment_event_list()
     time_stream_metadata = make_time_environment_stream_metadata()
     time_environment_instructions = make_time_environment_instructions()
+    modal_environment_metadata = make_modal_environment_metadata(hardware_metadata)
     sine_environment_metadata = make_sine_environment_metadata(hardware_metadata)
 
     rattlesnake = Rattlesnake(threaded=True, timeout=30)
     rattlesnake.set_hardware(hardware_metadata)
-    rattlesnake.set_environments([sine_environment_metadata])
+    rattlesnake.set_environments([modal_environment_metadata])
     # rattlesnake.set_profile_event_list(profile_event_list)
     # rattlesnake.set_stream_metadata(stream_metadata)
     # rattlesnake.start_acquisition(stream_metadata)
