@@ -66,7 +66,7 @@ ENVIRONMENT_TYPE = {
     "SINE": ControlTypes.SINE,
     "TIME": ControlTypes.TIME,
     "MODAL": ControlTypes.MODAL,
-    "READ": ControlTypes.READ,
+    # "READ": ControlTypes.READ,
 }
 
 
@@ -109,7 +109,7 @@ environment_definition_ui_paths[ControlTypes.MODAL] = os.path.join(directory, "u
 environment_run_ui_paths[ControlTypes.MODAL] = os.path.join(directory, "ui_files", "modal_run.ui")
 modal_mdi_ui_path = os.path.join(directory, "ui_files", "modal_acquisition_window.ui")
 # Read Environment
-environment_run_ui_paths[ControlTypes.READ] = os.path.join(directory, "ui_files", "read_run.ui")
+# environment_run_ui_paths[ControlTypes.READ] = os.path.join(directory, "ui_files", "read_run.ui")
 
 
 class UpdaterSignals(QtCore.QObject):

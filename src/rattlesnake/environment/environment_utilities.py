@@ -10,7 +10,7 @@ class ControlTypes(Enum):
     TIME = 4
     # NONLINEAR = 5
     MODAL = 6
-    READ = 7
+    # READ = 7
     # Add new environment types here
 
 
@@ -20,6 +20,6 @@ environment_long_names[ControlTypes.TRANSIENT] = "MIMO Transient"
 environment_long_names[ControlTypes.SINE] = "MIMO Sine Vibration"
 environment_long_names[ControlTypes.TIME] = "Time Signal Generation"
 environment_long_names[ControlTypes.MODAL] = "Modal Testing"
-environment_long_names[ControlTypes.READ] = "Read Signal"
+# environment_long_names[ControlTypes.READ] = "Read Signal"
 
 SYS_ID_ENVIRONMENTS = [ControlTypes.RANDOM, ControlTypes.TRANSIENT, ControlTypes.SINE]

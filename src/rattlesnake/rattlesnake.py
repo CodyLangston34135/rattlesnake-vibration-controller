@@ -321,11 +321,13 @@ class Rattlesnake:
                     self.set_hardware(hardware_metadata)
                     self.set_environments(environment_metadata_list)
                     self.set_profile_event_list([])
+                    self.last_stream_metadata = None
                 case ".xlsx":
                     hardware_metadata, environment_metadata_list, profile_event_list = load_metadata_from_worksheet(filepath)
                     self.set_hardware(hardware_metadata)
                     self.set_environments(environment_metadata_list)
                     self.set_profile_event_list(profile_event_list)
+                    self.last_stream_metadata = None
         finally:
             if not initial_blocking:
                 self.clear_blocking()
