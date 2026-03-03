@@ -1,7 +1,7 @@
 from rattlesnake.rattlesnake import Rattlesnake
 from rattlesnake.utilities import GlobalCommands, load_python_module, db2scale
 from rattlesnake.environment.environment_utilities import ControlTypes
-from rattlesnake.environment.sine_environment import SineCommands, SineMetadata
+from rattlesnake.environment.sine_environment import SineCommands, SineUICommands, SineMetadata
 from rattlesnake.user_interface.ui_utilities import (
     TransformationMatrixWindow,
     multiline_plotter,
@@ -902,12 +902,10 @@ class SineUI(AbstractSysIdUI):
         channel_index = self.prediction_widget.response_selector.currentIndex()
         type_index = self.prediction_widget.response_display_type.currentIndex()
         tone_index = self.prediction_widget.response_display_tone.currentIndex() - 1  # All tones is first
-        self.environment_command_queue.put(
-            self.log_name,
-            (
-                SineCommands.SEND_RESPONSE_PREDICTION,
-                (channel_index, type_index, tone_index),
-            ),
+        self.rattlesnake.send_environment_command(
+            self.environment_name,
+            SineCommands.SEND_RESPONSE_PREDICTION,
+            (channel_index, type_index, tone_index),
         )
         self.plot_prediction_warnings_and_aborts()  # Update the plots for the warning/abort limits
 
@@ -916,12 +914,10 @@ class SineUI(AbstractSysIdUI):
         channel_index = self.prediction_widget.excitation_selector.currentIndex()
         type_index = self.prediction_widget.excitation_display_type.currentIndex()
         tone_index = self.prediction_widget.excitation_display_tone.currentIndex() - 1  # All tones is first
-        self.environment_command_queue.put(
-            self.log_name,
-            (
-                SineCommands.SEND_EXCITATION_PREDICTION,
-                (channel_index, type_index, tone_index),
-            ),
+        self.rattlesnake.send_environment_command(
+            self.environment_name,
+            SineCommands.SEND_EXCITATION_PREDICTION,
+            (channel_index, type_index, tone_index),
         )
 
     def plot_prediction_warnings_and_aborts(self):
@@ -1061,28 +1057,6 @@ class SineUI(AbstractSysIdUI):
         )
         if self.run_widget.test_level_selector.value() >= 0:
             self.controller_communication_queue.put(self.log_name, (GlobalCommands.AT_TARGET_LEVEL, self.environment_name))
-
-    def enable_control(self, enabled):
-        """Enables or disables the widgets to start or modify the control
-
-        Parameters
-        ----------
-        enabled : bool
-            If True, enables the widgets.  Otherwise, it disables the widgets
-        """
-        for widget in [
-            self.run_widget.test_level_selector,
-            self.run_widget.partial_environment_selector,
-            self.run_widget.partial_environment_tone_selector,
-            self.run_widget.start_time_selector,
-            self.run_widget.stop_time_selector,
-            self.run_widget.start_test_button,
-        ]:
-            widget.setEnabled(enabled)
-        for widget in [self.run_widget.stop_test_button]:
-            widget.setEnabled(not enabled)
-        if enabled:
-            self.enable_disable_partial_environment()
 
     def stop_control(self):
         """Sends a signal to shut down the control"""
@@ -1290,6 +1264,28 @@ class SineUI(AbstractSysIdUI):
             widget.setEnabled(self.run_widget.partial_environment_selector.isChecked())
 
     # region: Acqusition
+    def enable_control(self, enabled):
+        """Enables or disables the widgets to start or modify the control
+
+        Parameters
+        ----------
+        enabled : bool
+            If True, enables the widgets.  Otherwise, it disables the widgets
+        """
+        for widget in [
+            self.run_widget.test_level_selector,
+            self.run_widget.partial_environment_selector,
+            self.run_widget.partial_environment_tone_selector,
+            self.run_widget.start_time_selector,
+            self.run_widget.stop_time_selector,
+            self.run_widget.start_test_button,
+        ]:
+            widget.setEnabled(enabled)
+        for widget in [self.run_widget.stop_test_button]:
+            widget.setEnabled(not enabled)
+        if enabled:
+            self.enable_disable_partial_environment()
+
     def get_environment_instructions(self):
         return super().get_environment_instructions()
 
@@ -1297,10 +1293,31 @@ class SineUI(AbstractSysIdUI):
         return super().set_environment_instructions(instructions)
 
     def display_environment_ended(self):
-        return
+        for widget in [
+            self.run_widget.test_level_selector,
+            self.run_widget.partial_environment_selector,
+            self.run_widget.partial_environment_tone_selector,
+            self.run_widget.start_time_selector,
+            self.run_widget.stop_time_selector,
+            self.run_widget.start_test_button,
+        ]:
+            widget.setEnabled(True)
+        for widget in [self.run_widget.stop_test_button]:
+            widget.setEnabled(False)
+        self.enable_disable_partial_environment()
 
     def display_environment_started(self):
-        return
+        for widget in [
+            self.run_widget.test_level_selector,
+            self.run_widget.partial_environment_selector,
+            self.run_widget.partial_environment_tone_selector,
+            self.run_widget.start_time_selector,
+            self.run_widget.stop_time_selector,
+            self.run_widget.start_test_button,
+        ]:
+            widget.setEnabled(False)
+        for widget in [self.run_widget.stop_test_button]:
+            widget.setEnabled(True)
 
     def start_environment(self):
         return super().start_environment()
@@ -1324,78 +1341,55 @@ class SineUI(AbstractSysIdUI):
     def update_gui(self, queue_data):
         if super().update_gui(queue_data):
             return
-        message, data = queue_data
-        if message == "request_prediction_plot_choices":
-            self.log("Sending Prediction Plot Choices...")
-            self.send_response_prediction_plot_choices()
-            self.send_excitation_prediction_plot_choices()
-        elif message == "excitation_prediction":
-            self.plot_excitation_prediction(*data)
-        elif message == "response_prediction":
-            self.plot_response_prediction(*data)
-        elif message == "response_error_matrix":
-            self.update_response_matrix(*data)
-        elif message == "excitation_voltage_list":
-            self.update_voltage_list(data)
-        elif message == "specification_for_plotting":
-            (
-                self.specification_signals_combined,
-                self.specification_signals,
-                self.specification_frequencies,
-                self.specification_arguments,
-                self.specification_amplitudes,
-                self.specification_phases,
-                self.plot_downsample,
-            ) = data
-            self.log(f"Plot Downsample: {self.plot_downsample}")
-            self.update_run_plot(update_spec=True)
-        elif message == "time_data":
-            (last_excitation, last_control) = data
-            self.achieved_excitation_signals_combined.append(last_excitation)
-            self.achieved_response_signals_combined.append(last_control)
-        elif message == "control_data":
-            (
-                last_signals,
-                last_amplitudes,
-                last_phases,
-                last_frequencies,
-                last_correction,
-                last_errors,
-                last_warning_flags,
-                last_abort_flags,
-            ) = data
-            self.achieved_response_amplitudes.append(last_amplitudes)
-            self.achieved_response_phases.append(last_phases)
-            self.complex_drive_modifications.append(last_correction)
-            self.achieved_excitation_frequencies.append(last_frequencies)
-            self.achieved_excitation_signals.append(last_signals)
-            self.update_control_run_plot()
-            self.update_run_plot(update_spec=False)
-            self.update_control_error_table(last_errors, last_warning_flags, last_abort_flags)
-        elif message == "enable_control":
-            self.enable_control(True)
-        else:
-            print(f"Unknown Sine UI Command {message}")
-            widget = None
-            for parent in [
-                self.definition_widget,
-                self.run_widget,
-                self.system_id_widget,
-                self.prediction_widget,
-            ]:
-                try:
-                    widget = getattr(parent, message)
-                    break
-                except AttributeError:
-                    continue
-            if widget is None:
-                raise ValueError(f"Cannot Update Widget {message}: not found in UI")
-            if isinstance(widget, QtWidgets.QDoubleSpinBox):
-                widget.setValue(data)
-            elif isinstance(widget, QtWidgets.QSpinBox):
-                widget.setValue(data)
-            elif isinstance(widget, QtWidgets.QLineEdit):
-                widget.setText(data)
-            elif isinstance(widget, QtWidgets.QListWidget):
-                widget.clear()
-                widget.addItems([f"{d:.3f}" for d in data])
+        command, data = queue_data
+
+        match command:
+            case SineUICommands.REQUEST_PREDICTION_PLOT_CHOICES:
+                self.log("Sending Prediction Plot Choices...")
+                self.send_response_prediction_plot_choices()
+                self.send_excitation_prediction_plot_choices()
+            case SineUICommands.EXCITATION_PRECDICTION:
+                self.plot_excitation_prediction(*data)
+            case SineUICommands.RESPONSE_PREDICTION:
+                self.plot_response_prediction(*data)
+            case SineUICommands.RESPONSE_ERROR_MATRIX:
+                self.update_response_matrix(*data)
+            case SineUICommands.EXCITATION_VOLTAGE_LIST:
+                self.update_voltage_list(data)
+            case SineUICommands.SPECIFICATION_FOR_PLOTTING:
+                (
+                    self.specification_signals_combined,
+                    self.specification_signals,
+                    self.specification_frequencies,
+                    self.specification_arguments,
+                    self.specification_amplitudes,
+                    self.specification_phases,
+                    self.plot_downsample,
+                ) = data
+                self.log(f"Plot Downsample: {self.plot_downsample}")
+                self.update_run_plot(update_spec=True)
+            case SineUICommands.TIME_DATA:
+                (last_excitation, last_control) = data
+                self.achieved_excitation_signals_combined.append(last_excitation)
+                self.achieved_response_signals_combined.append(last_control)
+            case SineUICommands.CONTROL_DATA:
+                (
+                    last_signals,
+                    last_amplitudes,
+                    last_phases,
+                    last_frequencies,
+                    last_correction,
+                    last_errors,
+                    last_warning_flags,
+                    last_abort_flags,
+                ) = data
+                self.achieved_response_amplitudes.append(last_amplitudes)
+                self.achieved_response_phases.append(last_phases)
+                self.complex_drive_modifications.append(last_correction)
+                self.achieved_excitation_frequencies.append(last_frequencies)
+                self.achieved_excitation_signals.append(last_signals)
+                self.update_control_run_plot()
+                self.update_run_plot(update_spec=False)
+                self.update_control_error_table(last_errors, last_warning_flags, last_abort_flags)
+            case _:
+                print(f"Unknown Sine UI Command {command}")

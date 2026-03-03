@@ -723,6 +723,17 @@ class Rattlesnake:
             active_event_list = []
             self.wait_for_events(ready_event_list, active_event_list)
 
+    # region: User Interface
+    def send_environment_command(self, environment_name, command, data):
+        """
+        This is a bypass environment ui's can use to request information from their environments. This
+        should only be used for tasks that are almost certainly not going to throw an error and can be
+        performed at any rattlesnake state.
+        """
+        self.log(f"Sending {command} to {environment_name}")
+        queue_name = self.environment_manager.queue_names_dict[environment_name]
+        self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (command, data))
+
     # region: Shutdown
     def shutdown(self):
         if self.state in (RattlesnakeState.HARDWARE_ACTIVE, RattlesnakeState.ENVIRONMENT_ACTIVE):

@@ -30,6 +30,15 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <property name="backgroundBrush">
+           <brush brushstyle="NoBrush">
+            <color alpha="255">
+             <red>255</red>
+             <green>255</green>
+             <blue>255</blue>
+            </color>
+           </brush>
+          </property>
          </widget>
         </item>
        </layout>
@@ -305,7 +314,17 @@
          </property>
          <layout class="QHBoxLayout" name="horizontalLayout_3">
           <item>
-           <widget class="PlotWidget" name="amplitude_plot"/>
+           <widget class="PlotWidget" name="amplitude_plot">
+            <property name="backgroundBrush">
+             <brush brushstyle="NoBrush">
+              <color alpha="255">
+               <red>255</red>
+               <green>255</green>
+               <blue>255</blue>
+              </color>
+             </brush>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>
@@ -323,7 +342,17 @@
          </property>
          <layout class="QHBoxLayout" name="horizontalLayout_4">
           <item>
-           <widget class="PlotWidget" name="phase_plot"/>
+           <widget class="PlotWidget" name="phase_plot">
+            <property name="backgroundBrush">
+             <brush brushstyle="NoBrush">
+              <color alpha="255">
+               <red>255</red>
+               <green>255</green>
+               <blue>255</blue>
+              </color>
+             </brush>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>

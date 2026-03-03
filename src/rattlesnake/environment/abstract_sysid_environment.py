@@ -731,7 +731,7 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
     def system_id_complete(self, data):
         """Sends a message to the controller that this environment has completed system id"""
         self.log("Finished System Identification")
-        self.gui_update_queue.put((self.environment_name, (UICommands.COMPLETED_SYSTEM_ID, (self.environment_name, data))))
+        self.gui_update_queue.put((UICommands.COMPLETED_SYSTEM_ID, (self.environment_name, data)))
 
     @abstractmethod
     def stop_environment(self, data):
