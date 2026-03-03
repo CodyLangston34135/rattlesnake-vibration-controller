@@ -1024,6 +1024,8 @@ class ModalUI(AbstractUI):
             the data used to perform the operation.
         """
         # print('Got GUI Update {:}'.format(queue_data[0]))
+        if super().update_gui(queue_data):
+            return
         command, data = queue_data
         match command:
             case ModalUICommands.SPECTRAL_UPDATE:
@@ -1090,5 +1092,4 @@ class ModalUI(AbstractUI):
                     self.run_widget.accept_average_button.setEnabled(True)
                     self.run_widget.reject_average_button.setEnabled(True)
             case _:
-                if isinstance(command, str):
-                    print(f"Unknown Modal UI Command {command}")
+                print(f"Unknown Modal UI Command {command}")

@@ -271,7 +271,8 @@ class TimeUI(AbstractUI):
             denotes what to change and the data contains the information needed
             to be displayed.
         """
-        super().update_gui(queue_data)
+        if super().update_gui(queue_data):
+            return
         command, data = queue_data
         match command:
             case TimeUICommands.TIME_DATA:
@@ -282,15 +283,17 @@ class TimeUI(AbstractUI):
                 self.set_no_repeat(data)
             case TimeCommands.SET_REPEAT:
                 self.set_repeat(data)
+            case _:
+                print(f"Unknown Modal UI Command {command}")
 
     # region: Commands
-    def display_environment_started(self, data=None):
+    def display_environment_started(self):
         self.run_widget.stop_test_button.setEnabled(True)
         self.run_widget.start_test_button.setEnabled(False)
         self.run_widget.test_level_selector.setEnabled(False)
         self.run_widget.repeat_signal_checkbox.setEnabled(False)
 
-    def display_environment_ended(self, data=None):
+    def display_environment_ended(self):
         self.run_widget.stop_test_button.setEnabled(False)
         self.run_widget.start_test_button.setEnabled(True)
         self.run_widget.test_level_selector.setEnabled(True)

@@ -1158,6 +1158,7 @@ class ModalEnvironment(EnvironmentProcess):
         self.queue_container.environment_command_queue.put(self.environment_name, (ModalCommands.RUN_CONTROL, None))
 
         self.set_active()
+        self.queue_container.gui_update_queue.put((self.environment_name, (UICommands.ENVIRONMENT_STARTED, None)))
 
     def run_control(self, data):  # pylint: disable=unused-argument
         """Runs the environment
@@ -1249,6 +1250,7 @@ class ModalEnvironment(EnvironmentProcess):
         if self.siggen_shutdown_achieved and self.collector_shutdown_achieved and self.spectral_shutdown_achieved:
             self.log("Shutdown Achieved")
             self.clear_active()
+            self.queue_container.gui_update_queue.put((self.environment_name, (UICommands.ENVIRONMENT_ENDED, None)))
             # self.gui_update_queue.put((self.environment_name, (UICommands.ENVIRONMENT_ENDED, None)))
         else:
             # Recheck some time later
