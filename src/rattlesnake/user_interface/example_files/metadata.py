@@ -4,11 +4,14 @@ from rattlesnake.hardware.hardware_utilities import Channel
 from rattlesnake.hardware.sdynpy_system import SDynPySystemMetadata
 from rattlesnake.environment.time_environment import TimeMetadata, TimeInstructions, TimeCommands
 from rattlesnake.process.streaming import StreamMetadata, StreamType
+from rattlesnake.environment.sine_environment import SineMetadata
+from rattlesnake.environment.sine_utilities import SineSpecification
 import numpy as np
 
 BUFFER_SIZE = 0.05
 TIME_ENVIRONMENT_NAME = "My Time"
 MODAL_ENVIRONMENT_NAME = "My Modal"
+SINE_ENVIRONMENT_NAME = "My Sine"
 
 
 def make_sdynpy_system_metadata():
@@ -67,7 +70,7 @@ def make_sdynpy_system_metadata():
 def make_time_environment_metadata(hardware_metadata, environment_name=TIME_ENVIRONMENT_NAME):
     num_rows = 3
     num_samples = 10000
-    sample_rate = 1000  # Hz
+    sample_rate = hardware_metadata.sample_rate  # Hz
     frequency = 2  # Hz sine wave
 
     # Create time vector
@@ -78,7 +81,6 @@ def make_time_environment_metadata(hardware_metadata, environment_name=TIME_ENVI
     signal[0, :] = np.sin(2 * np.pi * frequency * t)  # sine wave in first row
 
     channel_list_bools = [True, True, True, True, True, True]
-    sample_rate = 1000
     cancel_rampdown_time = 0.5
     time_metadata = TimeMetadata(environment_name, channel_list_bools, sample_rate, signal, cancel_rampdown_time)
 
@@ -131,3 +133,89 @@ def make_time_environment_instructions(environment_name=TIME_ENVIRONMENT_NAME):
 
 def make_modal_environment_metadata(environment_name=MODAL_ENVIRONMENT_NAME):
     return
+
+
+def make_sine_environment_metadata(hardware_metadata, environment_name=SINE_ENVIRONMENT_NAME):
+    channel_list_bools = [True, True, True, True, True, True]
+    sample_rate = hardware_metadata.sample_rate
+    samples_per_frame = 50
+    number_of_channels = 6
+    specification = SineSpecification(
+        name=environment_name,
+        start_time=0,
+        num_control=1,
+        num_breakpoints=2,
+    )
+
+    table = specification.breakpoint_table
+
+    # --- Breakpoint 0 ---
+    table[0]["frequency"] = 1
+    table[0]["sweep_type"] = 0  # 0 = linear
+    table[0]["sweep_rate"] = 1
+    table[0]["amplitude"][0] = 1
+    table[0]["phase"][0] = 0  # radians
+
+    # --- Breakpoint 1 ---
+    table[1]["frequency"] = 10  # you must set frequency
+    table[1]["amplitude"][0] = 1
+    table[1]["phase"][0] = 0  # radians
+
+    # Last breakpoint should not have sweep info (UI enforces this)
+    table[1]["sweep_type"] = 0
+    table[1]["sweep_rate"] = 1
+
+    # --- Disable warnings / aborts ---
+    table["warning"][:] = np.nan
+    table["abort"][:] = np.nan
+
+    specifications = [specification]
+    ramp_time = 0.5
+    buffer_blocks = 2
+    control_convergence = 0.15
+    update_drives_after_environment = False
+    phase_fit = False
+    allow_automatic_aborts = False
+    tracking_filter_type = 0
+    tracking_filter_cutoff = 0.15
+    tracking_filter_order = 2
+    vk_filter_order = 2
+    vk_filter_bandwidth = 2
+    vk_filter_blocksize = 1000
+    vk_filter_overlap = 0.15
+    control_python_script = None
+    control_python_class = None
+    control_python_parameters = ""
+    control_channel_indices = [3]
+    output_channel_indices = [3, 4, 5]
+    response_transformation_matrix = None
+    output_transformation_matrix = None
+
+    return SineMetadata(
+        environment_name=environment_name,
+        channel_list_bools=channel_list_bools,
+        sample_rate=sample_rate,
+        samples_per_frame=samples_per_frame,
+        number_of_channels=number_of_channels,
+        specifications=specifications,
+        ramp_time=ramp_time,
+        buffer_blocks=buffer_blocks,
+        control_convergence=control_convergence,
+        update_drives_after_environment=update_drives_after_environment,
+        phase_fit=phase_fit,
+        allow_automatic_aborts=allow_automatic_aborts,
+        tracking_filter_type=tracking_filter_type,
+        tracking_filter_cutoff=tracking_filter_cutoff,
+        tracking_filter_order=tracking_filter_order,
+        vk_filter_order=vk_filter_order,
+        vk_filter_bandwidth=vk_filter_bandwidth,
+        vk_filter_blocksize=vk_filter_blocksize,
+        vk_filter_overlap=vk_filter_overlap,
+        control_python_script=control_python_script,
+        control_python_class=control_python_class,
+        control_python_parameters=control_python_parameters,
+        control_channel_indices=control_channel_indices,
+        output_channel_indices=output_channel_indices,
+        response_transformation_matrix=response_transformation_matrix,
+        output_transformation_matrix=output_transformation_matrix,
+    )

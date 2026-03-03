@@ -243,7 +243,7 @@ class AbstractSysIdUI(AbstractUI):
         self.system_id_widget.highFreqCutoffSpinBox.setMaximum(hardware_metadata.sample_rate // 2)
         # finish setting up kurtosis plots using node number + direction
         for i, channel in enumerate(self.hardware_metadata.channel_list):
-            node = channel.node_number + ("" if channel.node_direction is None else channel.node_direction)
+            node = str(channel.node_number) + ("" if channel.node_direction is None else channel.node_direction)
             if channel.feedback_device is None:
                 self.response_nodes.append(node)
                 self.all_response_indices.append(i)
@@ -723,6 +723,22 @@ class AbstractSysIdUI(AbstractUI):
         ready_event_list = []
         active_event_list = [self.rattlesnake.event_container.environment_sysid_events[queue_name]]
         self.create_event_watcher(ready_event_list, active_event_list, active_event_check=False)
+        self.event_watcher.ready.connect(self.run_system_id_stop_streaming)
+        self.event_watcher.error.connect(self.run_system_id_error)
+        self.event_thread.start()
+
+    def run_system_id_stop_streaming(self):
+        self.clean_up_event_watcher()
+
+        try:
+            self.rattlesnake.stop_streaming()
+        except Exception as e:
+            self.run_system_id_error(e)
+            return
+
+        ready_event_list = []
+        active_event_list = [self.rattlesnake.event_container.streaming_active_event]
+        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=False)
         self.event_watcher.ready.connect(self.run_system_id_start_transfer)
         self.event_watcher.error.connect(self.run_system_id_error)
         self.event_thread.start()
@@ -731,7 +747,6 @@ class AbstractSysIdUI(AbstractUI):
         self.clean_up_event_watcher()
 
         try:
-            self.rattlesnake.stop_streaming()
             store_data = True
             queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
             self.rattlesnake.start_streaming()

@@ -1020,6 +1020,39 @@ class SineSweepTable:
                         spec_row["abort"][ind + (i,)] = np.nan if val == 0 else val
         return spec
 
+    def set_specification(self, spec: SineSpecification):
+
+        frequencies = spec.breakpoint_table["frequency"]
+
+        amplitudes = spec.breakpoint_table["amplitude"].T
+        phases = np.rad2deg(spec.breakpoint_table["phase"].T)
+
+        sweep_types = spec.breakpoint_table["sweep_type"][:-1]
+        sweep_types_str = []
+        for sweep_type in sweep_types:
+            if sweep_type == 0:
+                sweep_types_str.append("Linear")
+            else:
+                sweep_types_str.append("Logorithmic")
+
+        sweep_rates = spec.breakpoint_table["sweep_rate"][:-1]
+
+        warnings = np.transpose(spec.breakpoint_table["warning"], (1, 2, 3, 0))
+
+        aborts = np.transpose(spec.breakpoint_table["abort"], (1, 2, 3, 0))
+
+        self.clear_and_update_specification_table(
+            frequencies=frequencies,
+            amplitudes=amplitudes,
+            phases=phases,
+            sweep_types=sweep_types_str,
+            sweep_rates=sweep_rates,
+            warning_amplitudes=warnings,
+            abort_amplitudes=aborts,
+            start_time=spec.start_time,
+            sine_name=spec.name,
+        )
+
 
 class NoWheelSpinBox(QtWidgets.QDoubleSpinBox):
     """A simple class to remove the scroll wheel capability from a spin box"""

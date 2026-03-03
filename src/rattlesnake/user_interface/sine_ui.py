@@ -518,8 +518,49 @@ class SineUI(AbstractSysIdUI):
             output_transformation_matrix=self.output_transformation_matrix,
         )
 
-    def set_environment_metadata(self, metadata):
-        return super().set_environment_metadata(metadata)
+    def set_environment_metadata(self, metadata: SineMetadata):
+        self.definition_widget.sample_rate_display.setValue(metadata.sample_rate)
+        self.definition_widget.samples_per_acquire_display.setValue(metadata.samples_per_frame)
+        self.definition_widget.ramp_time_spinbox.setValue(metadata.ramp_time)
+        self.definition_widget.buffer_blocks_selector.setValue(metadata.buffer_blocks)
+        self.definition_widget.control_convergence_selector.setValue(metadata.control_convergence)
+        self.definition_widget.update_drives_after_environment_selector.setChecked(metadata.update_drives_after_environment)
+        self.definition_widget.best_fit_phase_checkbox.setChecked(metadata.phase_fit)
+        self.definition_widget.auto_abort_checkbox.setChecked(metadata.allow_automatic_aborts)
+        self.definition_widget.filter_type_selector.setCurrentIndex(metadata.tracking_filter_type)
+        self.definition_widget.tracking_filter_cutoff_selector.setValue(metadata.tracking_filter_cutoff * 100)
+        self.definition_widget.tracking_filter_order_selector.setValue(metadata.tracking_filter_order)
+        self.definition_widget.vk_filter_order_selector.setCurrentIndex(metadata.vk_filter_order - 1)
+        self.definition_widget.vk_filter_bandwidth_selector.setValue(metadata.vk_filter_bandwidth)
+        self.definition_widget.vk_filter_block_size_selector.setValue(metadata.vk_filter_blocksize)
+        self.definition_widget.vk_filter_block_overlap_selector.setValue(metadata.vk_filter_overlap)
+        if metadata.control_python_script:
+            self.definition_widget.script_file_path_input.setText(metadata.control_python_script)
+        if metadata.control_python_class:
+            index = self.definition_widget.python_class_input.findText(metadata.control_python_class)
+            if index == -1:
+                self.definition_widget.python_class_input.addItem(metadata.control_python_class)
+                index = self.definition_widget.python_class_input.findText(metadata.control_python_class)
+            self.definition_widget.python_class_input.setCurrentIndex(index)
+        if metadata.control_python_parameters:
+            self.definition_widget.control_parameters_text_input.setPlainText(metadata.control_python_parameters)
+        for i in range(self.definition_widget.control_channels_selector.count()):
+            self.definition_widget.control_channels_selector.item(i).setCheckState(Qt.Unchecked)
+        for control_channel in metadata.control_channel_indices:
+            self.definition_widget.control_channels_selector.item(control_channel).setCheckState(Qt.Checked)
+        self.physical_output_indices = metadata.output_channel_indices
+        self.response_transformation_matrix = metadata.response_transformation_matrix
+        self.output_transformation_matrix = metadata.reference_transformation_matrix
+
+        for idx in reversed(range(len(self.sine_tables) - 1)):
+            self.remove_sine_table_entry(idx + 1)
+
+        for idx, spec in enumerate(metadata.specifications):
+            if idx > 0:
+                self.add_sine_table_tab()
+            sine_table = self.sine_tables[idx]
+            sine_table.set_specification(spec)
+        # self.update_specification()
 
     # region: Definition
     def update_control_channels(self):

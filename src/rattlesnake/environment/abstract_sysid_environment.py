@@ -164,22 +164,7 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
             environment's metadata is stored.
 
         """
-        netcdf_group_handle.sysid_frame_size = self.sysid_frame_size
-        netcdf_group_handle.sysid_averaging_type = self.sysid_averaging_type
-        netcdf_group_handle.sysid_noise_averages = self.sysid_noise_averages
-        netcdf_group_handle.sysid_averages = self.sysid_averages
-        netcdf_group_handle.sysid_exponential_averaging_coefficient = self.sysid_exponential_averaging_coefficient
-        netcdf_group_handle.sysid_estimator = self.sysid_estimator
-        netcdf_group_handle.sysid_level = self.sysid_level
-        netcdf_group_handle.sysid_level_ramp_time = self.sysid_level_ramp_time
-        netcdf_group_handle.sysid_signal_type = self.sysid_signal_type
-        netcdf_group_handle.sysid_window = self.sysid_window
-        netcdf_group_handle.sysid_overlap = self.sysid_overlap
-        netcdf_group_handle.sysid_burst_on = self.sysid_burst_on
-        netcdf_group_handle.sysid_pretrigger = self.sysid_pretrigger
-        netcdf_group_handle.sysid_burst_ramp_fraction = self.sysid_burst_ramp_fraction
-        netcdf_group_handle.sysid_low_frequency_cutoff = self.sysid_low_frequency_cutoff
-        netcdf_group_handle.sysid_high_frequency_cutoff = self.sysid_high_frequency_cutoff
+        self.sysid_metadata.store_to_netcdf(netcdf_group_handle)
 
     def __eq__(self, other):
         try:
