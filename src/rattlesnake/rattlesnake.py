@@ -497,7 +497,6 @@ class Rattlesnake:
         except KeyError:
             raise RattlesnakeError(f"No environments exist for {environment_name} name")
 
-        self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.STREAM_MANUAL, None))
         self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.START_SYSTEM_ID_NOISE, queue_name))
 
         if self.blocking:
@@ -505,7 +504,7 @@ class Rattlesnake:
             active_event_list = [self.event_container.environment_sysid_events[queue_name]]
             self.wait_for_events(ready_event_list, active_event_list, active_event_check=True)
 
-    def start_system_id_transfer_function(self, environment_name, store_data=False):
+    def start_system_id_transfer_function(self, environment_name):
         if self.state != RattlesnakeState.HARDWARE_ACTIVE:
             raise RattlesnakeError(f"Invalid state for starting system identification: {self.state}")
         try:
@@ -513,8 +512,7 @@ class Rattlesnake:
         except KeyError:
             raise RattlesnakeError(f"No environments exist for {environment_name} name")
 
-        self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.STREAM_MANUAL, None))
-        self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.START_SYSTEM_ID_TRANSFER, (queue_name, store_data)))
+        self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.START_SYSTEM_ID_TRANSFER, queue_name))
 
         if self.blocking:
             ready_event_list = []
@@ -589,9 +587,8 @@ class Rattlesnake:
             self.wait_for_events(ready_event_list, active_event_list, active_event_check=False)
 
         self.stop_streaming()
-        store_data = True
         self.start_streaming()
-        self.start_system_id_transfer_function(environment_name, store_data)
+        self.start_system_id_transfer_function(environment_name)
 
         # Wait for automatic shutdown
         if self.blocking:
@@ -653,7 +650,7 @@ class Rattlesnake:
 
     # region: Streaming
     def start_streaming(self):
-        if self.state not in (RattlesnakeState.HARDWARE_ACTIVE, RattlesnakeState.ENVIRONMENT_ACTIVE):
+        if self.state not in (RattlesnakeState.HARDWARE_ACTIVE, RattlesnakeState.ENVIRONMENT_ACTIVE, RattlesnakeState.SYS_ID_ACTIVE):
             raise RattlesnakeError(f"Invalid state for starting streaming: {self.state}")
         if self.streaming:
             raise RattlesnakeError(f"Rattlesnake is currently streaming")

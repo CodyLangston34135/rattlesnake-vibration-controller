@@ -134,9 +134,9 @@ class ControllerProcess(AbstractMessageProcess):
         self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.START_SYSTEM_ID_NOISE, None))
 
     def start_system_id_transfer(self, data):
-        queue_name, store_data = data
+        queue_name = data
         self.queue_container.output_command_queue.put(TASK_NAME, (GlobalCommands.START_ENVIRONMENT, queue_name))
-        self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.START_SYSTEM_ID_TRANSFER, store_data))
+        self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (GlobalCommands.START_SYSTEM_ID_TRANSFER, None))
 
     def stop_system_id(self, data):
         queue_name = data

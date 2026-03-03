@@ -40,14 +40,17 @@ class SysIdDataAnalysisCommands(Enum):
     START_SHUTDOWN = 3
     STOP_SYSTEM_ID = 4
     SHUTDOWN_ACHIEVED = 5
-    SYSTEM_ID_COMPLETE = 6
-    LOAD_TRANSFER_FUNCTION = 7
-    LOAD_NOISE = 8
+    SYSTEM_ID_NOISE_COMPLETE = 6
+    SYSTEM_ID_COMPLETE = 7
+    LOAD_TRANSFER_FUNCTION = 8
+    LOAD_NOISE = 9
 
 
 class SysIdDataAnalysisUICommands(Enum):
     NOISE_UPDATE = 1
     SYSID_UPDATE = 2
+    NOISE_COMPLETED = 3
+    TRANSFER_COMPLETED = 4
 
 
 # region: Metadata
@@ -360,10 +363,11 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
                 (SysIdDataAnalysisCommands.START_SHUTDOWN, False),
             )
             self.stop_sysid(None)
+            self.environment_command_queue.put(self.process_name, (SysIdDataAnalysisCommands.SYSTEM_ID_NOISE_COMPLETE, None))
         else:
             self.command_queue.put(self.process_name, (SysIdDataAnalysisCommands.RUN_NOISE, auto_shutdown))
 
-    def run_sysid_transfer_function(self, data):
+    def run_sysid_transfer_function(self, auto_shutdown):
         """Starts and runs the system identification
 
         Parameters
@@ -373,7 +377,6 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
             number of measurement frames.  If False, it will run indefinitely until manually
             stopped.
         """
-        auto_shutdown, store_data = data
         if self.startup:
             self.startup = False
             self.frames = 0
@@ -404,29 +407,28 @@ class SysIDAnalysisProcess(AbstractMessageProcess):
                 (SysIdDataAnalysisCommands.START_SHUTDOWN, False),
             )
             self.stop_sysid(None)
-            if store_data:
-                self.environment_command_queue.put(
-                    self.process_name,
+            self.environment_command_queue.put(
+                self.process_name,
+                (
+                    SysIdDataAnalysisCommands.SYSTEM_ID_COMPLETE,
                     (
-                        SysIdDataAnalysisCommands.SYSTEM_ID_COMPLETE,
-                        (
-                            self.frames,
-                            self.parameters.sysid_averages,
-                            self.frequencies,
-                            self.sysid_frf,
-                            self.sysid_coherence,
-                            self.sysid_response_cpsd,
-                            self.sysid_reference_cpsd,
-                            self.sysid_condition,
-                            self.sysid_response_noise,
-                            self.sysid_reference_noise,
-                        ),
+                        self.frames,
+                        self.parameters.sysid_averages,
+                        self.frequencies,
+                        self.sysid_frf,
+                        self.sysid_coherence,
+                        self.sysid_response_cpsd,
+                        self.sysid_reference_cpsd,
+                        self.sysid_condition,
+                        self.sysid_response_noise,
+                        self.sysid_reference_noise,
                     ),
-                )
+                ),
+            )
         else:
             self.command_queue.put(
                 self.process_name,
-                (SysIdDataAnalysisCommands.RUN_TRANSFER_FUNCTION, (auto_shutdown, store_data)),
+                (SysIdDataAnalysisCommands.RUN_TRANSFER_FUNCTION, auto_shutdown),
             )
 
     def stop_sysid(self, data):  # pylint: disable=unused-argument

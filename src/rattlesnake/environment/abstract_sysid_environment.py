@@ -24,7 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.abstract_environment import EnvironmentMetadata, EnvironmentProcess
-from rattlesnake.process.sysid_data_analysis import SysIdDataAnalysisCommands, SysIdMetadata
+from rattlesnake.process.sysid_data_analysis import SysIdDataAnalysisCommands, SysIdDataAnalysisUICommands, SysIdMetadata
 from rattlesnake.process.data_collector import (
     Acceptance,
     AcquisitionType,
@@ -246,6 +246,7 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
         self.map_command(SpectralProcessingCommands.SHUTDOWN_ACHIEVED, self.spectral_shutdown_achieved_fn)
         self.map_command(SysIdDataAnalysisCommands.SHUTDOWN_ACHIEVED, self.analysis_shutdown_achieved_fn)
         self.map_command(SysIdDataAnalysisCommands.START_SHUTDOWN, self.stop_system_id)
+        self.map_command(SysIdDataAnalysisCommands.SYSTEM_ID_NOISE_COMPLETE, self.system_id_noise_complete)
         self.map_command(SysIdDataAnalysisCommands.SYSTEM_ID_COMPLETE, self.system_id_complete)
         self.map_command(SysIdDataAnalysisCommands.LOAD_NOISE, self.load_noise)
         self.map_command(SysIdDataAnalysisCommands.LOAD_TRANSFER_FUNCTION, self.load_transfer_function)
@@ -579,7 +580,6 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
         self.collector_shutdown_achieved = False
         self.spectral_shutdown_achieved = False
         self.analysis_shutdown_achieved = False
-        store_data = data if data is not None else False
 
         # Set up the collector
         self.collector_command_queue.put(
@@ -638,7 +638,7 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
         # Start the data analysis running
         self.data_analysis_command_queue.put(
             self.environment_name,
-            (SysIdDataAnalysisCommands.RUN_TRANSFER_FUNCTION, (self.environment_metadata.sysid_metadata.auto_shutdown, store_data)),
+            (SysIdDataAnalysisCommands.RUN_TRANSFER_FUNCTION, (self.environment_metadata.sysid_metadata.auto_shutdown)),
         )
 
         # Set up the spectral processing
@@ -728,10 +728,17 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
                 (SystemIdCommands.CHECK_FOR_COMPLETE_SHUTDOWN, None),
             )
 
+    def system_id_noise_complete(self, data):
+        """Sends a message to the gui that this environment has completed system id noise and should start
+        system id transfer function"""
+        self.log("System Identification Noise Compelte")
+        self.gui_update_queue.put((self.environment_name, (SysIdDataAnalysisUICommands.NOISE_COMPLETED, data)))
+
     def system_id_complete(self, data):
         """Sends a message to the controller that this environment has completed system id"""
         self.log("Finished System Identification")
-        self.gui_update_queue.put((UICommands.COMPLETED_SYSTEM_ID, (self.environment_name, data)))
+        self.gui_update_queue.put((self.environment_name, (SysIdDataAnalysisUICommands.TRANSFER_COMPLETED, data)))
+        self.gui_update_queue.put((UICommands.COMPLETED_SYSTEM_ID, (self.environment_name, data)))  # Enable tabs
 
     @abstractmethod
     def stop_environment(self, data):
