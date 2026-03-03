@@ -521,6 +521,10 @@ class Rattlesnake:
         self.sys_id_active = True
 
     def stop_system_id(self, environment_name):
+        if self.state == RattlesnakeState.HARDWARE_ACTIVE:
+            self.stop_acquisition()
+            return
+
         if self.state != RattlesnakeState.SYS_ID_ACTIVE:
             raise RattlesnakeError(f"Invalid state for stopping system identification {self.state}")
         try:
@@ -540,6 +544,9 @@ class Rattlesnake:
         self.stop_acquisition()
 
     def preview_sys_id_noise(self, sysid_metadata: SysIdMetadata, environment_name):
+        if self.state == RattlesnakeState.HARDWARE_ACTIVE:
+            self.stop_acquisition()
+
         if self.state != RattlesnakeState.ENVIRONMENT_STORE:
             raise RattlesnakeError(f"Invalid state for previewing system identification noise: {self.state}")
 
@@ -552,6 +559,9 @@ class Rattlesnake:
         self.start_system_id_noise(environment_name)
 
     def preview_sys_id_transfer(self, sysid_metadata: SysIdMetadata, environment_name):
+        if self.state == RattlesnakeState.HARDWARE_ACTIVE:
+            self.stop_acquisition()
+
         if self.state != RattlesnakeState.ENVIRONMENT_STORE:
             raise RattlesnakeError(f"Invalid state for previewing system identification transfer function: {self.state}")
 

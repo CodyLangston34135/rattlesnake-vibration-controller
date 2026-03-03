@@ -551,7 +551,9 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
         )
 
         # Start the data analysis running
-        self.data_analysis_command_queue.put(self.environment_name, (SysIdDataAnalysisCommands.RUN_NOISE, True))
+        self.data_analysis_command_queue.put(
+            self.environment_name, (SysIdDataAnalysisCommands.RUN_NOISE, self.environment_metadata.sysid_metadata.auto_shutdown)
+        )
 
         # Set up the spectral processing
         self.spectral_processing_command_queue.put(
@@ -586,7 +588,6 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
         self.collector_shutdown_achieved = False
         self.spectral_shutdown_achieved = False
         self.analysis_shutdown_achieved = False
-        self.environment_metadata = data
 
         # Set up the collector
         self.collector_command_queue.put(
@@ -645,7 +646,7 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
         # Start the data analysis running
         self.data_analysis_command_queue.put(
             self.environment_name,
-            (SysIdDataAnalysisCommands.RUN_TRANSFER_FUNCTION, True),
+            (SysIdDataAnalysisCommands.RUN_TRANSFER_FUNCTION, self.environment_metadata.sysid_metadata.auto_shutdown),
         )
 
         # Set up the spectral processing
@@ -672,6 +673,7 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
         self.collector_command_queue.put(self.environment_name, (DataCollectorCommands.CLEAR_KURTOSIS_BUFFER, None))
 
         self.set_active()
+        self.gui_update_queue.put((self.environment_name, (SysIdUICommands.SYSID_STARTED, None)))
 
     # region: Shutdown
     def stop_system_id(self, stop_tasks):

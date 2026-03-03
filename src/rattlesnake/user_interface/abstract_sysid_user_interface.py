@@ -415,129 +415,50 @@ class AbstractSysIdUI(AbstractUI):
             widget.setEnabled(False)
 
     def preview_noise(self):
-        # """Starts the noise preview"""
-        self.rattlesnake.set_blocking()
-        sysid_metadata = self.get_sysid_metadata(self.hardware_metadata)
-        self.rattlesnake.preview_sys_id_noise(sysid_metadata, self.environment_name)
-
-        # self.log("Starting Noise Preview")
-        for widget in [
-            self.system_id_widget.preview_noise_button,
-            self.system_id_widget.preview_system_id_button,
-            self.system_id_widget.start_button,
-            self.system_id_widget.samplesPerFrameSpinBox,
-            self.system_id_widget.averagingTypeComboBox,
-            self.system_id_widget.noiseAveragesSpinBox,
-            self.system_id_widget.systemIDAveragesSpinBox,
-            self.system_id_widget.averagingCoefficientDoubleSpinBox,
-            self.system_id_widget.estimatorComboBox,
-            self.system_id_widget.levelDoubleSpinBox,
-            self.system_id_widget.signalTypeComboBox,
-            self.system_id_widget.windowComboBox,
-            self.system_id_widget.overlapDoubleSpinBox,
-            self.system_id_widget.onFractionDoubleSpinBox,
-            self.system_id_widget.pretriggerDoubleSpinBox,
-            self.system_id_widget.rampFractionDoubleSpinBox,
-            self.system_id_widget.stream_transfer_function_data_checkbox,
-            self.system_id_widget.select_transfer_function_stream_file_button,
-            self.system_id_widget.transfer_function_stream_file_display,
-            self.system_id_widget.levelRampTimeDoubleSpinBox,
-            self.system_id_widget.save_system_id_matrices_button,
-            self.system_id_widget.load_system_id_matrices_button,
-            self.system_id_widget.lowFreqCutoffSpinBox,
-            self.system_id_widget.highFreqCutoffSpinBox,
-        ]:
-            widget.setEnabled(False)
+        """Starts the noise preview"""
+        self.log("Starting Noise Preview")
+        try:
+            self.rattlesnake.set_blocking()
+            sysid_metadata = self.get_sysid_metadata(self.hardware_metadata)
+            self.rattlesnake.preview_sys_id_noise(sysid_metadata, self.environment_name)
+            self.rattlesnake.clear_blocking()
+        except Exception as e:
+            self.system_id_error(e)
 
     def preview_transfer_function(self):
-        # """Starts previewing the system identification transfer function calculation"""
-        # self.log("Starting System ID Preview")
-        # self.update_sysid_metadata(self.environment_metadata)
-        # for widget in [
-        #     self.system_id_widget.preview_noise_button,
-        #     self.system_id_widget.preview_system_id_button,
-        #     self.system_id_widget.start_button,
-        #     self.system_id_widget.samplesPerFrameSpinBox,
-        #     self.system_id_widget.averagingTypeComboBox,
-        #     self.system_id_widget.noiseAveragesSpinBox,
-        #     self.system_id_widget.systemIDAveragesSpinBox,
-        #     self.system_id_widget.averagingCoefficientDoubleSpinBox,
-        #     self.system_id_widget.estimatorComboBox,
-        #     self.system_id_widget.levelDoubleSpinBox,
-        #     self.system_id_widget.signalTypeComboBox,
-        #     self.system_id_widget.windowComboBox,
-        #     self.system_id_widget.overlapDoubleSpinBox,
-        #     self.system_id_widget.onFractionDoubleSpinBox,
-        #     self.system_id_widget.pretriggerDoubleSpinBox,
-        #     self.system_id_widget.rampFractionDoubleSpinBox,
-        #     self.system_id_widget.stream_transfer_function_data_checkbox,
-        #     self.system_id_widget.select_transfer_function_stream_file_button,
-        #     self.system_id_widget.transfer_function_stream_file_display,
-        #     self.system_id_widget.levelRampTimeDoubleSpinBox,
-        #     self.system_id_widget.save_system_id_matrices_button,
-        #     self.system_id_widget.load_system_id_matrices_button,
-        #     self.system_id_widget.lowFreqCutoffSpinBox,
-        #     self.system_id_widget.highFreqCutoffSpinBox,
-        # ]:
-        #     widget.setEnabled(False)
-        # for widget in [self.system_id_widget.stop_button]:
-        #     widget.setEnabled(True)
-        # self.environment_command_queue.put(
-        #     self.log_name,
-        #     (SystemIdCommands.PREVIEW_TRANSFER_FUNCTION, (self.environment_metadata)),
-        # )
-        pass
+        """Starts previewing the system identification transfer function calculation"""
+        self.log("Starting System ID Preview")
+        try:
+            self.rattlesnake.set_blocking()
+            sysid_metadata = self.get_sysid_metadata(self.hardware_metadata)
+            self.rattlesnake.preview_sys_id_transfer(sysid_metadata, self.environment_name)
+            self.rattlesnake.clear_blocking()
+        except Exception as e:
+            self.system_id_error(e)
 
     def acquire_transfer_function(self):
-        # """Starts the acquisition phase of the controller"""
-        # self.log("Starting System ID")
-        # self.update_sysid_metadata(self.environment_metadata)
-        # for widget in [
-        #     self.system_id_widget.preview_noise_button,
-        #     self.system_id_widget.preview_system_id_button,
-        #     self.system_id_widget.start_button,
-        #     self.system_id_widget.samplesPerFrameSpinBox,
-        #     self.system_id_widget.averagingTypeComboBox,
-        #     self.system_id_widget.noiseAveragesSpinBox,
-        #     self.system_id_widget.systemIDAveragesSpinBox,
-        #     self.system_id_widget.averagingCoefficientDoubleSpinBox,
-        #     self.system_id_widget.estimatorComboBox,
-        #     self.system_id_widget.levelDoubleSpinBox,
-        #     self.system_id_widget.signalTypeComboBox,
-        #     self.system_id_widget.windowComboBox,
-        #     self.system_id_widget.overlapDoubleSpinBox,
-        #     self.system_id_widget.onFractionDoubleSpinBox,
-        #     self.system_id_widget.pretriggerDoubleSpinBox,
-        #     self.system_id_widget.rampFractionDoubleSpinBox,
-        #     self.system_id_widget.stream_transfer_function_data_checkbox,
-        #     self.system_id_widget.select_transfer_function_stream_file_button,
-        #     self.system_id_widget.transfer_function_stream_file_display,
-        #     self.system_id_widget.levelRampTimeDoubleSpinBox,
-        #     self.system_id_widget.save_system_id_matrices_button,
-        #     self.system_id_widget.load_system_id_matrices_button,
-        #     self.system_id_widget.lowFreqCutoffSpinBox,
-        #     self.system_id_widget.highFreqCutoffSpinBox,
-        # ]:
-        #     widget.setEnabled(False)
-        # for widget in [self.system_id_widget.stop_button]:
-        #     widget.setEnabled(True)
-        # if self.system_id_widget.stream_transfer_function_data_checkbox.isChecked():
-        #     stream_name = self.system_id_widget.transfer_function_stream_file_display.text()
-        # else:
-        #     stream_name = None
-        # self.environment_command_queue.put(
-        #     self.log_name,
-        #     (
-        #         SystemIdCommands.START_SYSTEM_ID,
-        #         (self.environment_metadata, stream_name),
-        #     ),
-        # )
-        pass
+        """Starts the acquisition phase of the controller"""
+        self.log("Starting System ID")
+        try:
+            self.rattlesnake.set_blocking()
+            sysid_metadata = self.get_sysid_metadata(self.hardware_metadata)
+            self.rattlesnake.run_system_id(sysid_metadata, self.environment_name)
+            self.rattlesnake.clear_blocking()
+        except Exception as e:
+            self.system_id_error(e)
 
     def stop_system_id(self):
         """Stops the system identification"""
         self.log("Stopping System ID")
         self.rattlesnake.stop_system_id(self.environment_name)
+
+    def system_id_error(self, error):
+        if self.active:
+            self.display_sys_id_started()
+        else:
+            self.display_sys_id_ended()
+
+        self.display_error(error)
 
     def select_transfer_function_stream_file(self):
         """Select a file to save transfer function data to"""
@@ -1283,67 +1204,3 @@ class AbstractSysIdUI(AbstractUI):
         # self.system_id_widget.current_frames_spinbox.setValue(0)
         # self.system_id_widget.total_frames_spinbox.setValue(0)
         # self.system_id_widget.progressBar.setValue(100)
-
-    def disable_system_id_daq_armed(self):
-        """Disables widget on the UI due to the data acquisition being in use"""
-        for widget in [
-            self.system_id_widget.preview_noise_button,
-            self.system_id_widget.preview_system_id_button,
-            self.system_id_widget.start_button,
-            self.system_id_widget.samplesPerFrameSpinBox,
-            self.system_id_widget.averagingTypeComboBox,
-            self.system_id_widget.noiseAveragesSpinBox,
-            self.system_id_widget.systemIDAveragesSpinBox,
-            self.system_id_widget.averagingCoefficientDoubleSpinBox,
-            self.system_id_widget.estimatorComboBox,
-            self.system_id_widget.levelDoubleSpinBox,
-            self.system_id_widget.signalTypeComboBox,
-            self.system_id_widget.windowComboBox,
-            self.system_id_widget.overlapDoubleSpinBox,
-            self.system_id_widget.onFractionDoubleSpinBox,
-            self.system_id_widget.pretriggerDoubleSpinBox,
-            self.system_id_widget.rampFractionDoubleSpinBox,
-            self.system_id_widget.stream_transfer_function_data_checkbox,
-            self.system_id_widget.select_transfer_function_stream_file_button,
-            self.system_id_widget.transfer_function_stream_file_display,
-            self.system_id_widget.levelRampTimeDoubleSpinBox,
-            self.system_id_widget.save_system_id_matrices_button,
-            self.system_id_widget.load_system_id_matrices_button,
-            self.system_id_widget.lowFreqCutoffSpinBox,
-            self.system_id_widget.highFreqCutoffSpinBox,
-        ]:
-            widget.setEnabled(False)
-        for widget in [self.system_id_widget.stop_button]:
-            widget.setEnabled(False)
-
-    def enable_system_id_daq_disarmed(self):
-        """Enables widgets on the UI due to the data acquisition being no longer in use"""
-        for widget in [
-            self.system_id_widget.preview_noise_button,
-            self.system_id_widget.preview_system_id_button,
-            self.system_id_widget.start_button,
-            self.system_id_widget.samplesPerFrameSpinBox,
-            self.system_id_widget.averagingTypeComboBox,
-            self.system_id_widget.noiseAveragesSpinBox,
-            self.system_id_widget.systemIDAveragesSpinBox,
-            self.system_id_widget.averagingCoefficientDoubleSpinBox,
-            self.system_id_widget.estimatorComboBox,
-            self.system_id_widget.levelDoubleSpinBox,
-            self.system_id_widget.signalTypeComboBox,
-            self.system_id_widget.windowComboBox,
-            self.system_id_widget.overlapDoubleSpinBox,
-            self.system_id_widget.onFractionDoubleSpinBox,
-            self.system_id_widget.pretriggerDoubleSpinBox,
-            self.system_id_widget.rampFractionDoubleSpinBox,
-            self.system_id_widget.stream_transfer_function_data_checkbox,
-            self.system_id_widget.select_transfer_function_stream_file_button,
-            self.system_id_widget.transfer_function_stream_file_display,
-            self.system_id_widget.levelRampTimeDoubleSpinBox,
-            self.system_id_widget.save_system_id_matrices_button,
-            self.system_id_widget.load_system_id_matrices_button,
-            self.system_id_widget.lowFreqCutoffSpinBox,
-            self.system_id_widget.highFreqCutoffSpinBox,
-        ]:
-            widget.setEnabled(True)
-        for widget in [self.system_id_widget.stop_button]:
-            widget.setEnabled(False)
