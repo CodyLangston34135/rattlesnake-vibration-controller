@@ -66,6 +66,7 @@ import pyqtgraph as pg
 from scipy.io import loadmat, savemat
 
 
+# region: Commands
 class SystemIdCommands(Enum):
     """Enumeration of commands that could be sent to the system identification environment"""
 
@@ -86,6 +87,7 @@ class SysIdUICommands(Enum):
         return self.name.replace("_", " ").title()
 
 
+# region: Metadata
 class SysIdEnvironmentMetadata(EnvironmentMetadata):
     def __init__(
         self,
@@ -100,7 +102,11 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
             channel_list_bools,
             sample_rate,
         )
-        self._sysid_metadata = None
+        # I initialize this because a lot of sysid environments use it to
+        # check the validity of the control class during initialize_environment.
+        # It is always overwritten with control_class.update_sysid after sysid
+        # is made so it is never used for actual control.
+        self._sysid_metadata = SysIdMetadata.default_metadata(sample_rate)
 
     @property
     def sysid_metadata(self):
@@ -190,6 +196,7 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
             return False
 
 
+# region: Environment
 class SysIdEnvironmentProcess(EnvironmentProcess):
     """Abstract Environment class defining the interface with the controller
 
@@ -277,6 +284,7 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
         self.siggen_shutdown_achieved = True
         self.analysis_shutdown_achieved = True
 
+    # region: Initialize
     @abstractmethod
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         """Initialize the data acquisition parameters in the environment.
@@ -291,7 +299,7 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
             channels active in the environment as well as sampling parameters.
         """
         self.hardware_metadata = hardware_metadata
-        super().initialize_hardware()
+        self.set_ready()
 
     @abstractmethod
     def initialize_environment(self, environment_metadata: SysIdEnvironmentMetadata):
@@ -308,7 +316,7 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
 
         """
         self.environment_metadata = environment_metadata
-        super().initialize_environment()
+        self.set_ready()
 
     @abstractmethod
     def initialize_sysid(self, sysid_metadata: SysIdMetadata):
@@ -474,6 +482,7 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
                 output_oversample=self.hardware_metadata.output_oversample,
             )
 
+    # region: Loading
     def load_noise(self, data):
         """Sends noise data to the data analysis process"""
         self.data_analysis_command_queue.put(self.environment_name, (SysIdDataAnalysisCommands.LOAD_NOISE, data))
@@ -485,6 +494,7 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
             (SysIdDataAnalysisCommands.LOAD_TRANSFER_FUNCTION, data),
         )
 
+    # region: Control Loop
     def start_noise(self, data):
         """Starts the noise measurement with the provided metadata"""
         self.log("Starting Noise Measurement for System ID")
@@ -666,6 +676,7 @@ class SysIdEnvironmentProcess(EnvironmentProcess):
 
         self.set_active()
 
+    # region: Shutdown
     def stop_system_id(self, stop_tasks):
         """Starts the shutdown process for the system identification"""
         stop_data_analysis = stop_tasks  # This is so that data analysis class can stop itself then tell environment to stop for quicker responses

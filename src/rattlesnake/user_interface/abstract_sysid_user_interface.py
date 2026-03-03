@@ -211,7 +211,7 @@ class AbstractSysIdUI(AbstractUI):
     def initialized_output_names(self):
         """Names of output channels that have been initialized and will be used in displays"""
 
-    # region: Metadata
+    # region: Hardware
     @abstractmethod
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         """Update the user interface with data acquisition parameters
@@ -251,6 +251,23 @@ class AbstractSysIdUI(AbstractUI):
             1, len(self.all_reference_indices) * 2 + len(self.all_response_indices)
         )
 
+    # region: Environment
+    @abstractmethod
+    def initialize_environment(self, environment_metadata):
+        self.system_id_widget.reference_selector.blockSignals(True)
+        self.system_id_widget.response_selector.blockSignals(True)
+        self.system_id_widget.reference_selector.clear()
+        self.system_id_widget.response_selector.clear()
+        for i, control_name in enumerate(self.initialized_control_names):
+            self.system_id_widget.response_selector.addItem(f"{i + 1}: {control_name}")
+        for i, drive_name in enumerate(self.initialized_output_names):
+            self.system_id_widget.reference_selector.addItem(f"{i + 1}: {drive_name}")
+        self.system_id_widget.reference_selector.blockSignals(False)
+        self.system_id_widget.response_selector.blockSignals(False)
+        self.system_id_widget.reference_selector.setCurrentRow(0)
+        self.system_id_widget.response_selector.setCurrentRow(0)
+        self.update_signal_type()
+
     @abstractmethod
     def get_environment_metadata(self, global_channel_list) -> SysIdEnvironmentMetadata:
         """
@@ -272,22 +289,7 @@ class AbstractSysIdUI(AbstractUI):
         This function should set up the user interface accordingly.
         """
 
-    @abstractmethod
-    def initialize_environment(self, environment_metadata):
-        self.system_id_widget.reference_selector.blockSignals(True)
-        self.system_id_widget.response_selector.blockSignals(True)
-        self.system_id_widget.reference_selector.clear()
-        self.system_id_widget.response_selector.clear()
-        for i, control_name in enumerate(self.initialized_control_names):
-            self.system_id_widget.response_selector.addItem(f"{i + 1}: {control_name}")
-        for i, drive_name in enumerate(self.initialized_output_names):
-            self.system_id_widget.reference_selector.addItem(f"{i + 1}: {drive_name}")
-        self.system_id_widget.reference_selector.blockSignals(False)
-        self.system_id_widget.response_selector.blockSignals(False)
-        self.system_id_widget.reference_selector.setCurrentRow(0)
-        self.system_id_widget.response_selector.setCurrentRow(0)
-        self.update_signal_type()
-
+    # region: System Identification
     def get_sysid_metadata(self, hardware_metadata: HardwareMetadata):
         """Updates the provided system identification metadata based on current UI widget values"""
         sysid_frame_size = self.system_id_widget.samplesPerFrameSpinBox.value()
@@ -347,14 +349,6 @@ class AbstractSysIdUI(AbstractUI):
 
         """
         pass
-
-    @abstractmethod
-    def get_environment_instructions(self):
-        return
-
-    @abstractmethod
-    def set_environment_instructions(self, instructions):
-        return
 
     # region: Callbacks
     def preview_noise(self):
@@ -731,6 +725,48 @@ class AbstractSysIdUI(AbstractUI):
             self.system_id_widget.lowFreqCutoffSpinBox.hide()
             self.system_id_widget.highFreqCutoffSpinBox.hide()
 
+    # region: Acqusition
+    @abstractmethod
+    def get_environment_instructions(self):
+        return
+
+    @abstractmethod
+    def set_environment_instructions(self, instructions):
+        return
+
+    @abstractmethod
+    def display_environment_ended(self):
+        return
+
+    @abstractmethod
+    def display_environment_started(self):
+        return
+
+    @abstractmethod
+    def start_environment(self):
+        return super().start_environment()
+
+    @abstractmethod
+    def start_environment_ready(self):
+        return super().start_environment_ready()
+
+    @abstractmethod
+    def start_environment_error(self, error):
+        return super().start_environment_error(error)
+
+    @abstractmethod
+    def stop_environment(self):
+        return super().stop_environment()
+
+    @abstractmethod
+    def stop_environment_error(self, error):
+        return super().stop_environment_error(error)
+
+    @abstractmethod
+    def stop_environment_ready(self):
+        return super().stop_environment_ready()
+
+    # region: Commands
     @abstractmethod
     def update_gui(self, queue_data: tuple):
         """Update the environment's graphical user interface

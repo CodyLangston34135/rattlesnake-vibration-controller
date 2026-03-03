@@ -45,6 +45,7 @@ class SysIdDataAnalysisCommands(Enum):
     LOAD_NOISE = 8
 
 
+# region: Metadata
 class SysIdMetadata:
     """Abstract class for storing metadata for an environment.
 
@@ -155,6 +156,30 @@ class SysIdMetadata:
     def validate(self):
         return True
 
+    @classmethod
+    def default_metadata(cls, sample_rate):
+        return cls(
+            sample_rate=sample_rate,
+            sysid_frame_size=sample_rate,
+            sysid_averaging_type=int(sample_rate / 2) + 1,
+            sysid_noise_averages=20,
+            sysid_averages=20,
+            sysid_exponential_averaging_coefficient=0.01,
+            sysid_estimator="H1",
+            sysid_level=0.01,
+            sysid_level_ramp_time=0.5,
+            sysid_signal_type="Random",
+            sysid_window="Hann",
+            sysid_overlap=0.5,
+            sysid_burst_on=0.5,
+            sysid_pretrigger=0.05,
+            sysid_burst_ramp_fraction=0.05,
+            sysid_low_frequency_cutoff=0,
+            sysid_high_frequency_cutoff=int(sample_rate / 2),
+            stream_file=None,
+            auto_shutdown=False,
+        )
+
     def __eq__(self, other):
         try:
             return np.all([np.all(value == other.__dict__[field]) for field, value in self.__dict__.items()])
@@ -162,6 +187,7 @@ class SysIdMetadata:
             return False
 
 
+# region: Data Analysis
 class SysIDAnalysisProcess(AbstractMessageProcess):
     """Process to perform data analysis and control calculations in an environment
     using system id"""

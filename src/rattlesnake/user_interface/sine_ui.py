@@ -278,7 +278,6 @@ class SineUI(AbstractSysIdUI):
         """Defines names of the physical drive channels"""
         return [self.physical_channel_names[i] for i in self.physical_output_indices]
 
-    # region: Environment
     @property
     def physical_control_indices(self):
         """Gets the physical control indices currently checked"""
@@ -313,6 +312,216 @@ class SineUI(AbstractSysIdUI):
         else:
             return [f"Transformed Drive {i + 1}" for i in range(self.environment_metadata.reference_transformation_matrix.shape[0])]
 
+    # region: Environment
+    def initialize_environment(self, environment_metadata):
+        self.environment_metadata = environment_metadata
+        super().initialize_environment(environment_metadata)
+        # Set up channel names in selectors
+        for widget in [
+            self.prediction_widget.response_selector,
+            self.run_widget.control_channel_selector,
+        ]:
+            widget.blockSignals(True)
+            widget.clear()
+            for i, control_name in enumerate(self.initialized_control_names):
+                widget.addItem(f"{i + 1}: {control_name}")
+            if isinstance(widget, QtWidgets.QListWidget):
+                widget.setCurrentRow(0)
+            widget.blockSignals(False)
+        for widget in [self.prediction_widget.excitation_selector]:
+            widget.blockSignals(True)
+            widget.clear()
+            for i, drive_name in enumerate(self.initialized_output_names):
+                widget.addItem(f"{i + 1}: {drive_name}")
+            if isinstance(widget, QtWidgets.QListWidget):
+                widget.setCurrentRow(0)
+            widget.blockSignals(False)
+        # Set up tone names in selectors
+        for widget in [
+            self.prediction_widget.response_display_tone,
+            self.prediction_widget.excitation_display_tone,
+            self.run_widget.partial_environment_tone_selector,
+            self.run_widget.control_tone_selector,
+        ]:
+            widget.blockSignals(True)
+            widget.clear()
+            if widget not in [
+                self.run_widget.partial_environment_tone_selector,
+                self.run_widget.control_tone_selector,
+            ]:
+                widget.addItem("All Tones")
+            for table in self.sine_tables:
+                widget.addItem(table.widget.name_editor.text())
+            if isinstance(widget, QtWidgets.QListWidget):
+                widget.setCurrentRow(0)
+            widget.blockSignals(False)
+        # Set up the run widget tables
+        for widget, channel_names in zip(
+            [
+                self.run_widget.signal_selector,
+                self.run_widget.control_updates_signal_selector,
+            ],
+            [self.initialized_control_names, self.initialized_output_names],
+        ):
+            widget.blockSignals(True)
+            widget.clear()
+            widget.setRowCount(len(self.sine_tables))
+            widget.setColumnCount(len(channel_names))
+            for i in range(widget.rowCount()):
+                for j in range(widget.columnCount()):
+                    item = QtWidgets.QTableWidgetItem("0.000")
+                    widget.setItem(i, j, item)
+                    item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+            widget.blockSignals(False)
+
+        # Set up the prediction and run plots
+        self.prediction_widget.excitation_display_plot.getPlotItem().clear()
+        self.prediction_widget.response_display_plot.getPlotItem().clear()
+        self.run_widget.control_updates_plot.getPlotItem().clear()
+        self.run_widget.amplitude_plot.getPlotItem().clear()
+        self.run_widget.phase_plot.getPlotItem().clear()
+        self.run_widget.amplitude_plot.getPlotItem().addLegend()
+        self.run_widget.phase_plot.getPlotItem().addLegend()
+        self.prediction_widget.excitation_display_plot.getPlotItem().addLegend()
+        self.prediction_widget.response_display_plot.getPlotItem().addLegend()
+        self.plot_data_items["response_prediction"] = multiline_plotter(
+            np.arange(2),
+            np.zeros((2, 2)),
+            widget=self.prediction_widget.response_display_plot,
+            other_pen_options={"width": 1},
+            names=["Prediction", "Spec"],
+        )
+        self.plot_data_items["excitation_prediction"] = multiline_plotter(
+            np.arange(2),
+            np.zeros((1, 2)),
+            widget=self.prediction_widget.excitation_display_plot,
+            other_pen_options={"width": 1},
+            names=["Prediction"],
+        )
+        self.plot_data_items["control_amplitude"] = multiline_plotter(
+            np.arange(2),
+            np.zeros((2, 2)),
+            widget=self.run_widget.amplitude_plot,
+            other_pen_options={"width": 1},
+            names=["Achieved", "Spec"],
+        )
+        self.plot_data_items["control_phase"] = multiline_plotter(
+            np.arange(2),
+            np.zeros((2, 2)),
+            widget=self.run_widget.phase_plot,
+            other_pen_options={"width": 1},
+            names=["Achieved", "Spec"],
+        )
+        self.plot_data_items["control_warning_upper"] = self.run_widget.amplitude_plot.getPlotItem().plot(
+            np.array([0, 0]),
+            np.zeros(2),
+            pen={"color": (255, 204, 0), "width": 1, "style": Qt.DashLine},
+            name="Warning",
+        )
+        self.plot_data_items["control_warning_lower"] = self.run_widget.amplitude_plot.getPlotItem().plot(
+            np.array([0, 0]),
+            np.zeros(2),
+            pen={"color": (255, 204, 0), "width": 1, "style": Qt.DashLine},
+        )
+        self.plot_data_items["control_abort_upper"] = self.run_widget.amplitude_plot.getPlotItem().plot(
+            np.array([0, 0]),
+            np.zeros(2),
+            pen={"color": (153, 0, 0), "width": 1, "style": Qt.DashLine},
+            name="Abort",
+        )
+        self.plot_data_items["control_abort_lower"] = self.run_widget.amplitude_plot.getPlotItem().plot(
+            np.array([0, 0]),
+            np.zeros(2),
+            pen={"color": (153, 0, 0), "width": 1, "style": Qt.DashLine},
+        )
+        self.plot_data_items["prediction_warning_upper"] = self.prediction_widget.response_display_plot.getPlotItem().plot(
+            np.array([0, 0]),
+            np.zeros(2),
+            pen={"color": (255, 204, 0), "width": 1, "style": Qt.DashLine},
+            name="Warning",
+        )
+        self.plot_data_items["prediction_warning_lower"] = self.prediction_widget.response_display_plot.getPlotItem().plot(
+            np.array([0, 0]),
+            np.zeros(2),
+            pen={"color": (255, 204, 0), "width": 1, "style": Qt.DashLine},
+        )
+        self.plot_data_items["prediction_abort_upper"] = self.prediction_widget.response_display_plot.getPlotItem().plot(
+            np.array([0, 0]),
+            np.zeros(2),
+            pen={"color": (153, 0, 0), "width": 1, "style": Qt.DashLine},
+            name="Abort",
+        )
+        self.plot_data_items["prediction_abort_lower"] = self.prediction_widget.response_display_plot.getPlotItem().plot(
+            np.array([0, 0]),
+            np.zeros(2),
+            pen={"color": (153, 0, 0), "width": 1, "style": Qt.DashLine},
+        )
+        self.plot_data_items["control_updates"] = blended_scatter_plot(np.zeros((10, 2)), widget=self.run_widget.control_updates_plot)
+
+        # Make sure the specification starts at 0
+        min_time = min(spec.start_time for spec in self.collect_specification())
+        for sine_table in self.sine_tables:
+            sine_table.widget.start_time_selector.setValue(sine_table.widget.start_time_selector.value() - min_time)
+
+        self.spec_time = self.update_specification()
+
+        for widget in [
+            self.run_widget.start_time_selector,
+            self.run_widget.stop_time_selector,
+        ]:
+            widget.setMinimum(0)
+            widget.setMaximum(self.spec_time)
+        self.run_widget.stop_time_selector.setValue(self.spec_time)
+
+        return self.environment_metadata
+
+    def get_environment_metadata(self, global_channel_list=None):
+        if self.hardware_metadata and global_channel_list:
+            channel_list_bools = self.get_channel_list_bools(global_channel_list)
+        else:
+            channel_list_bools = []
+
+        if self.python_control_module is None:
+            control_module = None
+            control_class = None
+            control_class_parameters = self.definition_widget.control_parameters_text_input.toPlainText()
+        else:
+            control_module = self.definition_widget.script_file_path_input.text()
+            control_class = self.definition_widget.python_class_input.itemText(self.definition_widget.python_class_input.currentIndex())
+            control_class_parameters = self.definition_widget.control_parameters_text_input.toPlainText()
+        return SineMetadata(
+            environment_name=self.environment_name,
+            channel_list_bools=channel_list_bools,
+            sample_rate=self.definition_widget.sample_rate_display.value(),
+            samples_per_frame=self.definition_widget.samples_per_acquire_display.value(),
+            number_of_channels=len(self.hardware_metadata.channel_list),
+            specifications=self.collect_specification(),
+            ramp_time=self.definition_widget.ramp_time_spinbox.value(),
+            buffer_blocks=self.definition_widget.buffer_blocks_selector.value(),
+            control_convergence=self.definition_widget.control_convergence_selector.value(),
+            update_drives_after_environment=self.definition_widget.update_drives_after_environment_selector.isChecked(),
+            phase_fit=self.definition_widget.best_fit_phase_checkbox.isChecked(),
+            allow_automatic_aborts=self.definition_widget.auto_abort_checkbox.isChecked(),
+            tracking_filter_type=self.definition_widget.filter_type_selector.currentIndex(),
+            tracking_filter_cutoff=self.definition_widget.tracking_filter_cutoff_selector.value() / 100,
+            tracking_filter_order=self.definition_widget.tracking_filter_order_selector.value(),
+            vk_filter_order=self.definition_widget.vk_filter_order_selector.currentIndex() + 1,
+            vk_filter_bandwidth=self.definition_widget.vk_filter_bandwidth_selector.value(),
+            vk_filter_blocksize=self.definition_widget.vk_filter_block_size_selector.value(),
+            vk_filter_overlap=self.definition_widget.vk_filter_block_overlap_selector.value(),
+            control_python_script=control_module,
+            control_python_class=control_class,
+            control_python_parameters=control_class_parameters,
+            control_channel_indices=self.physical_control_indices,
+            output_channel_indices=self.physical_output_indices,
+            response_transformation_matrix=self.response_transformation_matrix,
+            output_transformation_matrix=self.output_transformation_matrix,
+        )
+
+    def set_environment_metadata(self, metadata):
+        return super().set_environment_metadata(metadata)
+
+    # region: Definition
     def update_control_channels(self):
         """Updates the control channels due to selection changes"""
         self.response_transformation_matrix = None
@@ -553,207 +762,6 @@ class SineUI(AbstractSysIdUI):
         for control_class in classes:
             self.definition_widget.python_class_input.addItem(control_class[0])
 
-    def initialize_environment(self, environment_metadata):
-        super().initialize_environment(environment_metadata)
-        # Set up channel names in selectors
-        for widget in [
-            self.prediction_widget.response_selector,
-            self.run_widget.control_channel_selector,
-        ]:
-            widget.blockSignals(True)
-            widget.clear()
-            for i, control_name in enumerate(self.initialized_control_names):
-                widget.addItem(f"{i + 1}: {control_name}")
-            if isinstance(widget, QtWidgets.QListWidget):
-                widget.setCurrentRow(0)
-            widget.blockSignals(False)
-        for widget in [self.prediction_widget.excitation_selector]:
-            widget.blockSignals(True)
-            widget.clear()
-            for i, drive_name in enumerate(self.initialized_output_names):
-                widget.addItem(f"{i + 1}: {drive_name}")
-            if isinstance(widget, QtWidgets.QListWidget):
-                widget.setCurrentRow(0)
-            widget.blockSignals(False)
-        # Set up tone names in selectors
-        for widget in [
-            self.prediction_widget.response_display_tone,
-            self.prediction_widget.excitation_display_tone,
-            self.run_widget.partial_environment_tone_selector,
-            self.run_widget.control_tone_selector,
-        ]:
-            widget.blockSignals(True)
-            widget.clear()
-            if widget not in [
-                self.run_widget.partial_environment_tone_selector,
-                self.run_widget.control_tone_selector,
-            ]:
-                widget.addItem("All Tones")
-            for table in self.sine_tables:
-                widget.addItem(table.widget.name_editor.text())
-            if isinstance(widget, QtWidgets.QListWidget):
-                widget.setCurrentRow(0)
-            widget.blockSignals(False)
-        # Set up the run widget tables
-        for widget, channel_names in zip(
-            [
-                self.run_widget.signal_selector,
-                self.run_widget.control_updates_signal_selector,
-            ],
-            [self.initialized_control_names, self.initialized_output_names],
-        ):
-            widget.blockSignals(True)
-            widget.clear()
-            widget.setRowCount(len(self.sine_tables))
-            widget.setColumnCount(len(channel_names))
-            for i in range(widget.rowCount()):
-                for j in range(widget.columnCount()):
-                    item = QtWidgets.QTableWidgetItem("0.000")
-                    widget.setItem(i, j, item)
-                    item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-            widget.blockSignals(False)
-
-        # Set up the prediction and run plots
-        self.prediction_widget.excitation_display_plot.getPlotItem().clear()
-        self.prediction_widget.response_display_plot.getPlotItem().clear()
-        self.run_widget.control_updates_plot.getPlotItem().clear()
-        self.run_widget.amplitude_plot.getPlotItem().clear()
-        self.run_widget.phase_plot.getPlotItem().clear()
-        self.run_widget.amplitude_plot.getPlotItem().addLegend()
-        self.run_widget.phase_plot.getPlotItem().addLegend()
-        self.prediction_widget.excitation_display_plot.getPlotItem().addLegend()
-        self.prediction_widget.response_display_plot.getPlotItem().addLegend()
-        self.plot_data_items["response_prediction"] = multiline_plotter(
-            np.arange(2),
-            np.zeros((2, 2)),
-            widget=self.prediction_widget.response_display_plot,
-            other_pen_options={"width": 1},
-            names=["Prediction", "Spec"],
-        )
-        self.plot_data_items["excitation_prediction"] = multiline_plotter(
-            np.arange(2),
-            np.zeros((1, 2)),
-            widget=self.prediction_widget.excitation_display_plot,
-            other_pen_options={"width": 1},
-            names=["Prediction"],
-        )
-        self.plot_data_items["control_amplitude"] = multiline_plotter(
-            np.arange(2),
-            np.zeros((2, 2)),
-            widget=self.run_widget.amplitude_plot,
-            other_pen_options={"width": 1},
-            names=["Achieved", "Spec"],
-        )
-        self.plot_data_items["control_phase"] = multiline_plotter(
-            np.arange(2),
-            np.zeros((2, 2)),
-            widget=self.run_widget.phase_plot,
-            other_pen_options={"width": 1},
-            names=["Achieved", "Spec"],
-        )
-        self.plot_data_items["control_warning_upper"] = self.run_widget.amplitude_plot.getPlotItem().plot(
-            np.array([0, 0]),
-            np.zeros(2),
-            pen={"color": (255, 204, 0), "width": 1, "style": Qt.DashLine},
-            name="Warning",
-        )
-        self.plot_data_items["control_warning_lower"] = self.run_widget.amplitude_plot.getPlotItem().plot(
-            np.array([0, 0]),
-            np.zeros(2),
-            pen={"color": (255, 204, 0), "width": 1, "style": Qt.DashLine},
-        )
-        self.plot_data_items["control_abort_upper"] = self.run_widget.amplitude_plot.getPlotItem().plot(
-            np.array([0, 0]),
-            np.zeros(2),
-            pen={"color": (153, 0, 0), "width": 1, "style": Qt.DashLine},
-            name="Abort",
-        )
-        self.plot_data_items["control_abort_lower"] = self.run_widget.amplitude_plot.getPlotItem().plot(
-            np.array([0, 0]),
-            np.zeros(2),
-            pen={"color": (153, 0, 0), "width": 1, "style": Qt.DashLine},
-        )
-        self.plot_data_items["prediction_warning_upper"] = self.prediction_widget.response_display_plot.getPlotItem().plot(
-            np.array([0, 0]),
-            np.zeros(2),
-            pen={"color": (255, 204, 0), "width": 1, "style": Qt.DashLine},
-            name="Warning",
-        )
-        self.plot_data_items["prediction_warning_lower"] = self.prediction_widget.response_display_plot.getPlotItem().plot(
-            np.array([0, 0]),
-            np.zeros(2),
-            pen={"color": (255, 204, 0), "width": 1, "style": Qt.DashLine},
-        )
-        self.plot_data_items["prediction_abort_upper"] = self.prediction_widget.response_display_plot.getPlotItem().plot(
-            np.array([0, 0]),
-            np.zeros(2),
-            pen={"color": (153, 0, 0), "width": 1, "style": Qt.DashLine},
-            name="Abort",
-        )
-        self.plot_data_items["prediction_abort_lower"] = self.prediction_widget.response_display_plot.getPlotItem().plot(
-            np.array([0, 0]),
-            np.zeros(2),
-            pen={"color": (153, 0, 0), "width": 1, "style": Qt.DashLine},
-        )
-        self.plot_data_items["control_updates"] = blended_scatter_plot(np.zeros((10, 2)), widget=self.run_widget.control_updates_plot)
-
-        # Make sure the specification starts at 0
-        min_time = min(spec.start_time for spec in self.collect_specification())
-        for sine_table in self.sine_tables:
-            sine_table.widget.start_time_selector.setValue(sine_table.widget.start_time_selector.value() - min_time)
-
-        self.spec_time = self.update_specification()
-
-        for widget in [
-            self.run_widget.start_time_selector,
-            self.run_widget.stop_time_selector,
-        ]:
-            widget.setMinimum(0)
-            widget.setMaximum(self.spec_time)
-        self.run_widget.stop_time_selector.setValue(self.spec_time)
-
-        return self.environment_metadata
-
-    def get_environment_metadata(self, global_channel_list):
-        return super().get_environment_metadata(global_channel_list)
-        if self.python_control_module is None:
-            control_module = None
-            control_class = None
-            control_class_parameters = self.definition_widget.control_parameters_text_input.toPlainText()
-        else:
-            control_module = self.definition_widget.script_file_path_input.text()
-            control_class = self.definition_widget.python_class_input.itemText(self.definition_widget.python_class_input.currentIndex())
-            control_class_parameters = self.definition_widget.control_parameters_text_input.toPlainText()
-        return SineMetadata(
-            sample_rate=self.definition_widget.sample_rate_display.value(),
-            samples_per_frame=self.definition_widget.samples_per_acquire_display.value(),
-            number_of_channels=len(self.hardware_metadata.channel_list),
-            specifications=self.collect_specification(),
-            ramp_time=self.definition_widget.ramp_time_spinbox.value(),
-            buffer_blocks=self.definition_widget.buffer_blocks_selector.value(),
-            control_convergence=self.definition_widget.control_convergence_selector.value(),
-            update_drives_after_environment=self.definition_widget.update_drives_after_environment_selector.isChecked(),
-            phase_fit=self.definition_widget.best_fit_phase_checkbox.isChecked(),
-            allow_automatic_aborts=self.definition_widget.auto_abort_checkbox.isChecked(),
-            tracking_filter_type=self.definition_widget.filter_type_selector.currentIndex(),
-            tracking_filter_cutoff=self.definition_widget.tracking_filter_cutoff_selector.value() / 100,
-            tracking_filter_order=self.definition_widget.tracking_filter_order_selector.value(),
-            vk_filter_order=self.definition_widget.vk_filter_order_selector.currentIndex() + 1,
-            vk_filter_bandwidth=self.definition_widget.vk_filter_bandwidth_selector.value(),
-            vk_filter_blocksize=self.definition_widget.vk_filter_block_size_selector.value(),
-            vk_filter_overlap=self.definition_widget.vk_filter_block_overlap_selector.value(),
-            control_python_script=control_module,
-            control_python_class=control_class,
-            control_python_parameters=control_class_parameters,
-            control_channel_indices=self.physical_control_indices,
-            output_channel_indices=self.physical_output_indices,
-            response_transformation_matrix=self.response_transformation_matrix,
-            output_transformation_matrix=self.output_transformation_matrix,
-        )
-
-    def set_environment_metadata(self, metadata):
-        return super().set_environment_metadata(metadata)
-
     def define_transformation_matrices(self, clicked, dialog=True):  # pylint: disable=unused-argument
         """Defines the transformation matrices using the dialog box"""
         if dialog:
@@ -805,7 +813,7 @@ class SineUI(AbstractSysIdUI):
             self.output_transformation_matrix = output_transformation
             self.clear_and_update_specification_table()
 
-    # region: Predictions
+    # region: Prediction
     def update_response_prediction_tone(self):
         """Called when the tone is changed, sends selection to environment"""
         type_index = self.prediction_widget.response_display_type.currentIndex()
@@ -975,13 +983,6 @@ class SineUI(AbstractSysIdUI):
         self.send_excitation_prediction_plot_choices()
 
     # region: Run
-
-    def get_environment_instructions(self):
-        return super().get_environment_instructions()
-
-    def set_environment_instructions(self, instructions):
-        return super().set_environment_instructions(instructions)
-
     def start_control(self):
         """Sets itself up to start controlling and sends a signal to the environment to start"""
         self.achieved_response_signals_combined = []
@@ -1019,30 +1020,6 @@ class SineUI(AbstractSysIdUI):
         )
         if self.run_widget.test_level_selector.value() >= 0:
             self.controller_communication_queue.put(self.log_name, (GlobalCommands.AT_TARGET_LEVEL, self.environment_name))
-
-    def start_environment(self):
-        return super().start_environment()
-
-    def start_environment_ready(self):
-        return super().start_environment_ready()
-
-    def start_environment_error(self, error):
-        return super().start_environment_error(error)
-
-    def display_environment_started(self):
-        return super().display_environment_started()
-
-    def display_environment_ended(self):
-        return super().display_environment_ended()
-
-    def stop_environment(self):
-        return super().stop_environment()
-
-    def stop_environment_ready(self):
-        return super().stop_environment_ready()
-
-    def stop_environment_error(self, error):
-        return super().stop_environment_error(error)
 
     def enable_control(self, enabled):
         """Enables or disables the widgets to start or modify the control
@@ -1271,77 +1248,38 @@ class SineUI(AbstractSysIdUI):
         ]:
             widget.setEnabled(self.run_widget.partial_environment_selector.isChecked())
 
-    # region: Misc
-    def retrieve_metadata(
-        self,
-        netcdf_handle: nc4._netCDF4.Dataset,  # pylint: disable=c-extension-no-member
-        environment_name: str = None,
-    ) -> nc4._netCDF4.Group:  # pylint: disable=c-extension-no-member
-        """Retrieves metadata from a netcdf file and sets the UI appropriately."""
-        # Get all the system identification information
-        super().retrieve_metadata(netcdf_handle, environment_name)
-        # Get the group
-        group = netcdf_handle.groups[self.environment_name]
-        self.definition_widget.ramp_time_spinbox.setValue(group.ramp_time)
-        self.definition_widget.buffer_blocks_selector.setValue(group.buffer_blocks)
-        self.definition_widget.control_convergence_selector.setValue(group.control_convergence)
-        self.definition_widget.update_drives_after_environment_selector.setChecked(bool(group.update_drives_after_environment))
-        self.definition_widget.best_fit_phase_checkbox.setChecked(bool(group.phase_fit))
-        self.definition_widget.auto_abort_checkbox.setChecked(bool(group.allow_automatic_aborts))
-        self.definition_widget.filter_type_selector.setCurrentIndex(group.tracking_filter_type)
-        self.definition_widget.tracking_filter_cutoff_selector.setValue(group.tracking_filter_cutoff * 100)
-        self.definition_widget.tracking_filter_order_selector.setValue(group.tracking_filter_order)
-        self.definition_widget.vk_filter_order_selector.setCurrentIndex(group.vk_filter_order - 1)
-        self.definition_widget.vk_filter_bandwidth_selector.setValue(group.vk_filter_bandwidth)
-        self.definition_widget.vk_filter_block_size_selector.setValue(group.vk_filter_blocksize)
-        self.definition_widget.vk_filter_block_overlap_selector.setValue(group.vk_filter_overlap)
-        if group.control_python_script != "":
-            self.select_python_module(None, group.control_python_script)
-            self.definition_widget.control_function_input.setCurrentIndex(
-                self.definition_widget.control_function_input.findText(group.control_python_class)
-            )
-            self.definition_widget.control_parameters_text_input.setText(group.control_python_function_parameters)
-        # Control channels
-        for i in group.variables["control_channel_indices"][...]:
-            item = self.definition_widget.control_channels_selector.item(i)
-            item.setCheckState(Qt.Checked)
-        # Transformation matrices
-        try:
-            self.response_transformation_matrix = group.variables["response_transformation_matrix"][...].data
-        except KeyError:
-            self.response_transformation_matrix = None
-        try:
-            self.output_transformation_matrix = group.variables["output_transformation_matrix"][...].data
-        except KeyError:
-            self.output_transformation_matrix = None
-        self.define_transformation_matrices(None, dialog=False)
-        # Specifications
-        self.clear_and_update_specification_table()
-        for index, (spec_name, spec_group) in enumerate(group["specifications"].groups.items()):
-            if index > 0:
-                self.add_sine_table_tab()
-            frequency = spec_group["spec_frequency"][...]
-            amplitude = spec_group["spec_amplitude"][...].transpose(1, 0)
-            phase = spec_group["spec_phase"][...].transpose(1, 0)
-            sweep_type = spec_group["spec_sweep_type"][...]
-            sweep_rate = spec_group["spec_sweep_rate"][...].copy()
-            sweep_rate[sweep_type == 1] = sweep_rate[sweep_type == 1] / 60
-            sweep_type = ["lin" if val == 0 else "log" for val in sweep_type]
-            warning = spec_group["spec_warning"][...].transpose(1, 2, 3, 0)
-            abort = spec_group["spec_abort"][...].transpose(1, 2, 3, 0)
-            start_time = spec_group.start_time
-            self.sine_tables[-1].clear_and_update_specification_table(
-                frequency,
-                amplitude,
-                phase,
-                sweep_type,
-                sweep_rate,
-                warning,
-                abort,
-                start_time,
-                spec_name,
-            )
+    # region: Acqusition
+    def get_environment_instructions(self):
+        return super().get_environment_instructions()
 
+    def set_environment_instructions(self, instructions):
+        return super().set_environment_instructions(instructions)
+
+    def display_environment_ended(self):
+        return
+
+    def display_environment_started(self):
+        return
+
+    def start_environment(self):
+        return super().start_environment()
+
+    def start_environment_ready(self):
+        return super().start_environment_ready()
+
+    def start_environment_error(self, error):
+        return super().start_environment_error(error)
+
+    def stop_environment(self):
+        return super().stop_environment()
+
+    def stop_environment_error(self, error):
+        return super().stop_environment_error(error)
+
+    def stop_environment_ready(self):
+        return super().stop_environment_ready()
+
+    # region: Commands
     def update_gui(self, queue_data):
         if super().update_gui(queue_data):
             return
@@ -1419,246 +1357,3 @@ class SineUI(AbstractSysIdUI):
             elif isinstance(widget, QtWidgets.QListWidget):
                 widget.clear()
                 widget.addItems([f"{d:.3f}" for d in data])
-
-    def set_parameters_from_template(self, worksheet):
-        self.definition_widget.ramp_time_spinbox.setValue(float(worksheet.cell(2, 2).value))
-        self.definition_widget.control_convergence_selector.setValue(float(worksheet.cell(3, 2).value))
-        self.definition_widget.update_drives_after_environment_selector.setChecked(worksheet.cell(4, 2).value.upper() == "Y")
-        self.definition_widget.best_fit_phase_checkbox.setChecked(worksheet.cell(5, 2).value.upper() == "Y")
-        self.definition_widget.auto_abort_checkbox.setChecked(worksheet.cell(6, 2).value.upper() == "Y")
-        self.definition_widget.buffer_blocks_selector.setValue(int(worksheet.cell(7, 2).value))
-        self.definition_widget.filter_type_selector.setCurrentIndex(1 if worksheet.cell(8, 2).value.upper() == "VK" else 0)
-        self.definition_widget.tracking_filter_cutoff_selector.setValue(float(worksheet.cell(9, 2).value))
-        self.definition_widget.tracking_filter_order_selector.setValue(int(worksheet.cell(10, 2).value))
-        self.definition_widget.vk_filter_order_selector.setCurrentIndex(int(worksheet.cell(11, 2).value) - 1)
-        self.definition_widget.vk_filter_bandwidth_selector.setValue(float(worksheet.cell(12, 2).value))
-        self.definition_widget.vk_filter_block_size_selector.setValue(int(worksheet.cell(13, 2).value))
-        self.definition_widget.vk_filter_block_overlap_selector.setValue(float(worksheet.cell(14, 2).value))
-        if worksheet.cell(15, 2).value is not None and worksheet.cell(15, 2).value != "":
-            self.select_python_module(None, worksheet.cell(15, 2).value)
-            self.definition_widget.python_class_input.setCurrentIndex(self.definition_widget.python_class_input.findText(worksheet.cell(16, 2).value))
-        self.definition_widget.control_parameters_text_input.setText("" if worksheet.cell(17, 2).value is None else str(worksheet.cell(17, 2).value))
-        column_index = 2
-        while True:
-            value = worksheet.cell(18, column_index).value
-            if value is None or (isinstance(value, str) and value.strip() == ""):
-                break
-            item = self.definition_widget.control_channels_selector.item(int(value) - 1)
-            item.setCheckState(Qt.Checked)
-            column_index += 1
-        self.system_id_widget.samplesPerFrameSpinBox.setValue(int(worksheet.cell(19, 2).value))
-        self.system_id_widget.averagingTypeComboBox.setCurrentIndex(self.system_id_widget.averagingTypeComboBox.findText(worksheet.cell(20, 2).value))
-        self.system_id_widget.noiseAveragesSpinBox.setValue(int(worksheet.cell(21, 2).value))
-        self.system_id_widget.systemIDAveragesSpinBox.setValue(int(worksheet.cell(22, 2).value))
-        self.system_id_widget.averagingCoefficientDoubleSpinBox.setValue(float(worksheet.cell(23, 2).value))
-        self.system_id_widget.estimatorComboBox.setCurrentIndex(self.system_id_widget.estimatorComboBox.findText(worksheet.cell(24, 2).value))
-        self.system_id_widget.levelDoubleSpinBox.setValue(float(worksheet.cell(25, 2).value))
-        self.system_id_widget.levelRampTimeDoubleSpinBox.setValue(float(worksheet.cell(26, 2).value))
-        self.system_id_widget.signalTypeComboBox.setCurrentIndex(self.system_id_widget.signalTypeComboBox.findText(worksheet.cell(27, 2).value))
-        self.system_id_widget.windowComboBox.setCurrentIndex(self.system_id_widget.windowComboBox.findText(worksheet.cell(28, 2).value))
-        self.system_id_widget.overlapDoubleSpinBox.setValue(float(worksheet.cell(29, 2).value))
-        self.system_id_widget.onFractionDoubleSpinBox.setValue(float(worksheet.cell(30, 2).value))
-        self.system_id_widget.pretriggerDoubleSpinBox.setValue(float(worksheet.cell(31, 2).value))
-        self.system_id_widget.rampFractionDoubleSpinBox.setValue(float(worksheet.cell(32, 2).value))
-
-        # Now we need to find the transformation matrices' sizes
-        response_channels = self.definition_widget.control_channels_display.value()
-        output_channels = self.definition_widget.output_channels_display.value()
-        output_transform_row = 35
-        if isinstance(worksheet.cell(34, 2).value, str) and worksheet.cell(34, 2).value.lower() == "none":
-            self.response_transformation_matrix = None
-        else:
-            while True:
-                if worksheet.cell(output_transform_row, 1).value == "Output Transformation Matrix:":
-                    break
-                output_transform_row += 1
-            response_size = output_transform_row - 34
-            response_transformation = []
-            for i in range(response_size):
-                response_transformation.append([])
-                for j in range(response_channels):
-                    response_transformation[-1].append(float(worksheet.cell(34 + i, 2 + j).value))
-            self.response_transformation_matrix = np.array(response_transformation)
-        if isinstance(worksheet.cell(output_transform_row, 2).value, str) and worksheet.cell(output_transform_row, 2).value.lower() == "none":
-            self.output_transformation_matrix = None
-        else:
-            output_transformation = []
-            i = 0
-            while True:
-                if worksheet.cell(output_transform_row + i, 2).value is None or (
-                    isinstance(worksheet.cell(output_transform_row + i, 2).value, str)
-                    and worksheet.cell(output_transform_row + i, 2).value.strip() == ""
-                ):
-                    break
-                output_transformation.append([])
-                for j in range(output_channels):
-                    output_transformation[-1].append(float(worksheet.cell(output_transform_row + i, 2 + j).value))
-                i += 1
-            self.output_transformation_matrix = np.array(output_transformation)
-        self.define_transformation_matrices(None, dialog=False)
-
-        # Load in the specification
-        if worksheet.cell(33, 2).value:
-            self.sine_tables[0].load_specification(None, worksheet.cell(33, 2).value)
-        column_index = 3
-        while True:
-            if worksheet.cell(33, column_index).value:
-                self.add_sine_table_tab()
-                self.sine_tables[-1].load_specification(None, worksheet.cell(33, column_index).value)
-                column_index += 1
-            else:
-                break
-
-    @staticmethod
-    def create_environment_template(environment_name, workbook):
-        worksheet = workbook.create_sheet(environment_name)
-        worksheet.cell(1, 1, "Control Type")
-        worksheet.cell(1, 2, "Sine")
-        worksheet.cell(
-            1,
-            4,
-            "Note: Replace cells with hash marks (#) to provide the requested parameters.",
-        )
-        worksheet.cell(2, 1, "Test Ramp Time")
-        worksheet.cell(2, 2, "# Time for the test to ramp up or down when starting or stopping")
-        worksheet.cell(3, 1, "Control Convergence")
-        worksheet.cell(
-            3,
-            2,
-            "# A scale factor on the closed-loop update to " "balance stability with speed of convergence",
-        )
-        worksheet.cell(4, 1, "Update Drives after Environment:")
-        worksheet.cell(
-            4,
-            2,
-            "# If Y, then a control calculation will be performed after the " "environment finishes to update the next drive signal (Y/N)",
-        )
-        worksheet.cell(5, 1, "Fit Phases")
-        worksheet.cell(
-            5,
-            2,
-            "# If Y, perform a best fit to phase quantities to accommodate time delays (Y/N)",
-        )
-        worksheet.cell(6, 1, "Allow Automatic Aborts")
-        worksheet.cell(
-            6,
-            2,
-            "# Shut down the test automatically if an abort level is reached (Y/N)",
-        )
-        worksheet.cell(7, 1, "Buffer Blocks")
-        worksheet.cell(
-            7,
-            2,
-            "# Number of write blocks to keep in the buffer to " "guard against running out of samples to generate",
-        )
-        worksheet.cell(8, 1, "Tracking Filter Type")
-        worksheet.cell(
-            8,
-            2,
-            "# Select the tracking filter type to use " "(VK - Vold-Kalman / DFT - Digital Tracking Filter)",
-        )
-        worksheet.cell(9, 1, "Digital Tracking Filter Cutoff Percent:")
-        worksheet.cell(
-            9,
-            2,
-            "# Tracking filter cutoff frequency compared to the instantaneous frequency",
-        )
-        worksheet.cell(10, 1, "Digital Tracking Filter Order")
-        worksheet.cell(10, 2, "# Order of the Butterworth filter used in the tracking filter")
-        worksheet.cell(11, 1, "VK Filter Order")
-        worksheet.cell(11, 2, "# Order of the Vold-Kalman Filter (1, 2, or 3)")
-        worksheet.cell(12, 1, "VK Filter Bandwidth")
-        worksheet.cell(12, 2, "# Bandwidth of the Vold-Kalman Filter")
-        worksheet.cell(13, 1, "VK Filter Block Size")
-        worksheet.cell(13, 2, "# Number of samples in the filter blocks for the Vold-Kalman Filter")
-        worksheet.cell(14, 1, "VK Filter Overlap")
-        worksheet.cell(14, 2, "Overlap between frames in the VK filter as a fraction (0.5, not 50)")
-        worksheet.cell(15, 1, "Custom Control Python Script:")
-        worksheet.cell(15, 2, "# Path to the Python script containing the control law")
-        worksheet.cell(16, 1, "Custom Control Python Class:")
-        worksheet.cell(
-            16,
-            2,
-            "# Class name within the Python Script that will serve as the control law",
-        )
-        worksheet.cell(17, 1, "Control Parameters:")
-        worksheet.cell(17, 2, "# Extra parameters used in the control law")
-        worksheet.cell(18, 1, "Control Channels (1-based):")
-        worksheet.cell(18, 2, "# List of channels, one per cell on this row")
-        worksheet.cell(19, 1, "System ID Samples per Frame")
-        worksheet.cell(
-            19,
-            2,
-            "# Number of Samples per Measurement Frame in the System Identification",
-        )
-        worksheet.cell(20, 1, "System ID Averaging:")
-        worksheet.cell(20, 2, "# Averaging Type, should be Linear or Exponential")
-        worksheet.cell(21, 1, "Noise Averages:")
-        worksheet.cell(21, 2, "# Number of Averages used when characterizing noise")
-        worksheet.cell(22, 1, "System ID Averages:")
-        worksheet.cell(22, 2, "# Number of Averages used when computing the FRF")
-        worksheet.cell(23, 1, "Exponential Averaging Coefficient:")
-        worksheet.cell(23, 2, "# Averaging Coefficient for Exponential Averaging (if used)")
-        worksheet.cell(24, 1, "System ID Estimator:")
-        worksheet.cell(
-            24,
-            2,
-            "# Technique used to compute system ID.  Should be one of H1, H2, H3, or Hv.",
-        )
-        worksheet.cell(25, 1, "System ID Level (V RMS):")
-        worksheet.cell(
-            25,
-            2,
-            "# RMS Value of Flat Voltage Spectrum used for System Identification.",
-        )
-        worksheet.cell(26, 1, "System ID Ramp Time")
-        worksheet.cell(
-            26,
-            2,
-            "# Time for the system identification to ramp between levels or from start or to stop.",
-        )
-        worksheet.cell(27, 1, "System ID Signal Type:")
-        worksheet.cell(27, 2, "# Signal to use for the system identification")
-        worksheet.cell(28, 1, "System ID Window:")
-        worksheet.cell(
-            28,
-            2,
-            "# Window used to compute FRFs during system ID.  Should be one of Hann or None",
-        )
-        worksheet.cell(29, 1, "System ID Overlap %:")
-        worksheet.cell(29, 2, "# Overlap to use in the system identification")
-        worksheet.cell(30, 1, "System ID Burst On %:")
-        worksheet.cell(30, 2, "# Percentage of a frame that the burst random is on for")
-        worksheet.cell(31, 1, "System ID Burst Pretrigger %:")
-        worksheet.cell(
-            31,
-            2,
-            "# Percentage of a frame that occurs before the burst starts in a burst random signal",
-        )
-        worksheet.cell(32, 1, "System ID Ramp Fraction %:")
-        worksheet.cell(
-            32,
-            2,
-            '# Percentage of the "System ID Burst On %" that will be used to ramp up to full level',
-        )
-        worksheet.cell(33, 1, "Specification File:")
-        worksheet.cell(33, 2, "# Path to the file containing the Specification")
-        worksheet.cell(34, 1, "Response Transformation Matrix:")
-        worksheet.cell(
-            34,
-            2,
-            (
-                "# Transformation matrix to apply to the response channels.  Type None if there is "
-                "none.  Otherwise, make this a 2D array in the spreadsheet and move the Output "
-                "Transformation Matrix line down so it will fit.  The number of columns should be "
-                "the number of physical control channels."
-            ),
-        )
-        worksheet.cell(35, 1, "Output Transformation Matrix:")
-        worksheet.cell(
-            35,
-            2,
-            "# Transformation matrix to apply to the outputs.  Type None if there is none.  "
-            "Otherwise, make this a 2D array in the spreadsheet.  The number of columns should be "
-            "the number of physical output channels in the environment.",
-        )

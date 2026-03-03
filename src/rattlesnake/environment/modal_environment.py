@@ -57,7 +57,6 @@ from rattlesnake.process.spectral_processing import (  # noqa # pylint: disable=
 from rattlesnake.user_interface.ui_utilities import UICommands
 import multiprocessing as mp
 import threading
-import queue as thqueue
 import time
 import openpyxl
 from enum import Enum
@@ -349,6 +348,7 @@ class ModalMetadata(EnvironmentMetadata):
         level"""
         return int(self.hysteresis_length * self.samples_per_frame)
 
+    # region: Loading
     def store_to_netcdf(
         self,
         netcdf_group_handle: nc4._netCDF4.Group,  # pylint: disable=c-extension-no-member
@@ -861,6 +861,7 @@ class ModalQueues:
         self.signal_generation_command_queue = VerboseMessageQueue(log_file_queue, mp.Queue(), environment_name + " Signal Generation Command Queue")
 
 
+# region: Environment
 class ModalEnvironment(EnvironmentProcess):
     """Modal Environment class defining the interface with the controller"""
 
@@ -908,6 +909,7 @@ class ModalEnvironment(EnvironmentProcess):
             self.spectral_shutdown_achieved_fn,
         )
 
+    # region: Initialize
     def initialize_hardware(self, hardware_metadata: HardwareMetadata):
         """Initialize the data acquisition parameters in the environment.
 
@@ -1073,6 +1075,7 @@ class ModalEnvironment(EnvironmentProcess):
         """Gets the signal generator object used to generate signals for the environment"""
         return self.metadata.get_signal_generator()
 
+    # region: Control Loop
     def start_environment(self, data):  # pylint: disable=unused-argument
         """Starts the environment
 
@@ -1200,6 +1203,7 @@ class ModalEnvironment(EnvironmentProcess):
             time.sleep(WAIT_TIME)
         self.queue_container.environment_command_queue.put(self.environment_name, (ModalCommands.RUN_CONTROL, None))
 
+    # region: Shutdown
     def siggen_shutdown_achieved_fn(self, data):  # pylint: disable=unused-argument
         """Sets the signal generation shutdown flag to True
 
@@ -1306,6 +1310,7 @@ class ModalEnvironment(EnvironmentProcess):
         return True
 
 
+# region: Process
 def modal_process(
     environment_name: str,
     queue_name: str,

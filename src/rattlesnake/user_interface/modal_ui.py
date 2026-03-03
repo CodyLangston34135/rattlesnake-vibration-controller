@@ -244,7 +244,7 @@ class ModalUI(AbstractUI):
         self.run_widget.add_override_button.clicked.connect(self.add_override_channel)
         self.run_widget.remove_override_button.clicked.connect(self.remove_override_channel)
 
-    # region: Definition Callbacks
+    # region: Definition
     def update_parameters(self):
         """Updates widget values when fundamental signal processing parameters change"""
         if self.definition_widget.samples_per_frame_selector.value() % 2 == 1:
@@ -396,7 +396,7 @@ class ModalUI(AbstractUI):
             for widget in self.window_parameter_widgets:
                 widget.hide()
 
-    # region: Run Callbacks
+    # region: Run
     def select_file(self):
         """Brings up a file dialog box to select the save file location"""
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
@@ -721,7 +721,7 @@ class ModalUI(AbstractUI):
         ]:
             widget.setMaximum(self.hardware_metadata.sample_rate / 2)
 
-    # region: Environment Metadata
+    # region: Environment
     def initialize_environment(self, environment_metadata):
         self.metadata = environment_metadata
         self.reference_channel_indices = self.metadata.reference_channel_indices
@@ -940,7 +940,7 @@ class ModalUI(AbstractUI):
                 widget = self.definition_widget.reference_channels_selector.cellWidget(row, 1)
                 widget.setChecked(False)
 
-    # region: Environment Start
+    # region: Acquisition
     def get_environment_instructions(self):
         return ModalInstructions(self.environment_name)
 

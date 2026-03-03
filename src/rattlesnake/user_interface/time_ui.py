@@ -199,7 +199,7 @@ class TimeUI(AbstractUI):
     def initialize_environment(self, environment_metadata):
         return
 
-    def get_environment_metadata(self, global_channel_list) -> TimeMetadata:
+    def get_environment_metadata(self, global_channel_list=None) -> TimeMetadata:
         """Collect the parameters from the user interface defining the environment
 
         Returns
@@ -208,8 +208,11 @@ class TimeUI(AbstractUI):
             A metadata or parameters object containing the parameters defining
             the corresponding environment.
         """
-        if self.hardware_metadata:
+        if self.hardware_metadata and global_channel_list:
             channel_list_bools = self.get_channel_list_bools(global_channel_list)
+        else:
+            channel_list_bools = []
+
         sample_rate = self.definition_widget.output_sample_rate_display.value()
         output_signal = self.signal
         cancel_rampdown_time = self.definition_widget.cancel_rampdown_selector.value()
