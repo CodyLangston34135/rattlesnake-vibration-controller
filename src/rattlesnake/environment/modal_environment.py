@@ -59,6 +59,7 @@ import multiprocessing as mp
 import threading
 import queue as thqueue
 import time
+import openpyxl
 from enum import Enum
 from glob import glob
 import netCDF4 as nc4
@@ -70,6 +71,7 @@ CONTROL_TYPE = ControlTypes.MODAL
 WAIT_TIME = 0.02
 
 
+# region: Commands
 class ModalCommands(Enum):
     """Valid commands for the modal environment"""
 
@@ -96,6 +98,7 @@ class ModalUICommands(Enum):
     FINISHED = 2
 
 
+# region: Metadata
 class ModalMetadata(EnvironmentMetadata):
     """Class for storing metadata for an environment.
 
@@ -409,9 +412,7 @@ class ModalMetadata(EnvironmentMetadata):
         netcdf_group_handle: nc4._netCDF4.Dataset,
         environment_name: str,
         channel_list_bools: List[bool],
-        sample_rate: float,
-        output_oversample: int,
-        channel_list,
+        hardware_metadata: HardwareMetadata,
     ):
         """Collects environment parameters from a netCDF dataset.
 
@@ -443,7 +444,7 @@ class ModalMetadata(EnvironmentMetadata):
         averaging_coefficient = netcdf_group_handle.averaging_coefficient
         frf_technique = netcdf_group_handle.frf_technique
         frf_window = netcdf_group_handle.frf_window
-        overlap_percent = netcdf_group_handle.overlap
+        overlap_percent = netcdf_group_handle.overlap * 100
         trigger_type = netcdf_group_handle.trigger_type
         accept_type = netcdf_group_handle.accept_type
         if accept_type == "Autoreject...":
@@ -452,26 +453,26 @@ class ModalMetadata(EnvironmentMetadata):
             acceptance_function = None
         wait_for_steady_state = netcdf_group_handle.wait_for_steady_state
         trigger_channel = netcdf_group_handle.trigger_channel
-        pretrigger_percent = netcdf_group_handle.pretrigger
+        pretrigger_percent = netcdf_group_handle.pretrigger * 100
         trigger_slope_positive = netcdf_group_handle.trigger_slope_positive
-        trigger_level_percent = netcdf_group_handle.trigger_level
-        hysteresis_level_percent = netcdf_group_handle.hysteresis_level
-        hysteresis_frame_percent = netcdf_group_handle.hysteresis_length
+        trigger_level_percent = netcdf_group_handle.trigger_level * 100
+        hysteresis_level_percent = netcdf_group_handle.hysteresis_level * 100
+        hysteresis_frame_percent = netcdf_group_handle.hysteresis_length * 100
         signal_generator_type = netcdf_group_handle.signal_generator_type
         signal_generator_level = netcdf_group_handle.signal_generator_level
         signal_generator_min_frequency = netcdf_group_handle.signal_generator_min_frequency
         signal_generator_max_frequency = netcdf_group_handle.signal_generator_max_frequency
-        signal_generator_on_percent = netcdf_group_handle.signal_generator_level
+        signal_generator_on_percent = netcdf_group_handle.signal_generator_level * 100
         reference_channel_indices = netcdf_group_handle.variables["reference_channel_indices"][...]
         response_channel_indices = netcdf_group_handle.variables["response_channel_indices"][...]
-        environment_channel_list = [channel for channel, channel_bool in zip(channel_list, channel_list_bools) if channel_bool]
+        environment_channel_list = [channel for channel, channel_bool in zip(hardware_metadata.channel_list, channel_list_bools) if channel_bool]
         output_channel_indices = [index for index, channel in enumerate(environment_channel_list) if channel.feedback_device is not None]
         exponential_window_value_at_frame_end = netcdf_group_handle.exponential_window_value_at_frame_end
 
         return cls(
             environment_name,
             channel_list_bools,
-            sample_rate,
+            hardware_metadata.sample_rate,
             samples_per_frame,
             averaging_type,
             num_averages,
@@ -497,15 +498,305 @@ class ModalMetadata(EnvironmentMetadata):
             reference_channel_indices,
             response_channel_indices,
             output_channel_indices,
-            output_oversample,
+            hardware_metadata.output_oversample,
             exponential_window_value_at_frame_end,
         )
 
-    def store_to_worksheet(self, worksheet):
-        return super().store_to_worksheet(worksheet)
+    def store_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+        """Creates a template worksheet in an Excel workbook defining the
+        environment.
 
-    def retrieve_metadata_from_worksheet(self, worksheet):
-        return super().retrieve_metadata_from_worksheet(worksheet)
+        This function creates a template worksheet in an Excel workbook that
+        when filled out could be read by the controller to re-create the
+        environment.
+
+        This function is the "write" counterpart to the
+        ``set_parameters_from_template`` function in the ``ModalUI`` class,
+        which reads the values from the template file to populate the user
+        interface.
+
+        Parameters
+        ----------
+        environment_name : str :
+            The name of the environment that will specify the worksheet's name
+        workbook : openpyxl.worksheet.worksheet.Worksheet :
+            A reference to an ``openpyxl`` workbook.
+
+        """
+        worksheet.cell(1, 1, "Control Type")
+        worksheet.cell(1, 2, "Modal")
+        worksheet.cell(2, 1, "Samples Per Frame:")
+        worksheet.cell(2, 3, "# Number of Samples per Measurement Frame")
+        worksheet.cell(3, 1, "Averaging Type:")
+        worksheet.cell(3, 3, "# Averaging Type")
+        worksheet.cell(4, 1, "Number of Averages:")
+        worksheet.cell(4, 3, "# Number of Averages used when computing the FRF")
+        worksheet.cell(5, 1, "Averaging Coefficient:")
+        worksheet.cell(5, 3, "# Averaging Coefficient for Exponential Averaging")
+        worksheet.cell(6, 1, "FRF Technique:")
+        worksheet.cell(6, 3, "# FRF Technique")
+        worksheet.cell(7, 1, "FRF Window:")
+        worksheet.cell(7, 3, "# Window used to compute FRF")
+        worksheet.cell(8, 1, "Exponential Window End Value:")
+        worksheet.cell(
+            8,
+            3,
+            "# Exponential Window Value at the end of the measurement frame (0.5 or 50%, not 50)",
+        )
+        worksheet.cell(9, 1, "FRF Overlap:")
+        worksheet.cell(9, 3, "# Overlap for FRF calculations (0.5 or 50%, not 50)")
+        worksheet.cell(10, 1, "Triggering Type:")
+        worksheet.cell(10, 3, '# One of "Free Run", "First Frame", or "Every Frame"')
+        worksheet.cell(11, 1, "Average Acceptance:")
+        worksheet.cell(11, 3, '# One of "Accept All", "Manual", or "Autoreject"')
+        worksheet.cell(12, 1, "Trigger Channel")
+        worksheet.cell(12, 3, "# Channel number (1-based) to use for triggering")
+        worksheet.cell(13, 1, "Pretrigger")
+        worksheet.cell(13, 3, "# Amount of frame to use as pretrigger (0.5 or 50%, not 50)")
+        worksheet.cell(14, 1, "Trigger Slope")
+        worksheet.cell(14, 3, '# One of "Positive" or "Negative"')
+        worksheet.cell(15, 1, "Trigger Level")
+        worksheet.cell(
+            15,
+            3,
+            "# Level to use to trigger the test as a fraction of the total range of the channel " "(0.5 or 50%, not 50)",
+        )
+        worksheet.cell(16, 1, "Hysteresis Level")
+        worksheet.cell(
+            16,
+            3,
+            "# Level that a channel must fall below before another trigger can be considered " "(0.5 or 50%, not 50)",
+        )
+        worksheet.cell(17, 1, "Hysteresis Frame Fraction")
+        worksheet.cell(
+            17,
+            3,
+            "# Fraction of the frame that a channel maintain hysteresis condition before another " "trigger can be considered (0.5 or 50%, not 50)",
+        )
+        worksheet.cell(18, 1, "Signal Generator Type")
+        worksheet.cell(
+            18,
+            3,
+            '# One of "None", "Random", "Burst Random", "Pseudorandom", "Chirp", "Square", or ' '"Sine"',
+        )
+        worksheet.cell(19, 1, "Signal Generator Level")
+        worksheet.cell(
+            19,
+            3,
+            "# RMS voltage level for random signals, Peak voltage level for chirp, sine, and " "square pulse",
+        )
+        worksheet.cell(20, 1, "Signal Generator Frequency 1")
+        worksheet.cell(
+            20,
+            3,
+            "# Minimum frequency for broadband signals or frequency for sine and square pulse",
+        )
+        worksheet.cell(21, 1, "Signal Generator Frequency 2")
+        worksheet.cell(
+            21,
+            3,
+            "# Maximum frequency for broadband signals.  Ignored for sine and square pulse",
+        )
+        worksheet.cell(22, 1, "Signal Generator On Fraction")
+        worksheet.cell(
+            22,
+            3,
+            "# Fraction of time that the burst or square wave is on (0.5 or 50%, not 50)",
+        )
+        worksheet.cell(23, 1, "Wait Time for Steady State")
+        worksheet.cell(
+            23,
+            3,
+            "# Time to wait after output starts to allow the system to reach steady state",
+        )
+        worksheet.cell(24, 1, "Autoaccept Script")
+        worksheet.cell(24, 3, "# File in which an autoacceptance function is defined")
+        worksheet.cell(25, 1, "Autoaccept Function")
+        worksheet.cell(25, 3, "# Function name in which the autoacceptance function is defined")
+        worksheet.cell(26, 1, "Reference Channels")
+        worksheet.cell(26, 3, "# List of channels, one per cell on this row")
+        worksheet.cell(27, 1, "Disabled Channels")
+        worksheet.cell(27, 3, "# List of channels, one per cell on this row")
+
+        if self.samples_per_frame is not None:
+            worksheet.cell(2, 2, self.samples_per_frame)
+        if self.averaging_type is not None:
+            worksheet.cell(3, 2, self.averaging_type)
+        if self.num_averages is not None:
+            worksheet.cell(4, 2, self.num_averages)
+        if self.averaging_coefficient is not None:
+            worksheet.cell(5, 2, self.averaging_coefficient)
+        if self.frf_technique is not None:
+            worksheet.cell(6, 2, self.frf_technique)
+        if self.frf_window is not None:
+            worksheet.cell(7, 2, self.frf_window)
+        if self.exponential_window_value_at_frame_end:
+            worksheet.cell(8, 2, self.exponential_window_value_at_frame_end)
+        if self.overlap is not None:
+            worksheet.cell(9, 2, self.overlap)
+        if self.trigger_type is not None:
+            worksheet.cell(10, 2, self.trigger_type)
+        if self.accept_type is not None:
+            worksheet.cell(11, 2, self.accept_type)
+        if self.trigger_channel is not None:
+            worksheet.cell(12, 2, self.trigger_channel)
+        if self.pretrigger is not None:
+            worksheet.cell(13, 2, self.pretrigger)
+        if self.trigger_slope_positive is not None:
+            worksheet.cell(14, 2, self.trigger_slope_positive)
+        if self.trigger_level is not None:
+            worksheet.cell(15, 2, self.trigger_level)
+        if self.hysteresis_level is not None:
+            worksheet.cell(16, 2, self.hysteresis_level)
+        if self.hysteresis_length is not None:
+            worksheet.cell(17, 2, self.hysteresis_length)
+        if self.signal_generator_type is not None:
+            worksheet.cell(18, 2, self.signal_generator_type)
+        if self.signal_generator_level is not None:
+            worksheet.cell(19, 2, self.signal_generator_level)
+        if self.signal_generator_min_frequency is not None:
+            worksheet.cell(20, 2, self.signal_generator_min_frequency)
+        if self.signal_generator_max_frequency is not None:
+            worksheet.cell(21, 2, self.signal_generator_max_frequency)
+        if self.signal_generator_on_fraction is not None:
+            worksheet.cell(22, 2, self.signal_generator_on_fraction)
+        if self.wait_for_steady_state is not None:
+            worksheet.cell(23, 2, self.wait_for_steady_state)
+        if self.acceptance_function is not None:
+            worksheet.cell(24, 2, self.acceptance_function[0])
+            worksheet.cell(25, 2, self.acceptance_function[1])
+        if self.reference_channel_indices is not None:
+            for idx, channel_ind in enumerate(self.reference_channel_indices):
+                col_idx = idx + 2
+                worksheet.cell(26, col_idx, channel_ind + 1)
+        num_channels = sum(self.channel_list_bools)
+        if self.response_channel_indices is not None:
+            col_idx = 2
+            for channel_ind in range(num_channels):
+                if channel_ind not in self.response_channel_indices and channel_ind not in self.reference_channel_indices:
+                    worksheet.cell(27, col_idx, channel_ind + 1)
+                    col_idx += 1
+
+    @classmethod
+    def retrieve_metadata_from_worksheet(
+        cls,
+        worksheet: openpyxl.worksheet.worksheet.Worksheet,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        hardware_metadata: HardwareMetadata,
+    ):
+        """
+        Collects parameters for the user interface from the Excel template file
+
+        This function reads a filled out template worksheet to create an
+        environment.  Cells on this worksheet contain parameters needed to
+        specify the environment, so this function should read those cells and
+        update the UI widgets with those parameters.
+
+        This function is the "read" counterpart to the
+        ``create_environment_template`` function in the ``ModalUI`` class,
+        which writes a template file that can be filled out by a user.
+
+
+        Parameters
+        ----------
+        worksheet : openpyxl.worksheet.worksheet.Worksheet
+            An openpyxl worksheet that contains the environment template.
+            Cells on this worksheet should contain the parameters needed for the
+            user interface.
+
+        """
+        samples_per_frame = worksheet.cell(2, 2).value
+        averaging_type = worksheet.cell(3, 2).value
+        num_averages = worksheet.cell(4, 2).value
+        averaging_coefficient = worksheet.cell(5, 2).value
+        frf_technique = worksheet.cell(6, 2).value
+        frf_window = worksheet.cell(7, 2).value
+        overlap = worksheet.cell(9, 2).value
+        overlap_percent = overlap * 100 if overlap else 0
+        trigger_type = worksheet.cell(10, 2).value
+        exponential_window_value_at_frame_end = worksheet.cell(8, 2).value
+        accept_type = worksheet.cell(11, 2).value
+        if accept_type == "Autoreject":
+            acceptance_function = [
+                worksheet.cell(24, 2).value,
+                worksheet.cell(25, 2).value,
+            ]
+        else:
+            acceptance_function = None
+        trigger_channel = worksheet.cell(12, 2).value
+        pretrigger = worksheet.cell(13, 2).value
+        pretrigger_percent = pretrigger * 100 if pretrigger else 0
+        trigger_slope_positive = worksheet.cell(14, 2).value
+        trigger_level = worksheet.cell(15, 2).value
+        trigger_level_percent = trigger_level * 100 if trigger_level else 0
+        hysteresis_level = worksheet.cell(16, 2).value
+        hysteresis_level_percent = hysteresis_level * 100 if hysteresis_level else 0
+        hysteresis_frame = worksheet.cell(17, 2).value
+        hysteresis_frame_percent = hysteresis_frame * 100 if hysteresis_frame else 0
+        signal_generator_type = worksheet.cell(18, 2).value
+        signal_generator_level = worksheet.cell(19, 2).value
+        signal_generator_min_frequency = worksheet.cell(20, 2).value
+        signal_generator_max_frequency = worksheet.cell(21, 2).value
+        signal_generator_on_fraction = worksheet.cell(22, 2).value
+        signal_generator_on_percent = signal_generator_on_fraction * 100 if signal_generator_on_fraction else 0
+        wait_for_steady_state = worksheet.cell(23, 2).value
+        max_row = 0
+        column_index = 2
+        reference_channel_indices = []
+        response_channel_indices = []
+        output_channel_indices = []
+        while True:
+            value = worksheet.cell(26, column_index).value
+            if value is None or (isinstance(value, str) and value.strip() == ""):
+                break
+            reference_channel_indices.append(int(value) - 1)
+            column_index += 1
+        max_row = len(channel_list_bools)
+        for i in range(max_row):
+            response_channel_indices.append(int(i))
+        column_index = 2
+        while True:
+            value = worksheet.cell(27, column_index).value
+            if value is None or (isinstance(value, str) and value.strip() == ""):
+                break
+            response_channel_indices.remove(value - 1)
+            column_index += 1
+        environment_channel_list = [channel for channel, channel_bool in zip(hardware_metadata.channel_list, channel_list_bools) if channel_bool]
+        output_channel_indices = [index for index, channel in enumerate(environment_channel_list) if channel.feedback_device is not None]
+
+        return cls(
+            environment_name,
+            channel_list_bools,
+            hardware_metadata.sample_rate,
+            samples_per_frame,
+            averaging_type,
+            num_averages,
+            averaging_coefficient,
+            frf_technique,
+            frf_window,
+            overlap_percent,
+            trigger_type,
+            accept_type,
+            wait_for_steady_state,
+            trigger_channel,
+            pretrigger_percent,
+            trigger_slope_positive,
+            trigger_level_percent,
+            hysteresis_level_percent,
+            hysteresis_frame_percent,
+            signal_generator_type,
+            signal_generator_level,
+            signal_generator_min_frequency,
+            signal_generator_max_frequency,
+            signal_generator_on_percent,
+            acceptance_function,
+            reference_channel_indices,
+            response_channel_indices,
+            output_channel_indices,
+            hardware_metadata.output_oversample,
+            exponential_window_value_at_frame_end,
+        )
 
     def generate_signal(self):
         """Generates a single frame of data"""

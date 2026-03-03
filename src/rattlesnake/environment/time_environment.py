@@ -176,7 +176,11 @@ class TimeMetadata(EnvironmentMetadata):
 
     @classmethod
     def retrieve_metadata_from_netcdf(
-        cls, group: nc4._netCDF4.Dataset, environment_name: str, channel_list_bools: List[bool], sample_rate: float
+        cls,
+        group: nc4._netCDF4.Dataset,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        hardware_metadata: HardwareMetadata,
     ):  # pylint: disable=c-extension-no-member
         """Collects environment parameters from a netCDF dataset.
 
@@ -204,7 +208,7 @@ class TimeMetadata(EnvironmentMetadata):
         output_signal = group.variables["output_signal"][...].data
         cancel_rampdown_time = group.cancel_rampdown_time
 
-        return cls(environment_name, channel_list_bools, sample_rate, output_signal, cancel_rampdown_time)
+        return cls(environment_name, channel_list_bools, hardware_metadata.sample_rate, output_signal, cancel_rampdown_time)
 
     def store_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
         worksheet.cell(1, 1, "Control Type")
@@ -215,24 +219,26 @@ class TimeMetadata(EnvironmentMetadata):
             "Note: Replace cells with hash marks (#) to provide the requested parameters.",
         )
         worksheet.cell(2, 1, "Signal File")
-        worksheet.cell(2, 2, "# Path to the file that contains the time signal that will be output")
+        worksheet.cell(2, 3, "# Path to the file that contains the time signal that will be output")
         worksheet.cell(3, 1, "Cancel Rampdown Time")
         worksheet.cell(
             3,
-            2,
+            3,
             "# Time for the environment to ramp to zero if the environment is cancelled.",
         )
 
-        if self._signal_file:
-            worksheet.cell(2, 2, str(self._signal_file))
         if self.signal_file:
             worksheet.cell(2, 2, str(self.signal_file))
-        if self.cancel_rampdown_time:
+        if self.cancel_rampdown_time is not None:
             worksheet.cell(3, 2, str(self.cancel_rampdown_time))
 
     @classmethod
     def retrieve_metadata_from_worksheet(
-        cls, worksheet: openpyxl.worksheet.worksheet.Worksheet, environment_name: str, channel_list_bools: List[bool], sample_rate: float
+        cls,
+        worksheet: openpyxl.worksheet.worksheet.Worksheet,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        hardware_metadata: HardwareMetadata,
     ):
         for row in worksheet.rows:
             name = str(row[0].value).lower().strip().replace(" ", "_")
@@ -242,7 +248,7 @@ class TimeMetadata(EnvironmentMetadata):
                     continue
                 case "signal_file":
                     signal_file = value
-                    output_signal = load_time_history(signal_file, sample_rate)
+                    output_signal = load_time_history(signal_file, hardware_metadata.sample_rate)
                 case "cancel_rampdown_time":
                     cancel_rampdown_time = float(value)
                 case "":
@@ -250,7 +256,7 @@ class TimeMetadata(EnvironmentMetadata):
                 case _:
                     raise RattlesnakeError(f"{name} does not go with {CONTROL_TYPE} environment")
 
-        metadata = cls(environment_name, channel_list_bools, sample_rate, output_signal, cancel_rampdown_time)
+        metadata = cls(environment_name, channel_list_bools, hardware_metadata.sample_rate, output_signal, cancel_rampdown_time)
         if signal_file:
             metadata.set_file(signal_file)
 

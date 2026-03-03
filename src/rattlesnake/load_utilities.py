@@ -210,23 +210,12 @@ def load_metadata_from_netcdf(filepath):
 
         environment_metadata_class = ENVIRONMENT_METADATA[environment_type]
         channel_list_bools = environment_active_channels
-        match environment_type:
-            case ControlTypes.TIME:
-                environment_metadata = environment_metadata_class.retrieve_metadata_from_netcdf(
-                    environment_group,
-                    environment_name,
-                    channel_list_bools,
-                    sample_rate,
-                )
-            case ControlTypes.MODAL:
-                environment_metadata = environment_metadata_class.retrieve_metadata_from_netcdf(
-                    environment_group,
-                    environment_name,
-                    channel_list_bools,
-                    sample_rate,
-                    output_oversample,
-                    channel_list,
-                )
+        environment_metadata = environment_metadata_class.retrieve_metadata_from_netcdf(
+            environment_group,
+            environment_name,
+            channel_list_bools,
+            hardware_metadata,
+        )
 
         environment_metadata_list.append(environment_metadata)
 
@@ -333,7 +322,10 @@ def load_metadata_from_worksheet(filepath):
         environment_metadata_class = ENVIRONMENT_METADATA[environment_type]
         channel_list_bools = environment_channel_list_bools[environment_name]
         environment_metadata = environment_metadata_class.retrieve_metadata_from_worksheet(
-            environment_sheet, environment_name, channel_list_bools, sample_rate
+            environment_sheet,
+            environment_name,
+            channel_list_bools,
+            hardware_metadata,
         )
         environment_metadata_list.append(environment_metadata)
 
@@ -506,7 +498,7 @@ def save_rattlesnake_template(filepath, hardware_metadata=None, environment_meta
             col_idx = col + 24
             environment_name = environment_metadata.environment_name
             worksheet.cell(row=2, column=col_idx, value=environment_name)
-            bool_indices = environment_metadata.map_channel_indices(channel_list)
+            bool_indices = environment_metadata.map_channel_indices()
             for row in bool_indices:
                 row_idx = row + 3
                 worksheet.cell(row=row_idx, column=col_idx, value="x")

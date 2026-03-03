@@ -143,7 +143,11 @@ class EnvironmentMetadata(ABC):
     @classmethod
     @abstractmethod
     def retrieve_metadata_from_netcdf(
-        cls, netcdf_handle: nc4._netCDF4.Dataset, environment_name: str, channel_list_bools: List[bool], sample_rate: float
+        cls,
+        netcdf_handle: nc4._netCDF4.Dataset,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        hardware_metadata: HardwareMetadata,
     ):  # pylint: disable=c-extension-no-member
         """Collects environment parameters from a netCDF dataset.
 
@@ -195,7 +199,11 @@ class EnvironmentMetadata(ABC):
     @classmethod
     @abstractmethod
     def retrieve_metadata_from_worksheet(
-        cls, worksheet: openpyxl.worksheet.worksheet.Worksheet, environment_name: str, channel_list_bools: List[bool], sample_rate: float
+        cls,
+        worksheet: openpyxl.worksheet.worksheet.Worksheet,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        hardware_metadata: HardwareMetadata,
     ):  # pylint: disable=c-extension-no-member
         """Collects environment parameters from an Excel worksheet.
 
