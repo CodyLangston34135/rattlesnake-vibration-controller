@@ -396,6 +396,7 @@ class TimeUI(AbstractUI):
         self.run_widget.test_level_selector.setEnabled(False)
         self.run_widget.repeat_signal_checkbox.setEnabled(False)
         super().start_environment()
+        self.rattlesnake.environment_at_target_level(self.environment_name)
 
     def start_environment_ready(self):
         super().start_environment_ready()

@@ -126,9 +126,9 @@ class AbstractSysIdUI(AbstractUI):
 
     def connect_sysid_callbacks(self):
         """Connects the callback functions to the system identification widgets"""
-        self.system_id_widget.preview_noise_button.clicked.connect(self.preview_noise)
-        self.system_id_widget.preview_system_id_button.clicked.connect(self.preview_transfer_function)
-        self.system_id_widget.start_button.clicked.connect(self.run_system_id_noise)
+        self.system_id_widget.preview_noise_button.clicked.connect(lambda: self.run_system_id(bool_preview=True, type="noise"))
+        self.system_id_widget.preview_system_id_button.clicked.connect(lambda: self.run_system_id(bool_preview=True, type="transfer"))
+        self.system_id_widget.start_button.clicked.connect(lambda: self.run_system_id(bool_preview=False, type="noise"))
         self.system_id_widget.stop_button.clicked.connect(self.stop_system_id)
         self.system_id_widget.select_transfer_function_stream_file_button.clicked.connect(self.select_transfer_function_stream_file)
         self.system_id_widget.response_selector.itemSelectionChanged.connect(self.update_sysid_plots)
@@ -423,205 +423,17 @@ class AbstractSysIdUI(AbstractUI):
         for widget in [self.system_id_widget.stop_button]:
             widget.setEnabled(False)
 
-    # region: Preview Noise
-    def preview_noise(self):
-        """Starts the noise preview"""
-        self.log("Starting Noise Preview")
-        for widget in [
-            self.system_id_widget.preview_noise_button,
-            self.system_id_widget.preview_system_id_button,
-            self.system_id_widget.start_button,
-            self.system_id_widget.samplesPerFrameSpinBox,
-            self.system_id_widget.averagingTypeComboBox,
-            self.system_id_widget.noiseAveragesSpinBox,
-            self.system_id_widget.systemIDAveragesSpinBox,
-            self.system_id_widget.averagingCoefficientDoubleSpinBox,
-            self.system_id_widget.estimatorComboBox,
-            self.system_id_widget.levelDoubleSpinBox,
-            self.system_id_widget.signalTypeComboBox,
-            self.system_id_widget.windowComboBox,
-            self.system_id_widget.overlapDoubleSpinBox,
-            self.system_id_widget.onFractionDoubleSpinBox,
-            self.system_id_widget.pretriggerDoubleSpinBox,
-            self.system_id_widget.rampFractionDoubleSpinBox,
-            self.system_id_widget.stream_transfer_function_data_checkbox,
-            self.system_id_widget.select_transfer_function_stream_file_button,
-            self.system_id_widget.transfer_function_stream_file_display,
-            self.system_id_widget.levelRampTimeDoubleSpinBox,
-            self.system_id_widget.save_system_id_matrices_button,
-            self.system_id_widget.load_system_id_matrices_button,
-            self.system_id_widget.lowFreqCutoffSpinBox,
-            self.system_id_widget.highFreqCutoffSpinBox,
-        ]:
-            widget.setEnabled(False)
-
-        try:
-            queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
-            sysid_metadata = self.get_sysid_metadata(self.hardware_metadata)
-            sysid_metadata.auto_shutdown = False
-            self.rattlesnake.initialize_system_id(sysid_metadata, self.environment_name)
-        except Exception as e:
-            self.preview_system_id_error(e)
-            return
-
-        ready_event_list = [self.rattlesnake.event_container.environment_ready_events[queue_name]]
-        active_event_list = []
-        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
-        self.event_watcher.ready.connect(self.preview_noise_acquisition)
-        self.event_watcher.error.connect(self.preview_system_id_error)
-        self.event_thread.start()
-
-    def preview_noise_acquisition(self):
-        self.clean_up_event_watcher()
-
-        # Start Acqusition
-        try:
-            stream_metadata = StreamMetadata(StreamType.NO_STREAM)
-            self.rattlesnake.start_acquisition(stream_metadata)
-        except Exception as e:
-            self.preview_system_id_error(e)
-            return
-
-        ready_event_list = [
-            self.rattlesnake.event_container.streaming_ready_event,
-        ]
-        active_event_list = [
-            self.rattlesnake.event_container.acquisition_active_event,
-            self.rattlesnake.event_container.output_active_event,
-        ]
-        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
-        self.event_watcher.ready.connect(self.preview_noise_start)
-        self.event_watcher.error.connect(self.preview_system_id_error)
-        self.event_thread.start()
-
-    def preview_noise_start(self):
-        self.clean_up_event_watcher()
-
-        # Start noise
-        try:
-            queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
-            self.rattlesnake.start_system_id_noise(self.environment_name)
-        except Exception as e:
-            self.preview_system_id_error(e)
-            return
-
-        ready_event_list = []
-        active_event_list = [self.rattlesnake.event_container.environment_sysid_events[queue_name]]
-        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
-        self.event_watcher.ready.connect(self.preview_system_id_ready)
-        self.event_watcher.error.connect(self.preview_system_id_error)
-        self.event_thread.start()
-
-    # region: Preview Transfer
-    def preview_transfer_function(self):
-        """Starts previewing the system identification transfer function calculation"""
-        self.log("Starting System ID Preview")
-
-        for widget in [
-            self.system_id_widget.preview_noise_button,
-            self.system_id_widget.preview_system_id_button,
-            self.system_id_widget.start_button,
-            self.system_id_widget.samplesPerFrameSpinBox,
-            self.system_id_widget.averagingTypeComboBox,
-            self.system_id_widget.noiseAveragesSpinBox,
-            self.system_id_widget.systemIDAveragesSpinBox,
-            self.system_id_widget.averagingCoefficientDoubleSpinBox,
-            self.system_id_widget.estimatorComboBox,
-            self.system_id_widget.levelDoubleSpinBox,
-            self.system_id_widget.signalTypeComboBox,
-            self.system_id_widget.windowComboBox,
-            self.system_id_widget.overlapDoubleSpinBox,
-            self.system_id_widget.onFractionDoubleSpinBox,
-            self.system_id_widget.pretriggerDoubleSpinBox,
-            self.system_id_widget.rampFractionDoubleSpinBox,
-            self.system_id_widget.stream_transfer_function_data_checkbox,
-            self.system_id_widget.select_transfer_function_stream_file_button,
-            self.system_id_widget.transfer_function_stream_file_display,
-            self.system_id_widget.levelRampTimeDoubleSpinBox,
-            self.system_id_widget.save_system_id_matrices_button,
-            self.system_id_widget.load_system_id_matrices_button,
-            self.system_id_widget.lowFreqCutoffSpinBox,
-            self.system_id_widget.highFreqCutoffSpinBox,
-        ]:
-            widget.setEnabled(False)
-
-        # Initialize Metadata
-        try:
-            queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
-            sysid_metadata = self.get_sysid_metadata(self.hardware_metadata)
-            sysid_metadata.auto_shutdown = False
-            self.rattlesnake.initialize_system_id(sysid_metadata, self.environment_name)
-        except Exception as e:
-            self.preview_system_id_error(e)
-            return
-
-        ready_event_list = [self.rattlesnake.event_container.environment_ready_events[queue_name]]
-        active_event_list = []
-        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
-        self.event_watcher.ready.connect(self.preview_transfer_function_acquisition)
-        self.event_watcher.error.connect(self.preview_system_id_error)
-        self.event_thread.start()
-
-    def preview_transfer_function_acquisition(self):
-        self.clean_up_event_watcher()
-
-        # Start Acqusition
-        try:
-            stream_metadata = StreamMetadata(StreamType.NO_STREAM)
-            self.rattlesnake.start_acquisition(stream_metadata)
-        except Exception as e:
-            self.preview_system_id_error(e)
-            return
-
-        ready_event_list = [
-            self.rattlesnake.event_container.streaming_ready_event,
-        ]
-        active_event_list = [
-            self.rattlesnake.event_container.acquisition_active_event,
-            self.rattlesnake.event_container.output_active_event,
-        ]
-        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
-        self.event_watcher.ready.connect(self.preview_transfer_function_start)
-        self.event_watcher.error.connect(self.preview_system_id_error)
-        self.event_thread.start()
-
-    def preview_transfer_function_start(self):
-        self.clean_up_event_watcher()
-
-        # Start transfer function
-        try:
-            queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
-            self.rattlesnake.start_system_id_transfer_function(self.environment_name)
-        except Exception as e:
-            self.preview_system_id_error(e)
-            return
-
-        ready_event_list = []
-        active_event_list = [self.rattlesnake.event_container.environment_sysid_events[queue_name]]
-        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
-        self.event_watcher.ready.connect(self.preview_system_id_ready)
-        self.event_watcher.error.connect(self.preview_system_id_error)
-        self.event_thread.start()
-
-    def preview_system_id_ready(self):
-        if self.sysid_active:
-            self.display_sys_id_started()
-        else:
-            self.display_sys_id_ended()
-
-        self.clean_up_event_watcher()
-
-    def preview_system_id_error(self, error):
-        if self.sysid_active:
-            self.display_sys_id_started()
-        else:
-            self.display_sys_id_ended()
-
-        self.display_error(error)
-        self.clean_up_event_watcher()
-
     # region: Run SysId
-    def run_system_id_noise(self):
+    """
+    To run the noise, the steps are
+    1. Initialize system id metadata
+    2. Start up hardware acquisition
+    3. Start up streaming and noise
+    4. If the full test is happening, wait for sys_id
+    analysis process to send the NOISE_COMPLETED command
+    """
+
+    def run_system_id(self, bool_preview, type):
         """Starts the acquisition phase of the controller"""
         self.log("Starting System ID")
 
@@ -656,7 +468,10 @@ class AbstractSysIdUI(AbstractUI):
         try:
             queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
             sysid_metadata = self.get_sysid_metadata(self.hardware_metadata)
-            sysid_metadata.auto_shutdown = True
+            if bool_preview:
+                sysid_metadata.auto_shutdown = False
+            else:
+                sysid_metadata.auto_shutdown = True
             self.rattlesnake.initialize_system_id(sysid_metadata, self.environment_name)
         except Exception as e:
             self.run_system_id_error(e)
@@ -665,17 +480,19 @@ class AbstractSysIdUI(AbstractUI):
         ready_event_list = [self.rattlesnake.event_container.environment_ready_events[queue_name]]
         active_event_list = []
         self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
-        self.event_watcher.ready.connect(self.run_system_id_acquisition)
+        self.event_watcher.ready.connect(lambda: self.run_system_id_acquisition_noise(bool_preview=bool_preview, type=type))
         self.event_watcher.error.connect(self.run_system_id_error)
         self.event_thread.start()
 
-    def run_system_id_acquisition(self):
+    def run_system_id_acquisition_noise(self, bool_preview, type):
         self.clean_up_event_watcher()
 
         # Start Acqusition
         try:
             sysid_metadata = self.get_sysid_metadata(self.hardware_metadata)
-            if sysid_metadata.stream_file:
+            if bool_preview:
+                stream_metadata = StreamMetadata(StreamType.NO_STREAM)
+            elif sysid_metadata.stream_file:
                 stream_metadata = StreamMetadata(StreamType.MANUAL, sysid_metadata.stream_file)
             else:
                 stream_metadata = StreamMetadata(StreamType.NO_STREAM)
@@ -692,11 +509,14 @@ class AbstractSysIdUI(AbstractUI):
             self.rattlesnake.event_container.output_active_event,
         ]
         self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
-        self.event_watcher.ready.connect(self.run_system_id_start_noise)
+        if type.lower() == "noise":
+            self.event_watcher.ready.connect(self.run_system_id_noise)
+        else:
+            self.event_watcher.ready.connect(self.run_system_id_transfer)
         self.event_watcher.error.connect(self.run_system_id_error)
         self.event_thread.start()
 
-    def run_system_id_start_noise(self):
+    def run_system_id_noise(self):
         self.clean_up_event_watcher()
 
         try:
@@ -715,6 +535,9 @@ class AbstractSysIdUI(AbstractUI):
         self.event_thread.start()
 
     def run_system_id_validate_noise_closeout(self):
+        """This is used to refresh streaming when the sys_id_data_analysis process
+        tells the UI to start up transfer function after noise has automatically
+        shutdown"""
         try:
             queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
             if self.rattlesnake.streaming:
@@ -729,11 +552,11 @@ class AbstractSysIdUI(AbstractUI):
             self.rattlesnake.event_container.environment_sysid_events[queue_name],
         ]
         self.create_event_watcher(ready_event_list, active_event_list, active_event_check=False)
-        self.event_watcher.ready.connect(self.run_system_id_start_transfer)
+        self.event_watcher.ready.connect(self.run_system_id_transfer)
         self.event_watcher.error.connect(self.run_system_id_error)
         self.event_thread.start()
 
-    def run_system_id_start_transfer(self):
+    def run_system_id_transfer(self):
         self.clean_up_event_watcher()
 
         try:
@@ -1112,7 +935,7 @@ class AbstractSysIdUI(AbstractUI):
             the data used to perform the operation.
         """
         if super().update_gui(queue_data):
-            return
+            return True
         command, data = queue_data
         self.log(f"Got GUI Message {command}")
         # print('Update GUI Got {:}'.format(message))

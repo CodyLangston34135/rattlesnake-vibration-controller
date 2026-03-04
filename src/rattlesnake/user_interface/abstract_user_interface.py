@@ -149,6 +149,100 @@ class AbstractUI(ABC):
         environment's run_tab to the values in the EnvironmentInstructions
         """
 
+    # region: Processes
+    @abstractmethod
+    def start_environment(self):
+        """
+        This method in the UI class should follow this structure:
+        1. Disable start_environment button
+        2. Call super().start_environment
+        """
+        try:
+            instructions = self.get_environment_instructions()
+            queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
+            self.rattlesnake.start_environment(instructions)
+        except Exception as e:
+            self.start_environment_error(e)
+            return
+
+        ready_event_list = []
+        active_event_list = [self.rattlesnake.event_container.environment_active_events[queue_name]]
+        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
+        self.event_watcher.ready.connect(self.start_environment_ready)
+        self.event_watcher.error.connect(self.start_environment_error)
+        self.event_thread.start()
+
+    @abstractmethod
+    def start_environment_ready(self):
+        if self.active:
+            self.display_environment_started()
+        else:
+            self.display_environment_ended()
+
+        self.clean_up_event_watcher()
+
+    @abstractmethod
+    def start_environment_error(self, error):
+        """
+        This method defines how to recover UI if the instruction/environment did
+        not start up correctly. Should follow this structure:
+        1. Enable stop_environment and start_environment button
+        2. Call super().start_environment_error or display error some other way
+        """
+        if self.active:
+            self.display_environment_started()
+        else:
+            self.display_environment_ended()
+
+        self.clean_up_event_watcher()
+        self.display_error(error)
+
+    @abstractmethod
+    def stop_environment(self):
+        """
+        This method in the UI class should follow this structure:
+        1. Disable stop_environment button
+        2. Call super().stop_environment
+        """
+        try:
+            queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
+            self.rattlesnake.stop_environment(self.environment_name)
+        except Exception as e:
+            self.stop_environment_error(e)
+            return
+
+        ready_event_list = []
+        active_event_list = [self.rattlesnake.event_container.environment_active_events[queue_name]]
+        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=False)
+        self.event_watcher.ready.connect(self.stop_environment_ready)
+        self.event_watcher.error.connect(self.stop_environment_error)
+        self.event_thread.start()
+
+    @abstractmethod
+    def stop_environment_ready(self):
+        if self.active:
+            self.display_environment_started()
+        else:
+            self.display_environment_ended()
+
+        self.clean_up_event_watcher()
+
+    @abstractmethod
+    def stop_environment_error(self, error):
+        """
+        This method defines how to recover UI if the instruction/environment did
+        not start up correctly. Should follow this structure:
+        1. Enable stop_environment and start_environment button
+        2. Call super().start_environment_error or display error some other way
+        """
+        if self.active:
+            self.display_environment_started()
+        else:
+            self.display_environment_ended()
+
+        self.clean_up_event_watcher()
+        self.display_error(error)
+
     # region: Commands
     @abstractmethod
     def display_environment_started(self):
@@ -193,92 +287,6 @@ class AbstractUI(ABC):
             case _:
                 return False
         return True
-
-    # region: Processes
-    @abstractmethod
-    def start_environment(self):
-        """
-        This method in the UI class should follow this structure:
-        1. Disable start_environment button
-        2. Call super().start_environment
-        """
-        try:
-            instructions = self.get_environment_instructions()
-            queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
-            self.rattlesnake.start_environment(instructions)
-        except Exception as e:
-            self.start_environment_error(e)
-            return
-
-        ready_event_list = []
-        active_event_list = [self.rattlesnake.event_container.environment_active_events[queue_name]]
-        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=True)
-        self.event_watcher.ready.connect(self.start_environment_ready)
-        self.event_watcher.error.connect(self.start_environment_error)
-        self.event_thread.start()
-
-    @abstractmethod
-    def start_environment_ready(self):
-        self.display_environment_started()
-        self.clean_up_event_watcher()
-
-    @abstractmethod
-    def start_environment_error(self, error):
-        """
-        This method defines how to recover UI if the instruction/environment did
-        not start up correctly. Should follow this structure:
-        1. Enable stop_environment and start_environment button
-        2. Call super().start_environment_error or display error some other way
-        """
-        if self.active:
-            self.display_environment_started()
-        else:
-            self.display_environment_ended()
-
-        self.clean_up_event_watcher()
-        self.display_error(error)
-
-    @abstractmethod
-    def stop_environment(self):
-        """
-        This method in the UI class should follow this structure:
-        1. Disable stop_environment button
-        2. Call super().stop_environment
-        """
-        try:
-            queue_name = self.rattlesnake.environment_manager.queue_names_dict[self.environment_name]
-            self.rattlesnake.stop_environment(self.environment_name)
-        except Exception as e:
-            self.stop_environment_error(e)
-            return
-
-        ready_event_list = []
-        active_event_list = [self.rattlesnake.event_container.environment_active_events[queue_name]]
-        self.create_event_watcher(ready_event_list, active_event_list, active_event_check=False)
-        self.event_watcher.ready.connect(self.stop_environment_ready)
-        self.event_watcher.error.connect(self.stop_environment_error)
-        self.event_thread.start()
-
-    @abstractmethod
-    def stop_environment_ready(self):
-        self.display_environment_ended()
-        self.clean_up_event_watcher()
-
-    @abstractmethod
-    def stop_environment_error(self, error):
-        """
-        This method defines how to recover UI if the instruction/environment did
-        not start up correctly. Should follow this structure:
-        1. Enable stop_environment and start_environment button
-        2. Call super().start_environment_error or display error some other way
-        """
-        if self.active:
-            self.display_environment_started()
-        else:
-            self.display_environment_ended()
-
-        self.clean_up_event_watcher()
-        self.display_error(error)
 
     @property
     def log_file_queue(self) -> mp.Queue:

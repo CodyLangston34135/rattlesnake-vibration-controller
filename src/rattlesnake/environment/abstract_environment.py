@@ -276,6 +276,7 @@ class EnvironmentInstructions(ABC):
         self.environment_type = environment_type
         self.environment_name = environment_name
 
+    @abstractmethod
     def validate(self) -> True:
         """
         Validates the instruction to make sure that it will work with a

@@ -638,15 +638,28 @@ class Rattlesnake:
             active_event_list = [self.event_container.environment_active_events[queue_name]]
             self.wait_for_events(ready_event_list, active_event_list, active_event_check=False)
 
+    # region: Environment UI
     def environment_at_target_level(self, environment_name: str):
-        if self.state != RattlesnakeState.ENVIRONMENT_ACTIVE:
-            raise RattlesnakeError(f"Invalid state for streaming at target level: {self.state}")
         try:
             self.environment_manager.queue_names_dict[environment_name]
         except KeyError:
             raise RattlesnakeError(f"No environments exist for {environment_name} name")
 
         self.queue_container.controller_command_queue.put(TASK_NAME, (GlobalCommands.STREAM_AT_TARGET_LEVEL, environment_name))
+
+    def send_environment_command(self, environment_name, command, data):
+        """
+        This is a bypass environment ui's can use to request information from their environments. This
+        should only be used for tasks that are almost certainly not going to throw an error and can be
+        performed at any rattlesnake state.
+        """
+        self.log(f"Sending {command} to {environment_name}")
+        try:
+            queue_name = self.environment_manager.queue_names_dict[environment_name]
+        except KeyError:
+            raise RattlesnakeError(f"No environments exist for {environment_name} name")
+
+        self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (command, data))
 
     # region: Streaming
     def start_streaming(self):
@@ -719,17 +732,6 @@ class Rattlesnake:
             ready_event_list = [self.event_container.controller_ready_event]
             active_event_list = []
             self.wait_for_events(ready_event_list, active_event_list)
-
-    # region: User Interface
-    def send_environment_command(self, environment_name, command, data):
-        """
-        This is a bypass environment ui's can use to request information from their environments. This
-        should only be used for tasks that are almost certainly not going to throw an error and can be
-        performed at any rattlesnake state.
-        """
-        self.log(f"Sending {command} to {environment_name}")
-        queue_name = self.environment_manager.queue_names_dict[environment_name]
-        self.queue_container.environment_command_queues[queue_name].put(TASK_NAME, (command, data))
 
     # region: Shutdown
     def shutdown(self):

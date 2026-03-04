@@ -815,6 +815,9 @@ class ModalInstructions(EnvironmentInstructions):
     def __init__(self, environment_name):
         super().__init__(CONTROL_TYPE, environment_name)
 
+    def validate(self):
+        return super().validate()
+
 
 class ModalQueues:
     """A set of queues used by the modal environment"""

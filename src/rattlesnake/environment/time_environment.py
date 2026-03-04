@@ -269,6 +269,9 @@ class TimeInstructions(EnvironmentInstructions):
         self.current_test_level = current_test_level
         self.repeat = repeat
 
+    def validate(self):
+        return super().validate()
+
 
 # region: TimeQueues
 class TimeQueues:

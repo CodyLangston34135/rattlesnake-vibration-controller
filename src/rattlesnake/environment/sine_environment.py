@@ -21,9 +21,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-from rattlesnake.utilities import VerboseMessageQueue, flush_queue, scale2db, wrap
+from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands, flush_queue, scale2db, wrap, db2scale
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
+from rattlesnake.environment.abstract_environment import EnvironmentInstructions
 from rattlesnake.environment.abstract_sysid_environment import SysIdEnvironmentProcess, SysIdEnvironmentMetadata
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.environment.sine_utilities import (
@@ -792,6 +793,19 @@ class SineMetadata(SysIdEnvironmentMetadata):
         )
 
 
+# region: Instructions
+class SineInstructions(EnvironmentInstructions):
+    def __init__(self, environment_name, control_test_level, control_tones, control_start_time, control_end_time):
+        super().__init__(CONTROL_TYPE, environment_name)
+        self.control_test_level = control_test_level
+        self.control_tones = control_tones
+        self.control_start_time = control_start_time
+        self.control_end_time = control_end_time
+
+    def validate(self):
+        return super().validate()
+
+
 # region: Environment
 class SineEnvironment(SysIdEnvironmentProcess):
     """Class representing the environment computations on a separate process from the main UI"""
@@ -843,6 +857,7 @@ class SineEnvironment(SysIdEnvironmentProcess):
             sysid_event,
         )
         self.map_command(SineCommands.PERFORM_CONTROL_PREDICTION, self.perform_control_prediction)
+        self.map_command(GlobalCommands.START_ENVIRONMENT, self.start_control)
         self.map_command(SineCommands.START_CONTROL, self.start_control)
         self.map_command(SineCommands.STOP_CONTROL, self.stop_environment)
         self.map_command(SineCommands.SAVE_CONTROL_DATA, self.save_control_data)
@@ -1504,7 +1519,7 @@ class SineEnvironment(SysIdEnvironmentProcess):
             output_transformation_matrix=self.environment_metadata.reference_transformation_matrix,
         )
 
-    def start_control(self, data):
+    def start_control(self, data: SineInstructions):
         """
         Starts up and runs the control with the specified test level,
         tones, start and end times
@@ -1512,12 +1527,10 @@ class SineEnvironment(SysIdEnvironmentProcess):
         if self.control_startup:
             self.log("Starting Environment")
             # Read in the starting parameters
-            (
-                self.control_test_level,
-                self.control_tones,
-                self.control_start_time,
-                self.control_end_time,
-            ) = data
+            self.control_test_level = db2scale(data.control_test_level)
+            self.control_tones = data.control_tones
+            self.control_start_time = data.control_start_time
+            self.control_end_time = data.control_end_time
             if self.control_tones is not None and len(self.control_tones) == 0:
                 self.control_tones = None
             if self.control_tones is None:

@@ -1,7 +1,7 @@
 from rattlesnake.rattlesnake import Rattlesnake
 from rattlesnake.utilities import GlobalCommands, load_python_module, db2scale
 from rattlesnake.environment.environment_utilities import ControlTypes
-from rattlesnake.environment.sine_environment import SineCommands, SineUICommands, SineMetadata
+from rattlesnake.environment.sine_environment import SineCommands, SineUICommands, SineMetadata, SineInstructions
 from rattlesnake.user_interface.ui_utilities import (
     TransformationMatrixWindow,
     multiline_plotter,
@@ -170,8 +170,8 @@ class SineUI(AbstractSysIdUI):
         self.prediction_widget.excitation_voltage_list.itemDoubleClicked.connect(self.update_excitation_prediction_from_table)
         self.prediction_widget.response_error_table.cellDoubleClicked.connect(self.update_response_prediction_from_table)
         # Run Test
-        self.run_widget.start_test_button.clicked.connect(self.start_control)
-        self.run_widget.stop_test_button.clicked.connect(self.stop_control)
+        self.run_widget.start_test_button.clicked.connect(self.start_environment)
+        self.run_widget.stop_test_button.clicked.connect(self.stop_environment)
         self.run_widget.create_window_button.clicked.connect(self.create_window)
         self.run_widget.show_all_channels_button.clicked.connect(self.show_all_channels)
         self.run_widget.tile_windows_button.clicked.connect(self.tile_windows)
@@ -1020,49 +1020,6 @@ class SineUI(AbstractSysIdUI):
         self.send_excitation_prediction_plot_choices()
 
     # region: Run
-    def start_control(self):
-        """Sets itself up to start controlling and sends a signal to the environment to start"""
-        self.achieved_response_signals_combined = []
-        self.achieved_response_signals = []
-        self.achieved_response_amplitudes = []
-        self.achieved_response_phases = []
-        self.complex_drive_modifications = []
-        self.achieved_excitation_signals_combined = []
-        self.achieved_excitation_signals = []
-        self.achieved_excitation_frequencies = []
-        self.achieved_excitation_arguments = []
-        self.achieved_excitation_amplitudes = []
-        self.achieved_excitation_phases = []
-        self.enable_control(False)
-        self.shutdown_sent = False
-        self.controller_communication_queue.put(self.log_name, (GlobalCommands.START_ENVIRONMENT, self.environment_name))
-        self.environment_command_queue.put(
-            self.log_name,
-            (
-                SineCommands.START_CONTROL,
-                (
-                    db2scale(self.run_widget.test_level_selector.value()),
-                    (
-                        [
-                            self.run_widget.partial_environment_tone_selector.row(item)
-                            for item in self.run_widget.partial_environment_tone_selector.selectedItems()
-                        ]
-                        if self.run_widget.partial_environment_selector.isChecked()
-                        else None
-                    ),
-                    (self.run_widget.start_time_selector.value() if self.run_widget.partial_environment_selector.isChecked() else None),
-                    (self.run_widget.stop_time_selector.value() if self.run_widget.partial_environment_selector.isChecked() else None),
-                ),
-            ),
-        )
-        if self.run_widget.test_level_selector.value() >= 0:
-            self.controller_communication_queue.put(self.log_name, (GlobalCommands.AT_TARGET_LEVEL, self.environment_name))
-
-    def stop_control(self):
-        """Sends a signal to shut down the control"""
-        self.shutdown_sent = True
-        self.environment_command_queue.put(self.log_name, (SineCommands.STOP_CONTROL, None))
-
     def change_test_level_from_profile(self, test_level):
         """Changes the value of the test level from a profile.
 
@@ -1264,33 +1221,34 @@ class SineUI(AbstractSysIdUI):
             widget.setEnabled(self.run_widget.partial_environment_selector.isChecked())
 
     # region: Acqusition
-    def enable_control(self, enabled):
-        """Enables or disables the widgets to start or modify the control
-
-        Parameters
-        ----------
-        enabled : bool
-            If True, enables the widgets.  Otherwise, it disables the widgets
-        """
-        for widget in [
-            self.run_widget.test_level_selector,
-            self.run_widget.partial_environment_selector,
-            self.run_widget.partial_environment_tone_selector,
-            self.run_widget.start_time_selector,
-            self.run_widget.stop_time_selector,
-            self.run_widget.start_test_button,
-        ]:
-            widget.setEnabled(enabled)
-        for widget in [self.run_widget.stop_test_button]:
-            widget.setEnabled(not enabled)
-        if enabled:
-            self.enable_disable_partial_environment()
-
     def get_environment_instructions(self):
-        return super().get_environment_instructions()
+        control_test_level = self.run_widget.test_level_selector.value()
+        control_tones = (
+            [
+                self.run_widget.partial_environment_tone_selector.row(item)
+                for item in self.run_widget.partial_environment_tone_selector.selectedItems()
+            ]
+            if self.run_widget.partial_environment_selector.isChecked()
+            else None
+        )
+        control_start_time = self.run_widget.start_time_selector.value() if self.run_widget.partial_environment_selector.isChecked() else None
+        control_end_time = self.run_widget.stop_time_selector.value() if self.run_widget.partial_environment_selector.isChecked() else None
+        return SineInstructions(self.environment_name, control_test_level, control_tones, control_start_time, control_end_time)
 
     def set_environment_instructions(self, instructions):
-        return super().set_environment_instructions(instructions)
+        self.run_widget.test_level_selector.setValue(instructions.control_test_level)
+        bool_partial = instructions.control_tones is not None
+        self.run_widget.partial_environment_selector.setChecked(bool_partial)
+        if bool_partial:
+            self.run_widget.start_time_selector.setValue(instructions.control_start_time)
+            self.run_widget.stop_time_selector.setValue(instructions.control_end_time)
+            self.run_widget.partial_environment_tone_selector.clearSelection()
+            for row in instructions.control_tones:
+                item = self.run_widget.partial_environment_tone_selector.item(row)
+                if item is not None:
+                    item.setSelected(True)
+        else:
+            self.run_widget.partial_environment_tone_selector.clearSelection()
 
     def display_environment_ended(self):
         for widget in [
@@ -1320,7 +1278,31 @@ class SineUI(AbstractSysIdUI):
             widget.setEnabled(True)
 
     def start_environment(self):
-        return super().start_environment()
+        """Sets itself up to start controlling and sends a signal to the environment to start"""
+        self.achieved_response_signals_combined = []
+        self.achieved_response_signals = []
+        self.achieved_response_amplitudes = []
+        self.achieved_response_phases = []
+        self.complex_drive_modifications = []
+        self.achieved_excitation_signals_combined = []
+        self.achieved_excitation_signals = []
+        self.achieved_excitation_frequencies = []
+        self.achieved_excitation_arguments = []
+        self.achieved_excitation_amplitudes = []
+        self.achieved_excitation_phases = []
+        self.shutdown_sent = False
+        for widget in [
+            self.run_widget.test_level_selector,
+            self.run_widget.partial_environment_selector,
+            self.run_widget.partial_environment_tone_selector,
+            self.run_widget.start_time_selector,
+            self.run_widget.stop_time_selector,
+            self.run_widget.start_test_button,
+        ]:
+            widget.setEnabled(False)
+
+        super().start_environment()
+        self.rattlesnake.environment_at_target_level(self.environment_name)
 
     def start_environment_ready(self):
         return super().start_environment_ready()
@@ -1329,7 +1311,12 @@ class SineUI(AbstractSysIdUI):
         return super().start_environment_error(error)
 
     def stop_environment(self):
-        return super().stop_environment()
+        """Sends a signal to shut down the control"""
+        self.shutdown_sent = True
+        for widget in [self.run_widget.stop_test_button]:
+            widget.setEnabled(False)
+
+        super().stop_environment()
 
     def stop_environment_error(self, error):
         return super().stop_environment_error(error)
