@@ -33,6 +33,7 @@ from rattlesnake.environment.sine_utilities import (
     digital_tracking_filter_generator,
     sine_sweep,
     vold_kalman_filter_generator,
+    read_transformation_matrix_from_worksheet,
 )
 from rattlesnake.process.sysid_data_analysis import SysIdMetadata, sysid_data_analysis_process
 from rattlesnake.process.data_collector import data_collector_process
@@ -571,7 +572,7 @@ class SineMetadata(SysIdEnvironmentMetadata):
         )
 
     @staticmethod
-    def store_to_worksheet(worksheet):
+    def create_blank_worksheet_template(worksheet):
         worksheet.cell(1, 1, "Control Type")
         worksheet.cell(1, 2, "Sine")
         worksheet.cell(
@@ -671,30 +672,6 @@ class SineMetadata(SysIdEnvironmentMetadata):
     def store_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
         super().store_to_worksheet(worksheet)
 
-        # self.samples_per_frame = samples_per_frame
-        # self.number_of_channels = number_of_channels
-        # self.specifications = specifications
-        # self.ramp_time = ramp_time
-        # self.buffer_blocks = buffer_blocks
-        # self.control_convergence = control_convergence
-        # self.update_drives_after_environment = update_drives_after_environment
-        # self.phase_fit = phase_fit
-        # self.allow_automatic_aborts = allow_automatic_aborts
-        # self.tracking_filter_type = tracking_filter_type
-        # self.tracking_filter_cutoff = tracking_filter_cutoff
-        # self.tracking_filter_order = tracking_filter_order
-        # self.vk_filter_order = vk_filter_order
-        # self.vk_filter_bandwidth = vk_filter_bandwidth
-        # self.vk_filter_blocksize = vk_filter_blocksize
-        # self.vk_filter_overlap = vk_filter_overlap
-        # self.control_python_script = control_python_script
-        # self.control_python_class = control_python_class
-        # self.control_python_parameters = control_python_parameters
-        # self.control_channel_indices = control_channel_indices
-        # self.output_channel_indices = output_channel_indices
-        # self.response_transformation_matrix = response_transformation_matrix
-        # self.reference_transformation_matrix = output_transformation_matrix
-
         if self.ramp_time is not None:
             worksheet.cell(2, 2, self.ramp_time)
         if self.control_convergence is not None:
@@ -708,7 +685,7 @@ class SineMetadata(SysIdEnvironmentMetadata):
         if self.buffer_blocks is not None:
             worksheet.cell(7, 2, self.buffer_blocks)
         if self.tracking_filter_type is not None:
-            worksheet.cell(8, 2, self.tracking_filter_type)
+            worksheet.cell(8, 2, "DFT" if self.tracking_filter_type == 0 else "VK")
         if self.tracking_filter_cutoff is not None:
             worksheet.cell(9, 2, self.tracking_filter_cutoff)
         if self.tracking_filter_order is not None:
@@ -731,52 +708,124 @@ class SineMetadata(SysIdEnvironmentMetadata):
             for idx, channel_ind in enumerate(self.control_channel_indices):
                 col_idx = idx + 2
                 worksheet.cell(18, col_idx, channel_ind + 1)
-        self.sysid_metadata.store_to_worksheet()
+        self.sysid_metadata.store_to_worksheet(worksheet, start_row=19)
+        response_row = 34
+        output_row = 35
+        if self.response_transformation_matrix is not None:
+            worksheet.cell(35, 1, None)
+            worksheet.cell(35, 2, None)
+            for i, row in enumerate(self.response_transformation_matrix):
+                for j, value in enumerate(row):
+                    worksheet.cell(i + response_row, j + 2, value)
+            # Shift output transfomation matrix down
+            output_row = i + 1
+            worksheet.cell(i + 1, 1, "Output Transformation Matrix:")
+            worksheet.cell(
+                i + 1,
+                2,
+                "# Transformation matrix to apply to the outputs.  Type None if there is none.  "
+                "Otherwise, make this a 2D array in the spreadsheet.  The number of columns should be "
+                "the number of physical output channels in the environment.",
+            )
+        if self.response_transformation_matrix is not None:
+            for i, row in enumerate(self.response_transformation_matrix):
+                for j, value in enumerate(row):
+                    worksheet.cell(i + output_row, j + 2, value)
 
     @classmethod
-    def retrieve_metadata_from_worksheet(cls, worksheet, environment_name, channel_list_bools, hardware_metadata):
-        return super().retrieve_metadata_from_worksheet(worksheet, environment_name, channel_list_bools, hardware_metadata)
-
-    def set_parameters_from_template(self, worksheet):
-        self.definition_widget.ramp_time_spinbox.setValue(float(worksheet.cell(2, 2).value))
-        self.definition_widget.control_convergence_selector.setValue(float(worksheet.cell(3, 2).value))
-        self.definition_widget.update_drives_after_environment_selector.setChecked(worksheet.cell(4, 2).value.upper() == "Y")
-        self.definition_widget.best_fit_phase_checkbox.setChecked(worksheet.cell(5, 2).value.upper() == "Y")
-        self.definition_widget.auto_abort_checkbox.setChecked(worksheet.cell(6, 2).value.upper() == "Y")
-        self.definition_widget.buffer_blocks_selector.setValue(int(worksheet.cell(7, 2).value))
-        self.definition_widget.filter_type_selector.setCurrentIndex(1 if worksheet.cell(8, 2).value.upper() == "VK" else 0)
-        self.definition_widget.tracking_filter_cutoff_selector.setValue(float(worksheet.cell(9, 2).value))
-        self.definition_widget.tracking_filter_order_selector.setValue(int(worksheet.cell(10, 2).value))
-        self.definition_widget.vk_filter_order_selector.setCurrentIndex(int(worksheet.cell(11, 2).value) - 1)
-        self.definition_widget.vk_filter_bandwidth_selector.setValue(float(worksheet.cell(12, 2).value))
-        self.definition_widget.vk_filter_block_size_selector.setValue(int(worksheet.cell(13, 2).value))
-        self.definition_widget.vk_filter_block_overlap_selector.setValue(float(worksheet.cell(14, 2).value))
-        if worksheet.cell(15, 2).value is not None and worksheet.cell(15, 2).value != "":
-            self.select_python_module(None, worksheet.cell(15, 2).value)
-            self.definition_widget.python_class_input.setCurrentIndex(self.definition_widget.python_class_input.findText(worksheet.cell(16, 2).value))
-        self.definition_widget.control_parameters_text_input.setText("" if worksheet.cell(17, 2).value is None else str(worksheet.cell(17, 2).value))
+    def retrieve_metadata_from_worksheet(
+        cls,
+        worksheet: openpyxl.worksheet.worksheet.Worksheet,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        hardware_metadata: HardwareMetadata,
+    ):
+        # environment_name: str,
+        # channel_list_bools: list,
+        # sample_rate: int,
+        # samples_per_frame,
+        # number_of_channels,
+        # specifications,
+        # ramp_time,
+        # buffer_blocks,
+        # control_convergence,
+        # update_drives_after_environment,
+        # phase_fit,
+        # allow_automatic_aborts,
+        # tracking_filter_type,
+        # tracking_filter_cutoff,
+        # tracking_filter_order,
+        # vk_filter_order,
+        # vk_filter_bandwidth,
+        # vk_filter_blocksize,
+        # vk_filter_overlap,
+        # control_python_script,
+        # control_python_class,
+        # control_python_parameters,
+        # control_channel_indices,
+        # output_channel_indices,
+        # response_transformation_matrix,
+        # output_transformation_matrix,
+        # sysid_metadata=None,
+        sample_rate = hardware_metadata.sample_rate
+        ramp_time = float(worksheet.cell(2, 2).value)
+        control_convergence = float(worksheet.cell(3, 2).value)
+        update_drives_after_environment = worksheet.cell(4, 2).value.upper() == "Y"
+        phase_fit = worksheet.cell(5, 2).value.upper() == "Y"
+        allow_automatic_aborts = worksheet.cell(6, 2).value.upper() == "Y"
+        buffer_blocks = int(worksheet.cell(7, 2).value)
+        tracking_filter_type = 1 if worksheet.cell(8, 2).value.upper() == "VK" else 0
+        tracking_filter_cutoff = float(worksheet.cell(9, 2).value)
+        tracking_filter_order = int(worksheet.cell(10, 2).value)
+        vk_filter_order = int(worksheet.cell(11, 2).value)
+        vk_filter_bandwidth = float(worksheet.cell(12, 2).value)
+        vk_filter_overlap = float(worksheet.cell(14, 2).value)
+        control_python_script = worksheet.cell(15, 2).value
+        control_python_class = worksheet.cell(16, 2).value
+        control_python_parameters = worksheet.cell(17, 2).value
+        control_channel_indices = []
         column_index = 2
         while True:
-            value = worksheet.cell(18, column_index).value
-            if value is None or (isinstance(value, str) and value.strip() == ""):
+            channel_ind = worksheet.cell(18, column_index).value
+            if channel_ind is None or (isinstance(channel_ind, str) and channel_ind.strip() == ""):
                 break
-            item = self.definition_widget.control_channels_selector.item(int(value) - 1)
-            # item.setCheckState(Qt.Checked)
+            control_channel_indices.append(int(channel_ind) - 1)
             column_index += 1
-        self.system_id_widget.samplesPerFrameSpinBox.setValue(int(worksheet.cell(19, 2).value))
-        self.system_id_widget.averagingTypeComboBox.setCurrentIndex(self.system_id_widget.averagingTypeComboBox.findText(worksheet.cell(20, 2).value))
-        self.system_id_widget.noiseAveragesSpinBox.setValue(int(worksheet.cell(21, 2).value))
-        self.system_id_widget.systemIDAveragesSpinBox.setValue(int(worksheet.cell(22, 2).value))
-        self.system_id_widget.averagingCoefficientDoubleSpinBox.setValue(float(worksheet.cell(23, 2).value))
-        self.system_id_widget.estimatorComboBox.setCurrentIndex(self.system_id_widget.estimatorComboBox.findText(worksheet.cell(24, 2).value))
-        self.system_id_widget.levelDoubleSpinBox.setValue(float(worksheet.cell(25, 2).value))
-        self.system_id_widget.levelRampTimeDoubleSpinBox.setValue(float(worksheet.cell(26, 2).value))
-        self.system_id_widget.signalTypeComboBox.setCurrentIndex(self.system_id_widget.signalTypeComboBox.findText(worksheet.cell(27, 2).value))
-        self.system_id_widget.windowComboBox.setCurrentIndex(self.system_id_widget.windowComboBox.findText(worksheet.cell(28, 2).value))
-        self.system_id_widget.overlapDoubleSpinBox.setValue(float(worksheet.cell(29, 2).value))
-        self.system_id_widget.onFractionDoubleSpinBox.setValue(float(worksheet.cell(30, 2).value))
-        self.system_id_widget.pretriggerDoubleSpinBox.setValue(float(worksheet.cell(31, 2).value))
-        self.system_id_widget.rampFractionDoubleSpinBox.setValue(float(worksheet.cell(32, 2).value))
+        sysid_metadata = SysIdMetadata.retrieve_metadata_from_worksheet(worksheet, hardware_metadata, start_row=19)
+
+        # Now we need to find the transformation matrices' sizes
+        start_response_row = 34
+        if isinstance(worksheet.cell(start_response_row, 2).value, str) and worksheet.cell(start_response_row, 2).value.lower() == "none":
+            response_transformation_matrix = None
+        else:
+            num_response_row = 0
+            while True:
+                num_response_row += 1
+                first_col_value = worksheet.cell(start_response_row + num_response_row, 2).value
+                if worksheet.cell(start_response_row + num_response_row, 1).value == "Output Transformation Matrix:" or (
+                    first_col_value is None or (isinstance(first_col_value, str) and first_col_value.strip() == "")
+                ):
+                    break
+
+        response_transformation_matrix = read_transformation_matrix_from_worksheet(
+            worksheet, start_row=start_response_row, num_rows=num_response_row, start_col=2
+        )
+        start_output_row = start_response_row + num_response_row
+        if isinstance(worksheet.cell(start_output_row, 2).value, str) and worksheet.cell(start_output_row, 2).value.lower() == "none":
+            output_transformation_matrix = None
+        else:
+            num_output_row = 0
+            while True:
+                num_output_row += 1
+                first_col_value = worksheet.cell(start_output_row + num_output_row, 2).value
+                if first_col_value is None or (isinstance(first_col_value, str) and first_col_value.strip() == ""):
+                    break
+        output_transformation_matrix_transformation_matrix = read_transformation_matrix_from_worksheet(
+            worksheet, start_row=start_output_row, num_rows=num_output_row, start_col=2
+        )
+        return
+
+    def set_parameters_from_template(self, worksheet):
 
         # Now we need to find the transformation matrices' sizes
         response_channels = self.definition_widget.control_channels_display.value()

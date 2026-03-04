@@ -1832,11 +1832,11 @@ if __name__ == "__main__":
     rattlesnake = Rattlesnake(threaded=True, timeout=30)
     rattlesnake.set_hardware(hardware_metadata)
     # Time Environment
-    rattlesnake.set_environments([time_environment_metadata])
-    rattlesnake.set_profile_event_list(time_profile_event_list)
-    rattlesnake.set_stream_metadata(time_stream_metadata)
-    rattlesnake.start_acquisition(time_stream_metadata)
-    rattlesnake.start_environment(time_environment_instructions)
+    # rattlesnake.set_environments([time_environment_metadata])
+    # rattlesnake.set_profile_event_list(time_profile_event_list)
+    # rattlesnake.set_stream_metadata(time_stream_metadata)
+    # rattlesnake.start_acquisition(time_stream_metadata)
+    # rattlesnake.start_environment(time_environment_instructions)
     # Modal Environment
     # rattlesnake.set_environments([modal_environment_metadata])
     # # Sine Environment

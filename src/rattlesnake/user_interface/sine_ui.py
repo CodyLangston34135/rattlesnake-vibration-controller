@@ -494,7 +494,7 @@ class SineUI(AbstractSysIdUI):
             channel_list_bools=channel_list_bools,
             sample_rate=self.definition_widget.sample_rate_display.value(),
             samples_per_frame=self.definition_widget.samples_per_acquire_display.value(),
-            number_of_channels=len(self.hardware_metadata.channel_list),
+            number_of_channels=sum(channel_list_bools),
             specifications=self.collect_specification(),
             ramp_time=self.definition_widget.ramp_time_spinbox.value(),
             buffer_blocks=self.definition_widget.buffer_blocks_selector.value(),
@@ -535,15 +535,13 @@ class SineUI(AbstractSysIdUI):
         self.definition_widget.vk_filter_block_size_selector.setValue(metadata.vk_filter_blocksize)
         self.definition_widget.vk_filter_block_overlap_selector.setValue(metadata.vk_filter_overlap)
         if metadata.control_python_script:
-            self.definition_widget.script_file_path_input.setText(metadata.control_python_script)
-        if metadata.control_python_class:
-            index = self.definition_widget.python_class_input.findText(metadata.control_python_class)
-            if index == -1:
-                self.definition_widget.python_class_input.addItem(metadata.control_python_class)
-                index = self.definition_widget.python_class_input.findText(metadata.control_python_class)
-            self.definition_widget.python_class_input.setCurrentIndex(index)
-        if metadata.control_python_parameters:
-            self.definition_widget.control_parameters_text_input.setPlainText(metadata.control_python_parameters)
+            self.select_python_module(None, metadata.control_python_script)
+            self.definition_widget.python_class_input.setCurrentIndex(
+                self.definition_widget.python_class_input.findText(metadata.control_python_class)
+            )
+        self.definition_widget.control_parameters_text_input.setText(
+            "" if metadata.control_python_parameters is None else str(metadata.control_python_parameters)
+        )
         for i in range(self.definition_widget.control_channels_selector.count()):
             self.definition_widget.control_channels_selector.item(i).setCheckState(Qt.Unchecked)
         for control_channel in metadata.control_channel_indices:

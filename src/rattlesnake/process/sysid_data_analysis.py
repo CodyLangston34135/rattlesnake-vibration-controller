@@ -26,6 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.utilities import VerboseMessageQueue, flush_queue
+import openpyxl
 import multiprocessing as mp
 import numpy as np
 import netCDF4 as nc4
@@ -202,7 +203,7 @@ class SysIdMetadata:
         )
 
     @staticmethod
-    def create_blank_worksheet_template(worksheet, start_row):
+    def create_blank_worksheet_template(worksheet: openpyxl.worksheet.worksheet.Worksheet, start_row):
         worksheet.cell(start_row, 1, "System ID Samples per Frame")
         worksheet.cell(
             start_row,
@@ -260,6 +261,75 @@ class SysIdMetadata:
             '# Percentage of the "System ID Burst On %" that will be used to ramp up to full level',
         )
 
+    def store_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet, start_row: int):
+        if self.sysid_frame_size is not None:
+            worksheet.cell(start_row, 2, self.sysid_frame_size)
+        if self.sysid_averaging_type is not None:
+            worksheet.cell(start_row + 1, 2, self.sysid_averaging_type)
+        if self.sysid_noise_averages is not None:
+            worksheet.cell(start_row + 2, 2, self.sysid_noise_averages)
+        if self.sysid_averages is not None:
+            worksheet.cell(start_row + 3, 2, self.sysid_averages)
+        if self.sysid_exponential_averaging_coefficient is not None:
+            worksheet.cell(start_row + 4, 2, self.sysid_exponential_averaging_coefficient)
+        if self.sysid_estimator is not None:
+            worksheet.cell(start_row + 5, 2, self.sysid_estimator)
+        if self.sysid_level is not None:
+            worksheet.cell(start_row + 6, 2, self.sysid_level)
+        if self.sysid_level_ramp_time is not None:
+            worksheet.cell(start_row + 7, 2, self.sysid_level_ramp_time)
+        if self.sysid_signal_type is not None:
+            worksheet.cell(start_row + 8, 2, self.sysid_signal_type)
+        if self.sysid_window is not None:
+            worksheet.cell(start_row + 9, 2, self.sysid_window)
+        if self.sysid_overlap is not None:
+            worksheet.cell(start_row + 10, 2, self.sysid_overlap * 100)
+        if self.sysid_burst_on is not None:
+            worksheet.cell(start_row + 11, 2, self.sysid_burst_on * 100)
+        if self.sysid_pretrigger is not None:
+            worksheet.cell(start_row + 12, 2, self.sysid_pretrigger * 100)
+        if self.sysid_burst_ramp_fraction is not None:
+            worksheet.cell(start_row + 13, 2, self.sysid_burst_ramp_fraction * 100)
+
+    @classmethod
+    def retrieve_metadata_from_worksheet(cls, worksheet: openpyxl.worksheet.worksheet.Worksheet, hardware_metadata: HardwareMetadata, start_row: int):
+        sysid_frame_size = int(worksheet.cell(start_row, 2).value)
+        sysid_averaging_type = worksheet.cell(start_row + 1, 2).value
+        sysid_noise_averages = int(worksheet.cell(start_row + 2, 2).value)
+        sysid_averages = int(worksheet.cell(start_row + 3, 2).value)
+        sysid_exponential_averaging_coefficient = float(worksheet.cell(start_row + 4, 2).value)
+        sysid_estimator = worksheet.cell(start_row + 5, 2).value
+        sysid_level = float(worksheet.cell(start_row + 6, 2).value)
+        sysid_level_ramp_time = float(worksheet.cell(start_row + 7, 2).value)
+        sysid_signal_type = worksheet.cell(start_row + 8, 2).value
+        sysid_window = worksheet.cell(start_row + 9, 2).value
+        sysid_overlap = float(worksheet.cell(start_row + 10, 2).value) / 100
+        sysid_burst_on = float(worksheet.cell(start_row + 11, 2).value) / 100
+        sysid_pretrigger = float(worksheet.cell(start_row + 12, 2).value) / 100
+        sysid_burst_ramp_fraction = float(worksheet.cell(start_row + 13, 2).value) / 100
+
+        return cls(
+            sample_rate=hardware_metadata.sample_rate,
+            sysid_frame_size=sysid_frame_size,
+            sysid_averaging_type=sysid_averaging_type,
+            sysid_noise_averages=sysid_noise_averages,
+            sysid_averages=sysid_averages,
+            sysid_exponential_averaging_coefficient=sysid_exponential_averaging_coefficient,
+            sysid_estimator=sysid_estimator,
+            sysid_level=sysid_level,
+            sysid_level_ramp_time=sysid_level_ramp_time,
+            sysid_signal_type=sysid_signal_type,
+            sysid_window=sysid_window,
+            sysid_overlap=sysid_overlap,
+            sysid_burst_on=sysid_burst_on,
+            sysid_pretrigger=sysid_pretrigger,
+            sysid_burst_ramp_fraction=sysid_burst_ramp_fraction,
+            sysid_low_frequency_cutoff=0,
+            sysid_high_frequency_cutoff=int(hardware_metadata.sample_rate / 2),
+            stream_file=None,
+            auto_shutdown=False,
+        )
+
     def validate(self):
         return True
 
@@ -268,7 +338,7 @@ class SysIdMetadata:
         return cls(
             sample_rate=sample_rate,
             sysid_frame_size=sample_rate,
-            sysid_averaging_type=int(sample_rate / 2) + 1,
+            sysid_averaging_type="Linear",
             sysid_noise_averages=20,
             sysid_averages=20,
             sysid_exponential_averaging_coefficient=0.01,

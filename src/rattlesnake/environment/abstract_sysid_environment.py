@@ -97,10 +97,11 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
             channel_list_bools,
             sample_rate,
         )
-        # I initialize this because a lot of sysid environments use it to
+        # I default initialize this because a lot of sysid environments use it to
         # check the validity of the control class during initialize_environment.
-        # It is always overwritten with control_class.update_sysid after sysid
-        # is made so it is never used for actual control.
+        # (ex. SineEnvironment needs self.environment_metadata.sysid_metadata.sysid_frequency_spacing)
+        # It is always overwritten with initialize_sysid after sysid
+        # is made so it is never used for actual calculations.
         if isinstance(sysid_metadata, SysIdMetadata):
             self.sysid_metadata = sysid_metadata
         else:
@@ -232,6 +233,7 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
             A reference to the Group within the netCDF dataset where the
             environment's metadata is stored.
         """
+        super().store_to_worksheet(worksheet)
 
     @classmethod
     @abstractmethod
