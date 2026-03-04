@@ -201,6 +201,65 @@ class SysIdMetadata:
             sysid_high_frequency_cutoff,
         )
 
+    @staticmethod
+    def create_blank_worksheet_template(worksheet, start_row):
+        worksheet.cell(start_row, 1, "System ID Samples per Frame")
+        worksheet.cell(
+            start_row,
+            3,
+            "# Number of Samples per Measurement Frame in the System Identification",
+        )
+        worksheet.cell(start_row + 1, 1, "System ID Averaging:")
+        worksheet.cell(start_row + 1, 3, "# Averaging Type, should be Linear or Exponential")
+        worksheet.cell(start_row + 2, 1, "Noise Averages:")
+        worksheet.cell(start_row + 2, 3, "# Number of Averages used when characterizing noise")
+        worksheet.cell(start_row + 3, 1, "System ID Averages:")
+        worksheet.cell(start_row + 3, 3, "# Number of Averages used when computing the FRF")
+        worksheet.cell(start_row + 4, 1, "Exponential Averaging Coefficient:")
+        worksheet.cell(start_row + 4, 3, "# Averaging Coefficient for Exponential Averaging (if used)")
+        worksheet.cell(start_row + 5, 1, "System ID Estimator:")
+        worksheet.cell(
+            start_row + 5,
+            3,
+            "# Technique used to compute system ID.  Should be one of H1, H2, H3, or Hv.",
+        )
+        worksheet.cell(start_row + 6, 1, "System ID Level (V RMS):")
+        worksheet.cell(
+            start_row + 6,
+            3,
+            "# RMS Value of Flat Voltage Spectrum used for System Identification.",
+        )
+        worksheet.cell(start_row + 7, 1, "System ID Ramp Time")
+        worksheet.cell(
+            start_row + 7,
+            3,
+            "# Time for the system identification to ramp between levels or from start or to stop.",
+        )
+        worksheet.cell(start_row + 8, 1, "System ID Signal Type:")
+        worksheet.cell(start_row + 8, 3, "# Signal to use for the system identification")
+        worksheet.cell(start_row + 9, 1, "System ID Window:")
+        worksheet.cell(
+            start_row + 9,
+            2,
+            "# Window used to compute FRFs during system ID.  Should be one of Hann or None",
+        )
+        worksheet.cell(start_row + 10, 1, "System ID Overlap %:")
+        worksheet.cell(start_row + 10, 3, "# Overlap to use in the system identification")
+        worksheet.cell(start_row + 11, 1, "System ID Burst On %:")
+        worksheet.cell(start_row + 11, 3, "# Percentage of a frame that the burst random is on for")
+        worksheet.cell(start_row + 12, 1, "System ID Burst Pretrigger %:")
+        worksheet.cell(
+            start_row + 12,
+            2,
+            "# Percentage of a frame that occurs before the burst starts in a burst random signal",
+        )
+        worksheet.cell(start_row + 13, 1, "System ID Ramp Fraction %:")
+        worksheet.cell(
+            start_row + 13,
+            3,
+            '# Percentage of the "System ID Burst On %" that will be used to ramp up to full level',
+        )
+
     def validate(self):
         return True
 

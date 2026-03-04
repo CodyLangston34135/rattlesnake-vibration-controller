@@ -204,6 +204,13 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
         """
         return SysIdMetadata.retrieve_metadata_from_netcdf(netcdf_group_handle, hardware_metadata)
 
+    @staticmethod
+    @abstractmethod
+    def create_blank_worksheet_template(worksheet):
+        """
+        Creates blank worksheet template for an excel worksheet
+        """
+
     @abstractmethod
     def store_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
         """

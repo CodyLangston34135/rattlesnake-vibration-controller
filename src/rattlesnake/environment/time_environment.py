@@ -207,7 +207,8 @@ class TimeMetadata(EnvironmentMetadata):
 
         return cls(environment_name, channel_list_bools, hardware_metadata.sample_rate, output_signal, cancel_rampdown_time)
 
-    def store_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+    @staticmethod
+    def create_blank_worksheet_template(worksheet):
         worksheet.cell(1, 1, "Control Type")
         worksheet.cell(1, 2, "Time")
         worksheet.cell(
@@ -223,6 +224,9 @@ class TimeMetadata(EnvironmentMetadata):
             3,
             "# Time for the environment to ramp to zero if the environment is cancelled.",
         )
+
+    def store_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+        super().store_to_worksheet(worksheet)
 
         if self.signal_file:
             worksheet.cell(2, 2, str(self.signal_file))

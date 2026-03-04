@@ -173,6 +173,13 @@ class EnvironmentMetadata(ABC):
 
         """
 
+    @staticmethod
+    @abstractmethod
+    def create_blank_worksheet_template(worksheet: openpyxl.worksheet.worksheet.Worksheet):
+        """
+        Create blank worksheet template for environment metadata to store to excel file
+        """
+
     @abstractmethod
     def store_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
         """
@@ -190,10 +197,11 @@ class EnvironmentMetadata(ABC):
 
         Parameters
         ----------
-        netcdf_group_handle : nc4._netCDF4.Group
-            A reference to the Group within the netCDF dataset where the
+        worksheet : openpyxl.worksheet.worksheet.Worksheet
+            A reference to the worksheet within the excel file where the
             environment's metadata is stored.
         """
+        self.create_blank_worksheet_template(worksheet)
 
     @classmethod
     @abstractmethod

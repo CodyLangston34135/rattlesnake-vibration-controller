@@ -496,27 +496,8 @@ class ModalMetadata(EnvironmentMetadata):
             exponential_window_value_at_frame_end,
         )
 
-    def store_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
-        """Creates a template worksheet in an Excel workbook defining the
-        environment.
-
-        This function creates a template worksheet in an Excel workbook that
-        when filled out could be read by the controller to re-create the
-        environment.
-
-        This function is the "write" counterpart to the
-        ``set_parameters_from_template`` function in the ``ModalUI`` class,
-        which reads the values from the template file to populate the user
-        interface.
-
-        Parameters
-        ----------
-        environment_name : str :
-            The name of the environment that will specify the worksheet's name
-        workbook : openpyxl.worksheet.worksheet.Worksheet :
-            A reference to an ``openpyxl`` workbook.
-
-        """
+    @staticmethod
+    def create_blank_worksheet_template(worksheet):
         worksheet.cell(1, 1, "Control Type")
         worksheet.cell(1, 2, "Modal")
         worksheet.cell(2, 1, "Samples Per Frame:")
@@ -611,6 +592,29 @@ class ModalMetadata(EnvironmentMetadata):
         worksheet.cell(26, 3, "# List of channels, one per cell on this row")
         worksheet.cell(27, 1, "Disabled Channels")
         worksheet.cell(27, 3, "# List of channels, one per cell on this row")
+
+    def store_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+        """Creates a template worksheet in an Excel workbook defining the
+        environment.
+
+        This function creates a template worksheet in an Excel workbook that
+        when filled out could be read by the controller to re-create the
+        environment.
+
+        This function is the "write" counterpart to the
+        ``set_parameters_from_template`` function in the ``ModalUI`` class,
+        which reads the values from the template file to populate the user
+        interface.
+
+        Parameters
+        ----------
+        environment_name : str :
+            The name of the environment that will specify the worksheet's name
+        workbook : openpyxl.worksheet.worksheet.Worksheet :
+            A reference to an ``openpyxl`` workbook.
+
+        """
+        super().store_to_worksheet(worksheet)
 
         if self.samples_per_frame is not None:
             worksheet.cell(2, 2, self.samples_per_frame)
