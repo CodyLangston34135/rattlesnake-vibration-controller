@@ -37,7 +37,17 @@
    <item>
     <layout class="QGridLayout" name="gridLayout">
      <item row="1" column="0">
-      <widget class="PlotWidget" name="full_time_history_plot"/>
+      <widget class="PlotWidget" name="full_time_history_plot">
+       <property name="backgroundBrush">
+        <brush brushstyle="NoBrush">
+         <color alpha="255">
+          <red>255</red>
+          <green>255</green>
+          <blue>255</blue>
+         </color>
+        </brush>
+       </property>
+      </widget>
      </item>
      <item row="1" column="1">
       <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -307,13 +317,43 @@
      <item row="2" column="0">
       <layout class="QHBoxLayout" name="horizontalLayout_2">
        <item>
-        <widget class="PlotWidget" name="order_time_history_plot"/>
+        <widget class="PlotWidget" name="order_time_history_plot">
+         <property name="backgroundBrush">
+          <brush brushstyle="NoBrush">
+           <color alpha="255">
+            <red>255</red>
+            <green>255</green>
+            <blue>255</blue>
+           </color>
+          </brush>
+         </property>
+        </widget>
        </item>
        <item>
-        <widget class="PlotWidget" name="order_amplitude_plot"/>
+        <widget class="PlotWidget" name="order_amplitude_plot">
+         <property name="backgroundBrush">
+          <brush brushstyle="NoBrush">
+           <color alpha="255">
+            <red>255</red>
+            <green>255</green>
+            <blue>255</blue>
+           </color>
+          </brush>
+         </property>
+        </widget>
        </item>
        <item>
-        <widget class="PlotWidget" name="order_phase_plot"/>
+        <widget class="PlotWidget" name="order_phase_plot">
+         <property name="backgroundBrush">
+          <brush brushstyle="NoBrush">
+           <color alpha="255">
+            <red>255</red>
+            <green>255</green>
+            <blue>255</blue>
+           </color>
+          </brush>
+         </property>
+        </widget>
        </item>
       </layout>
      </item>

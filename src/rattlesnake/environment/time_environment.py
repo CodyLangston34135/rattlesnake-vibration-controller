@@ -49,18 +49,16 @@ class TimeCommands(EnvironmentCommands):
     SET_REPEAT = 1
     SET_NO_REPEAT = 2
 
-    @property
-    def label(self):
-        """Used by UI as names for commands in profile table"""
-        return self.name.replace("_", " ").title()
-
-    @property
-    def valid_data(self):
-        return {
-            TimeCommands.SET_TEST_LEVEL: int,
-            TimeCommands.SET_REPEAT: type(None),
-            TimeCommands.SET_NO_REPEAT: type(None),
-        }.get(self)
+    VALID_PROFILE_COMMANDS = (
+        SET_TEST_LEVEL,
+        SET_REPEAT,
+        SET_NO_REPEAT,
+    )
+    VALID_DATA = {
+        SET_TEST_LEVEL: int,
+        SET_REPEAT: type(None),
+        SET_NO_REPEAT: type(None),
+    }
 
 
 class TimeUICommands(Enum):

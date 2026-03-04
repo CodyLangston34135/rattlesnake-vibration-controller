@@ -31,24 +31,23 @@ class EnvironmentCommands(Enum):
     for the command object.
     """
 
+    _ignore_ = ("VALID_PROFILE_COMMANDS", "VALID_DATA")
+    VALID_PROFILE_COMMANDS = ()
+    VALID_DATA = {}
+
     @property
     def label(self):
-        """Used by UI as names for commands in profile table"""
         return self.name.replace("_", " ").title()
 
-    @property
-    def valid_data(self):
-        """
-        This is used to validate data given with the command.
+    @classmethod
+    def valid_data(cls):
+        valid_data = {cls(command): data for command, data in cls.VALID_DATA.value.items()}
+        return valid_data
 
-        Map the specific command to a tuple of valid data types. The first
-        element in the tuple will be what the UI tries to convert the data
-        string in the profile table to.
-
-        For example {TimeCommand.SET_TEST_LEVEL: (float, int),
-                     TimeCommand.SET_REPEAT: (type(None),)}.get(self)
-        """
-        return {}.get(self)
+    @classmethod
+    def valid_profile_commands(cls):
+        valid_commands = tuple(cls(command) for command in cls.VALID_PROFILE_COMMANDS.value)
+        return valid_commands
 
 
 class EnvironmentUICommands(Enum):
@@ -144,7 +143,7 @@ class EnvironmentMetadata(ABC):
     @abstractmethod
     def retrieve_metadata_from_netcdf(
         cls,
-        netcdf_handle: nc4._netCDF4.Dataset,
+        netcdf_handle: nc4._netCDF4.Group,
         environment_name: str,
         channel_list_bools: List[bool],
         hardware_metadata: HardwareMetadata,

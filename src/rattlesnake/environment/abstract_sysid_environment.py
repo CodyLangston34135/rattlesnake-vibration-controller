@@ -53,11 +53,13 @@ from rattlesnake.process.spectral_processing import (
 from rattlesnake.user_interface.ui_utilities import UICommands
 import multiprocessing as mp
 import time
+import openpyxl
 from abc import abstractmethod
 from copy import deepcopy
 from enum import Enum
 from multiprocessing.queues import Queue
 from abc import abstractmethod
+from typing import List
 import netCDF4 as nc4
 import numpy as np
 
@@ -87,6 +89,7 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
         environment_name,
         channel_list_bools,
         sample_rate,
+        sysid_metadata=None,
     ):
         super().__init__(
             environment_type,
@@ -98,15 +101,10 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
         # check the validity of the control class during initialize_environment.
         # It is always overwritten with control_class.update_sysid after sysid
         # is made so it is never used for actual control.
-        self._sysid_metadata = SysIdMetadata.default_metadata(sample_rate)
-
-    @property
-    def sysid_metadata(self):
-        return self._sysid_metadata
-
-    @sysid_metadata.setter
-    def sysid_metadata(self, value):
-        self._sysid_metadata = value
+        if isinstance(sysid_metadata, SysIdMetadata):
+            self.sysid_metadata = sysid_metadata
+        else:
+            self.sysid_metadata = SysIdMetadata.default_metadata(sample_rate)
 
     @property
     @abstractmethod
@@ -171,6 +169,87 @@ class SysIdEnvironmentMetadata(EnvironmentMetadata):
             return np.all([np.all(value == other.__dict__[field]) for field, value in self.__dict__.items()])
         except (AttributeError, KeyError):
             return False
+
+    @classmethod
+    @abstractmethod
+    def retrieve_metadata_from_netcdf(
+        cls,
+        netcdf_group_handle: nc4._netCDF4.Group,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        hardware_metadata: HardwareMetadata,
+    ):  # pylint: disable=c-extension-no-member
+        """Collects environment parameters from a netCDF dataset.
+
+        This function retrieves parameters from a netCDF dataset that was written
+        by the controller during streaming.  It must populate the widgets
+        in the user interface with the proper information.
+
+        This function is the "read" counterpart to the store_to_netcdf
+        function in the AbstractMetadata class, which will write parameters to
+        the netCDF file to document the metadata.
+
+        Note that the entire dataset is passed to this function, so the function
+        should collect parameters pertaining to the environment from a Group
+        in the dataset sharing the environment's name, e.g.
+
+        ``group = netcdf_handle.groups[self.environment_name]``
+        ``self.definition_widget.parameter_selector.setValue(group.parameter)``
+
+        Parameters
+        ----------
+        netcdf_handle : nc4._netCDF4.Dataset :
+            The netCDF dataset from which the data will be read.  It should have
+            a group name with the enviroment's name.
+        """
+        return SysIdMetadata.retrieve_metadata_from_netcdf(netcdf_group_handle, hardware_metadata)
+
+    @abstractmethod
+    def store_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+        """
+        Store parameters to a worksheet in an netCDF streaming file.
+
+        This function stores parameters from the environment into the netCDF
+        file in a group with the environment's name as its name.  The function
+        will receive a reference to the group within the dataset and should
+        store the environment's parameters into that group in the form of
+        attributes, dimensions, or variables.
+
+        This function is the "write" counterpart to the retrieve_metadata
+        function in the AbstractUI class, which will read parameters from
+        the netCDF file to populate the parameters in the user interface.
+
+        Parameters
+        ----------
+        netcdf_group_handle : nc4._netCDF4.Group
+            A reference to the Group within the netCDF dataset where the
+            environment's metadata is stored.
+        """
+
+    @classmethod
+    @abstractmethod
+    def retrieve_metadata_from_worksheet(
+        cls,
+        worksheet: openpyxl.worksheet.worksheet.Worksheet,
+        environment_name: str,
+        channel_list_bools: List[bool],
+        hardware_metadata: HardwareMetadata,
+    ):  # pylint: disable=c-extension-no-member
+        """Collects environment parameters from an Excel worksheet.
+
+        This function retrieves parameters from an Excel worksheet that was written
+        by the controller during streaming.  It must populate the widgets
+        in the user interface with the proper information.
+
+        This function is the "read" counterpart to the store_to_worksheet
+        function in the AbstractMetadata class, which will write parameters to
+        the netCDF file to document the metadata.
+
+        Note that the entire dataset is passed to this function, so the function
+        should collect parameters pertaining to the environment from a worksheet
+        in the worksheet sharing the environment's name, e.g.
+
+        """
 
 
 # region: Environment

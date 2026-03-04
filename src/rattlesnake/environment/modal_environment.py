@@ -24,7 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue, flush_queue, load_python_module
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.environment_utilities import ControlTypes
-from rattlesnake.environment.abstract_environment import EnvironmentProcess, EnvironmentMetadata, EnvironmentInstructions
+from rattlesnake.environment.abstract_environment import EnvironmentProcess, EnvironmentCommands, EnvironmentMetadata, EnvironmentInstructions
 from rattlesnake.process.signal_generation_utilities import (
     BurstRandomSignalGenerator,
     ChirpSignalGenerator,
@@ -71,25 +71,19 @@ WAIT_TIME = 0.02
 
 
 # region: Commands
-class ModalCommands(Enum):
+class ModalCommands(EnvironmentCommands):
     """Valid commands for the modal environment"""
 
     ACCEPT_FRAME = 2
     RUN_CONTROL = 3
     CHECK_FOR_COMPLETE_SHUTDOWN = 4
 
-    @property
-    def label(self):
-        """Used by UI as names for commands in profile table"""
-        return self.name.replace("_", " ").title()
-
-    @property
-    def valid_data(self):
-        return {
-            ModalCommands.ACCEPT_FRAME: int,
-            ModalCommands.RUN_CONTROL: type(None),
-            ModalCommands.CHECK_FOR_COMPLETE_SHUTDOWN: type(None),
-        }.get(self)
+    VALID_PROFILE_COMMANDS = ()
+    VALID_DATA = {
+        ACCEPT_FRAME: int,
+        RUN_CONTROL: type(None),
+        CHECK_FOR_COMPLETE_SHUTDOWN: type(None),
+    }
 
 
 class ModalUICommands(Enum):

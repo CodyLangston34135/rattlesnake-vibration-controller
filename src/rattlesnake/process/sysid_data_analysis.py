@@ -23,6 +23,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
+from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.utilities import VerboseMessageQueue, flush_queue
 import multiprocessing as mp
@@ -160,6 +161,45 @@ class SysIdMetadata:
         netcdf_group_handle.sysid_burst_ramp_fraction = self.sysid_burst_ramp_fraction
         netcdf_group_handle.sysid_low_frequency_cutoff = self.sysid_low_frequency_cutoff
         netcdf_group_handle.sysid_high_frequency_cutoff = self.sysid_high_frequency_cutoff
+
+    @classmethod
+    def retrieve_metadata_from_netcdf(cls, netcdf_group_handle: nc4._netCDF4.Group, hardware_metadata: HardwareMetadata):
+        sample_rate = hardware_metadata.sample_rate
+        sysid_frame_size = netcdf_group_handle.sysid_frame_size
+        sysid_averaging_type = netcdf_group_handle.sysid_averaging_type
+        sysid_noise_averages = netcdf_group_handle.sysid_noise_averages
+        sysid_averages = netcdf_group_handle.sysid_averages
+        sysid_exponential_averaging_coefficient = netcdf_group_handle.sysid_exponential_averaging_coefficient
+        sysid_estimator = netcdf_group_handle.sysid_estimator
+        sysid_level = netcdf_group_handle.sysid_level
+        sysid_level_ramp_time = netcdf_group_handle.sysid_level_ramp_time
+        sysid_signal_type = netcdf_group_handle.sysid_signal_type
+        sysid_window = netcdf_group_handle.sysid_window
+        sysid_overlap = netcdf_group_handle.sysid_overlap
+        sysid_burst_on = netcdf_group_handle.sysid_burst_on
+        sysid_pretrigger = netcdf_group_handle.sysid_pretrigger
+        sysid_burst_ramp_fraction = netcdf_group_handle.sysid_burst_ramp_fraction
+        sysid_low_frequency_cutoff = netcdf_group_handle.sysid_low_frequency_cutoff
+        sysid_high_frequency_cutoff = netcdf_group_handle.sysid_high_frequency_cutoff
+        return cls(
+            sample_rate,
+            sysid_frame_size,
+            sysid_averaging_type,
+            sysid_noise_averages,
+            sysid_averages,
+            sysid_exponential_averaging_coefficient,
+            sysid_estimator,
+            sysid_level,
+            sysid_level_ramp_time,
+            sysid_signal_type,
+            sysid_window,
+            sysid_overlap,
+            sysid_burst_on,
+            sysid_pretrigger,
+            sysid_burst_ramp_fraction,
+            sysid_low_frequency_cutoff,
+            sysid_high_frequency_cutoff,
+        )
 
     def validate(self):
         return True

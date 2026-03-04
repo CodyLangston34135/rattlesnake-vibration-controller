@@ -1632,14 +1632,17 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
                 else:  # Convert data str to correct data type
                     data = data_item.text() if data_item is not None else ""
                     data = data if data.strip() != "" else ""
-                    validator = command.valid_data
+                    validator = command.valid_data()[command]  # This syntax is a weird consequence of enums
                     try:
-                        data = validator(data)
+                        if validator is type(None):
+                            data = None
+                        else:
+                            data = validator(data)
                     except:
                         raise RattlesnakeError(f"{environment_name} profile event {command} requires {validator} data type")
 
                 # Update environment ui
-                if environment_name != "Global":
+                if environment_name != "Global" and command not in (GlobalCommands.START_ENVIRONMENT, GlobalCommands.STOP_ENVIRONMENT):
                     self.environment_uis[environment_name].update_gui((command, data))
 
                 # Add to profile_event_list
@@ -1776,6 +1779,10 @@ class RattlesnakeUI(QtWidgets.QMainWindow):
             case UICommands.ERROR:
                 dialog_title, error_message = data
                 error_message_qt(dialog_title, error_message)
+            case UICommands.HARDWARE_STARTED:
+                self.display_acquisition_started()
+            case UICommands.HARDWARE_ENDED:
+                self.display_acquisition_ended()
             case UICommands.COMPLETED_SYSTEM_ID:
                 environment, _ = data
                 print(f"System Id Completed for {environment}")
@@ -1824,11 +1831,16 @@ if __name__ == "__main__":
 
     rattlesnake = Rattlesnake(threaded=True, timeout=30)
     rattlesnake.set_hardware(hardware_metadata)
-    rattlesnake.set_environments([sine_environment_metadata])
-    # rattlesnake.set_profile_event_list(profile_event_list)
-    # rattlesnake.set_stream_metadata(stream_metadata)
-    # rattlesnake.start_acquisition(stream_metadata)
-    # rattlesnake.start_environment(environment_instructions)
+    # Time Environment
+    rattlesnake.set_environments([time_environment_metadata])
+    rattlesnake.set_profile_event_list(time_profile_event_list)
+    rattlesnake.set_stream_metadata(time_stream_metadata)
+    rattlesnake.start_acquisition(time_stream_metadata)
+    rattlesnake.start_environment(time_environment_instructions)
+    # Modal Environment
+    # rattlesnake.set_environments([modal_environment_metadata])
+    # # Sine Environment
+    # rattlesnake.set_environments([sine_environment_metadata])
 
     # This is a fix for scaling Rattlesnake to different resolution monitors
     font_size = 10  # pt size

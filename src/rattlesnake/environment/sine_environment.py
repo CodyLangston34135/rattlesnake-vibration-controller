@@ -24,7 +24,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands, flush_queue, scale2db, wrap, db2scale
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
-from rattlesnake.environment.abstract_environment import EnvironmentInstructions
+from rattlesnake.environment.abstract_environment import EnvironmentInstructions, EnvironmentCommands
 from rattlesnake.environment.abstract_sysid_environment import SysIdEnvironmentProcess, SysIdEnvironmentMetadata
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.environment.sine_utilities import (
@@ -34,7 +34,7 @@ from rattlesnake.environment.sine_utilities import (
     sine_sweep,
     vold_kalman_filter_generator,
 )
-from rattlesnake.process.sysid_data_analysis import sysid_data_analysis_process
+from rattlesnake.process.sysid_data_analysis import SysIdMetadata, sysid_data_analysis_process
 from rattlesnake.process.data_collector import data_collector_process
 from rattlesnake.process.signal_generation_utilities import ContinuousTransientSignalGenerator
 from rattlesnake.process.signal_generation import SignalGenerationCommands, SignalGenerationMetadata, signal_generation_process
@@ -65,7 +65,7 @@ if DEBUG:
 
 
 # region: Commands
-class SineCommands(Enum):
+class SineCommands(EnvironmentCommands):
     """Enumeration containing sine commands"""
 
     START_CONTROL = 0
@@ -74,6 +74,18 @@ class SineCommands(Enum):
     PERFORM_CONTROL_PREDICTION = 3
     SEND_EXCITATION_PREDICTION = 4
     SEND_RESPONSE_PREDICTION = 5
+    SET_TEST_LEVEL = 6
+
+    VALID_PROFILE_COMMANDS = (SET_TEST_LEVEL, SAVE_CONTROL_DATA)
+    VALID_DATA = {
+        START_CONTROL: type(None),
+        STOP_CONTROL: type(None),
+        SAVE_CONTROL_DATA: str,
+        PERFORM_CONTROL_PREDICTION: type(None),
+        SEND_EXCITATION_PREDICTION: type(None),
+        SEND_RESPONSE_PREDICTION: type(None),
+        SET_TEST_LEVEL: int,
+    }
 
 
 class SineUICommands(Enum):
@@ -178,6 +190,7 @@ class SineMetadata(SysIdEnvironmentMetadata):
         output_channel_indices,
         response_transformation_matrix,
         output_transformation_matrix,
+        sysid_metadata=None,
     ):
         """Creates a Metadata object defining a Sine environment
 
@@ -238,7 +251,7 @@ class SineMetadata(SysIdEnvironmentMetadata):
             A 2D np.ndarray consisting of a transformation matrix applied to the
             drive channels
         """
-        super().__init__(CONTROL_TYPE, environment_name, channel_list_bools, sample_rate)
+        super().__init__(CONTROL_TYPE, environment_name, channel_list_bools, sample_rate, sysid_metadata)
         self.samples_per_frame = samples_per_frame
         self.number_of_channels = number_of_channels
         self.specifications = specifications
@@ -350,7 +363,6 @@ class SineMetadata(SysIdEnvironmentMetadata):
         netcdf_group_handle.sample_rate = self.sample_rate
         netcdf_group_handle.samples_per_frame = self.samples_per_frame
         netcdf_group_handle.ramp_time = self.ramp_time
-
         netcdf_group_handle.number_of_channels = self.number_of_channels
         netcdf_group_handle.update_drives_after_environment = 1 if self.update_drives_after_environment else 0
         netcdf_group_handle.phase_fit = 1 if self.phase_fit else 0
@@ -441,7 +453,7 @@ class SineMetadata(SysIdEnvironmentMetadata):
     @classmethod
     def retrieve_metadata_from_netcdf(
         cls,
-        netcdf_group_handle: nc4._netCDF4.Dataset,
+        netcdf_group_handle: nc4._netCDF4.Group,
         environment_name: str,
         channel_list_bools: List[bool],
         hardware_metadata: HardwareMetadata,
@@ -470,7 +482,92 @@ class SineMetadata(SysIdEnvironmentMetadata):
             a group name with the enviroment's name.
 
         """
-        return
+
+        sysid_metadata = SysIdMetadata.retrieve_metadata_from_netcdf(netcdf_group_handle, hardware_metadata)
+        # Get the group
+        sample_rate = hardware_metadata.sample_rate
+        samples_per_frame = netcdf_group_handle.samples_per_frame
+        number_of_channels = netcdf_group_handle.number_of_channels
+        ramp_time = netcdf_group_handle.ramp_time
+        buffer_blocks = netcdf_group_handle.buffer_blocks
+        control_convergence = netcdf_group_handle.control_convergence
+        update_drives_after_environment = bool(netcdf_group_handle.update_drives_after_environment)
+        phase_fit = bool(netcdf_group_handle.phase_fit)
+        allow_automatic_aborts = bool(netcdf_group_handle.allow_automatic_aborts)
+        tracking_filter_type = netcdf_group_handle.tracking_filter_type
+        tracking_filter_cutoff = netcdf_group_handle.tracking_filter_cutoff
+        tracking_filter_order = netcdf_group_handle.tracking_filter_order
+        vk_filter_order = netcdf_group_handle.vk_filter_order
+        vk_filter_bandwidth = netcdf_group_handle.vk_filter_bandwidth
+        vk_filter_blocksize = netcdf_group_handle.vk_filter_blocksize
+        vk_filter_overlap = netcdf_group_handle.vk_filter_overlap
+        control_python_script = netcdf_group_handle.control_python_script
+        control_python_class = netcdf_group_handle.control_python_class
+        control_python_parameters = netcdf_group_handle.control_python_parameters
+        control_channel_indices = netcdf_group_handle.variables["control_channel_indices"][...]
+        environment_channel_list = [channel for channel, channel_bool in zip(hardware_metadata.channel_list, channel_list_bools) if channel_bool]
+        output_channel_indices = [index for index, channel in enumerate(environment_channel_list) if channel.feedback_device is not None]
+        response_transformation_matrix = None
+        if "response_transformation_matrix" in netcdf_group_handle.variables:
+            response_transformation_matrix = netcdf_group_handle.variables["response_transformation_matrix"][...]
+        output_transformation_matrix = None
+        if "output_transformation_matrix" in netcdf_group_handle.variables:
+            output_transformation_matrix = netcdf_group_handle.variables["output_transformation_matrix"][...]
+        specifications = []
+        if "specifications" in netcdf_group_handle.groups:
+            spec_group = netcdf_group_handle.groups["specifications"]
+            for spec_name, grp in spec_group.groups.items():
+                start_time = grp.start_time
+                frequency = grp.variables["spec_frequency"][...]
+                amplitude = grp.variables["spec_amplitude"][...]
+                phase = grp.variables["spec_phase"][...]
+                sweep_type = grp.variables["spec_sweep_type"][...]
+                sweep_rate = grp.variables["spec_sweep_rate"][...]
+                warning = grp.variables["spec_warning"][...]
+                abort = grp.variables["spec_abort"][...]
+                num_control = amplitude.shape[-1]
+                spec = SineSpecification(
+                    name=spec_name,
+                    start_time=start_time,
+                    num_control=num_control,
+                    frequency_breakpoints=frequency,
+                    amplitude_breakpoints=amplitude,
+                    phase_breakpoints=phase,
+                    sweep_type_breakpoints=sweep_type[:-1],  # matches constructor logic
+                    sweep_rate_breakpoints=sweep_rate[:-1],  # matches constructor logic
+                    warning_breakpoints=warning,
+                    abort_breakpoints=abort,
+                )
+                specifications.append(spec)
+        return cls(
+            environment_name=environment_name,
+            channel_list_bools=channel_list_bools,
+            sample_rate=sample_rate,
+            samples_per_frame=samples_per_frame,
+            number_of_channels=number_of_channels,
+            specifications=specifications,
+            ramp_time=ramp_time,
+            buffer_blocks=buffer_blocks,
+            control_convergence=control_convergence,
+            update_drives_after_environment=update_drives_after_environment,
+            phase_fit=phase_fit,
+            allow_automatic_aborts=allow_automatic_aborts,
+            tracking_filter_type=tracking_filter_type,
+            tracking_filter_cutoff=tracking_filter_cutoff,
+            tracking_filter_order=tracking_filter_order,
+            vk_filter_order=vk_filter_order,
+            vk_filter_bandwidth=vk_filter_bandwidth,
+            vk_filter_blocksize=vk_filter_blocksize,
+            vk_filter_overlap=vk_filter_overlap,
+            control_python_script=control_python_script,
+            control_python_class=control_python_class,
+            control_python_parameters=control_python_parameters,
+            control_channel_indices=control_channel_indices,
+            output_channel_indices=output_channel_indices,
+            response_transformation_matrix=response_transformation_matrix,
+            output_transformation_matrix=output_transformation_matrix,
+            sysid_metadata=sysid_metadata,
+        )
 
     def store_to_worksheet(self, worksheet):
         return super().store_to_worksheet(worksheet)
@@ -863,6 +960,7 @@ class SineEnvironment(SysIdEnvironmentProcess):
         self.map_command(SineCommands.SAVE_CONTROL_DATA, self.save_control_data)
         self.map_command(SineCommands.SEND_RESPONSE_PREDICTION, self.send_response_prediction)
         self.map_command(SineCommands.SEND_EXCITATION_PREDICTION, self.send_excitation_prediction)
+        self.map_command(SineCommands.SET_TEST_LEVEL, self.set_test_level)
         # Persistent data
         self.hardware_metadata = None
         self.environment_metadata = None
@@ -987,7 +1085,7 @@ class SineEnvironment(SysIdEnvironmentProcess):
             self.ramp_samples = None
         super().initialize_environment(environment_metadata)
         self.environment_metadata: SineMetadata
-        if environment_metadata.control_python_script is None:
+        if not environment_metadata.control_python_script:
             control_class = DefaultSineControlLaw
             self.extra_control_parameters = environment_metadata.control_python_parameters
         else:
@@ -2022,7 +2120,7 @@ class SineEnvironment(SysIdEnvironmentProcess):
         """Sends a signal to start the shutdown process"""
         self.queue_container.signal_generation_command_queue.put(self.environment_name, (SignalGenerationCommands.START_SHUTDOWN, None))
 
-    # region: Loading
+    # region: Environment Commands
     def save_control_data(self, filename):
         """Saves the control data to a numpy file"""
         output_dict = {}
@@ -2045,6 +2143,11 @@ class SineEnvironment(SysIdEnvironmentProcess):
         output_dict["output_oversample"] = self.hardware_metadata.output_oversample
         output_dict["names"] = [spec.name for spec in self.environment_metadata.specifications]
         np.savez(filename, **output_dict)
+
+    def set_test_level(self, data):
+        level = db2scale(data)
+        self.control_test_level = level
+        self.queue_container.gui_update_queue.put((self.environment_name, (SineCommands.SET_TEST_LEVEL, data)))
 
 
 # region: Process

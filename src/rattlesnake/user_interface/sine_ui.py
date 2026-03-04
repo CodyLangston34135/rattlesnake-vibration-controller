@@ -1265,6 +1265,18 @@ class SineUI(AbstractSysIdUI):
         self.enable_disable_partial_environment()
 
     def display_environment_started(self):
+        self.achieved_response_signals_combined = []
+        self.achieved_response_signals = []
+        self.achieved_response_amplitudes = []
+        self.achieved_response_phases = []
+        self.complex_drive_modifications = []
+        self.achieved_excitation_signals_combined = []
+        self.achieved_excitation_signals = []
+        self.achieved_excitation_frequencies = []
+        self.achieved_excitation_arguments = []
+        self.achieved_excitation_amplitudes = []
+        self.achieved_excitation_phases = []
+        self.shutdown_sent = False  # For profile events that bypass start_environment
         for widget in [
             self.run_widget.test_level_selector,
             self.run_widget.partial_environment_selector,
@@ -1279,17 +1291,6 @@ class SineUI(AbstractSysIdUI):
 
     def start_environment(self):
         """Sets itself up to start controlling and sends a signal to the environment to start"""
-        self.achieved_response_signals_combined = []
-        self.achieved_response_signals = []
-        self.achieved_response_amplitudes = []
-        self.achieved_response_phases = []
-        self.complex_drive_modifications = []
-        self.achieved_excitation_signals_combined = []
-        self.achieved_excitation_signals = []
-        self.achieved_excitation_frequencies = []
-        self.achieved_excitation_arguments = []
-        self.achieved_excitation_amplitudes = []
-        self.achieved_excitation_phases = []
         self.shutdown_sent = False
         for widget in [
             self.run_widget.test_level_selector,
@@ -1331,6 +1332,9 @@ class SineUI(AbstractSysIdUI):
         command, data = queue_data
 
         match command:
+            case SineCommands.SET_TEST_LEVEL:
+                test_level = int(data)
+                self.change_test_level_from_profile(test_level)
             case SineUICommands.REQUEST_PREDICTION_PLOT_CHOICES:
                 self.log("Sending Prediction Plot Choices...")
                 self.send_response_prediction_plot_choices()

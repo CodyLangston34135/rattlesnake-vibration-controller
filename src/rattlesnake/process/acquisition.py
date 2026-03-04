@@ -379,6 +379,7 @@ class AcquisitionProcess(AbstractMessageProcess):
             self.hardware.start()
             self.startup = False
             self.set_active()
+            self.gui_update_queue.put((UICommands.HARDWARE_STARTED, None))
             # print('started acquisition')
         self.get_first_output_data()
         if (
@@ -415,6 +416,7 @@ class AcquisitionProcess(AbstractMessageProcess):
                 # self.queue_container.streaming_command_queue.put(self.process_name, (GlobalCommands.FINALIZE_STREAMING, None))
                 self.has_streamed = False
             self.clear_active()
+            self.gui_update_queue.put((UICommands.HARDWARE_ENDED, None))
             self.log("Acquisition Shut Down")
         else:
             aquiring_environments = [name for name, flag in self.environment_active_flags.items() if flag]

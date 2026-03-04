@@ -978,6 +978,12 @@ class ModalUI(AbstractUI):
 
     def display_environment_started(self):
         self.run_widget.stop_test_button.setEnabled(True)
+        self.run_widget.preview_test_button.setEnabled(False)
+        self.run_widget.start_test_button.setEnabled(False)
+        self.run_widget.select_file_button.setEnabled(False)
+        self.run_widget.dof_override_table.setEnabled(False)
+        self.run_widget.add_override_button.setEnabled(False)
+        self.run_widget.remove_override_button.setEnabled(False)
 
     def start_environment(self):
         self.run_widget.preview_test_button.setEnabled(False)

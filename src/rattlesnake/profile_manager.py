@@ -1,7 +1,9 @@
 from rattlesnake.utilities import RattlesnakeError, QueueContainer, GlobalCommands
 from rattlesnake.environment.abstract_environment import EnvironmentInstructions
 from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.environment.environment_registry import ENVIRONMENT_COMMANDS
 from rattlesnake.environment.time_environment import TimeCommands
+from rattlesnake.environment.sine_environment import SineCommands
 from rattlesnake.user_interface.ui_utilities import UICommands
 import threading
 from typing import List
@@ -9,19 +11,20 @@ from datetime import datetime
 
 EXTRA_CLOSEOUT_TIME = 0.1  # Adds seconds to let the last profile event happen
 TASK_NAME = "Profile Manager"
-VALID_COMMANDS = {
-    "Global": (GlobalCommands.STOP_HARDWARE, GlobalCommands.START_STREAMING, GlobalCommands.STOP_STREAMING),
-    ControlTypes.TIME: (
-        GlobalCommands.START_ENVIRONMENT,
-        GlobalCommands.STOP_ENVIRONMENT,
-        UICommands.SET_ENVIRONMENT_INSTRUCTIONS,
-        *TimeCommands,
-    ),
-    ControlTypes.MODAL: (
-        GlobalCommands.START_ENVIRONMENT,
-        GlobalCommands.STOP_ENVIRONMENT,
-    ),
-}
+VALID_COMMANDS = {"Global": (GlobalCommands.STOP_HARDWARE, GlobalCommands.START_STREAMING, GlobalCommands.STOP_STREAMING)}
+for control_type, command_type in ENVIRONMENT_COMMANDS.items():
+    VALID_COMMANDS.update(
+        {
+            control_type: (
+                GlobalCommands.START_ENVIRONMENT,
+                GlobalCommands.STOP_ENVIRONMENT,
+                UICommands.SET_ENVIRONMENT_INSTRUCTIONS,
+                *command_type.valid_profile_commands(),
+            )
+        }
+    )
+
+
 VALID_DATA = {
     GlobalCommands.STOP_HARDWARE: type(None),
     GlobalCommands.START_STREAMING: type(None),
@@ -30,7 +33,9 @@ VALID_DATA = {
     GlobalCommands.STOP_ENVIRONMENT: type(None),
     UICommands.SET_ENVIRONMENT_INSTRUCTIONS: EnvironmentInstructions,
 }
-VALID_DATA.update({command: command.valid_data for command in TimeCommands})
+for control_type, command_type in ENVIRONMENT_COMMANDS.items():
+    for command in command_type.valid_profile_commands():
+        VALID_DATA[command] = command_type.valid_data()[command]
 
 
 # region: ProfileEvent
@@ -97,7 +102,8 @@ class ProfileManager:
         self.command_map[GlobalCommands.STOP_STREAMING] = self.stop_streaming
         self.command_map[GlobalCommands.START_ENVIRONMENT] = self.start_environment
         self.command_map[GlobalCommands.STOP_ENVIRONMENT] = self.stop_environment
-        self.command_map.update({command: self.send_environment_command for command in TimeCommands})
+        for command_type in ENVIRONMENT_COMMANDS.values():
+            self.command_map.update({command: self.send_environment_command for command in command_type})
 
     @property
     def log_file_queue(self):
