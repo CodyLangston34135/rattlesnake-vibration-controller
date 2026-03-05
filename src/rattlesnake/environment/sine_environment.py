@@ -21,7 +21,15 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-from rattlesnake.utilities import VerboseMessageQueue, GlobalCommands, flush_queue, scale2db, wrap, db2scale
+from rattlesnake.utilities import (
+    VerboseMessageQueue,
+    GlobalCommands,
+    flush_queue,
+    scale2db,
+    wrap,
+    db2scale,
+    read_transformation_matrix_from_worksheet,
+)
 from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.abstract_environment import EnvironmentInstructions, EnvironmentCommands
@@ -33,7 +41,7 @@ from rattlesnake.environment.sine_utilities import (
     digital_tracking_filter_generator,
     sine_sweep,
     vold_kalman_filter_generator,
-    read_transformation_matrix_from_worksheet,
+    load_specification,
 )
 from rattlesnake.process.sysid_data_analysis import SysIdMetadata, sysid_data_analysis_process
 from rattlesnake.process.data_collector import data_collector_process
@@ -648,7 +656,7 @@ class SineMetadata(SysIdEnvironmentMetadata):
         worksheet.cell(18, 3, "# List of channels, one per cell on this row")
         SysIdMetadata.create_blank_worksheet_template(worksheet, start_row=19)
         worksheet.cell(33, 1, "Specification File:")
-        worksheet.cell(33, 3, "# Path to the file containing the Specification")
+        worksheet.cell(33, 3, "# Path to the file containing the Specification. Can specify multiple by using multiple columns")
         worksheet.cell(34, 1, "Response Transformation Matrix:")
         worksheet.cell(
             34,
@@ -740,34 +748,12 @@ class SineMetadata(SysIdEnvironmentMetadata):
         channel_list_bools: List[bool],
         hardware_metadata: HardwareMetadata,
     ):
-        # environment_name: str,
-        # channel_list_bools: list,
-        # sample_rate: int,
-        # samples_per_frame,
-        # number_of_channels,
-        # specifications,
-        # ramp_time,
-        # buffer_blocks,
-        # control_convergence,
-        # update_drives_after_environment,
-        # phase_fit,
-        # allow_automatic_aborts,
-        # tracking_filter_type,
-        # tracking_filter_cutoff,
-        # tracking_filter_order,
-        # vk_filter_order,
-        # vk_filter_bandwidth,
-        # vk_filter_blocksize,
-        # vk_filter_overlap,
-        # control_python_script,
-        # control_python_class,
-        # control_python_parameters,
-        # control_channel_indices,
-        # output_channel_indices,
-        # response_transformation_matrix,
-        # output_transformation_matrix,
-        # sysid_metadata=None,
         sample_rate = hardware_metadata.sample_rate
+        number_of_channels = sum(channel_list_bools)
+        samples_per_frame = hardware_metadata.samples_per_read
+        environment_channel_list = [channel for channel, channel_bool in zip(hardware_metadata.channel_list, channel_list_bools) if channel_bool]
+        output_channel_indices = [index for index, channel in enumerate(environment_channel_list) if channel.feedback_device is not None]
+
         ramp_time = float(worksheet.cell(2, 2).value)
         control_convergence = float(worksheet.cell(3, 2).value)
         update_drives_after_environment = worksheet.cell(4, 2).value.upper() == "Y"
@@ -779,51 +765,125 @@ class SineMetadata(SysIdEnvironmentMetadata):
         tracking_filter_order = int(worksheet.cell(10, 2).value)
         vk_filter_order = int(worksheet.cell(11, 2).value)
         vk_filter_bandwidth = float(worksheet.cell(12, 2).value)
+        vk_filter_blocksize = int(worksheet.cell(13, 2).value)
         vk_filter_overlap = float(worksheet.cell(14, 2).value)
-        control_python_script = worksheet.cell(15, 2).value
-        control_python_class = worksheet.cell(16, 2).value
-        control_python_parameters = worksheet.cell(17, 2).value
+        control_python_script = worksheet.cell(15, 2).value if worksheet.cell(15, 2).value is not None else ""
+        control_python_class = worksheet.cell(16, 2).value if worksheet.cell(16, 2).value is not None else ""
+        control_python_parameters = worksheet.cell(17, 2).value if worksheet.cell(17, 2).value is not None else ""
         control_channel_indices = []
         column_index = 2
         while True:
             channel_ind = worksheet.cell(18, column_index).value
             if channel_ind is None or (isinstance(channel_ind, str) and channel_ind.strip() == ""):
                 break
-            control_channel_indices.append(int(channel_ind) - 1)
+            try:
+                control_channel_indices.append(int(channel_ind) - 1)
+            except:
+                break  # This is incase it cant be converted to int
             column_index += 1
         sysid_metadata = SysIdMetadata.retrieve_metadata_from_worksheet(worksheet, hardware_metadata, start_row=19)
 
         # Now we need to find the transformation matrices' sizes
         start_response_row = 34
+        num_response_row = 1
         if isinstance(worksheet.cell(start_response_row, 2).value, str) and worksheet.cell(start_response_row, 2).value.lower() == "none":
             response_transformation_matrix = None
+        elif worksheet.cell(start_response_row, 2).value.lower().startswith("# transformation matrix"):
+            response_transformation_matrix = None
         else:
-            num_response_row = 0
+
             while True:
-                num_response_row += 1
                 first_col_value = worksheet.cell(start_response_row + num_response_row, 2).value
                 if worksheet.cell(start_response_row + num_response_row, 1).value == "Output Transformation Matrix:" or (
                     first_col_value is None or (isinstance(first_col_value, str) and first_col_value.strip() == "")
                 ):
                     break
-
-        response_transformation_matrix = read_transformation_matrix_from_worksheet(
-            worksheet, start_row=start_response_row, num_rows=num_response_row, start_col=2
-        )
+                num_response_row += 1
+            response_transformation_matrix = read_transformation_matrix_from_worksheet(
+                worksheet, start_row=start_response_row, num_rows=num_response_row, start_col=2
+            )
+        # Output transformation matrix
         start_output_row = start_response_row + num_response_row
+        num_output_row = 1
         if isinstance(worksheet.cell(start_output_row, 2).value, str) and worksheet.cell(start_output_row, 2).value.lower() == "none":
             output_transformation_matrix = None
+        elif worksheet.cell(start_output_row, 2).value.lower().startswith("# transformation matrix"):
+            output_transformation_matrix = None
         else:
-            num_output_row = 0
             while True:
-                num_output_row += 1
                 first_col_value = worksheet.cell(start_output_row + num_output_row, 2).value
                 if first_col_value is None or (isinstance(first_col_value, str) and first_col_value.strip() == ""):
                     break
-        output_transformation_matrix_transformation_matrix = read_transformation_matrix_from_worksheet(
-            worksheet, start_row=start_output_row, num_rows=num_output_row, start_col=2
+                num_output_row += 1
+            output_transformation_matrix = read_transformation_matrix_from_worksheet(
+                worksheet, start_row=start_output_row, num_rows=num_output_row, start_col=2
+            )
+
+        # Specification Files
+        specification_files = []
+        column_index = 2
+        while True:
+            filename = worksheet.cell(33, column_index).value
+            if filename is None or (isinstance(filename, str) and filename.strip() == ""):
+                break
+            specification_files.append(str(filename))
+            column_index += 1
+        specifications = []
+        for filename in specification_files:
+            (
+                frequencies,
+                amplitudes,
+                phases,  # Degrees
+                sweep_types,
+                sweep_rates,
+                warnings,
+                aborts,
+                start_time,
+                name,
+            ) = load_specification(filename)
+            spec = SineSpecification(
+                name=name,
+                start_time=start_time,
+                num_control=len(control_channel_indices),
+                frequency_breakpoints=frequencies,
+                amplitude_breakpoints=amplitudes,
+                phase_breakpoints=phases,
+                sweep_type_breakpoints=sweep_types,
+                sweep_rate_breakpoints=sweep_rates,
+                warning_breakpoints=warnings,
+                abort_breakpoints=aborts,
+            )
+            specifications.append(spec)
+
+        return cls(
+            environment_name=environment_name,
+            channel_list_bools=channel_list_bools,
+            sample_rate=sample_rate,
+            samples_per_frame=samples_per_frame,
+            number_of_channels=number_of_channels,
+            specifications=specifications,
+            ramp_time=ramp_time,
+            buffer_blocks=buffer_blocks,
+            control_convergence=control_convergence,
+            update_drives_after_environment=update_drives_after_environment,
+            phase_fit=phase_fit,
+            allow_automatic_aborts=allow_automatic_aborts,
+            tracking_filter_type=tracking_filter_type,
+            tracking_filter_cutoff=tracking_filter_cutoff,
+            tracking_filter_order=tracking_filter_order,
+            vk_filter_order=vk_filter_order,
+            vk_filter_bandwidth=vk_filter_bandwidth,
+            vk_filter_blocksize=vk_filter_blocksize,
+            vk_filter_overlap=vk_filter_overlap,
+            control_python_script=control_python_script,
+            control_python_class=control_python_class,
+            control_python_parameters=control_python_parameters,
+            control_channel_indices=control_channel_indices,
+            output_channel_indices=output_channel_indices,
+            response_transformation_matrix=response_transformation_matrix,
+            output_transformation_matrix=output_transformation_matrix,
+            sysid_metadata=sysid_metadata,
         )
-        return
 
     def set_parameters_from_template(self, worksheet):
 
