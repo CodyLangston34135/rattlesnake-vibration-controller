@@ -364,6 +364,141 @@ class SysIdMetadata:
             return False
 
 
+class SysIdDataPackage:
+    def __init__(
+        self,
+        frequencies,
+        sysid_frf,
+        sysid_coherence,
+        sysid_response_cpsd,
+        sysid_reference_cpsd,
+        sysid_condition,
+        sysid_response_noise,
+        sysid_reference_noise,
+    ):
+        self.frequencies = frequencies
+        self.sysid_frf = sysid_frf
+        self.sysid_coherence = sysid_coherence
+        self.sysid_response_cpsd = sysid_response_cpsd
+        self.sysid_reference_cpsd = sysid_reference_cpsd
+        self.sysid_condition = sysid_condition
+        self.sysid_response_noise = sysid_response_noise
+        self.sysid_reference_noise = sysid_reference_noise
+
+    def store_to_netcdf(self, netcdf_group_handle: nc4._netCDF4.Group):
+        netcdf_group_handle.createDimension("sysid_control_channels", self.sysid_frf.shape[1])
+        netcdf_group_handle.createDimension("sysid_output_channels", self.sysid_frf.shape[2])
+        netcdf_group_handle.createDimension("sysid_fft_lines", self.sysid_frf.shape[0])
+        var = netcdf_group_handle.createVariable(
+            "frf_data_real",
+            "f8",
+            ("sysid_fft_lines", "sysid_control_channels", "sysid_output_channels"),
+        )
+        var[...] = self.sysid_frf.real
+        var = netcdf_group_handle.createVariable(
+            "frf_data_imag",
+            "f8",
+            ("sysid_fft_lines", "sysid_control_channels", "sysid_output_channels"),
+        )
+        var[...] = self.sysid_frf.imag
+        var = netcdf_group_handle.createVariable("frf_coherence", "f8", ("sysid_fft_lines", "sysid_control_channels"))
+        var[...] = self.sysid_coherence.real
+        var = netcdf_group_handle.createVariable(
+            "response_cpsd_real",
+            "f8",
+            ("sysid_fft_lines", "sysid_control_channels", "sysid_control_channels"),
+        )
+        var[...] = self.sysid_response_cpsd.real
+        var = netcdf_group_handle.createVariable(
+            "response_cpsd_imag",
+            "f8",
+            ("sysid_fft_lines", "sysid_control_channels", "sysid_control_channels"),
+        )
+        var[...] = self.sysid_response_cpsd.imag
+        var = netcdf_group_handle.createVariable(
+            "reference_cpsd_real",
+            "f8",
+            ("sysid_fft_lines", "sysid_output_channels", "sysid_output_channels"),
+        )
+        var[...] = self.sysid_reference_cpsd.real
+        var = netcdf_group_handle.createVariable(
+            "reference_cpsd_imag",
+            "f8",
+            ("sysid_fft_lines", "sysid_output_channels", "sysid_output_channels"),
+        )
+        var[...] = self.sysid_reference_cpsd.imag
+        var = netcdf_group_handle.createVariable(
+            "response_noise_cpsd_real",
+            "f8",
+            ("sysid_fft_lines", "sysid_control_channels", "sysid_control_channels"),
+        )
+        var[...] = self.sysid_response_noise.real
+        var = netcdf_group_handle.createVariable(
+            "response_noise_cpsd_imag",
+            "f8",
+            ("sysid_fft_lines", "sysid_control_channels", "sysid_control_channels"),
+        )
+        var[...] = self.sysid_response_noise.imag
+        var = netcdf_group_handle.createVariable(
+            "reference_noise_cpsd_real",
+            "f8",
+            ("sysid_fft_lines", "sysid_output_channels", "sysid_output_channels"),
+        )
+        var[...] = self.sysid_reference_noise.real
+        var = netcdf_group_handle.createVariable(
+            "reference_noise_cpsd_imag",
+            "f8",
+            ("sysid_fft_lines", "sysid_output_channels", "sysid_output_channels"),
+        )
+        var[...] = self.sysid_reference_noise.imag
+
+    @classmethod
+    def retrieve_from_netcdf(cls, netcdf_group_handle: nc4._netCDF4.Group, sample_rate: int):
+        frame_size = netcdf_group_handle.sysid_frame_size
+        fft_lines = netcdf_group_handle.dimensions["fft_lines"].size
+        variables = netcdf_group_handle.variables
+        combine = np.vectorize(complex)
+        sysid_frf = np.array(combine(variables["frf_data_real"][:], variables["frf_data_imag"][:]))
+        sysid_coherence = np.array(variables["frf_coherence"][:])
+        sysid_response_cpsd = np.array(
+            combine(
+                variables["response_cpsd_real"][:],
+                variables["response_cpsd_imag"][:],
+            )
+        )
+        sysid_reference_cpsd = np.array(
+            combine(
+                variables["reference_cpsd_real"][:],
+                variables["reference_cpsd_imag"][:],
+            )
+        )
+        sysid_response_noise = np.array(
+            combine(
+                variables["response_noise_cpsd_real"][:],
+                variables["response_noise_cpsd_imag"][:],
+            )
+        )
+        sysid_reference_noise = np.array(
+            combine(
+                variables["reference_noise_cpsd_real"][:],
+                variables["reference_noise_cpsd_imag"][:],
+            )
+        )
+        sysid_condition = np.linalg.cond(sysid_frf)
+        frequencies = np.arange(fft_lines) * sample_rate / frame_size
+
+        return cls(
+            frequencies,
+            sysid_frf,
+            sysid_coherence,
+            sysid_response_cpsd,
+            sysid_reference_cpsd,
+            sysid_condition,
+            sysid_response_noise,
+            sysid_reference_noise,
+        )
+
+
 # region: Data Analysis
 class SysIDAnalysisProcess(AbstractMessageProcess):
     """Process to perform data analysis and control calculations in an environment
