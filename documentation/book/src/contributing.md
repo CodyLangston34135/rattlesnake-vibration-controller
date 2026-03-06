@@ -2,8 +2,8 @@
 numbering:
     headings: false
 ---
-(sec:development)=
-# Development
+(sec:contributing)=
+# Contributing
 
 ## Documentation
 
@@ -33,10 +33,16 @@ Within this `documentation` folder, the `myst.yml` file specifies how Jupyter Bo
 
 ```sh
 cd rattlesnake-vibration-controller/documentation
-jupyter book build
+jupyter book build --html --strict
 ```
 
-This will build the book.  The output will be similar to this:
+This will build the Jupyter Book documentation.
+
+```{warning}
+The foregoing command may not work behind a corporate firewall.
+```
+
+The output will be similar to this:
 
 ```sh
 building myst-cli session with API URL: https://api.mystmd.org
@@ -46,7 +52,7 @@ building myst-cli session with API URL: https://api.mystmd.org
 📖 Built book/src/_generated/random_vibration_run_doc.md in 64 ms.
 📖 Built book/src/chapter_13.md in 124 ms.
 📖 Built book/src/notation.md in 117 ms.
-📖 Built book/src/development.md in 117 ms.
+📖 Built book/src/contributing.md in 117 ms.
 <--(snip)-->
 📚 Built 32 pages for project in 813 ms.
 ```

@@ -3,16 +3,14 @@
 name: ci.yml
 
 on:
-  push:
+  push:  # Triggers if a commit is directly pushed to one of the specified branches
     branches:
       - main
-      - dev
-      - "doc*" # Explicitly include branches with "doc" in the name
-  pull_request:
+      - "dev*"  # Explicity include branches with "dev" in the name (e.g., dev, dev-feature, etc.)
+  pull_request:  # Triggers when a pull request is opened, synchronized, or reopened targeting one of the specified branches
     branches:
       - main
-      - dev
-      - "doc*" # Explicitly include branches with "doc" in the name
+      - "dev*"  # Explicity include branches with "dev" in the name (e.g., dev, dev-feature, etc.)
 env:
   # `BASE_URL` determines the website is served from, including CSS & JS assets
   # You may need to change this to `BASE_URL: ''`
@@ -143,7 +141,7 @@ jobs:
   # 1. Install uv: https://astral.sh/uv/installation/
   # 2. Run `uv pip install "jupyter-book>=2.0.0"`
   # 3. Run `cd documentation && uv run jupyter book build --html --strict && cd ..` from the root of the repository to build the book. The output will be in documentation/_build/html
-  jupyter_book:
+  build_book:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -163,6 +161,7 @@ jobs:
 
       - name: Build the book
         run: |
+          # Build the book. We use --strict to ensure any errors fail the job.
           cd documentation && uv run jupyter book build --html --strict && cd ..
 
       - name: Upload artifact
@@ -172,18 +171,13 @@ jobs:
           path: documentation/_build/html
 
   deploy:
-    needs: [lint, coverage, jupyter_book]
+    needs: [lint, coverage, build_book]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/dev'
-    # if: github.ref == 'refs/heads/documentation-update' # Temporary condition for testing - change back to dev after testing
+    if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Echo BASE_URL from env
-        run: |
-          echo "BASE_URL from env: $BASE_URL"
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v3
@@ -221,6 +215,14 @@ jobs:
           name: jupyter-book-report
           path: jupyter-book-report
 
+      - name: Set Deploy Directory
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "DEPLOY_SUBDIR=main" >> $GITHUB_ENV
+          else
+            echo "DEPLOY_SUBDIR=dev" >> $GITHUB_ENV
+          fi
+
       - name: Create badges
         run: |
           # Pylint badge
@@ -233,7 +235,7 @@ jobs:
           {
             "score": "${SCORE}",
             "color": "${{ env.BADGE_COLOR }}",
-            "pages_url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/reports/pylint/",
+            "pages_url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ env.DEPLOY_SUBDIR }}/reports/pylint/",
             "workflow_url": "${{ github.server_url }}/${{ github.repository }}/actions/workflows/ci.yml",
             "run_id": "${{ github.run_id }}",
             "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
@@ -250,7 +252,7 @@ jobs:
           {
             "coverage": "${{ env.COVERAGE }}",
             "color": "${{ env.BADGE_COLOR_COV }}",
-            "pages_url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/reports/coverage/",
+            "pages_url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ env.DEPLOY_SUBDIR }}/reports/coverage/",
             "workflow_url": "${WORKFLOW_URL}",
             "run_id": "${{ github.run_id }}",
             "artifact_url": "${REPO_URL}/actions/runs/${{ github.run_id }}",
@@ -271,13 +273,16 @@ jobs:
 
       - name: Assemble pages directory
         run: |
-          mkdir -p pages/reports/pylint
-          mkdir -p pages/reports/coverage
-          mkdir -p pages/book/jupyter
-          mv pylint-report/pylint_report.html pages/reports/pylint/index.html
-          mv pytest-report/pytest_report.html pages/reports/coverage/index.html
-          mv pytest-report/htmlcov/ pages/reports/coverage/
-          mv jupyter-book-report/* pages/book/jupyter/
+          mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/reports/pylint"
+          mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage"
+          mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/book/jupyter"
+          
+          mv pylint-report/pylint_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/pylint/index.html"
+          mv pytest-report/pytest_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/index.html"
+          mv pytest-report/htmlcov/ "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/"
+          mv jupyter-book-report/* "pages/${{ env.DEPLOY_SUBDIR }}/book/jupyter/"
+          
+          # Create a root index.html that redirects or links to both versions
           cat > pages/index.html << 'EOF'
           <!DOCTYPE html>
           <html lang="en">
@@ -289,20 +294,33 @@ jobs:
                   body { font-family: sans-serif; margin: 40px; background-color: #f6f8fa; }
                   .container { max-width: 800px; margin: 0 auto; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
                   h1 { color: #333; }
+                  h2 { color: #555; border-bottom: 1px solid #eee; padding-bottom: 10px; }
                   a { color: #0366d6; text-decoration: none; }
                   a:hover { text-decoration: underline; }
                   ul { list-style-type: none; padding: 0; }
-                  li { background-color: #f1f1f1; margin: 10px 0; padding: 15px; border-radius: 4px; }
+                  li { background-color: #f1f1f1; margin: 10px 0; padding: 15px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+                  .badge { font-weight: bold; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; }
+                  .badge-main { background-color: #0366d6; color: white; }
+                  .badge-dev { background-color: #f66a0a; color: white; }
               </style>
           </head>
           <body>
               <div class="container">
-                  <h1>Rattlesnake Vibration Controller - Reports</h1>
-                  <p>This page provides links to the latest reports generated by the CI/CD pipeline.</p>
+                  <h1>Rattlesnake Vibration Controller - CI/CD Hub</h1>
+                  <p>Access the latest documentation and quality reports for both the stable and development versions.</p>
+                  
+                  <h2>🚀 Released (Main Branch)</h2>
                   <ul>
-                      <li><a href="reports/pylint/index.html">Pylint Report</a></li>
-                      <li><a href="reports/coverage/index.html">Pytest Coverage Report</a></li>
-                      <li><a href="book/jupyter/index.html">Rattlesnake User's Manual</a></li>
+                      <li><a href="main/book/jupyter/index.html">User's Manual</a> <span class="badge badge-main">stable</span></li>
+                      <li><a href="main/reports/pylint/index.html">Pylint Report</a></li>
+                      <li><a href="main/reports/coverage/index.html">Pytest Coverage</a></li>
+                  </ul>
+
+                  <h2>🛠️ Development (Dev Branch)</h2>
+                  <ul>
+                      <li><a href="dev/book/jupyter/index.html">User's Manual</a> <span class="badge badge-dev">latest</span></li>
+                      <li><a href="dev/reports/pylint/index.html">Pylint Report</a></li>
+                      <li><a href="dev/reports/coverage/index.html">Pytest Coverage</a></li>
                   </ul>
               </div>
           </body>
@@ -316,7 +334,7 @@ jobs:
           publish_dir: ./pages
           publish_branch: gh-pages
           keep_files: true
-          commit_message: 'Deploy reports for ${{ github.sha }}'
+          commit_message: 'Deploy reports for ${{ github.ref_name }} (${{ github.sha }})'
 
   matrix:
     runs-on: ${{ matrix.os }}
