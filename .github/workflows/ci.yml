@@ -3,14 +3,20 @@
 name: ci.yml
 
 on:
-  push:  # Triggers if a commit is directly pushed to one of the specified branches
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
     branches:
       - main
       - "dev*"  # Explicity include branches with "dev" in the name (e.g., dev, dev-feature, etc.)
-  pull_request:  # Triggers when a pull request is opened, synchronized, or reopened targeting one of the specified branches
-    branches:
-      - main
-      - "dev*"  # Explicity include branches with "dev" in the name (e.g., dev, dev-feature, etc.)
+
+# Concurrency ensures that if you push again while a build is already running, the old one is canceled to save time.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   # `BASE_URL` determines the website is served from, including CSS & JS assets
   # This is dynamically set based on the branch to ensure correct pathing on GitHub Pages
@@ -309,14 +315,14 @@ jobs:
                   <h1>Rattlesnake Vibration Controller - CI/CD Hub</h1>
                   <p>Access the latest documentation and quality reports for both the stable and development versions.</p>
                   
-                  <h2>🚀 Released ([Main Branch](https://github.com/sandialabs/rattlesnake-vibration-controller/tree/main?tab=readme-ov-file)</h2>
+                  <h2>🚀 Released (<a href="https://github.com/sandialabs/rattlesnake-vibration-controller/tree/main?tab=readme-ov-file">Main Branch</a>)</h2>
                   <ul>
                       <li><a href="main/book/jupyter/index.html">User's Manual (work in progress)</a> <span class="badge badge-main">stable</span></li>
                       <li><a href="main/reports/pylint/index.html">Pylint Report (work in progress)</a></li>
                       <li><a href="main/reports/coverage/index.html">Pytest Coverage (work in progress)</a></li>
                   </ul>
 
-                  <h2>🛠️ Development ([Dev Branch](https://github.com/sandialabs/rattlesnake-vibration-controller/tree/dev?tab=readme-ov-file))</h2>
+                  <h2>🛠️ Development (<a href="https://github.com/sandialabs/rattlesnake-vibration-controller/tree/dev?tab=readme-ov-file">Dev Branch</a>)</h2>
                   <ul>
                       <li><a href="dev/book/jupyter/index.html">User's Manual</a> <span class="badge badge-dev">latest</span></li>
                       <li><a href="dev/reports/pylint/index.html">Pylint Report</a></li>
