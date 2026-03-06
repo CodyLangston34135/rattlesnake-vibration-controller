@@ -178,7 +178,6 @@ def load_metadata_from_netcdf(filepath):
     channel_list = load_channel_table_from_netcdf(filepath)
 
     # Hardware
-
     hardware_type = HardwareType(dataset.hardware)
     channel_list = channel_list
     sample_rate = int(dataset.sample_rate)

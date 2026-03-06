@@ -343,6 +343,9 @@ class Rattlesnake:
         environment_metadata_list = list(self.environment_metadata.values())
         save_rattlesnake_template(filepath, self.hardware_metadata, environment_metadata_list, self.last_profile_event_list)
 
+    def load_sys_id_to_environment(self, filepath, environment_name):
+        pass
+
     # region: Hardware
     def set_hardware(self, hardware_metadata: HardwareMetadata) -> None:
         """Validates hardware_metadata and sends data to relevant processes"""

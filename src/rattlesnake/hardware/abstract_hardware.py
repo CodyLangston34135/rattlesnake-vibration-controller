@@ -1,8 +1,10 @@
 from rattlesnake.utilities import RattlesnakeError
 from rattlesnake.hardware.hardware_utilities import Channel, HardwareModules
 from abc import ABC, abstractmethod
-from typing import List
+import openpyxl
+import netCDF4 as nc4
 import numpy as np
+from typing import List
 
 
 # region: HardwareMetadata
@@ -101,6 +103,24 @@ class HardwareMetadata(ABC):
         for attr in Channel().channel_attr_list:
             assist_modules[attr] = HardwareModules.NONE
         return assist_modules
+
+    # @abstractmethod
+    # def store_to_netcdf(self, netcdf_group_handle: nc4._netCDF4.Group) -> None:
+    #     pass
+
+    # @classmethod
+    # @abstractmethod
+    # def retrieve_metadata_from_netcdf(cls, netcdf_handle: nc4._netCDF4.Group):
+    #     pass
+
+    # @abstractmethod
+    # def store_to_worksheet(self, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+    #     pass
+
+    # @classmethod
+    # @abstractmethod
+    # def retrieve_metadata_from_worksheet(cls, worksheet: openpyxl.worksheet.worksheet.Worksheet):
+    #     pass
 
 
 # region: HardwareAcquisition
