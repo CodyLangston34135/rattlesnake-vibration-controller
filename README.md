@@ -1,5 +1,17 @@
 ![Rattlesnake Logo](/logo/Rattlesnake_Logo_Banner.png)
 
+# Rattlesnake Vibration Controller
+
+[![CI](https://github.com/sandialabs/rattlesnake-vibration-controller/actions/workflows/ci.yml/badge.svg)](https://github.com/sandialabs/rattlesnake-vibration-controller/actions/workflows/ci.yml)
+![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-blue)
+![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
+[![GitHub license](https://img.shields.io/badge/license-GNU-blue.svg)](https://github.com/sandialabs/rattlesnake-vibration-controller/blob/main/LICENSE)
+
+[![GitHub Pages badge](https://img.shields.io/badge/GitHub%20Pages-blueviolet?logo=github)](https://sandialabs.github.io/rattlesnake-vibration-controller/)
+[![Pylint Report badge](https://img.shields.io/badge/Pylint%20Report-blue)](https://sandialabs.github.io/rattlesnake-vibration-controller/main/reports/pylint/) [![Coverage Report badge](https://img.shields.io/badge/Coverage%20Report-blue)](https://sandialabs.github.io/rattlesnake-vibration-controller/main/reports/coverage/)
+
+## Overview
+
 This project aims to develop a Combined Environments, Multiple-Input/Multiple-Output (MIMO) vibration
 controller that can better simulate dynamic environments than a traditional single-shaker test.
 
@@ -9,7 +21,12 @@ and New Mexico (the location of the main Sandia National Laboratories campus, wh
 
 Rattlesnake can be run as a Python script using the code from this repository, or an executable can be downloaded from the [Releases](https://github.com/sandialabs/rattlesnake-vibration-controller/releases) page.
 
-See the [User's Manual](https://github.com/sandialabs/rattlesnake-vibration-controller/releases/download/v3.0.0/Rattlesnake.pdf) for more information.
+See the documentation for more information:
+
+* Rattlesnake User's Manual
+  * [Released](https://sandialabs.github.io/rattlesnake-vibration-controller/main/book/jupyter/index.html) ![branch-main](https://img.shields.io/badge/branch-main-blue)
+  * [Development](https://sandialabs.github.io/rattlesnake-vibration-controller/dev/book/jupyter/index.html) ![branch-dev](https://img.shields.io/badge/branch-dev-orange)
+* Rattlesnake User's Manual, Version 3, SAND2024-14378, Oct 2024. [Download](https://github.com/sandialabs/rattlesnake-vibration-controller/releases/download/v3.0.0/Rattlesnake.pdf) (78 MB)
 
 ### Flexible
 
