@@ -13,8 +13,8 @@ on:
       - "dev*"  # Explicity include branches with "dev" in the name (e.g., dev, dev-feature, etc.)
 env:
   # `BASE_URL` determines the website is served from, including CSS & JS assets
-  # You may need to change this to `BASE_URL: ''`
-  BASE_URL: /${{ github.event.repository.name }}/book/jupyter/
+  # This is dynamically set based on the branch to ensure correct pathing on GitHub Pages
+  BASE_URL: /${{ github.event.repository.name }}/${{ github.ref == 'refs/heads/main' && 'main' || 'dev' }}/book/jupyter/
 
 jobs:
   lint:
@@ -309,14 +309,14 @@ jobs:
                   <h1>Rattlesnake Vibration Controller - CI/CD Hub</h1>
                   <p>Access the latest documentation and quality reports for both the stable and development versions.</p>
                   
-                  <h2>🚀 Released (Main Branch)</h2>
+                  <h2>🚀 Released ([Main Branch](https://github.com/sandialabs/rattlesnake-vibration-controller/tree/main?tab=readme-ov-file)</h2>
                   <ul>
-                      <li><a href="main/book/jupyter/index.html">User's Manual</a> <span class="badge badge-main">stable</span></li>
-                      <li><a href="main/reports/pylint/index.html">Pylint Report</a></li>
-                      <li><a href="main/reports/coverage/index.html">Pytest Coverage</a></li>
+                      <li><a href="main/book/jupyter/index.html">User's Manual (work in progress)</a> <span class="badge badge-main">stable</span></li>
+                      <li><a href="main/reports/pylint/index.html">Pylint Report (work in progress)</a></li>
+                      <li><a href="main/reports/coverage/index.html">Pytest Coverage (work in progress)</a></li>
                   </ul>
 
-                  <h2>🛠️ Development (Dev Branch)</h2>
+                  <h2>🛠️ Development ([Dev Branch](https://github.com/sandialabs/rattlesnake-vibration-controller/tree/dev?tab=readme-ov-file))</h2>
                   <ul>
                       <li><a href="dev/book/jupyter/index.html">User's Manual</a> <span class="badge badge-dev">latest</span></li>
                       <li><a href="dev/reports/pylint/index.html">Pylint Report</a></li>
