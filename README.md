@@ -8,7 +8,9 @@
 [![GitHub license](https://img.shields.io/badge/license-GNU-blue.svg)](https://github.com/sandialabs/rattlesnake-vibration-controller/blob/main/LICENSE)
 
 [![GitHub Pages badge](https://img.shields.io/badge/GitHub%20Pages-blueviolet?logo=github)](https://sandialabs.github.io/rattlesnake-vibration-controller/)
+<!--
 [![Pylint Report badge](https://img.shields.io/badge/Pylint%20Report-blue)](https://sandialabs.github.io/rattlesnake-vibration-controller/main/reports/pylint/) [![Coverage Report badge](https://img.shields.io/badge/Coverage%20Report-blue)](https://sandialabs.github.io/rattlesnake-vibration-controller/main/reports/coverage/)
+-->
 
 ## Overview
 
@@ -24,7 +26,7 @@ Rattlesnake can be run as a Python script using the code from this repository, o
 See the documentation for more information:
 
 * Rattlesnake User's Manual
-  * [Released](https://sandialabs.github.io/rattlesnake-vibration-controller/main/book/jupyter/index.html) ![branch-main](https://img.shields.io/badge/branch-main-blue)
+  * (Work in progress) [Released](https://sandialabs.github.io/rattlesnake-vibration-controller/main/book/jupyter/index.html) ![branch-main](https://img.shields.io/badge/branch-main-blue)
   * [Development](https://sandialabs.github.io/rattlesnake-vibration-controller/dev/book/jupyter/index.html) ![branch-dev](https://img.shields.io/badge/branch-dev-orange)
 * Rattlesnake User's Manual, Version 3, SAND2024-14378, Oct 2024. [Download](https://github.com/sandialabs/rattlesnake-vibration-controller/releases/download/v3.0.0/Rattlesnake.pdf) (78 MB)
 
