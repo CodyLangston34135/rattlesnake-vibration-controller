@@ -25,6 +25,9 @@ See the documentation for more information:
 
 * [Rattlesnake User's Manual](https://sandialabs.github.io/rattlesnake-vibration-controller/book/jupyter/index.html) ![](https://img.shields.io/badge/🌱_new-_online-d4edda?style=flat&labelColor=d4edda&color=155724)
 * Rattlesnake User's Manual, Version 3, SAND2024-14378, Oct 2024. [Download](https://github.com/sandialabs/rattlesnake-vibration-controller/releases/download/v3.0.0/Rattlesnake.pdf) (78 MB)
+* **Main Branch:** [![Documentation](https://img.shields.io/badge/docs-main-blue)](https://your-link-here.com)
+* **Dev Branch:** [![Documentation](https://img.shields.io/badge/docs-dev-orange)](https://your-link-here.com)
+
 
 ### Flexible
 
