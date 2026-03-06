@@ -2,7 +2,8 @@
 
 # Rattlesnake Vibration Controller
 
-[![CI](https://github.com/sandialabs/rattlesnake-vibration-controller/actions/workflows/ci.yml/badge.svg)](https://github.com/sandialabs/rattlesnake-vibration-controller/actions/workflows/ci.yml)
+<!--[![CI](https://github.com/sandialabs/rattlesnake-vibration-controller/actions/workflows/ci.yml/badge.svg)](https://github.com/sandialabs/rattlesnake-vibration-controller/actions/workflows/ci.yml)
+-->
 ![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-blue)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
 [![GitHub license](https://img.shields.io/badge/license-GNU-blue.svg)](https://github.com/sandialabs/rattlesnake-vibration-controller/blob/main/LICENSE)
