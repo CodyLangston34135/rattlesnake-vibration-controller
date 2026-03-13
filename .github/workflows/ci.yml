@@ -81,26 +81,25 @@ jobs:
           pylint_output_*.txt
 
   coverage:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        python-version: ["3.11"]
-
+    runs-on: unbuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
-          cache: "pip"
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v1
+        with:
+          enable-cache: true
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install .[dev]
+          uv venv
+          uv pip install .[dev]
 
       - name: pytest coverage and custom coverage HTML report
         run: |
@@ -109,7 +108,7 @@ jobs:
 
           pytest -v --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
 
-          python src/rattlesnake/cicd/report_pytest.py \
+          uv run python src/rattlesnake/cicd/report_pytest.py \
             --input_file coverage.xml \
             --output_file pytest_report.html \
             --timestamp "$TIMESTAMP" \
