@@ -321,7 +321,7 @@ jobs:
           keep_files: true
           commit_message: 'Deploy reports for ${{ github.ref_name }} (${{ github.sha }})'
 
-  matrix:
+  pytest_matrix:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
