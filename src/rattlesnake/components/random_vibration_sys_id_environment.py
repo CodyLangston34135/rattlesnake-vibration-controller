@@ -424,7 +424,7 @@ class RandomVibrationMetadata(AbstractSysIdMetadata):
 from .abstract_interactive_control_law import (  # noqa: E402 pylint: disable=wrong-import-position
     AbstractControlLawComputation,
 )
-from .data_collector import (  # noqa: E402 pylint: disable=wrong-import-position
+from ..process.data_collector import (  # noqa: E402 pylint: disable=wrong-import-position
     Acceptance,
     AcquisitionType,
     CollectorMetadata,

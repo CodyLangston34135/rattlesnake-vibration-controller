@@ -38,4 +38,4 @@ from .environments import ControlTypes
 
 from ..process.acquisition import acquisition_process
 from ..process.output import output_process
-from .streaming import streaming_process
+from ..process.streaming import streaming_process

@@ -29,7 +29,7 @@ from enum import Enum
 
 import numpy as np
 
-from rattlesnake.components.abstract_sysid_data_analysis import (
+from rattlesnake.process.abstract_sysid_data_analysis import (
     AbstractSysIDAnalysisProcess,
     SysIDDataAnalysisCommands,
 )

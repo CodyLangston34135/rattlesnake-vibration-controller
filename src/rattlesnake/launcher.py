@@ -31,7 +31,7 @@ from rattlesnake.components.utilities import QueueContainer, VerboseMessageQueue
 from rattlesnake.process.acquisition import acquisition_process
 from rattlesnake.process.output import output_process
 from rattlesnake.components.environments import environment_processes as all_environment_processes
-from rattlesnake.components.streaming import streaming_process
+from rattlesnake.process.streaming import streaming_process
 
 
 def main():

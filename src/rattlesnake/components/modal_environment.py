@@ -577,7 +577,7 @@ class ModalMetadata(AbstractMetadata):
             return self.signal_generator.generate_frame()[0]
 
 
-from .data_collector import (  # noqa # pylint: disable=wrong-import-position
+from ..process.data_collector import (  # noqa # pylint: disable=wrong-import-position
     Acceptance,
     AcquisitionType,
     CollectorMetadata,

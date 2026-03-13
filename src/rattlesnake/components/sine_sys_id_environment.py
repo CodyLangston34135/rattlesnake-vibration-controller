@@ -470,10 +470,10 @@ class SineMetadata(AbstractSysIdMetadata):
 
 # %% Additional Imports
 # These need to be here to avoid circular imports
-from rattlesnake.components.abstract_sysid_data_analysis import (  # pylint: disable=wrong-import-position # noqa: E402
+from rattlesnake.process.abstract_sysid_data_analysis import (  # pylint: disable=wrong-import-position # noqa: E402
     sysid_data_analysis_process,
 )
-from rattlesnake.components.data_collector import (  # pylint: disable=wrong-import-position # noqa: E402
+from rattlesnake.process.data_collector import (  # pylint: disable=wrong-import-position # noqa: E402
     data_collector_process,
 )
 from rattlesnake.process.signal_generation import (  # pylint: disable=wrong-import-position # noqa: E402

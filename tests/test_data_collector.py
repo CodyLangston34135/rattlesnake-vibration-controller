@@ -5,9 +5,10 @@ from unittest import mock
 import numpy as np
 import pytest
 from functions.data_collector_functions import create_acquire_log_calls
+
 # from PyQt5 import QtWidgets  # unused import
 
-from rattlesnake.components.data_collector import (
+from rattlesnake.process.data_collector import (
     Acceptance,
     AcquisitionType,
     CollectorMetadata,
@@ -98,16 +99,12 @@ def test_frame_buffer_add_data(frame_buffer):
     [
         (
             0,
-            np.concatenate(
-                (np.zeros((2, 25)), np.ones((2, 25)), np.zeros((2, 150))), axis=1
-            ),
+            np.concatenate((np.zeros((2, 25)), np.ones((2, 25)), np.zeros((2, 150))), axis=1),
             False,
         ),
         (
             1,
-            np.concatenate(
-                (np.zeros((2, 25)), np.ones((2, 25)), np.zeros((2, 150))), axis=1
-            ),
+            np.concatenate((np.zeros((2, 25)), np.ones((2, 25)), np.zeros((2, 150))), axis=1),
             True,
         ),
         (2, np.concatenate((np.zeros((2, 100)), np.ones((2, 100))), axis=1), False),
@@ -157,9 +154,7 @@ def test_frame_buffer_accept(frame_buffer):
 @mock.patch("rattlesnake.components.data_collector.FrameBuffer.add_data")
 def test_frame_buffer_add_data_get_frame(mock_add, mock_find, frame_buffer):
     mock_find.return_value = [np.int64(125)]
-    buffer_data = np.concatenate(
-        (np.zeros((2, 75)), np.ones((2, 25)), np.zeros((2, 100))), axis=1
-    )
+    buffer_data = np.concatenate((np.zeros((2, 75)), np.ones((2, 25)), np.zeros((2, 100))), axis=1)
     frame_buffer._buffer = buffer_data
 
     data = frame_buffer.add_data_get_frame(buffer_data)
@@ -267,9 +262,7 @@ def test_data_collector_process_init(log_file_queue):
     assert isinstance(data_collector_process, DataCollectorProcess)
 
 
-@mock.patch(
-    "rattlesnake.components.data_collector.DataCollectorProcess.force_initialize_collector"
-)
+@mock.patch("rattlesnake.components.data_collector.DataCollectorProcess.force_initialize_collector")
 def test_data_collector_process_initialize_collector(
     mock_init, data_collector_process_obj, collector_metadata
 ):
@@ -350,17 +343,13 @@ def test_data_collector_process_acquire(
     if last_data:
         mock_stop.assert_called()
     else:
-        mock_vput.assert_called_with(
-            "Process Name", (DataCollectorCommands.ACQUIRE, None)
-        )
+        mock_vput.assert_called_with("Process Name", (DataCollectorCommands.ACQUIRE, None))
 
 
 @mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
 @mock.patch("rattlesnake.components.data_collector.mp.queues.Queue.put")
 @mock.patch("rattlesnake.components.data_collector.DataCollectorProcess.log")
-def test_data_collector_process_accept(
-    mock_log, mock_put, mock_vput, data_collector_process_obj
-):
+def test_data_collector_process_accept(mock_log, mock_put, mock_vput, data_collector_process_obj):
     mock_buffer = mock.MagicMock()
     data_collector_process_obj.frame_buffer = mock_buffer
     accept_frame = np.ones((2, 100))
@@ -379,9 +368,7 @@ def test_data_collector_process_accept(
         mock.call("Sent Data"),
     ]
     mock_log.assert_has_calls(log_calls)
-    np.testing.assert_array_equal(
-        mock_put.call_args_list[0][0][0][1][1][0], accept_frame
-    )
+    np.testing.assert_array_equal(mock_put.call_args_list[0][0][0][1][1][0], accept_frame)
     np.testing.assert_array_equal(
         mock_put.call_args_list[1][0][0][0],
         np.array([[100.0 + 0.0j] + [0.0 + 0.0j] * 50]),
@@ -405,9 +392,7 @@ def test_data_collector_process_stop(
     mock_flush.assert_called()
     mock_vflush.assert_called_with("Process Name")
     mock_buffer.reset_trigger.assert_called()
-    mock_put.assert_called_with(
-        "Process Name", (DataCollectorCommands.SHUTDOWN_ACHIEVED, None)
-    )
+    mock_put.assert_called_with("Process Name", (DataCollectorCommands.SHUTDOWN_ACHIEVED, None))
 
 
 @mock.patch("rattlesnake.components.data_collector.DataCollectorProcess.log")
@@ -421,9 +406,7 @@ def test_data_collector_process_set_test_level(mock_log, data_collector_process_
 
 # Test the data_collector_process
 # Prevent the run while loop from starting
-@mock.patch(
-    "rattlesnake.components.abstract_message_process.AbstractMessageProcess.run"
-)
+@mock.patch("rattlesnake.components.abstract_message_process.AbstractMessageProcess.run")
 def test_data_collector_process_function(mock_run, log_file_queue):
     data_collector_process(
         "Environment Name",

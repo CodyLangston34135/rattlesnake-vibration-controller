@@ -21,7 +21,7 @@ from functions.modal_environment_functions import (  # create_environment_templa
 )
 from qtpy import QtWidgets
 
-from rattlesnake.components.data_collector import DataCollectorCommands
+from rattlesnake.process.data_collector import DataCollectorCommands
 
 # from rattlesnake.components.environments import ControlTypes  # unused import
 from rattlesnake.components.modal_environment import (

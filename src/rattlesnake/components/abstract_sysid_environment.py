@@ -42,7 +42,7 @@ from rattlesnake.components.abstract_environment import (
     AbstractMetadata,
     AbstractUI,
 )
-from rattlesnake.components.data_collector import (
+from rattlesnake.process.data_collector import (
     Acceptance,
     AcquisitionType,
     CollectorMetadata,
@@ -294,7 +294,7 @@ class RotatedAxisItem(pg.AxisItem):  # pylint: disable=abstract-method
         return rect
 
 
-from rattlesnake.components.abstract_sysid_data_analysis import (  # noqa: E402 pylint: disable=wrong-import-position
+from rattlesnake.process.abstract_sysid_data_analysis import (  # noqa: E402 pylint: disable=wrong-import-position
     SysIDDataAnalysisCommands,
 )
 

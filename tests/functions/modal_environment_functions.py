@@ -1,5 +1,5 @@
 from rattlesnake.components.modal_environment import ModalCommands
-from rattlesnake.components.data_collector import (
+from rattlesnake.process.data_collector import (
     AcquisitionType,
     Acceptance,
     TriggerSlope,

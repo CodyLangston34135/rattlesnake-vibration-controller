@@ -149,7 +149,7 @@ class SkeletonMetadata(AbstractSysIdMetadata):
 
 # %% UI
 
-from rattlesnake.components.data_collector import (
+from rattlesnake.process.data_collector import (
     data_collector_process,
 )
 from rattlesnake.process.signal_generation_process import (

@@ -315,10 +315,10 @@ class TransientMetadata(AbstractSysIdMetadata):
 from rattlesnake.components.abstract_interactive_control_law import (  # noqa: E402 pylint: disable=wrong-import-position
     AbstractControlLawComputation,
 )
-from rattlesnake.components.abstract_sysid_data_analysis import (  # noqa: E402 pylint: disable=wrong-import-position
+from rattlesnake.process.abstract_sysid_data_analysis import (  # noqa: E402 pylint: disable=wrong-import-position
     sysid_data_analysis_process,
 )
-from rattlesnake.components.data_collector import (  # noqa: E402 pylint: disable=wrong-import-position
+from rattlesnake.process.data_collector import (  # noqa: E402 pylint: disable=wrong-import-position
     FrameBuffer,
     data_collector_process,
 )
