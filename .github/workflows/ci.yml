@@ -51,7 +51,7 @@ jobs:
 
         # Run pylint once, capturing the output to a variable.
         # This avoids reading the file twice.
-        PYLINT_OUTPUT=$(pylint src/rattlesnake/**/*.py --output-format=text --reports=yes || true)
+        PYLINT_OUTPUT=$(uv run pylint src/rattlesnake/**/*.py --output-format=text --reports=yes || true)
         echo "$PYLINT_OUTPUT" > "$PYLINT_OUTPUT_FILE"
 
         # Extract the score from the captured output
@@ -81,7 +81,7 @@ jobs:
           pylint_output_*.txt
 
   coverage:
-    runs-on: unbuntu-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -106,7 +106,7 @@ jobs:
           # Create a timestamp for the output file
           TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
 
-          pytest -v --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
+          uv run pytest -v --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
 
           uv run python src/rattlesnake/cicd/report_pytest.py \
             --input_file coverage.xml \
@@ -217,7 +217,7 @@ jobs:
           # Pylint badge
           PYLINT_OUTPUT_FILE=$(ls pylint-report/pylint_output_*.txt)
           SCORE=$(grep "Your code has been rated at" "$PYLINT_OUTPUT_FILE" | awk '{print $7}' | cut -d'/' -f1 || echo "0")
-          python3 src/rattlesnake/cicd/badge_color_pylint.py "$SCORE"
+          uv run python src/rattlesnake/cicd/badge_color_pylint.py "$SCORE"
           mkdir -p badges
           curl -o badges/pylint.svg "https://img.shields.io/badge/pylint-${SCORE}-${{ env.BADGE_COLOR }}.svg"
           cat > badges/pylint-info.json << EOF
@@ -232,7 +232,7 @@ jobs:
           EOF
 
           # Pytest badge
-          python3 src/rattlesnake/cicd/badge_color_coverage.py pytest-report/coverage.xml
+          uv run python src/rattlesnake/cicd/badge_color_coverage.py pytest-report/coverage.xml
           
           REPO_URL="${{ github.server_url }}/${{ github.repository }}"
           WORKFLOW_URL="${REPO_URL}/actions/workflows/ci.yml"
