@@ -68,7 +68,7 @@ jobs:
         echo "    🏆 Pylint score: $SCORE out of 10"
 
         # The report_pylint.py script still needs the file, which we created above.
-        python src/rattlesnake/cicd/report_pylint.py \
+        uv run python src/rattlesnake/cicd/report_pylint.py \
           --input_file "$PYLINT_OUTPUT_FILE" \
           --output_file pylint_report.html \
           --timestamp "$TIMESTAMP" \
