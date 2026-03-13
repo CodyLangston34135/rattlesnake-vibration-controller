@@ -24,10 +24,12 @@ env:
 
 jobs:
 
+  # 2026-03-13: We cannot use uv with the test matrix because of Qt.  There is
+  # a known challenge with PyQt5 on modern macOS (particularly M1/M2/M3 Silicon)
+  # and some Windows environments.  PyQt does not have pre-built wheels for every
+  # combination of OS and Python version, and uv is very strict about this.
   pytest_matrix:
-
     runs-on: ${{ matrix.os }}
-    
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
@@ -38,20 +40,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v1
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
         with:
-          enable-cache: true
           python-version: ${{ matrix.python-version }}
+          cache: "pip"
 
       - name: Install dependencies
         run: |
-          uv venv
-          uv pip install .[dev]
+          python -m pip install --upgrade pip
+          python -m pip install .[dev]
 
       - name: Run tests
         run: |
-          uv run pytest -v
+          python -m pytest -v
 
   lint:
     runs-on: ubuntu-latest
