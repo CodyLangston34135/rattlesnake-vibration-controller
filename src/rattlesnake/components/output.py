@@ -27,8 +27,8 @@ import multiprocessing.sharedctypes  # pylint: disable=unused-import
 
 import numpy as np
 
-from .abstract_message_process import AbstractMessageProcess
-from .utilities import GlobalCommands, QueueContainer, flush_queue, rms_time
+from rattlesnake.components.abstract_message_process import AbstractMessageProcess
+from rattlesnake.components.utilities import GlobalCommands, QueueContainer, flush_queue, rms_time
 
 TASK_NAME = "Output"
 

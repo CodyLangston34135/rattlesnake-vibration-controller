@@ -19,12 +19,12 @@ import pyqtgraph as pqtg
 from qtpy import QtWidgets, uic
 from qtpy.QtCore import Qt, QLocale  # pylint: disable=no-name-in-module
 
-from .environments import (
+from rattlesnake.components.environments import (
     sine_sweep_table_ui_path,
     filter_explorer_ui_path,
 )
-from .ui_utilities import VaryingNumberOfLinePlot
-from .utilities import wrap
+from rattlesnake.components.ui_utilities import VaryingNumberOfLinePlot
+from rattlesnake.components.utilities import wrap
 
 
 DEBUG = False

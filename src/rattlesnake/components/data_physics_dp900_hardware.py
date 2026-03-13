@@ -28,8 +28,8 @@ from typing import List
 
 import numpy as np
 
-from .abstract_hardware import HardwareAcquisition, HardwareOutput
-from .utilities import Channel, DataAcquisitionParameters, flush_queue
+from rattlesnake.components.abstract_hardware import HardwareAcquisition, HardwareOutput
+from rattlesnake.components.utilities import Channel, DataAcquisitionParameters, flush_queue
 
 BUFFER_SIZE_FACTOR = 3
 SLEEP_FACTOR = 10

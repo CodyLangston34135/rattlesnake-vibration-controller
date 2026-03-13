@@ -30,18 +30,18 @@ from multiprocessing.queues import Queue
 import netCDF4 as nc4
 from qtpy import QtWidgets, uic
 
-from .abstract_sysid_environment import (
+from rattlesnake.components.abstract_sysid_environment import (
     AbstractSysIdEnvironment,
     AbstractSysIdMetadata,
     AbstractSysIdUI,
 )
-from .environments import (
+from rattlesnake.components.environments import (
     ControlTypes,
     environment_definition_ui_paths,
     environment_prediction_ui_paths,
     environment_run_ui_paths,
 )
-from .utilities import VerboseMessageQueue
+from rattlesnake.components.utilities import VerboseMessageQueue
 
 # Update this line to define the controller type, and add to the ControlTypes enumeration in
 # components/environments.py
@@ -149,13 +149,13 @@ class SkeletonMetadata(AbstractSysIdMetadata):
 
 # %% UI
 
-from .data_collector import (
+from rattlesnake.components.data_collector import (
     data_collector_process,
 )
-from .signal_generation_process import (
+from rattlesnake.components.signal_generation_process import (
     signal_generation_process,
 )
-from .spectral_processing import (
+from rattlesnake.components.spectral_processing import (
     spectral_processing_process,
 )
 

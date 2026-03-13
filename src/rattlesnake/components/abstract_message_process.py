@@ -28,7 +28,7 @@ from abc import ABC
 from datetime import datetime
 from multiprocessing.queues import Queue
 
-from .utilities import GlobalCommands, VerboseMessageQueue
+from rattlesnake.components.utilities import GlobalCommands, VerboseMessageQueue
 
 
 class AbstractMessageProcess(ABC):

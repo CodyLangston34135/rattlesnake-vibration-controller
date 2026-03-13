@@ -37,8 +37,12 @@ import pyqtgraph as pg
 from qtpy import QtWidgets, uic
 from scipy.io import loadmat, savemat
 
-from .abstract_environment import AbstractEnvironment, AbstractMetadata, AbstractUI
-from .data_collector import (
+from rattlesnake.components.abstract_environment import (
+    AbstractEnvironment,
+    AbstractMetadata,
+    AbstractUI,
+)
+from rattlesnake.components.data_collector import (
     Acceptance,
     AcquisitionType,
     CollectorMetadata,
@@ -46,25 +50,25 @@ from .data_collector import (
     TriggerSlope,
     Window,
 )
-from .environments import system_identification_ui_path
-from .signal_generation import (
+from rattlesnake.components.environments import system_identification_ui_path
+from rattlesnake.components.signal_generation import (
     BurstRandomSignalGenerator,
     ChirpSignalGenerator,
     PseudorandomSignalGenerator,
     RandomSignalGenerator,
     SignalGenerator,
 )
-from .signal_generation_process import (
+from rattlesnake.components.signal_generation_process import (
     SignalGenerationCommands,
     SignalGenerationMetadata,
 )
-from .spectral_processing import (
+from rattlesnake.components.spectral_processing import (
     AveragingTypes,
     Estimator,
     SpectralProcessingCommands,
     SpectralProcessingMetadata,
 )
-from .utilities import (
+from rattlesnake.components.utilities import (
     DataAcquisitionParameters,
     GlobalCommands,
     VerboseMessageQueue,
@@ -290,7 +294,7 @@ class RotatedAxisItem(pg.AxisItem):  # pylint: disable=abstract-method
         return rect
 
 
-from .abstract_sysid_data_analysis import (  # noqa: E402 pylint: disable=wrong-import-position
+from rattlesnake.components.abstract_sysid_data_analysis import (  # noqa: E402 pylint: disable=wrong-import-position
     SysIDDataAnalysisCommands,
 )
 

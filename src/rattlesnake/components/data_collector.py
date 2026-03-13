@@ -32,8 +32,13 @@ import numpy as np
 import scipy.signal as sig
 from scipy.fft import rfft
 
-from .abstract_message_process import AbstractMessageProcess
-from .utilities import VerboseMessageQueue, flush_queue, load_python_module, rms_time
+from rattlesnake.components.abstract_message_process import AbstractMessageProcess
+from rattlesnake.components.utilities import (
+    VerboseMessageQueue,
+    flush_queue,
+    load_python_module,
+    rms_time,
+)
 
 DEBUG = False
 

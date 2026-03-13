@@ -38,18 +38,18 @@ from qtpy import QtWidgets, uic
 from qtpy.QtCore import Qt
 from qtpy.QtGui import QColor  # pylint: disable=no-name-in-module
 
-from .abstract_sysid_environment import (
+from rattlesnake.components.abstract_sysid_environment import (
     AbstractSysIdEnvironment,
     AbstractSysIdMetadata,
     AbstractSysIdUI,
 )
-from .environments import (
+from rattlesnake.components.environments import (
     ControlTypes,
     environment_definition_ui_paths,
     environment_prediction_ui_paths,
     environment_run_ui_paths,
 )
-from .sine_sys_id_utilities import (
+from rattlesnake.components.sine_sys_id_utilities import (
     DefaultSineControlLaw,
     FilterExplorer,
     PlotSineWindow,
@@ -59,13 +59,13 @@ from .sine_sys_id_utilities import (
     sine_sweep,
     vold_kalman_filter_generator,
 )
-from .ui_utilities import (
+from rattlesnake.components.ui_utilities import (
     TransformationMatrixWindow,
     VaryingNumberOfLinePlot,
     blended_scatter_plot,
     multiline_plotter,
 )
-from .utilities import (
+from rattlesnake.components.utilities import (
     GlobalCommands,
     VerboseMessageQueue,
     db2scale,
@@ -470,21 +470,21 @@ class SineMetadata(AbstractSysIdMetadata):
 
 # %% Additional Imports
 # These need to be here to avoid circular imports
-from .abstract_sysid_data_analysis import (  # pylint: disable=wrong-import-position # noqa: E402
+from rattlesnake.components.abstract_sysid_data_analysis import (  # pylint: disable=wrong-import-position # noqa: E402
     sysid_data_analysis_process,
 )
-from .data_collector import (  # pylint: disable=wrong-import-position # noqa: E402
+from rattlesnake.components.data_collector import (  # pylint: disable=wrong-import-position # noqa: E402
     data_collector_process,
 )
-from .signal_generation import (  # pylint: disable=wrong-import-position # noqa: E402
+from rattlesnake.components.signal_generation import (  # pylint: disable=wrong-import-position # noqa: E402
     ContinuousTransientSignalGenerator,
 )
-from .signal_generation_process import (  # pylint: disable=wrong-import-position # noqa: E402
+from rattlesnake.components.signal_generation_process import (  # pylint: disable=wrong-import-position # noqa: E402
     SignalGenerationCommands,
     SignalGenerationMetadata,
     signal_generation_process,
 )
-from .spectral_processing import (  # pylint: disable=wrong-import-position # noqa: E402
+from rattlesnake.components.spectral_processing import (  # pylint: disable=wrong-import-position # noqa: E402
     spectral_processing_process,
 )
 

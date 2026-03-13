@@ -29,15 +29,15 @@ from enum import Enum
 
 import numpy as np
 
-from .abstract_sysid_data_analysis import (
+from rattlesnake.components.abstract_sysid_data_analysis import (
     AbstractSysIDAnalysisProcess,
     SysIDDataAnalysisCommands,
 )
-from .random_vibration_sys_id_environment import (
+from rattlesnake.components.random_vibration_sys_id_environment import (
     RandomVibrationCommands,
     RandomVibrationMetadata,
 )
-from .utilities import (
+from rattlesnake.components.utilities import (
     GlobalCommands,
     VerboseMessageQueue,
     flush_queue,

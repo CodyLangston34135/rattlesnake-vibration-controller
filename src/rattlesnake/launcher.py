@@ -25,19 +25,13 @@ import sys
 
 from qtpy import QtWidgets
 
-from .components import (
-    ControlSelect,
-    ControlTypes,
-    EnvironmentSelect,
-    QueueContainer,
-    Ui,
-    VerboseMessageQueue,
-    acquisition_process,
-    all_environment_processes,
-    log_file_task,
-    output_process,
-    streaming_process,
-)
+from rattlesnake.components.ui_utilities import ControlSelect, ControlTypes, EnvironmentSelect
+from rattlesnake.components.user_interface import Ui
+from rattlesnake.components.utilities import QueueContainer, VerboseMessageQueue, log_file_task
+from rattlesnake.components.acquisition import acquisition_process
+from rattlesnake.components.output import output_process
+from rattlesnake.components.environments import environment_processes as all_environment_processes
+from rattlesnake.components.streaming import streaming_process
 
 
 def main():

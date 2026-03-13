@@ -30,9 +30,9 @@ from typing import List
 import numpy as np
 import requests
 
-from .abstract_hardware import HardwareAcquisition, HardwareOutput
-from .lanxi_stream import OpenapiHeader, OpenapiMessage
-from .utilities import Channel, DataAcquisitionParameters
+from rattlesnake.components.abstract_hardware import HardwareAcquisition, HardwareOutput
+from rattlesnake.components.lanxi_stream import OpenapiHeader, OpenapiMessage
+from rattlesnake.components.utilities import Channel, DataAcquisitionParameters
 
 OUTPUT_RATE = 131072
 LANXI_STATE_TIMEOUT = 255.0

@@ -48,16 +48,16 @@ from qtpy.QtCore import (  # pylint: disable=no-name-in-module
     Slot,
 )
 
-from .environments import environment_UIs as all_environment_UIs
-from .environments import ui_path
-from .ui_utilities import (
+from rattlesnake.components.environments import environment_UIs as all_environment_UIs
+from rattlesnake.components.environments import ui_path
+from rattlesnake.components.ui_utilities import (
     ChannelMonitor,
     IPAddress,
     IPAddressManager,
     ProfileTimer,
     get_table_bools,
 )
-from .utilities import (
+from rattlesnake.components.utilities import (
     Channel,
     DataAcquisitionParameters,
     GlobalCommands,

@@ -27,9 +27,13 @@ from typing import Dict
 import netCDF4 as nc
 import numpy as np
 
-from .abstract_environment import AbstractMetadata
-from .abstract_message_process import AbstractMessageProcess
-from .utilities import DataAcquisitionParameters, GlobalCommands, QueueContainer
+from rattlesnake.components.abstract_environment import AbstractMetadata
+from rattlesnake.components.abstract_message_process import AbstractMessageProcess
+from rattlesnake.components.utilities import (
+    DataAcquisitionParameters,
+    GlobalCommands,
+    QueueContainer,
+)
 
 
 class StreamingProcess(AbstractMessageProcess):

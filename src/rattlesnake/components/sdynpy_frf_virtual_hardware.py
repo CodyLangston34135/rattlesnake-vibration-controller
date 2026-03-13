@@ -27,8 +27,8 @@ from typing import List
 
 import numpy as np
 
-from .abstract_hardware import HardwareAcquisition, HardwareOutput
-from .utilities import (
+from rattlesnake.components.abstract_hardware import HardwareAcquisition, HardwareOutput
+from rattlesnake.components.utilities import (
     Channel,
     DataAcquisitionParameters,
     flush_queue,

@@ -70,7 +70,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from abc import ABC, abstractmethod
 
-from .utilities import GlobalCommands
+from rattlesnake.components.utilities import GlobalCommands
 
 
 class AbstractControlLawUI(ABC):

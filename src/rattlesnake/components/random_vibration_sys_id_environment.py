@@ -42,20 +42,27 @@ from qtpy.QtCore import Qt, QTimer  # pylint: disable=no-name-in-module
 from qtpy.QtGui import QColor  # pylint: disable=no-name-in-module
 
 # %% Imports
-from .abstract_sysid_environment import (
+from rattlesnake.components.abstract_sysid_environment import (
     AbstractSysIdEnvironment,
     AbstractSysIdMetadata,
     AbstractSysIdUI,
 )
-from .environments import (
+from rattlesnake.components.environments import (
     ControlTypes,
     environment_definition_ui_paths,
     environment_prediction_ui_paths,
     environment_run_ui_paths,
 )
-from .random_vibration_sys_id_utilities import _direction_map, load_specification
-from .ui_utilities import PlotWindow, TransformationMatrixWindow, multiline_plotter
-from .utilities import (
+from rattlesnake.components.random_vibration_sys_id_utilities import (
+    _direction_map,
+    load_specification,
+)
+from rattlesnake.components.ui_utilities import (
+    PlotWindow,
+    TransformationMatrixWindow,
+    multiline_plotter,
+)
+from rattlesnake.components.utilities import (
     DataAcquisitionParameters,
     GlobalCommands,
     VerboseMessageQueue,

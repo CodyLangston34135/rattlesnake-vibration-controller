@@ -27,8 +27,8 @@ from time import sleep, time
 
 import numpy as np
 
-from .abstract_message_process import AbstractMessageProcess
-from .utilities import (
+from rattlesnake.components.abstract_message_process import AbstractMessageProcess
+from rattlesnake.components.utilities import (
     GlobalCommands,
     QueueContainer,
     align_signals,

@@ -38,13 +38,17 @@ import scipy.signal as sig
 from qtpy import QtWidgets, uic
 from qtpy.QtCore import Qt
 
-from .abstract_environment import AbstractEnvironment, AbstractMetadata, AbstractUI
-from .environments import (
+from rattlesnake.components.abstract_environment import (
+    AbstractEnvironment,
+    AbstractMetadata,
+    AbstractUI,
+)
+from rattlesnake.components.environments import (
     ControlTypes,
     environment_definition_ui_paths,
     environment_run_ui_paths,
 )
-from .signal_generation import (
+from rattlesnake.components.signal_generation import (
     BurstRandomSignalGenerator,
     ChirpSignalGenerator,
     PseudorandomSignalGenerator,
@@ -52,8 +56,8 @@ from .signal_generation import (
     SineSignalGenerator,
     SquareSignalGenerator,
 )
-from .ui_utilities import ModalMDISubWindow, multiline_plotter
-from .utilities import (
+from rattlesnake.components.ui_utilities import ModalMDISubWindow, multiline_plotter
+from rattlesnake.components.utilities import (
     DataAcquisitionParameters,
     GlobalCommands,
     VerboseMessageQueue,

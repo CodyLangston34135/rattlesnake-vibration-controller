@@ -28,8 +28,8 @@ from typing import List
 import numpy as np
 import scipy.signal as signal
 
-from .abstract_hardware import HardwareAcquisition, HardwareOutput
-from .utilities import Channel, DataAcquisitionParameters, flush_queue
+from rattlesnake.components.abstract_hardware import HardwareAcquisition, HardwareOutput
+from rattlesnake.components.utilities import Channel, DataAcquisitionParameters, flush_queue
 
 _direction_map = {
     "X+": 1,

@@ -23,7 +23,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import os
 import numpy as np
 from scipy.io import loadmat
-from .utilities import reduce_array_by_coordinate
+from rattlesnake.components.utilities import reduce_array_by_coordinate
 
 _direction_map = {
     "X+": 1,

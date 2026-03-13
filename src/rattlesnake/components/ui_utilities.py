@@ -33,7 +33,7 @@ from qtpy.QtCore import Qt, QTimer  # pylint: disable=no-name-in-module
 from scipy.interpolate import interp1d
 from scipy.io import loadmat
 
-from .environments import (
+from rattlesnake.components.environments import (
     ControlTypes,
     combined_environments_capable,
     control_select_ui_path,
@@ -43,7 +43,7 @@ from .environments import (
     modal_mdi_ui_path,
     transformation_matrices_ui_path,
 )
-from .utilities import (
+from rattlesnake.components.utilities import (
     DataAcquisitionParameters,
     coherence,
     error_message_qt,
