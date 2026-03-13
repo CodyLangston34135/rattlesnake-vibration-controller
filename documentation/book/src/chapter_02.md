@@ -42,16 +42,44 @@ The alternative to running the Rattlesnake as an executable is to run it as a Py
 
 The first step to running Rattlesnake from its Python script is to install Python.  This can be done in multiple ways.  Python can be downloaded and installed from the [Python website](https://www.python.org/) directly.  When installed this way, Python will not include any of the numeric or scientific libraries such as [NumPy](https://numpy.org) or [SciPy](https://scipy.org).  For this reason, many users will prefer to download a scientific Python distribution which contains many numeric or scientific libraries.  [Anaconda](https://www.anaconda.com/) or [WinPython](https://winpython.github.io/) are popular distributions.
 
-Regardless of the distribution selected, users will need to install packages that Rattlesnake depends on.  The GitHub repository contains a [requirements.txt](https://github.com/sandialabs/rattlesnake-vibration-controller/blob/main/requirements.txt) file that can be used by the Python package manager `pip` to install all required dependencies:
+### Virtual Enrivonment
 
-```sh
-pip install -r requirements.txt
+It is a best practice to install Rattlesnake within a virtual environment.  A virtual environment is a self-contained directory that contains a specific Python installation, along with additional packages.  It allows users to create an isolated environment, ensuring that dependicies and libraries do not interfere with each other.
+
+Create a virtual environment with either `pip` or `uv`. `pip` is already included with Python, whereas `uv` must be [installed](https://docs.astral.sh/uv/getting-started/installation/) separately. `uv` is significantly faster than `pip` (often 10–100x) and is recommended, though not required.
+
+```
+# Option 1: pip method
+python -m venv .venv
+
+# Option 2: uv method
+uv venv
+
+# For both methods, prior to installation, activate the environment, depending on which shell is in use:
+
+source .venv/bin/activate       # bash / zsh
+source .venv/bin/activate.fish  # fish shell
+.\.venv\Scripts\activate        # Windows (PowerShell/CMD)
 ```
 
-Note that if running through a corporate or university firewall, the proxy may need to be specified in `pip`.  Additionally, on some networks the Python package repositories must be added as trusted hosts.  Such a command may look like
+### Installation
+
+Regardless of the distribution and virtual environment generation method selected, users will need to install the dependencies
+required by Rattlesnake.  The project uses a `pyproject.toml` file to manage its
+environment.  Install the package and its dependencies directly using `pip`:
+
+* For **standard users:** `pip install .`
+* For **developers** (includes tools like `pytest` defined in the `dev` extra): 
+  * `pip install -e .[dev]` or
+  * `uv pip install -e .[dev]`
+
+The `-e` flag installs the project in *editable mode*, ensuring that any changes you make
+to the source code are reflected immediately in the environment.
+
+If running through a corporate or university firewall, the proxy may need to be specified in `pip`.  Additionally, on some networks the Python package repositories must be added as trusted hosts.  Such a command may look like
 
 ```sh
-pip --proxy <proxy_address> install --trusted-host pypi.org --trusted-host files.pythonhosted.org -r requirements.txt
+pip --proxy <proxy_address> install --trusted-host pypi.org --trusted-host files.pythonhosted.org
 ```
 
 where `<proxy_address>` is the address of the proxy.

@@ -6,7 +6,7 @@ on:
   push:
     branches:
       - main
-      - dev
+      - "dev*"  # Explicity include branches with "dev" in the name (e.g., dev, dev-feature, etc.)
   pull_request:
     branches:
       - main
@@ -23,33 +23,53 @@ env:
   BASE_URL: /${{ github.event.repository.name }}/${{ github.ref == 'refs/heads/main' && 'main' || 'dev' }}/book/jupyter/
 
 jobs:
-  lint:
+
+  # 2026-03-13: We cannot use uv with the test matrix because of Qt.  There is
+  # a known challenge with PyQt5 on modern macOS (particularly M1/M2/M3 Silicon)
+  # and some Windows environments.  PyQt does not have pre-built wheels for every
+  # combination of OS and Python version, and uv is very strict about this.
+  pytest_matrix:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        python-version: ["3.11"]
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        python-version: ["3.11", "3.12"]
 
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .[dev]
+
+      - name: Run tests
+        run: |
+          python -m pytest -v
+
+  lint:
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v3
+    - name: Install uv
+      uses: astral-sh/setup-uv@v1
       with:
-        python-version: "3.11"
-
-    - name: Cache pip dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+        enable-cache: true
+        python-version: "3.12"
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install .[dev]
+        uv venv
+        uv pip install .[dev]
         
     - name: pylint analysis and custom pylint HTML report
       run: |
@@ -59,7 +79,7 @@ jobs:
 
         # Run pylint once, capturing the output to a variable.
         # This avoids reading the file twice.
-        PYLINT_OUTPUT=$(pylint src/rattlesnake/**/*.py --output-format=text --reports=yes || true)
+        PYLINT_OUTPUT=$(uv run pylint src/rattlesnake/**/*.py --output-format=text --reports=yes || true)
         echo "$PYLINT_OUTPUT" > "$PYLINT_OUTPUT_FILE"
 
         # Extract the score from the captured output
@@ -71,7 +91,7 @@ jobs:
         echo "    🏆 Pylint score: $SCORE out of 10"
 
         # The report_pylint.py script still needs the file, which we created above.
-        python src/rattlesnake/cicd/report_pylint.py \
+        uv run python src/rattlesnake/cicd/report_pylint.py \
           --input_file "$PYLINT_OUTPUT_FILE" \
           --output_file pylint_report.html \
           --timestamp "$TIMESTAMP" \
@@ -89,42 +109,30 @@ jobs:
           pylint_output_*.txt
 
   coverage:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-        python-version: ["3.11"]
-
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
+      - name: Install uv
+        uses: astral-sh/setup-uv@v1
         with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Cache pip dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          enable-cache: true
+          python-version: "3.12"
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install .[dev]
+          uv venv
+          uv pip install .[dev]
 
       - name: pytest coverage and custom coverage HTML report
         run: |
           # Create a timestamp for the output file
           TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
 
-          pytest -v --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
+          uv run pytest -v --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
 
-          python src/rattlesnake/cicd/report_pytest.py \
+          uv run python src/rattlesnake/cicd/report_pytest.py \
             --input_file coverage.xml \
             --output_file pytest_report.html \
             --timestamp "$TIMESTAMP" \
@@ -147,18 +155,16 @@ jobs:
   # 1. Install uv: https://astral.sh/uv/installation/
   # 2. Run `uv pip install "jupyter-book>=2.0.0"`
   # 3. Run `cd documentation && uv run jupyter book build --html --strict && cd ..` from the root of the repository to build the book. The output will be in documentation/_build/html
-  build_book:
+  docs_jupyter_book:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v3
-        with:
-          python-version: "3.12"
-
       - name: Install uv
         uses: astral-sh/setup-uv@v1
+        with:
+          enable-cache: true
+          python-version: "3.12"
 
       - name: Install dependencies
         run: |
@@ -177,7 +183,7 @@ jobs:
           path: documentation/_build/html
 
   deploy:
-    needs: [lint, coverage, build_book]
+    needs: [pytest_matrix, lint, coverage, docs_jupyter_book]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main'
 
@@ -185,23 +191,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v3
+      - name: Install uv
+        uses: astral-sh/setup-uv@v1
         with:
-          python-version: "3.11"
-
-      - name: Cache pip dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          enable-cache: true
+          python-version: "3.12"
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install .[dev]
+          uv venv
+          uv pip install .[dev]
 
       - name: Download pylint artifact
         uses: actions/download-artifact@v4
@@ -234,7 +233,7 @@ jobs:
           # Pylint badge
           PYLINT_OUTPUT_FILE=$(ls pylint-report/pylint_output_*.txt)
           SCORE=$(grep "Your code has been rated at" "$PYLINT_OUTPUT_FILE" | awk '{print $7}' | cut -d'/' -f1 || echo "0")
-          python3 src/rattlesnake/cicd/badge_color_pylint.py "$SCORE"
+          uv run python src/rattlesnake/cicd/badge_color_pylint.py "$SCORE"
           mkdir -p badges
           curl -o badges/pylint.svg "https://img.shields.io/badge/pylint-${SCORE}-${{ env.BADGE_COLOR }}.svg"
           cat > badges/pylint-info.json << EOF
@@ -249,7 +248,7 @@ jobs:
           EOF
 
           # Pytest badge
-          python3 src/rattlesnake/cicd/badge_color_coverage.py pytest-report/coverage.xml
+          uv run python src/rattlesnake/cicd/badge_color_coverage.py pytest-report/coverage.xml
           
           REPO_URL="${{ github.server_url }}/${{ github.repository }}"
           WORKFLOW_URL="${REPO_URL}/actions/workflows/ci.yml"
@@ -341,35 +340,3 @@ jobs:
           publish_branch: gh-pages
           keep_files: true
           commit_message: 'Deploy reports for ${{ github.ref_name }} (${{ github.sha }})'
-
-  matrix:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
-        python-version: ["3.11", "3.12"]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Cache pip dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install .[dev]
-
-      - name: Run tests
-        run: |
-          pytest -v
