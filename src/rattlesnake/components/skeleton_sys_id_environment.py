@@ -152,7 +152,7 @@ class SkeletonMetadata(AbstractSysIdMetadata):
 from rattlesnake.components.data_collector import (
     data_collector_process,
 )
-from rattlesnake.components.signal_generation_process import (
+from rattlesnake.process.signal_generation_process import (
     signal_generation_process,
 )
 from rattlesnake.components.spectral_processing import (

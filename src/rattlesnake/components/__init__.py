@@ -36,6 +36,6 @@ from .environments import environment_processes as all_environment_processes
 from .environments import environment_UIs as all_environment_UIs
 from .environments import ControlTypes
 
-from .acquisition import acquisition_process
-from .output import output_process
+from ..process.acquisition import acquisition_process
+from ..process.output import output_process
 from .streaming import streaming_process

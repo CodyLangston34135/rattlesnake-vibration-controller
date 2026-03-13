@@ -32,7 +32,7 @@ from rattlesnake.components.modal_environment import (
     ModalUI,
     modal_process,
 )
-from rattlesnake.components.signal_generation_process import SignalGenerationCommands
+from rattlesnake.process.signal_generation_process import SignalGenerationCommands
 from rattlesnake.components.spectral_processing import SpectralProcessingCommands
 
 # from rattlesnake.components.user_interface import Ui   # unused import
@@ -92,7 +92,7 @@ def data_acquisition_parameters(channel):
     environment_booleans = np.array([[True]])
     acquisition_processes = 1
     task_trigger = 0
-    task_trigger_output_channel = ''
+    task_trigger_output_channel = ""
     data_acquisition_parameters = DataAcquisitionParameters(
         channel_list,
         sample_rate,
@@ -103,9 +103,9 @@ def data_acquisition_parameters(channel):
         environments,
         environment_booleans,
         output_oversample,
-        maximum_acquisition_processes = acquisition_processes,
+        maximum_acquisition_processes=acquisition_processes,
         task_trigger=task_trigger,
-        task_trigger_output_channel=task_trigger_output_channel
+        task_trigger_output_channel=task_trigger_output_channel,
     )
 
     return data_acquisition_parameters
@@ -769,9 +769,7 @@ def test_modal_environment_initialize_data_acquisition_parameters(modal_environm
 @mock.patch(
     "rattlesnake.components.modal_environment.ModalEnvironment.get_signal_generation_metadata"
 )
-@mock.patch(
-    "rattlesnake.components.modal_environment.ModalEnvironment.get_data_collector_metadata"
-)
+@mock.patch("rattlesnake.components.modal_environment.ModalEnvironment.get_data_collector_metadata")
 @mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
 def test_modal_environment_initialize_environment_test_parameters(
     mock_put,
@@ -861,15 +859,11 @@ def test_modal_environment_get_signal_generator(modal_environment):
 @mock.patch(
     "rattlesnake.components.modal_environment.ModalEnvironment.get_spectral_processing_metadata"
 )
-@mock.patch(
-    "rattlesnake.components.modal_environment.ModalEnvironment.get_signal_generator"
-)
+@mock.patch("rattlesnake.components.modal_environment.ModalEnvironment.get_signal_generator")
 @mock.patch(
     "rattlesnake.components.modal_environment.ModalEnvironment.get_signal_generation_metadata"
 )
-@mock.patch(
-    "rattlesnake.components.modal_environment.ModalEnvironment.get_data_collector_metadata"
-)
+@mock.patch("rattlesnake.components.modal_environment.ModalEnvironment.get_data_collector_metadata")
 @mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
 @mock.patch("rattlesnake.components.modal_environment.ModalEnvironment.log")
 def test_modal_environment_start_environment(
@@ -973,35 +967,25 @@ def test_modal_environment_check_for_shutdown(
 def test_modal_environment_accept_frame(mock_put, modal_environment):
     modal_environment.accept_frame("data")
 
-    mock_put.assert_called_with(
-        "Environment_name", (DataCollectorCommands.ACCEPT, "data")
-    )
+    mock_put.assert_called_with("Environment_name", (DataCollectorCommands.ACCEPT, "data"))
 
 
 @mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
 @mock.patch("rattlesnake.components.modal_environment.flush_queue")
 @mock.patch("rattlesnake.components.modal_environment.ModalEnvironment.log")
-def test_modal_environment_stop_environment(
-    mock_log, mock_flush, mock_put, modal_environment
-):
+def test_modal_environment_stop_environment(mock_log, mock_flush, mock_put, modal_environment):
     modal_environment.stop_environment("data")
 
     mock_log.assert_called_with("Stopping Control")
-    mock_flush.assert_called_with(
-        modal_environment.queue_container.environment_command_queue
-    )
+    mock_flush.assert_called_with(modal_environment.queue_container.environment_command_queue)
     put_calls = [
-        mock.call(
-            "Environment_name", (DataCollectorCommands.SET_TEST_LEVEL, (1000, 1))
-        ),
+        mock.call("Environment_name", (DataCollectorCommands.SET_TEST_LEVEL, (1000, 1))),
         mock.call("Environment_name", (SignalGenerationCommands.START_SHUTDOWN, None)),
         mock.call(
             "Environment_name",
             (SpectralProcessingCommands.STOP_SPECTRAL_PROCESSING, None),
         ),
-        mock.call(
-            "Environment_name", (ModalCommands.CHECK_FOR_COMPLETE_SHUTDOWN, None)
-        ),
+        mock.call("Environment_name", (ModalCommands.CHECK_FOR_COMPLETE_SHUTDOWN, None)),
     ]
     mock_put.assert_has_calls(put_calls)
 
@@ -1023,9 +1007,7 @@ def test_modal_environment_quit(mock_put, modal_environment):
 @mock.patch("rattlesnake.components.modal_environment.mp.Process.join")
 @mock.patch("rattlesnake.components.modal_environment.ModalEnvironment.run")
 @mock.patch("rattlesnake.components.modal_environment.mp.Process.start")
-def test_modal_process_function(
-    mock_start, mock_run, mock_join, mock_log, log_file_queue
-):
+def test_modal_process_function(mock_start, mock_run, mock_join, mock_log, log_file_queue):
     modal_process(
         "Environment Name",
         VerboseMessageQueue(log_file_queue, "Environment Command Queue"),

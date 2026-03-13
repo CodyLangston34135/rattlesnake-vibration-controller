@@ -437,10 +437,10 @@ from .random_vibration_sys_id_data_analysis import (  # noqa: E402 pylint: disab
     RandomVibrationDataAnalysisCommands,
     random_data_analysis_process,
 )
-from .signal_generation import (  # noqa: E402 pylint: disable=wrong-import-position
+from ..process.signal_generation import (  # noqa: E402 pylint: disable=wrong-import-position
     CPSDSignalGenerator,
 )
-from .signal_generation_process import (  # noqa: E402 pylint: disable=wrong-import-position
+from ..process.signal_generation_process import (  # noqa: E402 pylint: disable=wrong-import-position
     SignalGenerationCommands,
     SignalGenerationMetadata,
     signal_generation_process,

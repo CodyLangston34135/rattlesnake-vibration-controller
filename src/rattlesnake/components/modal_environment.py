@@ -48,7 +48,7 @@ from rattlesnake.components.environments import (
     environment_definition_ui_paths,
     environment_run_ui_paths,
 )
-from rattlesnake.components.signal_generation import (
+from rattlesnake.process.signal_generation import (
     BurstRandomSignalGenerator,
     ChirpSignalGenerator,
     PseudorandomSignalGenerator,
@@ -586,7 +586,7 @@ from .data_collector import (  # noqa # pylint: disable=wrong-import-position
     Window,
     data_collector_process,
 )
-from .signal_generation_process import (  # noqa # pylint: disable=wrong-import-position
+from ..process.signal_generation_process import (  # noqa # pylint: disable=wrong-import-position
     SignalGenerationCommands,
     SignalGenerationMetadata,
     signal_generation_process,

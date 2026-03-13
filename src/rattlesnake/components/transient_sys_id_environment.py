@@ -322,10 +322,10 @@ from rattlesnake.components.data_collector import (  # noqa: E402 pylint: disabl
     FrameBuffer,
     data_collector_process,
 )
-from rattlesnake.components.signal_generation import (  # noqa: E402 pylint: disable=wrong-import-position
+from rattlesnake.process.signal_generation import (  # noqa: E402 pylint: disable=wrong-import-position
     TransientSignalGenerator,
 )
-from rattlesnake.components.signal_generation_process import (  # noqa: E402 pylint: disable=wrong-import-position
+from rattlesnake.process.signal_generation_process import (  # noqa: E402 pylint: disable=wrong-import-position
     SignalGenerationCommands,
     SignalGenerationMetadata,
     signal_generation_process,

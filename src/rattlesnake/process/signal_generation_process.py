@@ -25,8 +25,8 @@ from enum import Enum
 
 import numpy as np
 
-from rattlesnake.components.abstract_message_process import AbstractMessageProcess
-from rattlesnake.components.signal_generation import SignalGenerator
+from rattlesnake.process.abstract_message_process import AbstractMessageProcess
+from rattlesnake.process.signal_generation import SignalGenerator
 from rattlesnake.components.utilities import VerboseMessageQueue, flush_queue, rms_time
 
 TEST_LEVEL_THRESHOLD = 1.01

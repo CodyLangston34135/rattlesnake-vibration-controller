@@ -28,7 +28,7 @@ import netCDF4 as nc
 import numpy as np
 
 from rattlesnake.components.abstract_environment import AbstractMetadata
-from rattlesnake.components.abstract_message_process import AbstractMessageProcess
+from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.components.utilities import (
     DataAcquisitionParameters,
     GlobalCommands,

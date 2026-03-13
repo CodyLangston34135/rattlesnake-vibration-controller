@@ -51,14 +51,14 @@ from rattlesnake.components.data_collector import (
     Window,
 )
 from rattlesnake.components.environments import system_identification_ui_path
-from rattlesnake.components.signal_generation import (
+from rattlesnake.process.signal_generation import (
     BurstRandomSignalGenerator,
     ChirpSignalGenerator,
     PseudorandomSignalGenerator,
     RandomSignalGenerator,
     SignalGenerator,
 )
-from rattlesnake.components.signal_generation_process import (
+from rattlesnake.process.signal_generation_process import (
     SignalGenerationCommands,
     SignalGenerationMetadata,
 )

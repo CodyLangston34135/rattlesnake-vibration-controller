@@ -26,7 +26,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import multiprocessing as mp
 from enum import Enum
 
-from rattlesnake.components.abstract_message_process import AbstractMessageProcess
+from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.components.abstract_sysid_environment import AbstractSysIdMetadata
 from rattlesnake.components.utilities import VerboseMessageQueue, flush_queue
 

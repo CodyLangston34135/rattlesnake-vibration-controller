@@ -476,10 +476,10 @@ from rattlesnake.components.abstract_sysid_data_analysis import (  # pylint: dis
 from rattlesnake.components.data_collector import (  # pylint: disable=wrong-import-position # noqa: E402
     data_collector_process,
 )
-from rattlesnake.components.signal_generation import (  # pylint: disable=wrong-import-position # noqa: E402
+from rattlesnake.process.signal_generation import (  # pylint: disable=wrong-import-position # noqa: E402
     ContinuousTransientSignalGenerator,
 )
-from rattlesnake.components.signal_generation_process import (  # pylint: disable=wrong-import-position # noqa: E402
+from rattlesnake.process.signal_generation_process import (  # pylint: disable=wrong-import-position # noqa: E402
     SignalGenerationCommands,
     SignalGenerationMetadata,
     signal_generation_process,
