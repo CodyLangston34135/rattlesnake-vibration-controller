@@ -26,10 +26,27 @@ import time
 from typing import List
 
 import numpy as np
-import scipy.signal as signal
 
-from rattlesnake.components.abstract_hardware import HardwareAcquisition, HardwareOutput
-from rattlesnake.components.utilities import Channel, DataAcquisitionParameters, flush_queue
+from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
+from rattlesnake.utilities import (
+    Channel,
+    DataAcquisitionParameters,
+    flush_queue,
+    reduce_array_by_coordinate,
+)
+
+try:
+    # cupy may not exist if correct modules aren't installed
+    import cupy as cp  # type: ignore
+    from cupyx.scipy.signal import oaconvolve  # type: ignore
+
+    xp = cp
+    CUDA = True
+except ModuleNotFoundError:
+    from scipy.signal import oaconvolve
+
+    xp = np
+    CUDA = False
 
 _direction_map = {
     "X+": 1,
@@ -66,70 +83,63 @@ _direction_map = {
     None: 0,
 }
 
-DEBUG = False
 
-if DEBUG:
-    from glob import glob
-
-    FILE_OUTPUT = "debug_data/sdynpy_hardware_{:}.npz"
-
-
-class SDynPySystemAcquisition(HardwareAcquisition):
+class SDynPyFRFAcquisition(HardwareAcquisition):
     """Class defining the interface between the controller and synthetic acquisition
 
     This class defines the interfaces between the controller and the data
     acquisition portion of the hardware.  In this case, the hardware is simulated
-    by integrating state space matrices derived from a SDynPy system object.
+    by convolving an IRF with each new frame of data, where the IRF is supplied from
+    either a SDynPy TransferFunctionArray or ImpulseResponseFunctionArray object.
     It is run by the acquisition process, and must define how to get data from
     the test hardware into the controller.
     """
 
-    def __init__(self, system_file: str, queue: mp.queues.Queue, sleep: bool = True):
+    def __init__(self, frf_file: str, queue: mp.queues.Queue):
         """
-        Loads in the SDynPy system file and sets initial parameters to null
+        Loads in the SDynPy file and sets initial parameters to null
         values.
 
         Parameters
         ----------
         system_file : str
-            Path to the file containing state space the SDynPy system object
+            Path to the file containing state space the SDynPy object
         queue : mp.queues.Queue
-            A queue that passes input data from the SDynPySystemOutput class to
+            A queue that passes input data from the SDynPyFRFOutput class to
             this class.  Normally, this data transfer would occur through
             the physical test object: the exciters would excite the test object
             with the specified excitation and the Acquisition would record the
             responses to that excitation.  In the synthetic case, we need to
-            pass the output data to the acquisition which does the integration.
-        sleep : bool
-            If True, the integrator will wait the amount of time the calculation
-            would have took if it were real life, which adds a realistic delay
-            to simulate an actual measurement.  If False, the integration will
-            proceed as fast as possible.
+            pass the output data to the acquisition which does the convolution.
 
         Returns
         -------
         None.
 
         """
-        self.sdynpy_system_data = {key: val for key, val in np.load(system_file).items()}
+        self.sdynpy_data, self.function_type = np.load(frf_file).values()
+        if self.function_type.item() not in [4, 29]:
+            raise ValueError(
+                "File must be SDynPy TransferFunctionArray or ImpulseResponseFunctionArray"
+            )
         self.system = None
         self.times = None
-        self.state = None
+        self.sample_rate = None
+        self.samples_per_read = None
+        self.samples_per_write = None
         self.frame_time = None
+        self.convolution_samples = None
         self.queue = queue
         self.force_buffer = None
+        self.output_signal_time = None
+        self.sys_out = None
         self.integration_oversample = None
         self.response_channels: np.ndarray
         self.output_channels: np.ndarray
         self.response_channels = None
         self.output_channels = None
+        self.irf = None
         self.acquisition_delay = None
-        self.sleep = sleep
-        # Create a dictionary of channels for faster lookup
-        self.channel_indices = {
-            tuple([abs(v) for v in val]): index
-            for index, val in enumerate(self.sdynpy_system_data["coordinate"])
-        }
 
     def set_up_data_acquisition_parameters_and_channels(
         self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
@@ -153,8 +163,8 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         None.
 
         """
-        self.create_response_channels(channel_data)
         self.set_parameters(test_data)
+        self.create_response_channels(channel_data)
 
     def create_response_channels(self, channel_data: List[Channel]):
         """Method to set up response channels
@@ -168,8 +178,6 @@ class SDynPySystemAcquisition(HardwareAcquisition):
             A list of ``Channel`` objects defining the channels in the test
 
         """
-        # pylint: disable=invalid-name
-        #        print('{:} Channels'.format(len(channel_data)))
         self.response_channels = np.array(
             [
                 channel.feedback_device is None or channel.feedback_device == ""
@@ -178,144 +186,75 @@ class SDynPySystemAcquisition(HardwareAcquisition):
             dtype="bool",
         )
         self.output_channels = ~self.response_channels
-        # Need to add a signal buffer in case the write size is not equal to
-        # the read size
+        # Need to add a signal buffer in case the write size is not equal to the read size
         self.force_buffer = np.zeros((0, np.sum(~self.response_channels)))
 
         # Figure out which channels go with which indices
-        channel_indices = []
-        channel_signs = []
+        response_coord = []
+        excitation_coord = []
         for channel in channel_data:
             node_number = int(channel.node_number)
             direction = _direction_map[channel.node_direction]
-            channel_index = self.channel_indices[(node_number, abs(direction))]
-            channel_indices.append(channel_index)
-            channel_signs.append(
-                np.sign(direction)
-                * np.sign(self.sdynpy_system_data["coordinate"][channel_index]["direction"])
-            )
-        channel_indices = np.array(channel_indices)
-        channel_signs = np.array(channel_signs)
-
-        # Now we need to actually go through and set up the A, B, C, D state matrices
-        M = self.sdynpy_system_data["mass"]
-        C = self.sdynpy_system_data["damping"]
-        K = self.sdynpy_system_data["stiffness"]
-
-        # Now we need to pull out the transformation matrices
-        phi = self.sdynpy_system_data["transformation"][channel_indices, :]
-        # Multiply by the signs
-        phi *= channel_signs[:, np.newaxis]
-
-        # Separate into responses and excitations; here input is into the system
-        phi_excitation = phi[self.output_channels, :].copy()
-        phi_response = phi[self.response_channels, :].copy()
-
-        # Set up some other parameters
-        ndofs = M.shape[0]
-        tdofs_response = phi_response.shape[0]
-        tdofs_input = phi_excitation.shape[0]
-
-        # Assembly the full state matrices
-
-        # A = [[     0,     I],
-        #      [M^-1*K,M^-1*C]]
-
-        A_state = np.block(
-            [
-                [np.zeros((ndofs, ndofs)), np.eye(ndofs)],
-                [-np.linalg.solve(M, K), -np.linalg.solve(M, C)],
-            ]
-        )
-
-        # B = [[     0],
-        #      [  M^-1]]
-
-        B_state = np.block(
-            [[np.zeros((ndofs, tdofs_input))], [np.linalg.solve(M, phi_excitation.T)]]
-        )
-
-        # C = [[     I,     0],   # Displacements
-        #      [     0,     I],   # Velocities
-        #      [M^-1*K,M^-1*C],   # Accelerations
-        #      [     0,     0]]   # Forces
-
-        C_all = np.block(
-            [
-                [phi_response, np.zeros((tdofs_response, ndofs))],
-                [np.zeros((tdofs_response, ndofs)), phi_response],
-                [
-                    -phi_response @ np.linalg.solve(M, K),
-                    -phi_response @ np.linalg.solve(M, C),
-                ],
-                [np.zeros((tdofs_input, ndofs)), np.zeros((tdofs_input, ndofs))],
-            ]
-        )
-
-        # D = [[     0],   # Displacements
-        #      [     0],   # Velocities
-        #      [  M^-1],   # Accelerations
-        #      [     I]]   # Forces
-
-        D_all = np.block(
-            [
-                [np.zeros((tdofs_response, tdofs_input))],
-                [np.zeros((tdofs_response, tdofs_input))],
-                [phi_response @ np.linalg.solve(M, phi_excitation.T)],
-                [np.eye(tdofs_input)],
-            ]
-        )
-
-        # Split into different types
-        displacement_indices = np.arange(tdofs_response)
-        velocity_indices = np.arange(tdofs_response) + tdofs_response
-        acceleration_indices = np.arange(tdofs_response) + 2 * tdofs_response
-        force_indices = np.arange(tdofs_input) + 3 * tdofs_response
-
-        C_disp = C_all[displacement_indices]
-        C_vel = C_all[velocity_indices]
-        C_accel = C_all[acceleration_indices]
-        C_force = C_all[force_indices]
-
-        D_disp = D_all[displacement_indices]
-        D_vel = D_all[velocity_indices]
-        D_accel = D_all[acceleration_indices]
-        D_force = D_all[force_indices]
-
-        # Now assemble the full response C and D matrices based on the data type
-        C_response = []
-        D_response = []
-        response_index = 0
-        for i, channel in enumerate(channel_data):
-            if self.output_channels[i]:
-                continue
-            if channel.channel_type.lower() in ["disp", "displacement"]:
-                C_response.append(C_disp[response_index])
-                D_response.append(D_disp[response_index])
-            elif channel.channel_type.lower() in ["vel", "velocity"]:
-                C_response.append(C_vel[response_index])
-                D_response.append(D_vel[response_index])
-            elif channel.channel_type.lower() in ["accel", "acceleration", "acc"]:
-                C_response.append(C_accel[response_index])
-                D_response.append(D_accel[response_index])
+            channel_coord = (node_number, direction)
+            if channel.feedback_device is None or channel.feedback_device == "":
+                response_coord.append(channel_coord)
             else:
-                print(f"Unknown Channel Type for Channel {i + 1}: {channel.channel_type}")
-                C_response.append(C_disp[response_index])
-                D_response.append(D_disp[response_index])
-            response_index += 1
-        C_response = np.array(C_response)
-        D_response = np.array(D_response)
+                excitation_coord.append(channel_coord)
+        coord_dtype = np.dtype([("node", "<u8"), ("direction", "i1")])
+        response_coord = np.array(response_coord, dtype=coord_dtype)
+        excitation_coord = np.array(excitation_coord, dtype=coord_dtype)
 
-        # Now assemble the final C and D matrices
-        C_state = np.empty((len(channel_data), C_response.shape[-1]))
-        C_state[self.response_channels, :] = C_response
-        C_state[self.output_channels, :] = C_force
-        D_state = np.empty((len(channel_data), D_response.shape[-1]))
-        D_state[self.response_channels, :] = D_response
-        D_state[self.output_channels, :] = D_force
-        self.system = signal.StateSpace(A_state, B_state, C_state, D_state)
-        self.state = np.zeros(A_state.shape[0])
-        # np.savez('SDynPy_State.npz', A=A_state, B=B_state, C = C_state, D = D_state)
+        # check for even abscissa spacing
+        spacing = np.diff(self.sdynpy_data["abscissa"], axis=-1)
+        mean_spacing = np.mean(spacing)
+        if not np.allclose(spacing, mean_spacing):
+            raise ValueError("SDynPy array does not have evenly spaced abscissa")
+        # index array by coordinate. `reduce_array_by_coordinate` expects frequency on first axis
+        array = reduce_array_by_coordinate(
+            np.moveaxis(self.sdynpy_data["ordinate"], -1, 0),
+            self.sdynpy_data["coordinate"],
+            response_coord,
+            excitation_coord,
+        )
+        # convert to irf if needed
+        if self.function_type == 4:
+            # compute irf and transpose so that shape becomes (nref, nresp, nsamples)
+            self.irf = np.fft.irfft(array, axis=0).T
+            num_samples = self.irf.shape[-1]
+            dt = 1 / (self.sdynpy_data["abscissa"].max() * num_samples / np.floor(num_samples / 2))
+        elif self.function_type == 29:
+            self.irf = array.T
+            dt = mean_spacing
+        else:
+            raise ValueError(
+                "SDynPy FRFs should have type TransferFunctionArray or ImpulseResponseFunctionArray"
+            )
+        if CUDA:
+            self.irf = cp.asarray(self.irf)
+
+        # Checking to see if the transfer function sampling rate matches the acquisition rate
+        if not np.isclose(self.sample_rate, 1 / dt):
+            raise ValueError(
+                f"The transfer function sampling rate {1 / dt} "
+                f"does not match the hardware sampling rate {self.sample_rate}."
+            )
+
+        # check that all channels from channel table will have a corresponding irf
+        _, number_responses, model_order = self.irf.shape
+        if number_responses != np.sum(self.response_channels):
+            raise ValueError(
+                f"Number of responses in FRF ({number_responses}) does not "
+                f"match channel table ({np.sum(self.response_channels)})"
+            )
+        # each frame of the convolution must include M - 1 samples of
+        # previous data to maintain causality (where M is length of impulse response)
+        self.convolution_samples = self.samples_per_read + model_order - 1
+        # initialize convolution and output arrays (read function will overwrite rather than
+        # re-allocate)
+        self.output_signal_time = xp.zeros(
+            (number_responses, self.convolution_samples), dtype=xp.float64
+        )
+        self.sys_out = np.zeros((len(channel_data), self.times.size), dtype=np.float64)
 
     def set_parameters(self, test_data: DataAcquisitionParameters):
         """Method to set up sampling rate and other test parameters
@@ -331,19 +270,17 @@ class SDynPySystemAcquisition(HardwareAcquisition):
 
         """
         self.integration_oversample = test_data.output_oversample
-        # Need to get one more sample than you would think because lsim doesn't bridge the gap
-        # between integrations
-        self.times = np.arange(test_data.samples_per_read * self.integration_oversample + 1) / (
-            test_data.sample_rate * self.integration_oversample
-        )
+        self.sample_rate = test_data.sample_rate
+        self.times = np.arange(test_data.samples_per_read) / (test_data.sample_rate)
         self.frame_time = test_data.samples_per_read / test_data.sample_rate
-        self.acquisition_delay = test_data.samples_per_write / test_data.output_oversample
+        self.acquisition_delay = test_data.samples_per_write
+        self.samples_per_read = test_data.samples_per_read
+        self.samples_per_write = test_data.samples_per_write
 
     def start(self):
         """Method to start acquiring data.
 
-        For the synthetic case, it simply initializes the state of the system to zero"""
-        self.state[:] = 0
+        For the synthetic case, doesn't need to do anything"""
 
     def get_acquisition_delay(self) -> int:
         """
@@ -366,8 +303,15 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         """Method to read a frame of data from the hardware
 
         This function gets the force from the output queue and adds it to the
-        buffer of time signals that represents the force.  It then integrates
+        buffer of time signals that represents the force. It then convolves
         a frame of time and sends it to the acquisition.
+
+        For large datasets, computation time may exceed the acquisition
+        time in which this function is expected to return. This may result in
+        slower than real-time execution. GPU hardware acceleration is
+        available to increase computation speed if a CuPy installation is found.
+        (requires Nvidia CUDA toolkit and CUDA compatible GPU,
+        see https://docs.cupy.dev/en/stable/install.html)
 
         Returns
         -------
@@ -377,44 +321,53 @@ class SDynPySystemAcquisition(HardwareAcquisition):
 
         """
         start_time = time.time()
-        while self.force_buffer.shape[0] < self.times.size:
+        while self.force_buffer.shape[0] < self.convolution_samples:
             try:
                 forces = self.queue.get(timeout=self.frame_time)
             except mp.queues.Empty:
                 # If we don't get an output in time, this likely means output has stopped
                 # so just put zeros.
-                print("Warning! SDynPy integrator ran out of samples!")
                 forces = np.zeros((self.force_buffer.shape[-1], self.times.size))
             self.force_buffer = np.concatenate((self.force_buffer, forces.T), axis=0)
 
-        # Now extract a force that is the correct size
-        this_force = self.force_buffer[: self.times.size]
+        # Now extract a force that is the correct size (including past samples for convolution)
+        this_force = self.force_buffer[: self.convolution_samples].T
         # And leave the rest for next time
-        # Note we have to keep the last force sample still on the
-        # buffer because it will be the next force sample we use
-        self.force_buffer = self.force_buffer[self.times.size - 1 :]
+        self.force_buffer = self.force_buffer[self.times.size :]
 
-        _, sys_out, x_out = signal.lsim(self.system, this_force, self.times, self.state)
+        if np.any(this_force):
+            if CUDA:
+                this_force = cp.asarray(this_force)
+            # reset the output signal array to zero
+            self.output_signal_time[:] = 0
+            # Setting up and doing the convolution (using GPU if possible)
+            # (see sdynpy.data.TimeHistoryArray.mimo_forward)
+            for reference_irfs, inputs in zip(self.irf, this_force):
+                self.output_signal_time += oaconvolve(reference_irfs, inputs[np.newaxis, :])[
+                    :, : self.convolution_samples
+                ]
 
-        self.state[:] = x_out[-1]
+            # assign latest frame of data to correct channels
+            # (transfer from GPU to CPU if necessary)
+            if CUDA:
+                self.sys_out[self.response_channels, :] = self.output_signal_time[
+                    :, -self.times.size :
+                ].get()
+                self.sys_out[self.output_channels, :] = this_force[:, -self.times.size :].get()
+            else:
+                self.sys_out[self.response_channels, :] = self.output_signal_time[
+                    :, -self.times.size :
+                ]
+                self.sys_out[self.output_channels, :] = this_force[:, -self.times.size :]
+        else:
+            self.sys_out[:] = 0
 
-        if DEBUG:
-            num_files = len(glob(FILE_OUTPUT.format("*")))
-            np.savez(
-                FILE_OUTPUT.format(num_files),
-                force_in=this_force.T,
-                response_out_full_resolution=sys_out.T[..., : -1 : self.integration_oversample],
-                response_out_downsampled=sys_out.T[..., :-1],
-            )
-
-        integration_time = time.time() - start_time
-        remaining_time = self.frame_time - integration_time
-        if remaining_time > 0.0 and self.sleep:
+        computation_time = time.time() - start_time
+        remaining_time = self.frame_time - computation_time
+        if remaining_time > 0.0:
             time.sleep(remaining_time)
 
-        # We don't want to return the last sample because it
-        # will be the initial state for the next sample
-        return sys_out.T[..., : -1 : self.integration_oversample]
+        return self.sys_out
 
     def read_remaining(self):
         """Method to read the rest of the data on the acquisition
@@ -430,16 +383,13 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         return np.zeros((len(self.response_channels), 1))
 
     def stop(self):
-        """Method to stop the acquisition.
-
-        This simply sets the state to zero."""
-        self.state[:] = 0
+        """Method to stop the acquisition."""
 
     def close(self):
         """Method to close down the hardware"""
 
 
-class SDynPySystemOutput(HardwareOutput):
+class SDynPyFRFOutput(HardwareOutput):
     """Class defining the interface between the controller and synthetic output
 
     Note that the only thing that this class does is pass data to the acquisition

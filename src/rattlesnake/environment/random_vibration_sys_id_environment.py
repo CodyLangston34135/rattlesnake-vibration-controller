@@ -42,7 +42,7 @@ from qtpy.QtCore import Qt, QTimer  # pylint: disable=no-name-in-module
 from qtpy.QtGui import QColor  # pylint: disable=no-name-in-module
 
 # %% Imports
-from rattlesnake.components.abstract_sysid_environment import (
+from rattlesnake.environment.abstract_sysid_environment import (
     AbstractSysIdEnvironment,
     AbstractSysIdMetadata,
     AbstractSysIdUI,
@@ -53,7 +53,7 @@ from rattlesnake.components.environments import (
     environment_prediction_ui_paths,
     environment_run_ui_paths,
 )
-from rattlesnake.components.random_vibration_sys_id_utilities import (
+from rattlesnake.environment.random_vibration_sys_id_utilities import (
     _direction_map,
     load_specification,
 )
@@ -62,7 +62,7 @@ from rattlesnake.components.ui_utilities import (
     TransformationMatrixWindow,
     multiline_plotter,
 )
-from rattlesnake.components.utilities import (
+from rattlesnake.utilities import (
     DataAcquisitionParameters,
     GlobalCommands,
     VerboseMessageQueue,
@@ -433,7 +433,7 @@ from ..process.data_collector import (  # noqa: E402 pylint: disable=wrong-impor
     Window,
     data_collector_process,
 )
-from .random_vibration_sys_id_data_analysis import (  # noqa: E402 pylint: disable=wrong-import-position
+from ..process.random_vibration_sys_id_data_analysis import (  # noqa: E402 pylint: disable=wrong-import-position
     RandomVibrationDataAnalysisCommands,
     random_data_analysis_process,
 )
@@ -445,7 +445,7 @@ from ..process.signal_generation_process import (  # noqa: E402 pylint: disable=
     SignalGenerationMetadata,
     signal_generation_process,
 )
-from .spectral_processing import (  # noqa: E402 pylint: disable=wrong-import-position
+from ..process.spectral_processing import (  # noqa: E402 pylint: disable=wrong-import-position
     AveragingTypes,
     Estimator,
     SpectralProcessingCommands,

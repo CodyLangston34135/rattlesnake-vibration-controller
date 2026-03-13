@@ -33,7 +33,7 @@ import scipy.signal as sig
 from scipy.fft import rfft
 
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
-from rattlesnake.components.utilities import (
+from rattlesnake.utilities import (
     VerboseMessageQueue,
     flush_queue,
     load_python_module,

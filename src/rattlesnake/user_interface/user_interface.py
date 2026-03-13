@@ -57,7 +57,7 @@ from rattlesnake.components.ui_utilities import (
     ProfileTimer,
     get_table_bools,
 )
-from rattlesnake.components.utilities import (
+from rattlesnake.utilities import (
     Channel,
     DataAcquisitionParameters,
     GlobalCommands,

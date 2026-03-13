@@ -37,7 +37,7 @@ import pyqtgraph as pg
 from qtpy import QtWidgets, uic
 from scipy.io import loadmat, savemat
 
-from rattlesnake.components.abstract_environment import (
+from rattlesnake.environment.abstract_environment import (
     AbstractEnvironment,
     AbstractMetadata,
     AbstractUI,
@@ -62,13 +62,13 @@ from rattlesnake.process.signal_generation_process import (
     SignalGenerationCommands,
     SignalGenerationMetadata,
 )
-from rattlesnake.components.spectral_processing import (
+from rattlesnake.process.spectral_processing import (
     AveragingTypes,
     Estimator,
     SpectralProcessingCommands,
     SpectralProcessingMetadata,
 )
-from rattlesnake.components.utilities import (
+from rattlesnake.utilities import (
     DataAcquisitionParameters,
     GlobalCommands,
     VerboseMessageQueue,

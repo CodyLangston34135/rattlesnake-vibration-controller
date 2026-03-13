@@ -38,7 +38,7 @@ from qtpy import QtWidgets, uic
 from qtpy.QtCore import Qt
 from qtpy.QtGui import QColor  # pylint: disable=no-name-in-module
 
-from rattlesnake.components.abstract_sysid_environment import (
+from rattlesnake.environment.abstract_sysid_environment import (
     AbstractSysIdEnvironment,
     AbstractSysIdMetadata,
     AbstractSysIdUI,
@@ -49,7 +49,7 @@ from rattlesnake.components.environments import (
     environment_prediction_ui_paths,
     environment_run_ui_paths,
 )
-from rattlesnake.components.sine_sys_id_utilities import (
+from rattlesnake.environment.sine_sys_id_utilities import (
     DefaultSineControlLaw,
     FilterExplorer,
     PlotSineWindow,
@@ -65,7 +65,7 @@ from rattlesnake.components.ui_utilities import (
     blended_scatter_plot,
     multiline_plotter,
 )
-from rattlesnake.components.utilities import (
+from rattlesnake.utilities import (
     GlobalCommands,
     VerboseMessageQueue,
     db2scale,
@@ -484,7 +484,7 @@ from rattlesnake.process.signal_generation_process import (  # pylint: disable=w
     SignalGenerationMetadata,
     signal_generation_process,
 )
-from rattlesnake.components.spectral_processing import (  # pylint: disable=wrong-import-position # noqa: E402
+from rattlesnake.process.spectral_processing import (  # pylint: disable=wrong-import-position # noqa: E402
     spectral_processing_process,
 )
 

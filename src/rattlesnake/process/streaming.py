@@ -27,9 +27,9 @@ from typing import Dict
 import netCDF4 as nc
 import numpy as np
 
-from rattlesnake.components.abstract_environment import AbstractMetadata
+from rattlesnake.environment.abstract_environment import AbstractMetadata
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
-from rattlesnake.components.utilities import (
+from rattlesnake.utilities import (
     DataAcquisitionParameters,
     GlobalCommands,
     QueueContainer,

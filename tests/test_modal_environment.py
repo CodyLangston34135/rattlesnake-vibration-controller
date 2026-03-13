@@ -24,7 +24,7 @@ from qtpy import QtWidgets
 from rattlesnake.process.data_collector import DataCollectorCommands
 
 # from rattlesnake.components.environments import ControlTypes  # unused import
-from rattlesnake.components.modal_environment import (
+from rattlesnake.environment.modal_environment import (
     ModalCommands,
     ModalEnvironment,
     ModalMetadata,
@@ -33,10 +33,10 @@ from rattlesnake.components.modal_environment import (
     modal_process,
 )
 from rattlesnake.process.signal_generation_process import SignalGenerationCommands
-from rattlesnake.components.spectral_processing import SpectralProcessingCommands
+from rattlesnake.process.spectral_processing import SpectralProcessingCommands
 
 # from rattlesnake.components.user_interface import Ui   # unused import
-from rattlesnake.components.utilities import (
+from rattlesnake.utilities import (
     Channel,
     DataAcquisitionParameters,
     GlobalCommands,

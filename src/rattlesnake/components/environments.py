@@ -114,7 +114,7 @@ modal_mdi_ui_path = os.path.join(directory, "modal_acquisition_window.ui")
 environment_processes = {}
 environment_UIs = {}
 # Random Vibration
-from .random_vibration_sys_id_environment import (  # noqa # pylint: disable=wrong-import-position
+from ..environment.random_vibration_sys_id_environment import (  # noqa # pylint: disable=wrong-import-position
     random_vibration_process,
     RandomVibrationUI,
 )
@@ -122,12 +122,15 @@ from .random_vibration_sys_id_environment import (  # noqa # pylint: disable=wro
 environment_processes[ControlTypes.RANDOM] = random_vibration_process
 environment_UIs[ControlTypes.RANDOM] = RandomVibrationUI
 # Time Signal Generation
-from .time_environment import time_process, TimeUI  # noqa # pylint: disable=wrong-import-position
+from ..environment.time_environment import (
+    time_process,
+    TimeUI,
+)  # noqa # pylint: disable=wrong-import-position
 
 environment_processes[ControlTypes.TIME] = time_process
 environment_UIs[ControlTypes.TIME] = TimeUI
 # Transient
-from .transient_sys_id_environment import (  # noqa # pylint: disable=wrong-import-position
+from ..environment.transient_sys_id_environment import (  # noqa # pylint: disable=wrong-import-position
     transient_process,
     TransientUI,
 )
@@ -135,7 +138,7 @@ from .transient_sys_id_environment import (  # noqa # pylint: disable=wrong-impo
 environment_processes[ControlTypes.TRANSIENT] = transient_process
 environment_UIs[ControlTypes.TRANSIENT] = TransientUI
 # Sine
-from .sine_sys_id_environment import (  # noqa # pylint: disable=wrong-import-position
+from ..environment.sine_sys_id_environment import (  # noqa # pylint: disable=wrong-import-position
     sine_process,
     SineUI,
 )
@@ -143,7 +146,7 @@ from .sine_sys_id_environment import (  # noqa # pylint: disable=wrong-import-po
 environment_processes[ControlTypes.SINE] = sine_process
 environment_UIs[ControlTypes.SINE] = SineUI
 # Modal
-from .modal_environment import (  # noqa # pylint: disable=wrong-import-position
+from ..environment.modal_environment import (  # noqa # pylint: disable=wrong-import-position
     modal_process,
     ModalUI,
 )

@@ -24,7 +24,7 @@ from rattlesnake.components.environments import (
     filter_explorer_ui_path,
 )
 from rattlesnake.components.ui_utilities import VaryingNumberOfLinePlot
-from rattlesnake.components.utilities import wrap
+from rattlesnake.utilities import wrap
 
 
 DEBUG = False

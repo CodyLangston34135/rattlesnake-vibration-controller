@@ -11,14 +11,14 @@ import pytest
 from functions.common_functions import DummyMainWindow
 from qtpy import QtWidgets
 
-from rattlesnake.components.time_environment import (
+from rattlesnake.environment.time_environment import (
     TimeEnvironment,
     TimeParameters,
     TimeQueues,
     TimeUI,
     time_process,
 )
-from rattlesnake.components.utilities import (
+from rattlesnake.utilities import (
     Channel,
     DataAcquisitionParameters,
     GlobalCommands,
@@ -73,7 +73,7 @@ def data_acquisition_parameters(channel):
     environment_booleans = np.array([[True]])
     acquisition_processes = 1
     task_trigger = 0
-    task_trigger_output_channel = ''
+    task_trigger_output_channel = ""
     data_acquisition_parameters = DataAcquisitionParameters(
         channel_list,
         sample_rate,
@@ -84,9 +84,9 @@ def data_acquisition_parameters(channel):
         environments,
         environment_booleans,
         output_oversample,
-        maximum_acquisition_processes = acquisition_processes,
+        maximum_acquisition_processes=acquisition_processes,
         task_trigger=task_trigger,
-        task_trigger_output_channel=task_trigger_output_channel
+        task_trigger_output_channel=task_trigger_output_channel,
     )
 
     return data_acquisition_parameters
@@ -450,27 +450,17 @@ def test_time_environment_run_environment(
     ]
     mock_log.assert_has_calls(log_calls)
     mock_shutdown.assert_called()
-    np.testing.assert_array_equal(
-        np.ones((1, 500)), mock_output.call_args_list[0][0][0]
-    )
+    np.testing.assert_array_equal(np.ones((1, 500)), mock_output.call_args_list[0][0][0])
     assert mock_output.call_args_list[0][0][1] == False
-    np.testing.assert_array_equal(
-        np.ones((1, 1, 1200)), mock_put.call_args_list[0][0][0][1][1][0]
-    )
-    np.testing.assert_array_equal(
-        np.ones((1, 1, 1200)), mock_put.call_args_list[2][0][0][1][1][0]
-    )
-    mock_vput.assert_called_with(
-        "Environment Name", (GlobalCommands.START_ENVIRONMENT, None)
-    )
+    np.testing.assert_array_equal(np.ones((1, 1, 1200)), mock_put.call_args_list[0][0][0][1][1][0])
+    np.testing.assert_array_equal(np.ones((1, 1, 1200)), mock_put.call_args_list[2][0][0][1][1][0])
+    mock_vput.assert_called_with("Environment Name", (GlobalCommands.START_ENVIRONMENT, None))
 
 
 @pytest.mark.parametrize("test_level_change", [0, -0.001])
 @mock.patch("rattlesnake.components.time_environment.mp.queues.Queue.put")
 @mock.patch("rattlesnake.components.time_environment.TimeEnvironment.log")
-def test_time_environment_output(
-    mock_log, mock_put, time_environment, test_level_change
-):
+def test_time_environment_output(mock_log, mock_put, time_environment, test_level_change):
     time_environment.test_level_change = test_level_change
     time_environment.current_test_level = 1
     time_environment.test_level_target = 0.8
@@ -492,9 +482,7 @@ def test_time_environment_output(
     target_indices = np.where(output_array <= 0.8)
     output_array[target_indices] = 0.8
     output_array = output_array.reshape(1, -1)
-    np.testing.assert_array_almost_equal(
-        output_array, mock_put.call_args_list[0][0][0][0]
-    )
+    np.testing.assert_array_almost_equal(output_array, mock_put.call_args_list[0][0][0][0])
     assert mock_put.call_args_list[0][0][0][1] == False
 
 
@@ -506,9 +494,7 @@ def test_time_environment_stop_environment(mock_adjust, time_environment):
 
 
 @mock.patch("rattlesnake.components.time_environment.TimeEnvironment.log")
-def test_time_environment_adjust_test_level(
-    mock_log, time_environment, time_parameters
-):
+def test_time_environment_adjust_test_level(mock_log, time_environment, time_parameters):
     time_environment.current_test_level = 1
     time_environment.test_level_target = 0.1
     time_environment.environment_parameters = time_parameters

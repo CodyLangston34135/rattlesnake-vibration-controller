@@ -38,7 +38,7 @@ import scipy.signal as sig
 from qtpy import QtWidgets, uic
 from qtpy.QtCore import Qt
 
-from rattlesnake.components.abstract_environment import (
+from rattlesnake.environment.abstract_environment import (
     AbstractEnvironment,
     AbstractMetadata,
     AbstractUI,
@@ -57,7 +57,7 @@ from rattlesnake.process.signal_generation import (
     SquareSignalGenerator,
 )
 from rattlesnake.components.ui_utilities import ModalMDISubWindow, multiline_plotter
-from rattlesnake.components.utilities import (
+from rattlesnake.utilities import (
     DataAcquisitionParameters,
     GlobalCommands,
     VerboseMessageQueue,
@@ -591,7 +591,7 @@ from ..process.signal_generation_process import (  # noqa # pylint: disable=wron
     SignalGenerationMetadata,
     signal_generation_process,
 )
-from .spectral_processing import (  # noqa # pylint: disable=wrong-import-position
+from ..process.spectral_processing import (  # noqa # pylint: disable=wrong-import-position
     AveragingTypes,
     Estimator,
     SpectralProcessingCommands,

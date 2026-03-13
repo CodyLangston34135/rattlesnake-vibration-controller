@@ -34,7 +34,7 @@ import numpy as np
 import openpyxl
 from qtpy import QtCore, QtWidgets, uic
 
-from rattlesnake.components.abstract_environment import (
+from rattlesnake.environment.abstract_environment import (
     AbstractEnvironment,
     AbstractMetadata,
     AbstractUI,
@@ -45,7 +45,7 @@ from rattlesnake.components.environments import (
     environment_run_ui_paths,
 )
 from rattlesnake.components.ui_utilities import load_time_history, multiline_plotter
-from rattlesnake.components.utilities import (
+from rattlesnake.utilities import (
     DataAcquisitionParameters,
     GlobalCommands,
     VerboseMessageQueue,

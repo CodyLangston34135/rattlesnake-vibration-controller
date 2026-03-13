@@ -29,7 +29,7 @@ from enum import Enum
 import numpy as np
 
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
-from rattlesnake.components.utilities import GlobalCommands, VerboseMessageQueue, flush_queue
+from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue, flush_queue
 
 WAIT_TIME = 0.05
 

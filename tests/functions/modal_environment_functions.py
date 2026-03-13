@@ -1,4 +1,4 @@
-from rattlesnake.components.modal_environment import ModalCommands
+from rattlesnake.environment.modal_environment import ModalCommands
 from rattlesnake.process.data_collector import (
     AcquisitionType,
     Acceptance,
@@ -6,7 +6,7 @@ from rattlesnake.process.data_collector import (
     Window,
     DataCollectorCommands,
 )
-from rattlesnake.components.spectral_processing import (
+from rattlesnake.process.spectral_processing import (
     AveragingTypes,
     Estimator,
     SpectralProcessingCommands,

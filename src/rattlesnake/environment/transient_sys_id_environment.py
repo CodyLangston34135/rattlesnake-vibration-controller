@@ -37,7 +37,7 @@ import scipy.signal as sig
 from qtpy import QtCore, QtWidgets, uic
 from qtpy.QtCore import Qt
 
-from rattlesnake.components.abstract_sysid_environment import (
+from rattlesnake.environment.abstract_sysid_environment import (
     AbstractSysIdEnvironment,
     AbstractSysIdMetadata,
     AbstractSysIdUI,
@@ -55,7 +55,7 @@ from rattlesnake.components.ui_utilities import (
     load_time_history,
     multiline_plotter,
 )
-from rattlesnake.components.utilities import (
+from rattlesnake.utilities import (
     DataAcquisitionParameters,
     GlobalCommands,
     VerboseMessageQueue,
@@ -312,7 +312,7 @@ class TransientMetadata(AbstractSysIdMetadata):
 
 # %% UI
 
-from rattlesnake.components.abstract_interactive_control_law import (  # noqa: E402 pylint: disable=wrong-import-position
+from rattlesnake.environment.abstract_interactive_control_law import (  # noqa: E402 pylint: disable=wrong-import-position
     AbstractControlLawComputation,
 )
 from rattlesnake.process.abstract_sysid_data_analysis import (  # noqa: E402 pylint: disable=wrong-import-position
@@ -330,7 +330,7 @@ from rattlesnake.process.signal_generation_process import (  # noqa: E402 pylint
     SignalGenerationMetadata,
     signal_generation_process,
 )
-from rattlesnake.components.spectral_processing import (  # noqa: E402 pylint: disable=wrong-import-position
+from rattlesnake.process.spectral_processing import (  # noqa: E402 pylint: disable=wrong-import-position
     spectral_processing_process,
 )
 

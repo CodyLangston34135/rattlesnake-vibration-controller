@@ -1,5 +1,5 @@
 from rattlesnake.components.environments import ControlTypes
-from rattlesnake.components.utilities import (
+from rattlesnake.utilities import (
     VerboseMessageQueue,
     QueueContainer,
     DataAcquisitionParameters,
@@ -7,7 +7,7 @@ from rattlesnake.components.utilities import (
     GlobalCommands,
 )
 from rattlesnake.process.acquisition import AcquisitionProcess, acquisition_process
-from rattlesnake.components.abstract_hardware import HardwareAcquisition
+from rattlesnake.hardware.abstract_hardware import HardwareAcquisition
 from functions.common_functions import create_hardware_dict_acquisition
 from functions.acquisition_functions import create_acquire_log_calls
 from unittest import mock

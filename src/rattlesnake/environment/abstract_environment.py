@@ -33,7 +33,7 @@ from multiprocessing.queues import Queue
 import netCDF4 as nc4
 import openpyxl
 
-from rattlesnake.components.utilities import (
+from rattlesnake.utilities import (
     DataAcquisitionParameters,
     GlobalCommands,
     VerboseMessageQueue,

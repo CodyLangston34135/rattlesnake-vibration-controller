@@ -12,7 +12,7 @@ from rattlesnake.process.signal_generation_process import (
     SignalGenerationProcess,
     signal_generation_process,
 )
-from rattlesnake.components.utilities import VerboseMessageQueue
+from rattlesnake.utilities import VerboseMessageQueue
 
 
 # Create log_file_queue

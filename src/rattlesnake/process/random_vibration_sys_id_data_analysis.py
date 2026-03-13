@@ -33,11 +33,11 @@ from rattlesnake.process.abstract_sysid_data_analysis import (
     AbstractSysIDAnalysisProcess,
     SysIDDataAnalysisCommands,
 )
-from rattlesnake.components.random_vibration_sys_id_environment import (
+from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationCommands,
     RandomVibrationMetadata,
 )
-from rattlesnake.components.utilities import (
+from rattlesnake.utilities import (
     GlobalCommands,
     VerboseMessageQueue,
     flush_queue,

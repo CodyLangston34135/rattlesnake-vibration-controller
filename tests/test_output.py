@@ -1,5 +1,5 @@
 from rattlesnake.process.output import OutputProcess, output_process
-from rattlesnake.components.utilities import (
+from rattlesnake.utilities import (
     VerboseMessageQueue,
     QueueContainer,
     Channel,

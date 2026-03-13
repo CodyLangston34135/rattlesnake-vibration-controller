@@ -43,7 +43,7 @@ from rattlesnake.components.environments import (
     modal_mdi_ui_path,
     transformation_matrices_ui_path,
 )
-from rattlesnake.components.utilities import (
+from rattlesnake.utilities import (
     DataAcquisitionParameters,
     coherence,
     error_message_qt,

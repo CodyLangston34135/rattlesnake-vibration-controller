@@ -7,7 +7,7 @@ from functions.common_functions import fake_time
 # from PyQt5 import QtWidgets  # comment out unused import
 
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
-from rattlesnake.components.utilities import GlobalCommands, VerboseMessageQueue
+from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
 
 
 # Create log_file_queue

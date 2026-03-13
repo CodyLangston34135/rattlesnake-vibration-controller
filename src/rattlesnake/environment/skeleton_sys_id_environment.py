@@ -30,7 +30,7 @@ from multiprocessing.queues import Queue
 import netCDF4 as nc4
 from qtpy import QtWidgets, uic
 
-from rattlesnake.components.abstract_sysid_environment import (
+from rattlesnake.environment.abstract_sysid_environment import (
     AbstractSysIdEnvironment,
     AbstractSysIdMetadata,
     AbstractSysIdUI,
@@ -41,7 +41,7 @@ from rattlesnake.components.environments import (
     environment_prediction_ui_paths,
     environment_run_ui_paths,
 )
-from rattlesnake.components.utilities import VerboseMessageQueue
+from rattlesnake.utilities import VerboseMessageQueue
 
 # Update this line to define the controller type, and add to the ControlTypes enumeration in
 # components/environments.py
@@ -155,7 +155,7 @@ from rattlesnake.process.data_collector import (
 from rattlesnake.process.signal_generation_process import (
     signal_generation_process,
 )
-from rattlesnake.components.spectral_processing import (
+from rattlesnake.process.spectral_processing import (
     spectral_processing_process,
 )
 

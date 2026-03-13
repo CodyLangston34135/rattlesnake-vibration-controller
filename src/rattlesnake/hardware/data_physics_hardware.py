@@ -28,9 +28,9 @@ from typing import List
 
 import numpy as np
 
-from rattlesnake.components.abstract_hardware import HardwareAcquisition, HardwareOutput
-from rattlesnake.components.data_physics_interface import DPQuattro, QuattroCoupling, QuattroStatus
-from rattlesnake.components.utilities import Channel, DataAcquisitionParameters
+from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, HardwareOutput
+from rattlesnake.hardware.data_physics_interface import DPQuattro, QuattroCoupling, QuattroStatus
+from rattlesnake.utilities import Channel, DataAcquisitionParameters
 
 BUFFER_SIZE_FACTOR = 3
 SLEEP_FACTOR = 10

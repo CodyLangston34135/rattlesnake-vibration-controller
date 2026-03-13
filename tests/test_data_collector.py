@@ -19,7 +19,7 @@ from rattlesnake.process.data_collector import (
     Window,
     data_collector_process,
 )
-from rattlesnake.components.utilities import VerboseMessageQueue
+from rattlesnake.utilities import VerboseMessageQueue
 
 
 # Create log_file_queue

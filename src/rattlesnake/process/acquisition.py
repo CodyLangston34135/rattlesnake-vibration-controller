@@ -28,7 +28,7 @@ from time import sleep, time
 import numpy as np
 
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
-from rattlesnake.components.utilities import (
+from rattlesnake.utilities import (
     GlobalCommands,
     QueueContainer,
     align_signals,
@@ -160,55 +160,55 @@ class AcquisitionProcess(AbstractMessageProcess):
         if self.hardware is not None:
             self.hardware.close()
         if data_acquisition_parameters.hardware == 0:
-            from ..components.nidaqmx_hardware_multitask import NIDAQmxAcquisition
+            from ..hardware.nidaqmx_hardware_multitask import NIDAQmxAcquisition
 
             self.hardware = NIDAQmxAcquisition(
                 data_acquisition_parameters.extra_parameters["task_trigger"],
                 data_acquisition_parameters.extra_parameters["task_trigger_output_channel"],
             )
         elif data_acquisition_parameters.hardware == 1:
-            from ..components.lanxi_hardware_multiprocessing import LanXIAcquisition
+            from ..hardware.lanxi_hardware_multiprocessing import LanXIAcquisition
 
             self.hardware = LanXIAcquisition(
                 data_acquisition_parameters.extra_parameters["maximum_acquisition_processes"]
             )
         elif data_acquisition_parameters.hardware == 2:
-            from ..components.data_physics_hardware import DataPhysicsAcquisition
+            from ..hardware.data_physics_hardware import DataPhysicsAcquisition
 
             self.hardware = DataPhysicsAcquisition(
                 data_acquisition_parameters.hardware_file,
                 self.queue_container.single_process_hardware_queue,
             )
         elif data_acquisition_parameters.hardware == 3:
-            from ..components.data_physics_dp900_hardware import DataPhysicsDP900Acquisition
+            from ..hardware.data_physics_dp900_hardware import DataPhysicsDP900Acquisition
 
             self.hardware = DataPhysicsDP900Acquisition(
                 data_acquisition_parameters.hardware_file,
                 self.queue_container.single_process_hardware_queue,
             )
         elif data_acquisition_parameters.hardware == 4:
-            from ..components.exodus_modal_solution_hardware import ExodusAcquisition
+            from ..hardware.exodus_modal_solution_hardware import ExodusAcquisition
 
             self.hardware = ExodusAcquisition(
                 data_acquisition_parameters.hardware_file,
                 self.queue_container.single_process_hardware_queue,
             )
         elif data_acquisition_parameters.hardware == 5:
-            from ..components.state_space_virtual_hardware import StateSpaceAcquisition
+            from ..hardware.state_space_virtual_hardware import StateSpaceAcquisition
 
             self.hardware = StateSpaceAcquisition(
                 data_acquisition_parameters.hardware_file,
                 self.queue_container.single_process_hardware_queue,
             )
         elif data_acquisition_parameters.hardware == 6:
-            from ..components.sdynpy_system_virtual_hardware import SDynPySystemAcquisition
+            from ..hardware.sdynpy_system_virtual_hardware import SDynPySystemAcquisition
 
             self.hardware = SDynPySystemAcquisition(
                 data_acquisition_parameters.hardware_file,
                 self.queue_container.single_process_hardware_queue,
             )
         elif data_acquisition_parameters.hardware == 7:
-            from ..components.sdynpy_frf_virtual_hardware import SDynPyFRFAcquisition
+            from ..hardware.sdynpy_frf_virtual_hardware import SDynPyFRFAcquisition
 
             self.hardware = SDynPyFRFAcquisition(
                 data_acquisition_parameters.hardware_file,
