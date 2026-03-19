@@ -623,6 +623,28 @@ def save_csv_matrix(data, file):
         f.write(text)
 
 
+def load_python_module(module_path):
+    """Loads in the Python file at the specified path as a module at runtime
+
+    Parameters
+    ----------
+    module_path : str:
+        Path to the module to be loaded
+
+
+    Returns
+    -------
+    module : module:
+        A reference to the loaded module
+    """
+    _, file = os.path.split(module_path)
+    file, _ = os.path.splitext(file)
+    spec = importlib.util.spec_from_file_location(file, module_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 # region: Math Operations
 def coherence(cpsd_matrix: np.ndarray, row_column: Tuple[int] = None):
     """Compute coherence from a CPSD matrix
@@ -1247,25 +1269,3 @@ class OverlapBuffer:
     def shape(self):
         """Gets the shape of the buffer"""
         return self.buffer_data.shape
-
-
-def load_python_module(module_path):
-    """Loads in the Python file at the specified path as a module at runtime
-
-    Parameters
-    ----------
-    module_path : str:
-        Path to the module to be loaded
-
-
-    Returns
-    -------
-    module : module:
-        A reference to the loaded module
-    """
-    _, file = os.path.split(module_path)
-    file, _ = os.path.splitext(file)
-    spec = importlib.util.spec_from_file_location(file, module_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
