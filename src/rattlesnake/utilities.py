@@ -249,6 +249,38 @@ def coherence(cpsd_matrix: np.ndarray, row_column: Tuple[int] = None):
         )
 
 
+def flush_queue(queue, timeout=None):
+    """Flushes a queue by getting all the data currently in it.
+
+    Parameters
+    ----------
+    queue : mp.queues.Queue or VerboseMessageQueue:
+        The queue to flush
+
+
+    Returns
+    -------
+    data : iterable
+        A list of all data that were in the queue at flush
+
+    """
+    data = []
+    while True:
+        try:
+            if isinstance(queue, VerboseMessageQueue):
+                data.append(
+                    queue.get(
+                        "Flush",
+                        block=False if timeout is None else True,
+                        timeout=timeout,
+                    )
+                )
+            else:
+                data.append(queue.get(block=False if timeout is None else True, timeout=timeout))
+        except mp.queues.Empty:
+            return data
+
+
 # region: QueueContainer
 class QueueContainer:
     """A container class for the queues that the controller will manage"""
@@ -323,6 +355,7 @@ class QueueContainer:
         self.environment_data_out_queues = environment_data_out_queues
 
 
+# region: Hardware Utilities
 class Channel:
     """Property container for a single channel in the controller."""
 
@@ -566,6 +599,7 @@ class DataAcquisitionParameters:
         return self.sample_rate * self.output_oversample
 
 
+# region: UI Utilities
 def error_message_qt(title, message):
     """Helper class to create an error dialog.
 
@@ -580,6 +614,7 @@ def error_message_qt(title, message):
     QtWidgets.QMessageBox.critical(None, title, message)
 
 
+# region: Loading
 def load_csv_matrix(file):
     """Loads a matrix from a CSV file
 
@@ -620,6 +655,7 @@ def save_csv_matrix(data, file):
         f.write(text)
 
 
+# region: Math Operations
 def cpsd_to_time_history(cpsd_matrix, sample_rate, df, output_oversample=1):
     # pylint: disable=invalid-name
     """Generates a time history realization from a CPSD matrix
@@ -746,38 +782,6 @@ def reduce_array_by_coordinate(
     ordinate_multiplication_array[ordinate_multiplication_array == 0] = 1
     return_array *= ordinate_multiplication_array
     return np.moveaxis(return_array, -1, 0)
-
-
-def flush_queue(queue, timeout=None):
-    """Flushes a queue by getting all the data currently in it.
-
-    Parameters
-    ----------
-    queue : mp.queues.Queue or VerboseMessageQueue:
-        The queue to flush
-
-
-    Returns
-    -------
-    data : iterable
-        A list of all data that were in the queue at flush
-
-    """
-    data = []
-    while True:
-        try:
-            if isinstance(queue, VerboseMessageQueue):
-                data.append(
-                    queue.get(
-                        "Flush",
-                        block=False if timeout is None else True,
-                        timeout=timeout,
-                    )
-                )
-            else:
-                data.append(queue.get(block=False if timeout is None else True, timeout=timeout))
-        except mp.queues.Empty:
-            return data
 
 
 def db2scale(decibel):
