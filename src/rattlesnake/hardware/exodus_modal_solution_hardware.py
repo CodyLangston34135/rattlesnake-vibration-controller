@@ -54,6 +54,7 @@ if DEBUG:
                 pass
 
 
+# region: Acquisition
 class ExodusAcquisition(HardwareAcquisition):
     """Class defining the interface between the controller and synthetic acquisition
 
@@ -96,6 +97,7 @@ class ExodusAcquisition(HardwareAcquisition):
         self.acquisition_delay = None
         self.damping = None
 
+    # region: Abstract Methods
     def set_up_data_acquisition_parameters_and_channels(
         self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
     ):
@@ -325,6 +327,7 @@ class ExodusAcquisition(HardwareAcquisition):
         This simply closes the Exodus file."""
         self.exo.close()
 
+    # region: Functions
     def _create_channel(self, channel: Channel, displacement, node_numbers):
         """Helper function to create a channel from the Exodus file.
 
@@ -371,6 +374,7 @@ class ExodusAcquisition(HardwareAcquisition):
         return phi_row
 
 
+# region: Output
 class ExodusOutput(HardwareOutput):
     """Class defining the interface between the controller and synthetic output
 
@@ -391,6 +395,7 @@ class ExodusOutput(HardwareOutput):
         """
         self.queue = queue
 
+    # region: Abstract Methods
     def set_up_data_output_parameters_and_channels(
         self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
     ):

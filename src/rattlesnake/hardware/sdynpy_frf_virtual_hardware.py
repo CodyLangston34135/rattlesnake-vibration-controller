@@ -84,6 +84,7 @@ _direction_map = {
 }
 
 
+# region: Acqusition
 class SDynPyFRFAcquisition(HardwareAcquisition):
     """Class defining the interface between the controller and synthetic acquisition
 
@@ -141,6 +142,7 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
         self.irf = None
         self.acquisition_delay = None
 
+    # region: Abstract Methods
     def set_up_data_acquisition_parameters_and_channels(
         self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
     ):
@@ -389,6 +391,7 @@ class SDynPyFRFAcquisition(HardwareAcquisition):
         """Method to close down the hardware"""
 
 
+# region: Output
 class SDynPyFRFOutput(HardwareOutput):
     """Class defining the interface between the controller and synthetic output
 
@@ -409,6 +412,7 @@ class SDynPyFRFOutput(HardwareOutput):
         """
         self.queue = queue
 
+    # region: Abstract Methods
     def set_up_data_output_parameters_and_channels(
         self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
     ):

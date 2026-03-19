@@ -388,6 +388,7 @@ def close_recorder(host):
     return
 
 
+# region: Acqusition
 class LanXIAcquisition(HardwareAcquisition):
     """Class defining the interface between LAN-XI acquisition and the controller
 
@@ -415,6 +416,7 @@ class LanXIAcquisition(HardwareAcquisition):
         self.total_processes = None
         self.acquisition_delay = None
 
+    # region: Abstract Methods
     def set_up_data_acquisition_parameters_and_channels(
         self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
     ):
@@ -661,6 +663,7 @@ class LanXIAcquisition(HardwareAcquisition):
         if len(self.processes) > 0:  # This means we are still running!
             self.stop()
 
+    # region: Functions
     def _get_states(self):
         for host in list(self.slave_addresses) + [self.master_address]:
             response = requests.get("http://" + host + "/rest/rec/onchange", timeout=60)
@@ -675,6 +678,7 @@ class LanXIAcquisition(HardwareAcquisition):
             requests.put("http://" + host + "/rest/rec/reboot", timeout=60)
 
 
+# region: Output
 class LanXIOutput(HardwareOutput):
     """Abstract class defining the interface between the controller and output
 
@@ -702,6 +706,7 @@ class LanXIOutput(HardwareOutput):
         self.ready_signal_factor = BUFFER_SIZE
         self.maximum_processes = maximum_processes
 
+    # region: Abstract Methods
     def set_up_data_output_parameters_and_channels(
         self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
     ):
@@ -998,6 +1003,7 @@ class LanXIOutput(HardwareOutput):
         self.empty_time = 0.0
         self.set_generators()
 
+    # region: Functions
     def set_generators(self):
         """Sets the generator states"""
         if len(self.output_map) == 0:

@@ -37,6 +37,7 @@ from rattlesnake.utilities import Channel, DataAcquisitionParameters
 BUFFER_SIZE_FACTOR = 3
 
 
+# region: Acqusition
 class NIDAQmxAcquisition(HardwareAcquisition):
     """Class defining the interface between the controller and NI hardware
 
@@ -62,6 +63,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
         self.trigger_output_task = None
         self.test_data = None
 
+    # region: Abstract Methods
     def set_up_data_acquisition_parameters_and_channels(
         self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
     ):
@@ -297,6 +299,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
                 task.close()
         print("Input Tasks Closed")
 
+    # region: Functions
     def _create_channel(self, channel_data: Channel, task_index: int):
         """Helper function to construct a channel on the hardware.
 
@@ -451,6 +454,7 @@ class NIDAQmxAcquisition(HardwareAcquisition):
         return channel
 
 
+# region: Output
 class NIDAQmxOutput(HardwareOutput):
     """Class defining the interface between the controller and NI hardware
 
@@ -474,6 +478,7 @@ class NIDAQmxOutput(HardwareOutput):
         self.output_trigger_generator = output_trigger_generator
         self.has_printed_write_statement = False
 
+    # region: Abstract Methods
     def set_up_data_output_parameters_and_channels(
         self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
     ):
@@ -686,6 +691,7 @@ class NIDAQmxOutput(HardwareOutput):
             < (self.buffer_size_factor - 1) * self.signal_samples
         )
 
+    # region: Functions
     def _create_channel(self, channel_data: Channel, device_index):
         """
         Helper function to construct a channel on the hardware.

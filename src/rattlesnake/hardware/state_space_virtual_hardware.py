@@ -35,6 +35,7 @@ from rattlesnake.hardware.abstract_hardware import HardwareAcquisition, Hardware
 from rattlesnake.utilities import Channel, DataAcquisitionParameters, flush_queue
 
 
+# region: Acqusition
 class StateSpaceAcquisition(HardwareAcquisition):
     """Class defining the interface between the controller and synthetic acquisition
 
@@ -84,6 +85,7 @@ class StateSpaceAcquisition(HardwareAcquisition):
         self.response_channels: np.ndarray
         self.response_channels = None
 
+    # region: Abstract Methods
     def set_up_data_acquisition_parameters_and_channels(
         self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
     ):
@@ -245,6 +247,7 @@ class StateSpaceAcquisition(HardwareAcquisition):
         """Method to close down the hardware"""
 
 
+# region: Output
 class StateSpaceOutput(HardwareOutput):
     """Class defining the interface between the controller and synthetic output
 
@@ -265,6 +268,7 @@ class StateSpaceOutput(HardwareOutput):
         """
         self.queue = queue
 
+    # region: Abstract Methods
     def set_up_data_output_parameters_and_channels(
         self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
     ):

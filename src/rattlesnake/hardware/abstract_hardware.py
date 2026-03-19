@@ -29,7 +29,7 @@ import numpy as np
 from rattlesnake.utilities import Channel, DataAcquisitionParameters
 
 
-# region: HardwareAcqusition
+# region: Acqusition
 class HardwareAcquisition(ABC):
     """Abstract class defining the interface between the controller and acquisition
 
@@ -95,7 +95,7 @@ class HardwareAcquisition(ABC):
         actually played out from the device."""
 
 
-# region: HardwareOutput
+# region: Output
 class HardwareOutput(ABC):
     """Abstract class defining the interface between the controller and output
 

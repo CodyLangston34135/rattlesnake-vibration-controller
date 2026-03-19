@@ -35,6 +35,7 @@ BUFFER_SIZE_FACTOR = 3
 SLEEP_FACTOR = 10
 
 
+# region: Acqusition
 class DataPhysicsDP900Acquisition(HardwareAcquisition):
     """Class defining the interface between the controller and Data Physics
     DP900 hardware
@@ -79,6 +80,7 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
         self.time_per_read = None
         self.last_write_time = None
 
+    # region: Store Metadata
     def set_up_data_acquisition_parameters_and_channels(
         self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
     ):
@@ -256,6 +258,7 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
 
         self.dp900.set_save_recording(False)
 
+    # region: Abstract Methods
     def start(self):
         """Method to start acquiring data from the hardware"""
         self.dp900.init()
@@ -320,6 +323,7 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
         actually played out from the device."""
         return BUFFER_SIZE_FACTOR * self.data_acquisition_parameters.samples_per_write
 
+    # region: Functions
     def get_and_write_output_data(self, block: bool = False):
         """
         Checks to see if there is any data on the output queue that needs to be
@@ -374,6 +378,7 @@ class DataPhysicsDP900Acquisition(HardwareAcquisition):
         return
 
 
+# region: Output
 class DataPhysicsDP900Output(HardwareOutput):
     """Abstract class defining the interface between the controller and output
 
@@ -398,6 +403,7 @@ class DataPhysicsDP900Output(HardwareOutput):
         """
         self.queue = queue
 
+    # region: Abstract Methods
     def set_up_data_output_parameters_and_channels(
         self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
     ):

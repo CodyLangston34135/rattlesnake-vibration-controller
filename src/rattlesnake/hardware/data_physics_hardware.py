@@ -36,6 +36,7 @@ BUFFER_SIZE_FACTOR = 3
 SLEEP_FACTOR = 10
 
 
+# region: Acquisition
 class DataPhysicsAcquisition(HardwareAcquisition):
     """Class defining the interface between the controller and Data Physics
     hardware
@@ -76,6 +77,7 @@ class DataPhysicsAcquisition(HardwareAcquisition):
         self.read_data = None
         self.time_per_read = None
 
+    # region: Abstract Methods
     def set_up_data_acquisition_parameters_and_channels(
         self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
     ):
@@ -261,6 +263,7 @@ class DataPhysicsAcquisition(HardwareAcquisition):
         actually played out from the device."""
         return BUFFER_SIZE_FACTOR * self.data_acquisition_parameters.samples_per_write
 
+    # region: Functions
     def get_and_write_output_data(self, block: bool = False):
         """
         Checks to see if there is any data on the output queue that needs to be
@@ -312,6 +315,7 @@ class DataPhysicsAcquisition(HardwareAcquisition):
         return
 
 
+# region: Output
 class DataPhysicsOutput(HardwareOutput):
     """Abstract class defining the interface between the controller and output
 
@@ -336,6 +340,7 @@ class DataPhysicsOutput(HardwareOutput):
         """
         self.queue = queue
 
+    # region: Abstract Methods
     def set_up_data_output_parameters_and_channels(
         self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
     ):

@@ -74,6 +74,7 @@ if DEBUG:
     FILE_OUTPUT = "debug_data/sdynpy_hardware_{:}.npz"
 
 
+# region: Acuqisition
 class SDynPySystemAcquisition(HardwareAcquisition):
     """Class defining the interface between the controller and synthetic acquisition
 
@@ -131,6 +132,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
             for index, val in enumerate(self.sdynpy_system_data["coordinate"])
         }
 
+    # region: Abstract Methods
     def set_up_data_acquisition_parameters_and_channels(
         self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
     ):
@@ -439,6 +441,7 @@ class SDynPySystemAcquisition(HardwareAcquisition):
         """Method to close down the hardware"""
 
 
+# region: Output
 class SDynPySystemOutput(HardwareOutput):
     """Class defining the interface between the controller and synthetic output
 
@@ -459,6 +462,7 @@ class SDynPySystemOutput(HardwareOutput):
         """
         self.queue = queue
 
+    # region: Abstract Methods
     def set_up_data_output_parameters_and_channels(
         self, test_data: DataAcquisitionParameters, channel_data: List[Channel]
     ):
