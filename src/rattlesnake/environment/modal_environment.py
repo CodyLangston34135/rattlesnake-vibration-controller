@@ -22,29 +22,16 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import inspect
 import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
-import os
 import time
 from enum import Enum
 from glob import glob
 from multiprocessing.queues import Queue
-
 import netCDF4 as nc4
 import numpy as np
-import openpyxl
-import scipy.signal as sig
-from qtpy import QtWidgets, uic
-from qtpy.QtCore import Qt
-
 from rattlesnake.environment.abstract_environment import AbstractEnvironment, AbstractMetadata
-from rattlesnake.user_interface.abstract_user_interface import AbstractUI
-from rattlesnake.components.environments import (
-    ControlTypes,
-    environment_definition_ui_paths,
-    environment_run_ui_paths,
-)
+from rattlesnake.components.environments import ControlTypes
 from rattlesnake.process.signal_generation import (
     BurstRandomSignalGenerator,
     ChirpSignalGenerator,
@@ -53,14 +40,11 @@ from rattlesnake.process.signal_generation import (
     SineSignalGenerator,
     SquareSignalGenerator,
 )
-from rattlesnake.components.ui_utilities import ModalMDISubWindow, multiline_plotter
 from rattlesnake.utilities import (
     DataAcquisitionParameters,
     GlobalCommands,
     VerboseMessageQueue,
-    error_message_qt,
     flush_queue,
-    load_python_module,
 )
 
 CONTROL_TYPE = ControlTypes.MODAL
