@@ -37,6 +37,30 @@ import scipy.signal as sig
 from qtpy import QtWidgets
 
 
+# region: GlobalCommands
+class GlobalCommands(Enum):
+    """An enumeration that lists the commands that the controller can accept"""
+
+    QUIT = -1
+    INITIALIZE_DATA_ACQUISITION = -2
+    INITIALIZE_ENVIRONMENT_PARAMETERS = -3
+    RUN_HARDWARE = -4
+    STOP_HARDWARE = -5
+    INITIALIZE_STREAMING = -6
+    STREAMING_DATA = -7
+    FINALIZE_STREAMING = -8
+    START_ENVIRONMENT = -9
+    STOP_ENVIRONMENT = -10
+    START_STREAMING = -11
+    STOP_STREAMING = -12
+    CREATE_NEW_STREAM = -13
+    COMPLETED_SYSTEM_ID = -14
+    AT_TARGET_LEVEL = -15
+    UPDATE_METADATA = -16
+    UPDATE_INTERACTIVE_CONTROL_PARAMETERS = -17
+    SEND_INTERACTIVE_COMMAND = -18
+
+
 def log_file_task(queue: mp.queues.Queue):
     """A multiprocessing function that collects logging data and writes to file
 
@@ -58,6 +82,139 @@ def log_file_task(queue: mp.queues.Queue):
                 output = output.replace("\n", "////", num_newlines - 1)
             f.write(output)
             f.flush()
+
+
+# region: VerboseMessageQueue
+class VerboseMessageQueue:
+    """A queue class that contains automatic logging information"""
+
+    def __init__(self, log_queue, queue_name):
+        """
+        A queue class that contains automatic logging information
+
+        Parameters
+        ----------
+        log_queue : mp.queues.Queue :
+            A queue that a logging task will read from where the operations of
+            the queue will be logged.
+        queue_name : str :
+            The name of the queue that will be included in the logging information
+
+        """
+        self.queue = mp.Queue()
+        self.log_queue = log_queue
+        self.queue_name = queue_name
+        self.last_put_message = None
+        self.last_put_time = -float("inf")
+        self.last_flush = -float("inf")
+        self.time_threshold = 1.0
+
+    def generate_message_id(self, size=6, chars=string.ascii_letters + string.digits):
+        """Generates a random identifier for log file messages"""
+        return "".join(random.choice(chars) for _ in range(size))
+
+    def put(self, task_name, message_data_tuple, *args, **kwargs):
+        """Puts data to a verbose queue
+
+        Parameters
+        ----------
+        task_name : str
+            Task name that is performing the put operation
+        message_data_tuple : Tuple
+            A (message,data) tuple where message is the instruction and data is
+            any optional data to be passed along with the instruction.
+        *args :
+            Additional arguments that will be passed to the mp.queues.Queue.put
+            function
+        **kwargs :
+            Additional arguments that will be passed to the mp.queues.Queue.put
+            function
+
+        """
+        put_time = time.time()
+        if (
+            self.last_put_message != message_data_tuple[0]
+            or put_time - self.last_put_time > self.time_threshold
+        ):
+            message_id = self.generate_message_id(8)
+            self.log_queue.put(
+                f"{datetime.now()}: {task_name} put "
+                f"{message_data_tuple[0].name} ({message_id}) to {self.queue_name}\n"
+            )
+            self.last_put_message = message_data_tuple[0]
+            self.last_put_time = put_time
+        else:
+            message_id = ""
+        self.queue.put((message_id, message_data_tuple), *args, **kwargs)
+
+    def get(self, task_name, *args, **kwargs):
+        """Gets data from a verbose queue
+
+        Parameters
+        ----------
+        task_name : str :
+            Name of the task that is retrieving data from the queue
+        *args :
+            Additional arguments that will be passed to the mp.queues.Queue.get
+            function
+        **kwargs :
+            Additional arguments that will be passed to the mp.queues.Queue.get
+            function
+
+
+        Returns
+        -------
+        message_data_tuple :
+            A (message,data) tuple
+
+        """
+        (message_id, message_data_tuple) = self.queue.get(*args, **kwargs)
+        get_time = datetime.now()
+        if message_id != "":
+            self.log_queue.put(
+                f"{get_time}: {task_name} got "
+                f"{message_data_tuple[0].name} ({message_id}) from {self.queue_name}\n"
+            )
+        return message_data_tuple
+
+    def flush(self, task_name):
+        """Flushes a verbose queue getting all data currently in the queue
+
+        After execution the queue should be empty barring race conditions.
+
+        Parameters
+        ----------
+        task_name : str :
+            Name of the task that is flushing the queue
+
+
+        Returns
+        -------
+        data : iterable of message_data_tuples :
+            A list of all (message,data) tuples currently in the queue.
+
+        """
+        flush_time = time.time()
+        if flush_time - self.last_flush > 0.1:
+            self.log_queue.put(f"{datetime.now()}: {task_name} flushed {self.queue_name}\n")
+            self.last_flush = flush_time
+        data = []
+        while True:
+            try:
+                message_id, this_data = self.queue.get(False)
+                data.append(this_data)
+                if message_id != "":
+                    self.log_queue.put(
+                        f"{datetime.now()}: {task_name} got {data[-1][0].name} ("
+                        f"{message_id if message_id != '' else 'put not logged'})"
+                        f" from {self.queue_name} during flush\n"
+                    )
+            except mp.queues.Empty:
+                return data
+
+    def empty(self):
+        """Return true if the queue is empty."""
+        return self.queue.empty()
 
 
 def coherence(cpsd_matrix: np.ndarray, row_column: Tuple[int] = None):
@@ -347,138 +504,6 @@ def error_message_qt(title, message):
 
     """
     QtWidgets.QMessageBox.critical(None, title, message)
-
-
-class VerboseMessageQueue:
-    """A queue class that contains automatic logging information"""
-
-    def __init__(self, log_queue, queue_name):
-        """
-        A queue class that contains automatic logging information
-
-        Parameters
-        ----------
-        log_queue : mp.queues.Queue :
-            A queue that a logging task will read from where the operations of
-            the queue will be logged.
-        queue_name : str :
-            The name of the queue that will be included in the logging information
-
-        """
-        self.queue = mp.Queue()
-        self.log_queue = log_queue
-        self.queue_name = queue_name
-        self.last_put_message = None
-        self.last_put_time = -float("inf")
-        self.last_flush = -float("inf")
-        self.time_threshold = 1.0
-
-    def generate_message_id(self, size=6, chars=string.ascii_letters + string.digits):
-        """Generates a random identifier for log file messages"""
-        return "".join(random.choice(chars) for _ in range(size))
-
-    def put(self, task_name, message_data_tuple, *args, **kwargs):
-        """Puts data to a verbose queue
-
-        Parameters
-        ----------
-        task_name : str
-            Task name that is performing the put operation
-        message_data_tuple : Tuple
-            A (message,data) tuple where message is the instruction and data is
-            any optional data to be passed along with the instruction.
-        *args :
-            Additional arguments that will be passed to the mp.queues.Queue.put
-            function
-        **kwargs :
-            Additional arguments that will be passed to the mp.queues.Queue.put
-            function
-
-        """
-        put_time = time.time()
-        if (
-            self.last_put_message != message_data_tuple[0]
-            or put_time - self.last_put_time > self.time_threshold
-        ):
-            message_id = self.generate_message_id(8)
-            self.log_queue.put(
-                f"{datetime.now()}: {task_name} put "
-                f"{message_data_tuple[0].name} ({message_id}) to {self.queue_name}\n"
-            )
-            self.last_put_message = message_data_tuple[0]
-            self.last_put_time = put_time
-        else:
-            message_id = ""
-        self.queue.put((message_id, message_data_tuple), *args, **kwargs)
-
-    def get(self, task_name, *args, **kwargs):
-        """Gets data from a verbose queue
-
-        Parameters
-        ----------
-        task_name : str :
-            Name of the task that is retrieving data from the queue
-        *args :
-            Additional arguments that will be passed to the mp.queues.Queue.get
-            function
-        **kwargs :
-            Additional arguments that will be passed to the mp.queues.Queue.get
-            function
-
-
-        Returns
-        -------
-        message_data_tuple :
-            A (message,data) tuple
-
-        """
-        (message_id, message_data_tuple) = self.queue.get(*args, **kwargs)
-        get_time = datetime.now()
-        if message_id != "":
-            self.log_queue.put(
-                f"{get_time}: {task_name} got "
-                f"{message_data_tuple[0].name} ({message_id}) from {self.queue_name}\n"
-            )
-        return message_data_tuple
-
-    def flush(self, task_name):
-        """Flushes a verbose queue getting all data currently in the queue
-
-        After execution the queue should be empty barring race conditions.
-
-        Parameters
-        ----------
-        task_name : str :
-            Name of the task that is flushing the queue
-
-
-        Returns
-        -------
-        data : iterable of message_data_tuples :
-            A list of all (message,data) tuples currently in the queue.
-
-        """
-        flush_time = time.time()
-        if flush_time - self.last_flush > 0.1:
-            self.log_queue.put(f"{datetime.now()}: {task_name} flushed {self.queue_name}\n")
-            self.last_flush = flush_time
-        data = []
-        while True:
-            try:
-                message_id, this_data = self.queue.get(False)
-                data.append(this_data)
-                if message_id != "":
-                    self.log_queue.put(
-                        f"{datetime.now()}: {task_name} got {data[-1][0].name} ("
-                        f"{message_id if message_id != '' else 'put not logged'})"
-                        f" from {self.queue_name} during flush\n"
-                    )
-            except mp.queues.Empty:
-                return data
-
-    def empty(self):
-        """Return true if the queue is empty."""
-        return self.queue.empty()
 
 
 class QueueContainer:
@@ -1086,29 +1111,6 @@ def shift_signal(signal, samples_to_keep, sample_delay, phase_slope):
 def wrap(data, period=2 * np.pi):
     """Wraps angle data between -pi/2 and pi/2"""
     return (data + period / 2) % period - period / 2
-
-
-class GlobalCommands(Enum):
-    """An enumeration that lists the commands that the controller can accept"""
-
-    QUIT = -1
-    INITIALIZE_DATA_ACQUISITION = -2
-    INITIALIZE_ENVIRONMENT_PARAMETERS = -3
-    RUN_HARDWARE = -4
-    STOP_HARDWARE = -5
-    INITIALIZE_STREAMING = -6
-    STREAMING_DATA = -7
-    FINALIZE_STREAMING = -8
-    START_ENVIRONMENT = -9
-    STOP_ENVIRONMENT = -10
-    START_STREAMING = -11
-    STOP_STREAMING = -12
-    CREATE_NEW_STREAM = -13
-    COMPLETED_SYSTEM_ID = -14
-    AT_TARGET_LEVEL = -15
-    UPDATE_METADATA = -16
-    UPDATE_INTERACTIVE_CONTROL_PARAMETERS = -17
-    SEND_INTERACTIVE_COMMAND = -18
 
 
 class OverlapBuffer:

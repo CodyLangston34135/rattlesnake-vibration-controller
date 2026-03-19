@@ -18,13 +18,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-
-import datetime
-import multiprocessing as mp
-import sys
-
-from qtpy import QtWidgets
-
 from rattlesnake.components.ui_utilities import ControlSelect, ControlTypes, EnvironmentSelect
 from rattlesnake.user_interface.user_interface import Ui
 from rattlesnake.utilities import QueueContainer, VerboseMessageQueue, log_file_task
@@ -32,6 +25,10 @@ from rattlesnake.process.acquisition import acquisition_process
 from rattlesnake.process.output import output_process
 from rattlesnake.components.environments import environment_processes as all_environment_processes
 from rattlesnake.process.streaming import streaming_process
+import datetime
+import multiprocessing as mp
+import sys
+from qtpy import QtWidgets
 
 
 def main():
@@ -41,6 +38,7 @@ def main():
     # Create the user interface application
     app = QtWidgets.QApplication(sys.argv)
 
+    # region: Control Type
     # Check to see if the arguments have specified the control strategy
     upper_args = [arg.upper() for arg in sys.argv]
     control_type = None
@@ -54,6 +52,7 @@ def main():
         if not close_flag:
             sys.exit()
 
+    # region: Combined
     loaded_profile = None
     if control_type == ControlTypes.COMBINED:
         environment_select_results = EnvironmentSelect.select_environment()
@@ -65,6 +64,7 @@ def main():
     else:
         environments = [[control_type, control_type.name.title()]]
 
+    # region: Processes
     # Create the processes
     # Set up the log file process
     log_file_queue = mp.Queue()
@@ -155,11 +155,13 @@ def main():
     streaming_proc = mp.Process(target=streaming_process, args=(queue_container,))
     streaming_proc.start()
 
+    # region: App
     _ = Ui(environments, queue_container, loaded_profile)
 
     # Run the program
     app.exec_()
 
+    # region: Shutdown
     # Rejoin all proceseses
     log_file_queue.put(f"{datetime.datetime.now()}: Joining Acquisition Process\n")
     acquisition_proc.join(timeout=5)
