@@ -7,7 +7,7 @@ from rattlesnake.components.environments import (
     environment_prediction_ui_paths,
     environment_run_ui_paths,
 )
-from rattlesnake.environment.sine_sys_id_utilities import (
+from rattlesnake.user_interface.sine_sys_id_ui_utilities import (
     FilterExplorer,
     PlotSineWindow,
     SineSweepTable,
