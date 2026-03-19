@@ -114,7 +114,7 @@ modal_mdi_ui_path = os.path.join(directory, "modal_acquisition_window.ui")
 environment_processes = {}
 environment_UIs = {}
 # Random Vibration
-from ..environment.random_vibration_sys_id_environment import (  # noqa # pylint: disable=wrong-import-position
+from rattlesnake.environment.random_vibration_sys_id_environment import (  # noqa # pylint: disable=wrong-import-position
     random_vibration_process,
     RandomVibrationUI,
 )
@@ -122,7 +122,7 @@ from ..environment.random_vibration_sys_id_environment import (  # noqa # pylint
 environment_processes[ControlTypes.RANDOM] = random_vibration_process
 environment_UIs[ControlTypes.RANDOM] = RandomVibrationUI
 # Time Signal Generation
-from ..environment.time_environment import (
+from rattlesnake.environment.time_environment import (
     time_process,
     TimeUI,
 )  # noqa # pylint: disable=wrong-import-position
@@ -130,7 +130,7 @@ from ..environment.time_environment import (
 environment_processes[ControlTypes.TIME] = time_process
 environment_UIs[ControlTypes.TIME] = TimeUI
 # Transient
-from ..environment.transient_sys_id_environment import (  # noqa # pylint: disable=wrong-import-position
+from rattlesnake.environment.transient_sys_id_environment import (  # noqa # pylint: disable=wrong-import-position
     transient_process,
     TransientUI,
 )
@@ -138,7 +138,7 @@ from ..environment.transient_sys_id_environment import (  # noqa # pylint: disab
 environment_processes[ControlTypes.TRANSIENT] = transient_process
 environment_UIs[ControlTypes.TRANSIENT] = TransientUI
 # Sine
-from ..environment.sine_sys_id_environment import (  # noqa # pylint: disable=wrong-import-position
+from rattlesnake.environment.sine_sys_id_environment import (  # noqa # pylint: disable=wrong-import-position
     sine_process,
     SineUI,
 )
@@ -146,7 +146,7 @@ from ..environment.sine_sys_id_environment import (  # noqa # pylint: disable=wr
 environment_processes[ControlTypes.SINE] = sine_process
 environment_UIs[ControlTypes.SINE] = SineUI
 # Modal
-from ..environment.modal_environment import (  # noqa # pylint: disable=wrong-import-position
+from rattlesnake.environment.modal_environment import (  # noqa # pylint: disable=wrong-import-position
     modal_process,
 )
 from rattlesnake.user_interface.modal_ui import ModalUI
