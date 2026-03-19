@@ -217,38 +217,6 @@ class VerboseMessageQueue:
         return self.queue.empty()
 
 
-def coherence(cpsd_matrix: np.ndarray, row_column: Tuple[int] = None):
-    """Compute coherence from a CPSD matrix
-
-    Parameters
-    ----------
-    cpsd_matrix : np.ndarray :
-        A 3D complex numpy array where the first index corresponds to the
-        frequency line and the second and third indices correspond to the rows
-        and columns of the matrix.
-    row_column : Tuple[int] :
-        Optional argument to compute the coherence at just a single (row,column)
-        pair.  (Default value = Compute Entire Matrix)
-
-    Returns
-    -------
-    coherence : np.ndarray :
-        3D array of coherence values where the [i,j,k] entry corresponds to the
-        coherence of the CPSD matrix for the ith frequency line, jth row, and
-        kth column.
-
-    """
-    if row_column is None:
-        diag = np.einsum("ijj->ij", cpsd_matrix)
-        return np.real(np.abs(cpsd_matrix) ** 2 / (diag[:, :, np.newaxis] * diag[:, np.newaxis, :]))
-    else:
-        row, column = row_column
-        return np.real(
-            np.abs(cpsd_matrix[:, row, column]) ** 2
-            / (cpsd_matrix[:, row, row] * cpsd_matrix[:, column, column])
-        )
-
-
 def flush_queue(queue, timeout=None):
     """Flushes a queue by getting all the data currently in it.
 
@@ -656,6 +624,38 @@ def save_csv_matrix(data, file):
 
 
 # region: Math Operations
+def coherence(cpsd_matrix: np.ndarray, row_column: Tuple[int] = None):
+    """Compute coherence from a CPSD matrix
+
+    Parameters
+    ----------
+    cpsd_matrix : np.ndarray :
+        A 3D complex numpy array where the first index corresponds to the
+        frequency line and the second and third indices correspond to the rows
+        and columns of the matrix.
+    row_column : Tuple[int] :
+        Optional argument to compute the coherence at just a single (row,column)
+        pair.  (Default value = Compute Entire Matrix)
+
+    Returns
+    -------
+    coherence : np.ndarray :
+        3D array of coherence values where the [i,j,k] entry corresponds to the
+        coherence of the CPSD matrix for the ith frequency line, jth row, and
+        kth column.
+
+    """
+    if row_column is None:
+        diag = np.einsum("ijj->ij", cpsd_matrix)
+        return np.real(np.abs(cpsd_matrix) ** 2 / (diag[:, :, np.newaxis] * diag[:, np.newaxis, :]))
+    else:
+        row, column = row_column
+        return np.real(
+            np.abs(cpsd_matrix[:, row, column]) ** 2
+            / (cpsd_matrix[:, row, row] * cpsd_matrix[:, column, column])
+        )
+
+
 def cpsd_to_time_history(cpsd_matrix, sample_rate, df, output_oversample=1):
     # pylint: disable=invalid-name
     """Generates a time history realization from a CPSD matrix
