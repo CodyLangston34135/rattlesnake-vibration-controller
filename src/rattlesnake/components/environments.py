@@ -132,8 +132,8 @@ environment_UIs[ControlTypes.TIME] = TimeUI
 # Transient
 from rattlesnake.environment.transient_sys_id_environment import (  # noqa # pylint: disable=wrong-import-position
     transient_process,
-    TransientUI,
 )
+from rattlesnake.user_interface.transient_sys_id_ui import TransientUI
 
 environment_processes[ControlTypes.TRANSIENT] = transient_process
 environment_UIs[ControlTypes.TRANSIENT] = TransientUI
