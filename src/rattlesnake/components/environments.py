@@ -148,8 +148,8 @@ environment_UIs[ControlTypes.SINE] = SineUI
 # Modal
 from ..environment.modal_environment import (  # noqa # pylint: disable=wrong-import-position
     modal_process,
-    ModalUI,
 )
+from rattlesnake.user_interface.modal_ui import ModalUI
 
 environment_processes[ControlTypes.MODAL] = modal_process
 environment_UIs[ControlTypes.MODAL] = ModalUI

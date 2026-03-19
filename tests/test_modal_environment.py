@@ -29,9 +29,9 @@ from rattlesnake.environment.modal_environment import (
     ModalEnvironment,
     ModalMetadata,
     ModalQueues,
-    ModalUI,
     modal_process,
 )
+from rattlesnake.user_interface.modal_ui import ModalUI
 from rattlesnake.process.signal_generation_process import SignalGenerationCommands
 from rattlesnake.process.spectral_processing import SpectralProcessingCommands
 
