@@ -27,7 +27,6 @@ import multiprocessing as mp
 from enum import Enum
 
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
-from rattlesnake.environment.abstract_sysid_environment import AbstractSysIdMetadata
 from rattlesnake.utilities import VerboseMessageQueue, flush_queue
 
 
@@ -114,7 +113,7 @@ class AbstractSysIDAnalysisProcess(AbstractMessageProcess):
         self.sysid_condition = None
         self.startup = True
 
-    def initialize_sysid_parameters(self, data: AbstractSysIdMetadata):
+    def initialize_sysid_parameters(self, data):
         """Stores parameters describing the system identification into the object
 
         Parameters

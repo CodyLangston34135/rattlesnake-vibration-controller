@@ -1,8 +1,8 @@
 from rattlesnake.environment.abstract_sysid_environment import (
-    AbstractSysIdMetadata,
-    AbstractSysIdUI,
     AbstractSysIdEnvironment,
+    AbstractSysIdMetadata,
 )
+from rattlesnake.user_interface.abstract_sys_id_user_interface import AbstractSysIdUI
 import openpyxl
 
 

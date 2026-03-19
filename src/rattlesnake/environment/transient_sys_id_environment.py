@@ -40,8 +40,8 @@ from qtpy.QtCore import Qt
 from rattlesnake.environment.abstract_sysid_environment import (
     AbstractSysIdEnvironment,
     AbstractSysIdMetadata,
-    AbstractSysIdUI,
 )
+from rattlesnake.user_interface.abstract_sys_id_user_interface import AbstractSysIdUI
 from rattlesnake.components.environments import (
     ControlTypes,
     environment_definition_ui_paths,

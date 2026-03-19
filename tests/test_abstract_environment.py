@@ -6,11 +6,8 @@ from functions.common_functions import fake_time
 
 # from PyQt5 import QtWidgets  # comment out unused import
 
-from rattlesnake.environment.abstract_environment import (
-    AbstractEnvironment,
-    AbstractMetadata,
-    AbstractUI,
-)
+from rattlesnake.environment.abstract_environment import AbstractEnvironment, AbstractMetadata
+from rattlesnake.user_interface.abstract_user_interface import AbstractUI
 from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
 
 
