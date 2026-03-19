@@ -140,8 +140,8 @@ environment_UIs[ControlTypes.TRANSIENT] = TransientUI
 # Sine
 from rattlesnake.environment.sine_sys_id_environment import (  # noqa # pylint: disable=wrong-import-position
     sine_process,
-    SineUI,
 )
+from rattlesnake.user_interface.sine_sys_id_ui import SineUI
 
 environment_processes[ControlTypes.SINE] = sine_process
 environment_UIs[ControlTypes.SINE] = SineUI

@@ -89,9 +89,7 @@ class RandomVibrationCommands(Enum):
     # UPDATE_INTERACTIVE_CONTROL_PARAMETERS = 5
 
 
-# %% Queues
-
-
+# region: Queues
 class RandomVibrationQueues:
     """A container class for the queues that random vibration will manage."""
 
