@@ -48,7 +48,6 @@ from rattlesnake.utilities import (
 )
 
 CONTROL_TYPE = ControlTypes.MODAL
-
 WAIT_TIME = 0.02
 
 
@@ -1068,6 +1067,7 @@ class ModalEnvironment(AbstractEnvironment):
         return True
 
 
+# region: Process
 def modal_process(
     environment_name: str,
     input_queue: VerboseMessageQueue,

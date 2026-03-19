@@ -124,8 +124,8 @@ environment_UIs[ControlTypes.RANDOM] = RandomVibrationUI
 # Time Signal Generation
 from rattlesnake.environment.time_environment import (
     time_process,
-    TimeUI,
 )  # noqa # pylint: disable=wrong-import-position
+from rattlesnake.user_interface.time_ui import TimeUI
 
 environment_processes[ControlTypes.TIME] = time_process
 environment_UIs[ControlTypes.TIME] = TimeUI

@@ -15,9 +15,9 @@ from rattlesnake.environment.time_environment import (
     TimeEnvironment,
     TimeParameters,
     TimeQueues,
-    TimeUI,
     time_process,
 )
+from rattlesnake.user_interface.time_ui import TimeUI
 from rattlesnake.utilities import (
     Channel,
     DataAcquisitionParameters,
