@@ -1,8 +1,8 @@
 from rattlesnake.user_interface.abstract_sys_id_user_interface import AbstractSysIdUI
 from rattlesnake.environment.sine_sys_id_environment import SineCommands, SineMetadata
 from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue, load_python_module, db2scale
-from rattlesnake.components.environments import (
-    ControlTypes,
+from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.user_interface.ui_utilities import (
     environment_definition_ui_paths,
     environment_prediction_ui_paths,
     environment_run_ui_paths,
@@ -12,7 +12,7 @@ from rattlesnake.user_interface.sine_sys_id_ui_utilities import (
     PlotSineWindow,
     SineSweepTable,
 )
-from rattlesnake.components.ui_utilities import (
+from rattlesnake.user_interface.ui_utilities import (
     TransformationMatrixWindow,
     VaryingNumberOfLinePlot,
     blended_scatter_plot,

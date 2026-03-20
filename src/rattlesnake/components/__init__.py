@@ -29,12 +29,14 @@ from ..utilities import VerboseMessageQueue, log_file_task
 
 from ..user_interface.user_interface import Ui, QueueContainer
 
-from .ui_utilities import ControlSelect, EnvironmentSelect
+from ..user_interface.ui_utilities import ControlSelect, EnvironmentSelect
 
 # Import environment processes
-from .environments import environment_processes as all_environment_processes
-from .environments import environment_UIs as all_environment_UIs
-from .environments import ControlTypes
+from ..environment.environment_registry import (
+    ENVIRONMENT_PROCESS as all_environment_processes,
+)
+from ..user_interface.ui_registry import ENVIRONMENT_UIS as all_environment_UIs
+from ..environment.environment_utilities import ControlTypes
 
 from ..process.acquisition import acquisition_process
 from ..process.output import output_process

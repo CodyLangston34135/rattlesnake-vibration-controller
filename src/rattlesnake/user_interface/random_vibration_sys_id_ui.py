@@ -11,8 +11,8 @@ from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationMetadata,
     RandomVibrationCommands,
 )
-from rattlesnake.components.environments import (
-    ControlTypes,
+from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.user_interface.ui_utilities import (
     environment_definition_ui_paths,
     environment_prediction_ui_paths,
     environment_run_ui_paths,
@@ -21,7 +21,7 @@ from rattlesnake.user_interface.random_vibration_sys_id_ui_utilities import (
     _direction_map,
     load_specification,
 )
-from rattlesnake.components.ui_utilities import (
+from rattlesnake.user_interface.ui_utilities import (
     PlotWindow,
     TransformationMatrixWindow,
     multiline_plotter,

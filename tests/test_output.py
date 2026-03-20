@@ -5,7 +5,7 @@ from rattlesnake.utilities import (
     Channel,
     DataAcquisitionParameters,
 )
-from rattlesnake.components.environments import ControlTypes
+from rattlesnake.environment.environment_utilities import ControlTypes
 from functions.common_functions import create_hardware_dict_output
 from unittest import mock
 import multiprocessing as mp

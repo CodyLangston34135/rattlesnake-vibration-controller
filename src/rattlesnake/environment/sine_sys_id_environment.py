@@ -39,7 +39,7 @@ from rattlesnake.environment.abstract_sysid_environment import (
     AbstractSysIdMetadata,
 )
 from rattlesnake.user_interface.abstract_sys_id_user_interface import AbstractSysIdUI
-from rattlesnake.components.environments import ControlTypes
+from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.environment.sine_sys_id_utilities import (
     DefaultSineControlLaw,
     SineSpecification,

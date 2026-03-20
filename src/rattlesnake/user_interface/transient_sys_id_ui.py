@@ -7,13 +7,13 @@ from rattlesnake.environment.abstract_interactive_control_law import (  # noqa: 
     AbstractControlLawComputation,
 )
 from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
-from rattlesnake.components.environments import (
-    ControlTypes,
+from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.user_interface.ui_utilities import (
     environment_definition_ui_paths,
     environment_prediction_ui_paths,
     environment_run_ui_paths,
 )
-from rattlesnake.components.ui_utilities import (
+from rattlesnake.user_interface.ui_utilities import (
     PlotTimeWindow,
     TransformationMatrixWindow,
     colororder,

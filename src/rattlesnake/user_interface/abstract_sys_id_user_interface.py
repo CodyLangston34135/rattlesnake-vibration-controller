@@ -5,7 +5,7 @@ from rattlesnake.environment.abstract_sysid_environment import (
     AbstractSysIdMetadata,
     SystemIdCommands,
 )
-from rattlesnake.components.environments import system_identification_ui_path
+from rattlesnake.user_interface.ui_utilities import system_identification_ui_path
 from rattlesnake.process.abstract_sysid_data_analysis import SysIDDataAnalysisCommands
 from abc import ABC, abstractmethod
 from multiprocessing.queues import Queue

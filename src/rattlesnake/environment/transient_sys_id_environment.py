@@ -36,7 +36,7 @@ from rattlesnake.environment.abstract_sysid_environment import (
     AbstractSysIdEnvironment,
     AbstractSysIdMetadata,
 )
-from rattlesnake.components.environments import ControlTypes
+from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.utilities import (
     GlobalCommands,
     VerboseMessageQueue,

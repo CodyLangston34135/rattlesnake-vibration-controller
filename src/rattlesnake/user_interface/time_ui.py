@@ -8,9 +8,9 @@ from rattlesnake.utilities import (
     rms_time,
     db2scale,
 )
-from rattlesnake.components.ui_utilities import multiline_plotter, load_time_history
-from rattlesnake.components.environments import (
-    ControlTypes,
+from rattlesnake.user_interface.ui_utilities import multiline_plotter, load_time_history
+from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.user_interface.ui_utilities import (
     environment_definition_ui_paths,
     environment_run_ui_paths,
 )

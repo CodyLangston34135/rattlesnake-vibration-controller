@@ -48,9 +48,9 @@ from qtpy.QtCore import (  # pylint: disable=no-name-in-module
     Slot,
 )
 
-from rattlesnake.components.environments import environment_UIs as all_environment_UIs
-from rattlesnake.components.environments import ui_path
-from rattlesnake.components.ui_utilities import (
+from rattlesnake.user_interface.ui_registry import ENVIRONMENT_UIS as all_environment_UIs
+from rattlesnake.user_interface.ui_utilities import ui_path
+from rattlesnake.user_interface.ui_utilities import (
     ChannelMonitor,
     IPAddress,
     IPAddressManager,

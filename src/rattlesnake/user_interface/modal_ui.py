@@ -8,12 +8,12 @@ from rattlesnake.utilities import (
     load_python_module,
     error_message_qt,
 )
-from rattlesnake.components.environments import (
-    ControlTypes,
+from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.user_interface.ui_utilities import (
     environment_definition_ui_paths,
     environment_run_ui_paths,
 )
-from rattlesnake.components.ui_utilities import ModalMDISubWindow, multiline_plotter
+from rattlesnake.user_interface.ui_utilities import ModalMDISubWindow, multiline_plotter
 from qtpy import QtWidgets, uic
 from qtpy.QtCore import Qt
 from multiprocessing.queues import Queue

@@ -18,12 +18,15 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-from rattlesnake.components.ui_utilities import ControlSelect, ControlTypes, EnvironmentSelect
+from rattlesnake.user_interface.ui_utilities import ControlSelect, ControlTypes
+from rattlesnake.user_interface.ui_registry import EnvironmentSelect
 from rattlesnake.user_interface.user_interface import Ui
 from rattlesnake.utilities import QueueContainer, VerboseMessageQueue, log_file_task
 from rattlesnake.process.acquisition import acquisition_process
 from rattlesnake.process.output import output_process
-from rattlesnake.components.environments import environment_processes as all_environment_processes
+from rattlesnake.environment.environment_registry import (
+    ENVIRONMENT_PROCESS as all_environment_processes,
+)
 from rattlesnake.process.streaming import streaming_process
 import datetime
 import multiprocessing as mp

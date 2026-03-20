@@ -30,7 +30,7 @@ from functions.common_functions import DummyMainWindow
 from qtpy import QtWidgets
 
 # from rattlesnake.components.environments import ControlTypes  # unused import
-from rattlesnake.components.ui_utilities import (
+from rattlesnake.user_interface.ui_utilities import (
     ChannelMonitor,
     ControlSelect,
     EnvironmentSelect,

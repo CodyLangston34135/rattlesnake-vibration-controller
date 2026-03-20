@@ -31,7 +31,7 @@ from multiprocessing.queues import Queue
 import netCDF4 as nc4
 import numpy as np
 from rattlesnake.environment.abstract_environment import AbstractEnvironment, AbstractMetadata
-from rattlesnake.components.environments import ControlTypes
+from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.process.signal_generation import (
     BurstRandomSignalGenerator,
     ChirpSignalGenerator,

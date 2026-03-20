@@ -35,8 +35,8 @@ from rattlesnake.environment.abstract_sysid_environment import (
     AbstractSysIdMetadata,
 )
 from rattlesnake.user_interface.abstract_sys_id_user_interface import AbstractSysIdUI
-from rattlesnake.components.environments import (
-    ControlTypes,
+from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.user_interface.ui_utilities import (
     environment_definition_ui_paths,
     environment_prediction_ui_paths,
     environment_run_ui_paths,

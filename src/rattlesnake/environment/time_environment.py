@@ -36,18 +36,11 @@ from qtpy import QtCore, QtWidgets, uic
 
 from rattlesnake.environment.abstract_environment import AbstractEnvironment, AbstractMetadata
 from rattlesnake.user_interface.abstract_user_interface import AbstractUI
-from rattlesnake.components.environments import (
-    ControlTypes,
-    environment_definition_ui_paths,
-    environment_run_ui_paths,
-)
-from rattlesnake.components.ui_utilities import load_time_history, multiline_plotter
+from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.utilities import (
     DataAcquisitionParameters,
     GlobalCommands,
     VerboseMessageQueue,
-    db2scale,
-    rms_time,
 )
 
 CONTROL_TYPE = ControlTypes.TIME
