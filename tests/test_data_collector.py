@@ -150,8 +150,8 @@ def test_frame_buffer_accept(frame_buffer):
     assert frame_buffer.waiting_for_accept == False
 
 
-@mock.patch("rattlesnake.components.data_collector.FrameBuffer.find_triggers")
-@mock.patch("rattlesnake.components.data_collector.FrameBuffer.add_data")
+@mock.patch("rattlesnake.process.data_collector.FrameBuffer.find_triggers")
+@mock.patch("rattlesnake.process.data_collector.FrameBuffer.add_data")
 def test_frame_buffer_add_data_get_frame(mock_add, mock_find, frame_buffer):
     mock_find.return_value = [np.int64(125)]
     buffer_data = np.concatenate((np.zeros((2, 75)), np.ones((2, 25)), np.zeros((2, 100))), axis=1)
@@ -262,7 +262,7 @@ def test_data_collector_process_init(log_file_queue):
     assert isinstance(data_collector_process, DataCollectorProcess)
 
 
-@mock.patch("rattlesnake.components.data_collector.DataCollectorProcess.force_initialize_collector")
+@mock.patch("rattlesnake.process.data_collector.DataCollectorProcess.force_initialize_collector")
 def test_data_collector_process_initialize_collector(
     mock_init, data_collector_process_obj, collector_metadata
 ):
@@ -285,7 +285,7 @@ def test_data_collector_process_initialize_collector(
         Window.EXPONENTIAL_FORCE,
     ],
 )
-@mock.patch("rattlesnake.components.data_collector.flush_queue")
+@mock.patch("rattlesnake.process.data_collector.flush_queue")
 def test_data_collector_process_force_initialize_collector(
     mock_flush, data_collector_process_obj, collector_metadata, window
 ):
@@ -296,11 +296,11 @@ def test_data_collector_process_force_initialize_collector(
 
 
 @pytest.mark.parametrize("last_data", [True, False])
-@mock.patch("rattlesnake.components.data_collector.DataCollectorProcess.stop")
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
-@mock.patch("rattlesnake.components.data_collector.mp.queues.Queue.put")
-@mock.patch("rattlesnake.components.data_collector.DataCollectorProcess.log")
-@mock.patch("rattlesnake.components.data_collector.mp.queues.Queue.get")
+@mock.patch("rattlesnake.process.data_collector.DataCollectorProcess.stop")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
+@mock.patch("rattlesnake.process.data_collector.mp.queues.Queue.put")
+@mock.patch("rattlesnake.process.data_collector.DataCollectorProcess.log")
+@mock.patch("rattlesnake.process.data_collector.mp.queues.Queue.get")
 def test_data_collector_process_acquire(
     mock_get,
     mock_log,
@@ -346,9 +346,9 @@ def test_data_collector_process_acquire(
         mock_vput.assert_called_with("Process Name", (DataCollectorCommands.ACQUIRE, None))
 
 
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
-@mock.patch("rattlesnake.components.data_collector.mp.queues.Queue.put")
-@mock.patch("rattlesnake.components.data_collector.DataCollectorProcess.log")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
+@mock.patch("rattlesnake.process.data_collector.mp.queues.Queue.put")
+@mock.patch("rattlesnake.process.data_collector.DataCollectorProcess.log")
 def test_data_collector_process_accept(mock_log, mock_put, mock_vput, data_collector_process_obj):
     mock_buffer = mock.MagicMock()
     data_collector_process_obj.frame_buffer = mock_buffer
@@ -376,10 +376,10 @@ def test_data_collector_process_accept(mock_log, mock_put, mock_vput, data_colle
     mock_vput.assert_called_with("Process Name", (DataCollectorCommands.ACCEPTED, True))
 
 
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.flush")
-@mock.patch("rattlesnake.components.data_collector.flush_queue")
-@mock.patch("rattlesnake.components.data_collector.DataCollectorProcess.log")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.flush")
+@mock.patch("rattlesnake.process.data_collector.flush_queue")
+@mock.patch("rattlesnake.process.data_collector.DataCollectorProcess.log")
 def test_data_collector_process_stop(
     mock_log, mock_flush, mock_vflush, mock_put, data_collector_process_obj
 ):
@@ -395,7 +395,7 @@ def test_data_collector_process_stop(
     mock_put.assert_called_with("Process Name", (DataCollectorCommands.SHUTDOWN_ACHIEVED, None))
 
 
-@mock.patch("rattlesnake.components.data_collector.DataCollectorProcess.log")
+@mock.patch("rattlesnake.process.data_collector.DataCollectorProcess.log")
 def test_data_collector_process_set_test_level(mock_log, data_collector_process_obj):
     data_collector_process_obj.set_test_level((10, 0.1))
 
@@ -406,7 +406,7 @@ def test_data_collector_process_set_test_level(mock_log, data_collector_process_
 
 # Test the data_collector_process
 # Prevent the run while loop from starting
-@mock.patch("rattlesnake.components.abstract_message_process.AbstractMessageProcess.run")
+@mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.run")
 def test_data_collector_process_function(mock_run, log_file_queue):
     data_collector_process(
         "Environment Name",

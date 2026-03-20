@@ -243,9 +243,9 @@ def test_verbose_message_id(verbose_queue, random_seed=42):
 
 # Test verbose message queue put
 # Mock the message id return string
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.generate_message_id")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.generate_message_id")
 # Prevent the Queue object form putting stuff into it
-@mock.patch("rattlesnake.components.utilities.mp.queues.Queue.put")
+@mock.patch("rattlesnake.utilities.mp.queues.Queue.put")
 def test_verbose_message_queue_put(mock_put, mock_id, verbose_queue):
     # Mock message id
     message_id = "1"
@@ -262,7 +262,7 @@ def test_verbose_message_queue_put(mock_put, mock_id, verbose_queue):
 
 # Test verbose message queue get
 # Prevent the Queue object from getting from an empty queue
-@mock.patch("rattlesnake.components.utilities.mp.queues.Queue.get")
+@mock.patch("rattlesnake.utilities.mp.queues.Queue.get")
 def test_verbose_message_queue_get(mock_get, verbose_queue):
     # Mock the data to get from the queue
     message_id = "1"
@@ -313,9 +313,9 @@ def test_verbose_message_queue_get(mock_get, verbose_queue):
 
 # Test log_file_queue for verbose push and verbose get)
 # Mock the message_id for the log message
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.generate_message_id")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.generate_message_id")
 # Mock the datetime in the log message
-@mock.patch("rattlesnake.components.utilities.datetime")
+@mock.patch("rattlesnake.utilities.datetime")
 def test_verbose_message_queue_log(mock_time, mock_id, log_file_queue, verbose_queue):
     # Generate multiprocessing arrays to store data and log message to
     verbose_array = mp.Array("i", 1)
@@ -350,8 +350,8 @@ def test_verbose_message_queue_log(mock_time, mock_id, log_file_queue, verbose_q
     )
 
 
-@mock.patch("rattlesnake.components.utilities.importlib.util.module_from_spec")
-@mock.patch("rattlesnake.components.utilities.importlib.util.spec_from_file_location")
+@mock.patch("rattlesnake.utilities.importlib.util.module_from_spec")
+@mock.patch("rattlesnake.utilities.importlib.util.spec_from_file_location")
 def test_load_python_module(mock_from_spec, mock_module):
     mock_spec = mock.MagicMock()
     mock_from_spec.return_value = mock_spec

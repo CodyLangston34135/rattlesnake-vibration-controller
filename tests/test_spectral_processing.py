@@ -141,7 +141,7 @@ def test_spectral_processing_init(log_file_queue):
     assert isinstance(spectral_processing_process, SpectralProcessingProcess)
 
 
-@mock.patch("rattlesnake.components.spectral_processing.SpectralProcessingProcess.log")
+@mock.patch("rattlesnake.process.spectral_processing.SpectralProcessingProcess.log")
 def test_spectral_processing_initialize_parameters(
     mock_log, spectral_processing_process_obj, spectral_processing_metadata
 ):
@@ -175,8 +175,8 @@ def test_spectral_processing_clear_spectral_processing(spectral_processing_proce
     )
 
 
-@mock.patch("rattlesnake.components.spectral_processing.SpectralProcessingProcess.command_queue")
-@mock.patch("rattlesnake.components.spectral_processing.flush_queue")
+@mock.patch("rattlesnake.process.spectral_processing.SpectralProcessingProcess.command_queue")
+@mock.patch("rattlesnake.process.spectral_processing.flush_queue")
 def test_spectral_processing_stop_spectral_processing(
     mock_flush, mock_command, spectral_processing_process_obj
 ):
@@ -199,7 +199,7 @@ def test_spectral_processing_stop_spectral_processing(
 
 # Test the spectral_processing_process function
 # Prevent run while loop from starting
-@mock.patch("rattlesnake.components.abstract_message_process.AbstractMessageProcess.run")
+@mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.run")
 def test_spectral_processing_process(mock_run, log_file_queue):
     spectral_processing_process(
         "Environment Name",

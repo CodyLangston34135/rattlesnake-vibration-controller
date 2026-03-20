@@ -57,7 +57,7 @@ def test_streaming_process_init(queue_container):
     assert isinstance(streaming_process, StreamingProcess)
 
 
-@mock.patch("rattlesnake.components.streaming.nc.Dataset")
+@mock.patch("rattlesnake.process.streaming.nc.Dataset")
 def test_streaming_process_initialize(
     mock_dataset, streaming_process_obj, data_acquisition_parameters
 ):
@@ -113,7 +113,7 @@ def test_streaming_process_finalize(streaming_process_obj):
     assert streaming_process_obj.netcdf_handle == None
 
 
-@mock.patch("rattlesnake.components.streaming.StreamingProcess.finalize")
+@mock.patch("rattlesnake.process.streaming.StreamingProcess.finalize")
 def test_streaming_process_quit(mock_finalize, streaming_process_obj):
     quit_var = streaming_process_obj.quit(None)
 
@@ -123,7 +123,7 @@ def test_streaming_process_quit(mock_finalize, streaming_process_obj):
 
 # Test streaming_process function
 # Prevent run while loop from starting
-@mock.patch("rattlesnake.components.abstract_message_process.AbstractMessageProcess.run")
+@mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.run")
 def test_streaming_process_func(mock_run, queue_container):
     streaming_process(queue_container)
 

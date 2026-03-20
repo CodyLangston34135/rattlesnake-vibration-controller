@@ -351,8 +351,8 @@ def test_modal_metadata_get_signal_generator(modal_metadata, signal_idx):
 #     assert isinstance(modal_ui, ModalUI)
 
 
-# @mock.patch("rattlesnake.components.modal_environment.ModalUI.generate_signal")
-# @mock.patch("rattlesnake.components.modal_environment.ModalUI.collect_environment_definition_parameters")
+# @mock.patch("rattlesnake.environment.modal_environment.ModalUI.generate_signal")
+# @mock.patch("rattlesnake.environment.modal_environment.ModalUI.collect_environment_definition_parameters")
 # def test_modal_ui_update_parameters(mock_collect, mock_signal, modal_ui):
 #     mock_metadata = mock.MagicMock()
 #     mock_metadata.samples_per_acquire = 100
@@ -370,10 +370,10 @@ def test_modal_metadata_get_signal_generator(modal_metadata, signal_idx):
 #     assert modal_ui.definition_widget.frequency_spacing_display.value() == 10
 
 
-# @mock.patch("rattlesnake.components.modal_environment.ModalUI.generate_signal")
-# @mock.patch("rattlesnake.components.modal_environment.ModalUI.output_channel_indices",new_callable=mock.PropertyMock)
-# @mock.patch("rattlesnake.components.modal_environment.ModalUI.reference_indices",new_callable=mock.PropertyMock)
-# @mock.patch("rattlesnake.components.modal_environment.ModalUI.response_indices",new_callable=mock.PropertyMock)
+# @mock.patch("rattlesnake.environment.modal_environment.ModalUI.generate_signal")
+# @mock.patch("rattlesnake.environment.modal_environment.ModalUI.output_channel_indices",new_callable=mock.PropertyMock)
+# @mock.patch("rattlesnake.environment.modal_environment.ModalUI.reference_indices",new_callable=mock.PropertyMock)
+# @mock.patch("rattlesnake.environment.modal_environment.ModalUI.response_indices",new_callable=mock.PropertyMock)
 # def test_modal_ui_update_reference_channels(mock_response, mock_reference, mock_output, mock_signal, modal_ui):
 #     mock_response.return_value = [0]
 #     mock_reference.return_value = [1, 2]
@@ -436,7 +436,7 @@ def test_modal_metadata_get_signal_generator(modal_metadata, signal_idx):
 #         assert modal_ui.definition_widget.hysteresis_eu_display.isEnabled()
 
 
-# @mock.patch("rattlesnake.components.modal_environment.ModalUI.collect_environment_definition_parameters")
+# @mock.patch("rattlesnake.environment.modal_environment.ModalUI.collect_environment_definition_parameters")
 # def test_modal_ui_update_trigger_levels(mock_collect, modal_ui, data_acquisition_parameters):
 #     t_v = 0.8
 #     t_eu = 0.2
@@ -456,7 +456,7 @@ def test_modal_metadata_get_signal_generator(modal_metadata, signal_idx):
 #     assert modal_ui.definition_widget.hysteresis_eu_display.value() == h_eu
 
 
-# @mock.patch("rattlesnake.components.modal_environment.ModalUI.collect_environment_definition_parameters")
+# @mock.patch("rattlesnake.environment.modal_environment.ModalUI.collect_environment_definition_parameters")
 # def test_modal_ui_update_hysteresis_length(mock_collect, modal_ui):
 #     mock_metadata = mock.MagicMock()
 #     mock_metadata.hysteresis_samples = 100
@@ -469,14 +469,14 @@ def test_modal_metadata_get_signal_generator(modal_metadata, signal_idx):
 #     assert modal_ui.definition_widget.hysteresis_time_display.value() == 0.05
 
 
-# @mock.patch("rattlesnake.components.modal_environment.ModalUI.generate_signal")
+# @mock.patch("rattlesnake.environment.modal_environment.ModalUI.generate_signal")
 # def test_modal_ui_update_signal(mock_signal, modal_ui):
 #     modal_ui.update_signal()
 
 #     mock_signal.assert_called()
 
 
-# @mock.patch("rattlesnake.components.modal_environment.ModalUI.collect_environment_definition_parameters")
+# @mock.patch("rattlesnake.environment.modal_environment.ModalUI.collect_environment_definition_parameters")
 # def test_modal_ui_generate_signal(mock_collect, modal_ui, data_acquisition_parameters):
 #     mock_metadata = mock.MagicMock()
 #     mock_metadata.samples_per_frame = 100
@@ -523,7 +523,7 @@ def test_modal_metadata_get_signal_generator(modal_metadata, signal_idx):
 #         mock_widget.hide.assert_called()
 
 
-# @mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
+# @mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
 # def test_modal_ui_preview_acquisition(mock_put, modal_ui):
 #     modal_ui.preview_acquisition()
 
@@ -533,14 +533,14 @@ def test_modal_metadata_get_signal_generator(modal_metadata, signal_idx):
 #     assert modal_ui.run_widget.stop_test_button.isEnabled()
 
 
-# @mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
+# @mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
 # def test_modal_ui_stop_control(mock_put, modal_ui):
 #     modal_ui.stop_control()
 
 #     mock_put.assert_called_with('Environment Name UI', (ModalCommands.STOP_CONTROL, None))
 
 
-# @mock.patch("rattlesnake.components.modal_environment.QtWidgets.QFileDialog.getSaveFileName")
+# @mock.patch("rattlesnake.environment.modal_environment.QtWidgets.QFileDialog.getSaveFileName")
 # def test_modal_ui_select_file(mock_file, modal_ui):
 #     mock_file.return_value = ("Filename", "File Filter")
 
@@ -549,7 +549,7 @@ def test_modal_metadata_get_signal_generator(modal_metadata, signal_idx):
 #     assert modal_ui.run_widget.data_file_selector.text() == "Filename"
 
 
-# @mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
+# @mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
 # def test_modal_ui_accept_frame(mock_put, modal_ui):
 #     modal_ui.accept_frame()
 
@@ -558,7 +558,7 @@ def test_modal_metadata_get_signal_generator(modal_metadata, signal_idx):
 #     assert not modal_ui.run_widget.reject_average_button.isEnabled()
 
 
-# @mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
+# @mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
 # def test_modal_ui_reject_frame(mock_put, modal_ui):
 #     modal_ui.reject_frame()
 
@@ -567,7 +567,7 @@ def test_modal_metadata_get_signal_generator(modal_metadata, signal_idx):
 #     assert not modal_ui.run_widget.reject_average_button.isEnabled()
 
 
-# @mock.patch("rattlesnake.components.modal_environment.ModalMDISubWindow")
+# @mock.patch("rattlesnake.environment.modal_environment.ModalMDISubWindow")
 # def test_modal_ui_new_window(mock_window, modal_ui):
 #     mock_display = mock.MagicMock()
 #     modal_ui.run_widget.channel_display_area = mock_display
@@ -614,7 +614,7 @@ def test_modal_metadata_get_signal_generator(modal_metadata, signal_idx):
 #     mock_window.widget().increment_channel.assert_called_with(2)
 
 
-# @mock.patch("rattlesnake.components.modal_environment.ModalUI.update_override_table")
+# @mock.patch("rattlesnake.environment.modal_environment.ModalUI.update_override_table")
 # def test_modal_ui_add_override_channels(mock_update, modal_ui):
 #     modal_ui.channel_names = ["Channel 1", "Channel 2", "Channel 3"]
 #     modal_ui.add_override_channel()
@@ -625,7 +625,7 @@ def test_modal_metadata_get_signal_generator(modal_metadata, signal_idx):
 #     assert modal_ui.run_widget.dof_override_table.item(0,2).text() == 'X+'
 
 
-# @mock.patch("rattlesnake.components.modal_environment.ModalUI.update_override_table")
+# @mock.patch("rattlesnake.environment.modal_environment.ModalUI.update_override_table")
 # def test_modal_ui_remove_override_channels(mock_update, modal_ui):
 #     mock_table = mock.MagicMock()
 #     mock_table.currentRow.return_value = 0
@@ -637,8 +637,8 @@ def test_modal_metadata_get_signal_generator(modal_metadata, signal_idx):
 #     mock_update.assert_called()
 
 
-# @mock.patch("rattlesnake.components.modal_environment.ModalMDISubWindow.show")
-# @mock.patch("rattlesnake.components.modal_environment.ModalUI.update_channel_names")
+# @mock.patch("rattlesnake.environment.modal_environment.ModalMDISubWindow.show")
+# @mock.patch("rattlesnake.environment.modal_environment.ModalUI.update_channel_names")
 # def test_modal_ui_update_override_table(mock_update, mock_show, main_window, modal_ui_init_env, data_acquisition_parameters):
 #     modal_ui_init_env.data_acquisition_parameters = data_acquisition_parameters
 #     mock_table = mock.MagicMock()
@@ -656,8 +656,8 @@ def test_modal_metadata_get_signal_generator(modal_metadata, signal_idx):
 #     assert modal_ui_init_env.run_widget.channel_display_area.reciprocal_responses == []
 
 
-# @mock.patch("rattlesnake.components.modal_environment.ModalMetadata.store_to_netcdf")
-# @mock.patch("rattlesnake.components.modal_environment.nc4.Dataset")
+# @mock.patch("rattlesnake.environment.modal_environment.ModalMetadata.store_to_netcdf")
+# @mock.patch("rattlesnake.environment.modal_environment.nc4.Dataset")
 # def test_modal_ui_create_netcdf_file(mock_dataset, mock_store, modal_ui_init_env):
 #     modal_ui_init_env.create_netcdf_file("filename")
 
@@ -669,10 +669,10 @@ def test_modal_metadata_get_signal_generator(modal_metadata, signal_idx):
 #     modal_ui.update_channel_names()
 
 
-# @mock.patch("rattlesnake.components.modal_environment.ModalUI.generate_signal")
-# @mock.patch("rattlesnake.components.modal_environment.multiline_plotter")
-# @mock.patch("rattlesnake.components.modal_environment.ModalUI.update_trigger_levels")
-# @mock.patch("rattlesnake.components.modal_environment.ModalUI.update_channel_names")
+# @mock.patch("rattlesnake.environment.modal_environment.ModalUI.generate_signal")
+# @mock.patch("rattlesnake.environment.modal_environment.multiline_plotter")
+# @mock.patch("rattlesnake.environment.modal_environment.ModalUI.update_trigger_levels")
+# @mock.patch("rattlesnake.environment.modal_environment.ModalUI.update_channel_names")
 # def test_modal_ui_initialize_data_acquisition(mock_channel, mock_trigger, mock_plot, mock_signal, modal_ui, data_acquisition_parameters):
 #     modal_ui.channel_names = ['Accel 221 Y+']
 #     modal_ui.initialize_data_acquisition(data_acquisition_parameters)
@@ -687,8 +687,8 @@ def test_modal_metadata_get_signal_generator(modal_metadata, signal_idx):
 
 
 # @pytest.mark.parametrize("frf_window", ["rectangle", "exponential", "hann"])
-# @mock.patch("rattlesnake.components.modal_environment.ModalUI.get_reciprocal_measurements")
-# @mock.patch("rattlesnake.components.modal_environment.ModalUI.collect_environment_definition_parameters")
+# @mock.patch("rattlesnake.environment.modal_environment.ModalUI.get_reciprocal_measurements")
+# @mock.patch("rattlesnake.environment.modal_environment.ModalUI.collect_environment_definition_parameters")
 # def test_modal_ui_initialize_environment(mock_metadata, mock_reciprocal, modal_ui_init_data, modal_metadata, frf_window):
 #     modal_metadata.frf_window = frf_window
 #     mock_metadata.return_value = modal_metadata
@@ -719,7 +719,7 @@ def test_modal_metadata_get_signal_generator(modal_metadata, signal_idx):
 #         dummy_netcdf.close.assert_called()
 
 
-# @mock.patch("rattlesnake.components.modal_environment.ModalMetadata")
+# @mock.patch("rattlesnake.environment.modal_environment.ModalMetadata")
 # def test_modal_ui_collect_environment_definition_parameters(mock_metadata, modal_ui):
 #     modal_ui.collect_environment_definition_parameters()
 
@@ -764,13 +764,15 @@ def test_modal_environment_initialize_data_acquisition_parameters(modal_environm
 
 
 @mock.patch(
-    "rattlesnake.components.modal_environment.ModalEnvironment.get_spectral_processing_metadata"
+    "rattlesnake.environment.modal_environment.ModalEnvironment.get_spectral_processing_metadata"
 )
 @mock.patch(
-    "rattlesnake.components.modal_environment.ModalEnvironment.get_signal_generation_metadata"
+    "rattlesnake.environment.modal_environment.ModalEnvironment.get_signal_generation_metadata"
 )
-@mock.patch("rattlesnake.components.modal_environment.ModalEnvironment.get_data_collector_metadata")
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
+@mock.patch(
+    "rattlesnake.environment.modal_environment.ModalEnvironment.get_data_collector_metadata"
+)
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
 def test_modal_environment_initialize_environment_test_parameters(
     mock_put,
     mock_collect,
@@ -802,7 +804,7 @@ def test_modal_environment_initialize_environment_test_parameters(
     mock_put.assert_has_calls(put_calls)
 
 
-@mock.patch("rattlesnake.components.modal_environment.CollectorMetadata")
+@mock.patch("rattlesnake.environment.modal_environment.CollectorMetadata")
 def test_modal_environment_get_data_collector_metadata(
     mock_metadata, modal_environment, data_acquisition_parameters, modal_metadata
 ):
@@ -817,7 +819,7 @@ def test_modal_environment_get_data_collector_metadata(
     mock_metadata.assert_has_calls(metadata_call)
 
 
-@mock.patch("rattlesnake.components.modal_environment.SpectralProcessingMetadata")
+@mock.patch("rattlesnake.environment.modal_environment.SpectralProcessingMetadata")
 def test_modal_environment_get_spectral_processing_metadata(
     mock_metadata, modal_environment, data_acquisition_parameters, modal_metadata
 ):
@@ -832,7 +834,7 @@ def test_modal_environment_get_spectral_processing_metadata(
     mock_metadata.assert_has_calls(metadata_call)
 
 
-@mock.patch("rattlesnake.components.modal_environment.SignalGenerationMetadata")
+@mock.patch("rattlesnake.environment.modal_environment.SignalGenerationMetadata")
 def test_modal_environment_get_signal_generator_metadata(
     mock_metadata, modal_environment, data_acquisition_parameters, modal_metadata
 ):
@@ -857,15 +859,17 @@ def test_modal_environment_get_signal_generator(modal_environment):
 
 
 @mock.patch(
-    "rattlesnake.components.modal_environment.ModalEnvironment.get_spectral_processing_metadata"
+    "rattlesnake.environment.modal_environment.ModalEnvironment.get_spectral_processing_metadata"
 )
-@mock.patch("rattlesnake.components.modal_environment.ModalEnvironment.get_signal_generator")
+@mock.patch("rattlesnake.environment.modal_environment.ModalEnvironment.get_signal_generator")
 @mock.patch(
-    "rattlesnake.components.modal_environment.ModalEnvironment.get_signal_generation_metadata"
+    "rattlesnake.environment.modal_environment.ModalEnvironment.get_signal_generation_metadata"
 )
-@mock.patch("rattlesnake.components.modal_environment.ModalEnvironment.get_data_collector_metadata")
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
-@mock.patch("rattlesnake.components.modal_environment.ModalEnvironment.log")
+@mock.patch(
+    "rattlesnake.environment.modal_environment.ModalEnvironment.get_data_collector_metadata"
+)
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
+@mock.patch("rattlesnake.environment.modal_environment.ModalEnvironment.log")
 def test_modal_environment_start_environment(
     mock_log,
     mock_put,
@@ -887,10 +891,10 @@ def test_modal_environment_start_environment(
     mock_log.assert_called_with("Starting Modal")
 
 
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
-@mock.patch("rattlesnake.components.modal_environment.mp.queues.Queue.put")
-@mock.patch("rattlesnake.components.modal_environment.ModalEnvironment.log")
-@mock.patch("rattlesnake.components.modal_environment.flush_queue")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
+@mock.patch("rattlesnake.environment.modal_environment.mp.queues.Queue.put")
+@mock.patch("rattlesnake.environment.modal_environment.ModalEnvironment.log")
+@mock.patch("rattlesnake.environment.modal_environment.flush_queue")
 def test_modal_environment_run_control(
     mock_flush, mock_log, mock_put, mock_vput, modal_environment, modal_metadata
 ):
@@ -942,9 +946,9 @@ def test_modal_environment_spectral_shutdown_achieved_fn(modal_environment):
 
 
 @pytest.mark.parametrize("shutdown", [True, False])
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
-@mock.patch("rattlesnake.components.modal_environment.mp.queues.Queue.put")
-@mock.patch("rattlesnake.components.modal_environment.ModalEnvironment.log")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
+@mock.patch("rattlesnake.environment.modal_environment.mp.queues.Queue.put")
+@mock.patch("rattlesnake.environment.modal_environment.ModalEnvironment.log")
 def test_modal_environment_check_for_shutdown(
     mock_log, mock_put, mock_vput, modal_environment, shutdown
 ):
@@ -963,16 +967,16 @@ def test_modal_environment_check_for_shutdown(
         )
 
 
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
 def test_modal_environment_accept_frame(mock_put, modal_environment):
     modal_environment.accept_frame("data")
 
     mock_put.assert_called_with("Environment_name", (DataCollectorCommands.ACCEPT, "data"))
 
 
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
-@mock.patch("rattlesnake.components.modal_environment.flush_queue")
-@mock.patch("rattlesnake.components.modal_environment.ModalEnvironment.log")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
+@mock.patch("rattlesnake.environment.modal_environment.flush_queue")
+@mock.patch("rattlesnake.environment.modal_environment.ModalEnvironment.log")
 def test_modal_environment_stop_environment(mock_log, mock_flush, mock_put, modal_environment):
     modal_environment.stop_environment("data")
 
@@ -990,7 +994,7 @@ def test_modal_environment_stop_environment(mock_log, mock_flush, mock_put, moda
     mock_put.assert_has_calls(put_calls)
 
 
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
 def test_modal_environment_quit(mock_put, modal_environment):
     data = modal_environment.quit("data")
 
@@ -1003,10 +1007,10 @@ def test_modal_environment_quit(mock_put, modal_environment):
     assert data == True
 
 
-@mock.patch("rattlesnake.components.modal_environment.ModalEnvironment.log")
-@mock.patch("rattlesnake.components.modal_environment.mp.Process.join")
-@mock.patch("rattlesnake.components.modal_environment.ModalEnvironment.run")
-@mock.patch("rattlesnake.components.modal_environment.mp.Process.start")
+@mock.patch("rattlesnake.environment.modal_environment.ModalEnvironment.log")
+@mock.patch("rattlesnake.environment.modal_environment.mp.Process.join")
+@mock.patch("rattlesnake.environment.modal_environment.ModalEnvironment.run")
+@mock.patch("rattlesnake.environment.modal_environment.mp.Process.start")
 def test_modal_process_function(mock_start, mock_run, mock_join, mock_log, log_file_queue):
     modal_process(
         "Environment Name",

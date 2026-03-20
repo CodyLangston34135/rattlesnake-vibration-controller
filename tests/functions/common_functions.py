@@ -10,24 +10,24 @@ def fake_time():
 
 def create_hardware_dict_acquisition():
     hardware_dict = {
-        0: "rattlesnake.components.nidaqmx_hardware_multitask.NIDAQmxAcquisition",
-        1: "rattlesnake.components.lanxi_hardware_multiprocessing.LanXIAcquisition",
-        2: "rattlesnake.components.data_physics_hardware.DataPhysicsAcquisition",
-        4: "rattlesnake.components.exodus_modal_solution_hardware.ExodusAcquisition",
-        5: "rattlesnake.components.state_space_virtual_hardware.StateSpaceAcquisition",
-        6: "rattlesnake.components.sdynpy_system_virtual_hardware.SDynPySystemAcquisition",
+        0: "rattlesnake.hardware.nidaqmx_hardware_multitask.NIDAQmxAcquisition",
+        1: "rattlesnake.hardware.lanxi_hardware_multiprocessing.LanXIAcquisition",
+        2: "rattlesnake.hardware.data_physics_hardware.DataPhysicsAcquisition",
+        4: "rattlesnake.hardware.exodus_modal_solution_hardware.ExodusAcquisition",
+        5: "rattlesnake.hardware.state_space_virtual_hardware.StateSpaceAcquisition",
+        6: "rattlesnake.hardware.sdynpy_system_virtual_hardware.SDynPySystemAcquisition",
     }
     return hardware_dict
 
 
 def create_hardware_dict_output():
     hardware_dict = {
-        0: "rattlesnake.components.nidaqmx_hardware_multitask.NIDAQmxOutput",
-        1: "rattlesnake.components.lanxi_hardware_multiprocessing.LanXIOutput",
-        2: "rattlesnake.components.data_physics_hardware.DataPhysicsOutput",
-        4: "rattlesnake.components.exodus_modal_solution_hardware.ExodusOutput",
-        5: "rattlesnake.components.state_space_virtual_hardware.StateSpaceOutput",
-        6: "rattlesnake.components.sdynpy_system_virtual_hardware.SDynPySystemOutput",
+        0: "rattlesnake.hardware.nidaqmx_hardware_multitask.NIDAQmxOutput",
+        1: "rattlesnake.hardware.lanxi_hardware_multiprocessing.LanXIOutput",
+        2: "rattlesnake.hardware.data_physics_hardware.DataPhysicsOutput",
+        4: "rattlesnake.hardware.exodus_modal_solution_hardware.ExodusOutput",
+        5: "rattlesnake.hardware.state_space_virtual_hardware.StateSpaceOutput",
+        6: "rattlesnake.hardware.sdynpy_system_virtual_hardware.SDynPySystemOutput",
     }
     return hardware_dict
 

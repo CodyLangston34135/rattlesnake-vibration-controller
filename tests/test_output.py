@@ -162,7 +162,7 @@ def test_output_process_init(queue_container, environments):
 
 @pytest.mark.parametrize("hardware", [None, mock.MagicMock()])
 @pytest.mark.parametrize("hardware_idx", [0, 1, 2, 4, 5])
-@mock.patch("rattlesnake.components.output.OutputProcess.log")
+@mock.patch("rattlesnake.process.output.OutputProcess.log")
 def test_output_process_initialize_data_acquisition(
     mock_log, hardware, hardware_idx, output_process_obj, data_acquisition_parameters, hardware_dict
 ):
@@ -184,10 +184,10 @@ def test_output_process_initialize_data_acquisition(
     assert output_process_obj.environment_output_channels["Environment Name"] == np.array([0])
 
 
-# @mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
-# @mock.patch("rattlesnake.components.acquisition.mp.queues.Queue.put")
-# @mock.patch("rattlesnake.components.acquisition.mp.queues.Queue.get_nowait")
-# @mock.patch("rattlesnake.components.output.OutputProcess.log")
+# @mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
+# @mock.patch("rattlesnake.process.acquisition.mp.queues.Queue.put")
+# @mock.patch("rattlesnake.process.acquisition.mp.queues.Queue.get_nowait")
+# @mock.patch("rattlesnake.process.output.OutputProcess.log")
 # def test_output_process_output_signal(mock_log, mock_get, mock_put, mock_vput, output_process_obj):
 #     mock_hardware = mock.MagicMock()
 #     output_process_obj.hardware = mock_hardware
@@ -198,7 +198,7 @@ def test_output_process_initialize_data_acquisition(
 #     output_process_obj.output_signal(None)
 
 
-@mock.patch("rattlesnake.components.output.OutputProcess.log")
+@mock.patch("rattlesnake.process.output.OutputProcess.log")
 def test_output_process_stop_output(mock_log, output_process_obj):
     output_process_obj.stop_output(None)
 
@@ -206,7 +206,7 @@ def test_output_process_stop_output(mock_log, output_process_obj):
     assert output_process_obj.shutdown_flag == True
 
 
-@mock.patch("rattlesnake.components.output.OutputProcess.log")
+@mock.patch("rattlesnake.process.output.OutputProcess.log")
 def test_output_process_start_environment(mock_log, output_process_obj):
     output_process_obj.start_environment("Modal")
 
@@ -216,8 +216,8 @@ def test_output_process_start_environment(mock_log, output_process_obj):
     assert output_process_obj.environment_active_flags["Modal"] == False
 
 
-@mock.patch("rattlesnake.components.acquisition.flush_queue")
-@mock.patch("rattlesnake.components.output.OutputProcess.log")
+@mock.patch("rattlesnake.process.acquisition.flush_queue")
+@mock.patch("rattlesnake.process.output.OutputProcess.log")
 def test_output_process_quit(mock_log, mock_flush, output_process_obj):
     mock_hardware = mock.MagicMock()
     output_process_obj.hardware = mock_hardware
@@ -230,7 +230,7 @@ def test_output_process_quit(mock_log, mock_flush, output_process_obj):
 
 # Test the output_process function
 # Prevent run while loop from starting
-@mock.patch("rattlesnake.components.abstract_message_process.AbstractMessageProcess.run")
+@mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.run")
 def test_output_process_func(mock_run, queue_container, environments):
     output_process(queue_container, environments, mp.Value("i", 0))
 

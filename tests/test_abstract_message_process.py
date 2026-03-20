@@ -60,9 +60,9 @@ def test_abstract_message_process_init(log_file_queue, abstract_command_queue, g
 
 # Test the AbstractMessageProcess log function
 # Prevent anything from being written to log_file_queue
-@mock.patch("rattlesnake.components.abstract_message_process.Queue.put")
+@mock.patch("rattlesnake.process.abstract_message_process.Queue.put")
 # Replace date and time with a string
-@mock.patch("rattlesnake.components.abstract_message_process.datetime")
+@mock.patch("rattlesnake.process.abstract_message_process.datetime")
 def test_abstract_message_process_log(mock_time, mock_put, abstract_message_process):
     message = "Test Message"
     mock_time.now = fake_time
@@ -107,9 +107,9 @@ def test_abstract_message_process_map_command(abstract_message_process):
     ],
 )
 # Force command_queue.get function to return data
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.get")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.get")
 # Prevent from storing to log_file_queue
-@mock.patch("rattlesnake.components.abstract_message_process.AbstractMessageProcess.log")
+@mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.log")
 def test_abstract_message_process_run(
     mock_log, mock_get, mock_function, mock_key, abstract_message_process
 ):

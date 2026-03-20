@@ -172,7 +172,7 @@ def test_acquisition_process_init(queue_container, environments):
 
 @pytest.mark.parametrize("hardware", [None, mock.MagicMock()])
 @pytest.mark.parametrize("hardware_idx", [0, 1, 2, 4, 5])
-@mock.patch("rattlesnake.components.abstract_message_process.AbstractMessageProcess.log")
+@mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.log")
 def test_acquisition_process_initialize_data_acquisition(
     mock_log,
     hardware_dict,
@@ -207,7 +207,7 @@ def test_acquisition_process_initialize_data_acquisition(
     np.testing.assert_array_almost_equal(acquisition_process_obj.read_data, np.zeros((2, 2000)))
 
 
-@mock.patch("rattlesnake.components.abstract_message_process.AbstractMessageProcess.log")
+@mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.log")
 def test_acquisition_process_stop_environment(mock_log, acquisition_process_obj):
     data = "Modal"
 
@@ -220,7 +220,7 @@ def test_acquisition_process_stop_environment(mock_log, acquisition_process_obj)
 
 
 @pytest.mark.parametrize("prev_streamed", [True, False])
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
 def test_acqusition_process_start_streaming(mock_put, prev_streamed, acquisition_process_obj):
     acquisition_process_obj.has_streamed = prev_streamed
     acquisition_process_obj.start_streaming(None)
@@ -236,14 +236,14 @@ def test_acquisition_process_stop_streaming(acquisition_process_obj):
     assert acquisition_process_obj.streaming == False
 
 
-@mock.patch("rattlesnake.components.acquisition.align_signals")
-@mock.patch("rattlesnake.components.acquisition.AcquisitionProcess.add_data_to_buffer")
-@mock.patch("rattlesnake.components.acquisition.AcquisitionProcess.get_first_output_data")
-@mock.patch("rattlesnake.components.utilities.VerboseMessageQueue.put")
-@mock.patch("rattlesnake.components.acquisition.mp.queues.Queue.put")
-@mock.patch("rattlesnake.components.acquisition.mp.queues.Queue.get_nowait")
-@mock.patch("rattlesnake.components.acquisition.time")
-@mock.patch("rattlesnake.components.abstract_message_process.AbstractMessageProcess.log")
+@mock.patch("rattlesnake.process.acquisition.align_signals")
+@mock.patch("rattlesnake.process.acquisition.AcquisitionProcess.add_data_to_buffer")
+@mock.patch("rattlesnake.process.acquisition.AcquisitionProcess.get_first_output_data")
+@mock.patch("rattlesnake.utilities.VerboseMessageQueue.put")
+@mock.patch("rattlesnake.process.acquisition.mp.queues.Queue.put")
+@mock.patch("rattlesnake.process.acquisition.mp.queues.Queue.get_nowait")
+@mock.patch("rattlesnake.process.acquisition.time")
+@mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.log")
 def test_acquisition_acquire_signal(
     mock_log,
     mock_time,
@@ -293,8 +293,8 @@ def test_add_data_to_buffer(acquisition_process_obj):
     np.testing.assert_array_equal(acquisition_process_obj.read_data, data)
 
 
-@mock.patch("rattlesnake.components.acquisition.flush_queue")
-@mock.patch("rattlesnake.components.abstract_message_process.AbstractMessageProcess.log")
+@mock.patch("rattlesnake.process.acquisition.flush_queue")
+@mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.log")
 def test_acquisition_process_get_first_output_data(
     mock_log, mock_flush, queue_container, acquisition_process_obj
 ):
@@ -314,8 +314,8 @@ def test_acquisition_process_stop_acquisition(acquisition_process_obj):
     assert acquisition_process_obj.shutdown_flag == True
 
 
-@mock.patch("rattlesnake.components.acquisition.flush_queue")
-@mock.patch("rattlesnake.components.acquisition.AcquisitionProcess.log")
+@mock.patch("rattlesnake.process.acquisition.flush_queue")
+@mock.patch("rattlesnake.process.acquisition.AcquisitionProcess.log")
 def test_acquisition_process_quit(mock_log, mock_flush, acquisition_process_obj):
     mock_hardware = mock.MagicMock()
     acquisition_process_obj.hardware = mock_hardware
@@ -328,7 +328,7 @@ def test_acquisition_process_quit(mock_log, mock_flush, acquisition_process_obj)
 
 # Test the acquisition_process function
 # Prevent the run while loop from starting
-@mock.patch("rattlesnake.components.abstract_message_process.AbstractMessageProcess.run")
+@mock.patch("rattlesnake.process.abstract_message_process.AbstractMessageProcess.run")
 def test_acquisition_process_func(mock_run, queue_container, environments):
     acquisition_process(queue_container, environments, mp.Value("i", 0))
 

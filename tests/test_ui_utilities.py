@@ -33,10 +33,12 @@ from qtpy import QtWidgets
 from rattlesnake.user_interface.ui_utilities import (
     ChannelMonitor,
     ControlSelect,
-    EnvironmentSelect,
     PlotWindow,
     ProfileTimer,
     multiline_plotter,
+)
+from rattlesnake.user_interface.ui_registry import (
+    EnvironmentSelect,
     save_combined_environments_profile_template,
 )
 from rattlesnake.utilities import Channel, DataAcquisitionParameters
@@ -161,7 +163,7 @@ def data_acquisition_parameters(channel_list):
 
 @pytest.fixture
 def channel_monitor(app, data_acquisition_parameters):
-    with mock.patch("rattlesnake.components.ui_utilities.QtWidgets.QDialog.show") as mock_show:
+    with mock.patch("rattlesnake.user_interface.ui_utilities.QtWidgets.QDialog.show") as mock_show:
         channel_monitor = ChannelMonitor(None, data_acquisition_parameters)
         app.addWidget(channel_monitor)
 

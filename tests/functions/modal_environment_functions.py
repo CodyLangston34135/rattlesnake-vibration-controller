@@ -18,13 +18,16 @@ import numpy as np
 
 def create_signal_generator_dict():
     signal_generator_dict = {
-        0: ("none", "rattlesnake.components.modal_environment.PseudorandomSignalGenerator"),
-        1: ("random", "rattlesnake.components.modal_environment.RandomSignalGenerator"),
-        2: ("pseudorandom", "rattlesnake.components.modal_environment.PseudorandomSignalGenerator"),
-        3: ("burst", "rattlesnake.components.modal_environment.BurstRandomSignalGenerator"),
-        4: ("chirp", "rattlesnake.components.modal_environment.ChirpSignalGenerator"),
-        5: ("square", "rattlesnake.components.modal_environment.SquareSignalGenerator"),
-        6: ("sine", "rattlesnake.components.modal_environment.SineSignalGenerator"),
+        0: ("none", "rattlesnake.environment.modal_environment.PseudorandomSignalGenerator"),
+        1: ("random", "rattlesnake.environment.modal_environment.RandomSignalGenerator"),
+        2: (
+            "pseudorandom",
+            "rattlesnake.environment.modal_environment.PseudorandomSignalGenerator",
+        ),
+        3: ("burst", "rattlesnake.environment.modal_environment.BurstRandomSignalGenerator"),
+        4: ("chirp", "rattlesnake.environment.modal_environment.ChirpSignalGenerator"),
+        5: ("square", "rattlesnake.environment.modal_environment.SquareSignalGenerator"),
+        6: ("sine", "rattlesnake.environment.modal_environment.SineSignalGenerator"),
     }
     return signal_generator_dict
 

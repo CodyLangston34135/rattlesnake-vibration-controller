@@ -16,10 +16,8 @@ from datetime import datetime
 def clear_verbose_queue(q, task_name, verbose_array):
     # Mock the datetime and message_id objects used during the log message in the VerboseQueue.get function
     with (
-        mock.patch("rattlesnake.components.utilities.datetime") as mock_time,
-        mock.patch(
-            "rattlesnake.components.utilities.VerboseMessageQueue.generate_message_id"
-        ) as mock_id,
+        mock.patch("rattlesnake.utilities.datetime") as mock_time,
+        mock.patch("rattlesnake.utilities.VerboseMessageQueue.generate_message_id") as mock_id,
     ):
         mock_time.now = fake_time
         mock_id.return_value = "1"
