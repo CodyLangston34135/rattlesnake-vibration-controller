@@ -116,8 +116,8 @@ environment_UIs = {}
 # Random Vibration
 from rattlesnake.environment.random_vibration_sys_id_environment import (  # noqa # pylint: disable=wrong-import-position
     random_vibration_process,
-    RandomVibrationUI,
 )
+from rattlesnake.user_interface.random_vibration_sys_id_ui import RandomVibrationUI
 
 environment_processes[ControlTypes.RANDOM] = random_vibration_process
 environment_UIs[ControlTypes.RANDOM] = RandomVibrationUI
