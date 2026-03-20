@@ -11,9 +11,7 @@ from rattlesnake.user_interface.ui_utilities import multiline_plotter, error_mes
 from rattlesnake.user_interface.modal_ui_utilities import ModalMDISubWindow
 import inspect
 import os
-import openpyxl
 import numpy as np
-import multiprocessing as mp
 import netCDF4 as nc4
 import scipy.signal as sig
 from glob import glob

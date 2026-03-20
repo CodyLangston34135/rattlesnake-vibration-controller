@@ -5,8 +5,6 @@ from rattlesnake.user_interface.ui_utilities import UICommands, EventWatcher
 from rattlesnake.hardware.abstract_hardware import HardwareMetadata
 from rattlesnake.environment.abstract_environment import ControlTypes, EnvironmentMetadata, EnvironmentInstructions
 import multiprocessing as mp
-import netCDF4 as nc4
-import openpyxl
 from abc import ABC, abstractmethod
 from datetime import datetime
 from qtpy import QtCore
