@@ -1,10 +1,12 @@
 from rattlesnake.environment.transient_sys_id_environment import (
     TransientCommands,
+    TransientUICommands,
     TransientMetadata,
 )
 from rattlesnake.user_interface.abstract_sys_id_user_interface import AbstractSysIdUI
 from rattlesnake.environment.abstract_interactive_control_law import (  # noqa: E402 pylint: disable=wrong-import-position
     AbstractControlLawComputation,
+    ControlLawUICommands,
 )
 from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
 from rattlesnake.environment.environment_utilities import ControlTypes
@@ -14,6 +16,7 @@ from rattlesnake.user_interface.ui_utilities import (
     environment_run_ui_paths,
 )
 from rattlesnake.user_interface.ui_utilities import (
+    UICommands,
     PlotTimeWindow,
     TransformationMatrixWindow,
     colororder,
@@ -1085,7 +1088,7 @@ class TransientUI(AbstractSysIdUI):
         if super().update_gui(queue_data):
             return
         message, data = queue_data
-        if message == "time_data":
+        if message == TransientUICommands.TIME_DATA:
             response_data, output_data, signal_delay = data
             max_y = -1e15
             min_y = 1e15
@@ -1148,7 +1151,7 @@ class TransientUI(AbstractSysIdUI):
                 curve.setData(x[-self.max_plot_samples :], y[-self.max_plot_samples :])
             if signal_delay is None:
                 self.plot_data_items["signal_range"].setData(np.ones(5) * x[-1], np.zeros(5))
-        elif message == "control_data":
+        elif message == TransientUICommands.CONTROL_DATA:
             self.last_control_data, self.last_output_data = data
             self.update_control_plots()
             max_y = np.max(self.last_control_data)
@@ -1182,7 +1185,7 @@ class TransientUI(AbstractSysIdUI):
                 ),
                 1.05 * np.array((min_y, max_y, max_y, min_y, min_y)),
             )
-        elif message == "control_predictions":
+        elif message == TransientUICommands.CONTROL_PREDICTIONS:
             (
                 _,  # times,
                 self.excitation_prediction,
@@ -1190,15 +1193,15 @@ class TransientUI(AbstractSysIdUI):
                 _,  # prediction,
             ) = data
             self.plot_predictions()
-        elif message == "interactive_control_sysid_update":
+        elif message == TransientUICommands.INTERACTIVE_CONTROL_SYSID_UPDATE:
             if self.interactive_control_law_widget is not None:
                 self.interactive_control_law_widget.update_ui_sysid(*data)
-        elif message == "interactive_control_update":
+        elif message == ControlLawUICommands.INTERACTIVE_CONTROL_UPDATE:
             if self.interactive_control_law_widget is not None:
                 self.interactive_control_law_widget.update_ui_control(data)
-        elif message == "enable_control":
+        elif message == TransientUICommands.ENABLE_CONTROL:
             self.enable_control(True)
-        elif message == "enable":
+        elif message == UICommands.ENABLE:
             widget = None
             for parent in [
                 self.definition_widget,
@@ -1214,7 +1217,7 @@ class TransientUI(AbstractSysIdUI):
             if widget is None:
                 raise ValueError(f"Cannot Enable Widget {data}: not found in UI")
             widget.setEnabled(True)
-        elif message == "disable":
+        elif message == UICommands.DISABLE:
             widget = None
             for parent in [
                 self.definition_widget,

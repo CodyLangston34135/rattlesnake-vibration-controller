@@ -82,6 +82,10 @@ class RandomVibrationCommands(Enum):
     # UPDATE_INTERACTIVE_CONTROL_PARAMETERS = 5
 
 
+class RandomVibrationUICommands(Enum):
+    ENABLE_CONTROL = 0
+
+
 # region: Queues
 class RandomVibrationQueues:
     """A container class for the queues that random vibration will manage."""
@@ -795,7 +799,9 @@ class RandomVibrationEnvironment(AbstractSysIdEnvironment):
             and self.analysis_shutdown_achieved
         ):
             self.log("Shutdown Achieved")
-            self.gui_update_queue.put((self.environment_name, ("enable_control", None)))
+            self.gui_update_queue.put(
+                (self.environment_name, (RandomVibrationUICommands.ENABLE_CONTROL, None))
+            )
         else:
             # Recheck some time later
             time.sleep(1)

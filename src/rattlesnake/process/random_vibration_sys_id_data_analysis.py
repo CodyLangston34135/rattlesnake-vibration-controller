@@ -58,6 +58,14 @@ class RandomVibrationDataAnalysisCommands(Enum):
     # UPDATE_INTERACTIVE_CONTROL_PARAMETERS = 5
 
 
+class RandomVibrationDataAnalysisUICommands(Enum):
+    INTERACTIVE_CONTROL_SYSID_UPDATE = 0
+    CONTROL_PREDICTIONS = 1
+    CONTROL_UPDATE = 2
+    UPDATE_TEST_RESPONSE_ERROR_LIST = 3
+    TEST_OUTPUT_VOLTAGE_LIST = 4
+
+
 class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
     """Control calculations for the Random Vibration environment"""
 

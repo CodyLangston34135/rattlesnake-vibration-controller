@@ -28,15 +28,14 @@ import copy
 import multiprocessing as mp
 import multiprocessing.sharedctypes  # pylint: disable=unused-import
 from multiprocessing.queues import Queue
-
+from enum import Enum
 import netCDF4 as nc4
 import numpy as np
 import openpyxl
 from qtpy import QtCore, QtWidgets, uic
-
 from rattlesnake.environment.abstract_environment import AbstractEnvironment, AbstractMetadata
-from rattlesnake.user_interface.abstract_user_interface import AbstractUI
 from rattlesnake.environment.environment_utilities import ControlTypes
+from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.utilities import (
     DataAcquisitionParameters,
     GlobalCommands,
@@ -45,6 +44,10 @@ from rattlesnake.utilities import (
 
 CONTROL_TYPE = ControlTypes.TIME
 TEST_LEVEL_THRESHOLD = 1.01
+
+
+class TimeUICommands(Enum):
+    TIME_DATA = 0
 
 
 # region: Queues
@@ -308,7 +311,7 @@ class TimeEnvironment(AbstractEnvironment):
             measurement_data = acquisition_data[self.measurement_channels]
             output_data = acquisition_data[self.output_channels]
             self.queue_container.gui_update_queue.put(
-                (self.environment_name, ("time_data", (measurement_data, output_data)))
+                (self.environment_name, (TimeUICommands.TIME_DATA, (measurement_data, output_data)))
             )
         except mp.queues.Empty:
             last_acquisition = False
@@ -347,7 +350,7 @@ class TimeEnvironment(AbstractEnvironment):
                     self.queue_container.gui_update_queue.put(
                         (
                             self.environment_name,
-                            ("time_data", (measurement_data, output_data)),
+                            (TimeUICommands.TIME_DATA, (measurement_data, output_data)),
                         )
                     )
                 self.shutdown()
@@ -453,16 +456,16 @@ class TimeEnvironment(AbstractEnvironment):
         self.queue_container.environment_command_queue.flush(self.environment_name)
         # Enable the volume controls
         self.queue_container.gui_update_queue.put(
-            (self.environment_name, ("enable", "test_level_selector"))
+            (self.environment_name, (UICommands.ENABLE, "test_level_selector"))
         )
         self.queue_container.gui_update_queue.put(
-            (self.environment_name, ("enable", "repeat_signal_checkbox"))
+            (self.environment_name, (UICommands.ENABLE, "repeat_signal_checkbox"))
         )
         self.queue_container.gui_update_queue.put(
-            (self.environment_name, ("enable", "start_test_button"))
+            (self.environment_name, (UICommands.ENABLE, "start_test_button"))
         )
         self.queue_container.gui_update_queue.put(
-            (self.environment_name, ("disable", "stop_test_button"))
+            (self.environment_name, (UICommands.DISABLE, "stop_test_button"))
         )
         self.startup = True
 

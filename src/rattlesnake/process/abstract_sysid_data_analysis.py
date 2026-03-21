@@ -45,6 +45,12 @@ class SysIDDataAnalysisCommands(Enum):
     LOAD_NOISE = 9
 
 
+class SysIDDataAnalysisUICommands(Enum):
+
+    NOISE_UPDATE = 0
+    SYS_ID_UPDATE = 1
+
+
 class AbstractSysIDAnalysisProcess(AbstractMessageProcess):
     """Process to perform data analysis and control calculations in an environment
     using system id"""
@@ -204,7 +210,7 @@ class AbstractSysIDAnalysisProcess(AbstractMessageProcess):
                 (
                     self.environment_name,
                     (
-                        "noise_update",
+                        SysIDDataAnalysisUICommands.NOISE_UPDATE,
                         (
                             self.frames,
                             self.parameters.sysid_noise_averages,
@@ -246,7 +252,7 @@ class AbstractSysIDAnalysisProcess(AbstractMessageProcess):
                 (
                     self.environment_name,
                     (
-                        "sysid_update",
+                        SysIDDataAnalysisUICommands.SYS_ID_UPDATE,
                         (
                             self.frames,
                             self.parameters.sysid_averages,
