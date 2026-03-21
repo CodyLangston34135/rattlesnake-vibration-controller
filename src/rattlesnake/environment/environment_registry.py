@@ -17,6 +17,12 @@ from rattlesnake.environment.modal_environment import (
     ModalEnvironment,
     modal_process,
 )
+from rattlesnake.environment.random_vibration_sys_id_environment import (
+    RandomVibrationCommands,
+    RandomVibrationMetadata,
+    RandomVibrationEnvironment,
+    random_vibration_process,
+)
 from rattlesnake.environment.time_environment import TimeParameters, TimeEnvironment, time_process
 
 ENVIRONMENT_COMMANDS = {}
@@ -48,7 +54,7 @@ ENVIRONMENT_CLASS[ControlTypes.TRANSIENT] = TransientEnvironment
 ENVIRONMENT_PROCESS[ControlTypes.TRANSIENT] = transient_process
 
 # Random Environment
-ENVIRONMENT_COMMANDS[ControlTypes.RANDOM] = TransientCommands
-ENVIRONMENT_METADATA[ControlTypes.RANDOM] = TransientMetadata
-ENVIRONMENT_CLASS[ControlTypes.RANDOM] = TransientEnvironment
-ENVIRONMENT_PROCESS[ControlTypes.RANDOM] = transient_process
+ENVIRONMENT_COMMANDS[ControlTypes.RANDOM] = RandomVibrationCommands
+ENVIRONMENT_METADATA[ControlTypes.RANDOM] = RandomVibrationMetadata
+ENVIRONMENT_CLASS[ControlTypes.RANDOM] = RandomVibrationEnvironment
+ENVIRONMENT_PROCESS[ControlTypes.RANDOM] = random_vibration_process
