@@ -49,7 +49,7 @@ from qtpy.QtCore import (  # pylint: disable=no-name-in-module
 )
 
 from rattlesnake.user_interface.ui_registry import ENVIRONMENT_UIS as all_environment_UIs
-from rattlesnake.user_interface.ui_utilities import ui_path
+from rattlesnake.user_interface.ui_utilities import ui_path, UICommands
 from rattlesnake.user_interface.ui_utilities import (
     ChannelMonitor,
     IPAddress,
@@ -1801,32 +1801,32 @@ class Ui(QtWidgets.QMainWindow):
         """
         message, data = queue_data
         #        self.log('Updating GUI {:}'.format(message))
-        if message == "error":
+        if message == UICommands.ERROR:
             error_message_qt(data[0], data[1])
             return
         elif message in self.environments:
             self.environment_uis[message].update_gui(data)
-        elif message == "monitor":
+        elif message == UICommands.MONITOR:
             if self.channel_monitor_window is not None:
                 if not self.channel_monitor_window.isVisible():
                     self.channel_monitor_window = None
                 else:
                     self.channel_monitor_window.update(data)
-        elif message == "update_metadata":
+        elif message == UICommands.UPDATE_METADATA:
             environment_name, metadata = data
             self.environment_metadata[environment_name] = metadata
-        elif message == "stop":
+        elif message == UICommands.STOP:
             self.disarm_test()
-        elif message == "enable":
+        elif message == UICommands.ENABLE:
             widget = getattr(self, data)
             widget.setEnabled(True)
-        elif message == "disable":
+        elif message == UICommands.DISABLE:
             widget = getattr(self, data)
             widget.setEnabled(False)
-        elif message == "enable_tab":
+        elif message == UICommands.ENABLE_TAB:
             self.rattlesnake_tabs.setTabEnabled(data, True)
             self.rattlesnake_tabs.setCurrentIndex(data)
-        elif message == "disable_tab":
+        elif message == UICommands.DISABLE_TAB:
             self.rattlesnake_tabs.setTabEnabled(data, False)
         else:
             widget = getattr(self, message)

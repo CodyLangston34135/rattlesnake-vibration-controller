@@ -44,6 +44,7 @@ from rattlesnake.utilities import (
     shift_signal,
     trac,
 )
+from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.process.abstract_sysid_data_analysis import (
     sysid_data_analysis_process,
 )
@@ -501,7 +502,7 @@ class TransientEnvironment(AbstractSysIdEnvironment):
         if self.frf is None:
             self.gui_update_queue.put(
                 (
-                    "error",
+                    UICommands.ERROR,
                     (
                         "Perform System Identification",
                         "Perform System ID before performing test predictions",
