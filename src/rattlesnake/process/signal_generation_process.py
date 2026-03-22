@@ -28,6 +28,7 @@ import numpy as np
 from rattlesnake.process.abstract_message_process import AbstractMessageProcess
 from rattlesnake.process.signal_generation import SignalGenerator
 from rattlesnake.utilities import VerboseMessageQueue, flush_queue, rms_time
+from rattlesnake.user_interface.ui_utilities import UICommands
 
 TEST_LEVEL_THRESHOLD = 1.01
 
@@ -201,7 +202,7 @@ class SignalGenerationProcess(AbstractMessageProcess):
                 except mp.queues.Empty:
                     self.gui_update_queue.put(
                         (
-                            "error",
+                            UICommands.ERROR,
                             (
                                 f"{self.process_name} Error",
                                 f"{self.process_name} timed out while waiting for first "

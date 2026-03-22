@@ -35,6 +35,7 @@ from rattlesnake.utilities import (
     correlation_norm_signal_spec_ratio,
     flush_queue,
 )
+from rattlesnake.user_interface.ui_utilities import UICommands
 
 DEBUG = False
 if DEBUG:
@@ -334,7 +335,7 @@ class AcquisitionProcess(AbstractMessageProcess):
                     if time() - start_wait_time > 30:
                         self.queue_container.gui_update_queue.put(
                             (
-                                "error",
+                                UICommands.ERROR,
                                 (
                                     "Acquisition Error",
                                     "Acquisition timed out waiting for output to start.  "
@@ -375,7 +376,7 @@ class AcquisitionProcess(AbstractMessageProcess):
             self.add_data_to_buffer(read_data)
             if read_data.shape[-1] != 0:
                 max_vals = np.max(np.abs(read_data), axis=-1)
-                self.gui_update_queue.put(("monitor", max_vals))
+                self.gui_update_queue.put((UICommands.MONITOR, max_vals))
                 warn_channels = max_vals > self.warning_limits
                 if np.any(warn_channels):
                     warning_numbers = [i + 1 for i in range(len(warn_channels)) if warn_channels[i]]
@@ -412,7 +413,7 @@ class AcquisitionProcess(AbstractMessageProcess):
             self.add_data_to_buffer(read_data)
             if read_data.shape[-1] != 0:
                 max_vals = np.max(np.abs(read_data), axis=-1)
-                self.gui_update_queue.put(("monitor", max_vals))
+                self.gui_update_queue.put((UICommands.MONITOR, max_vals))
                 warn_channels = max_vals > self.warning_limits
                 if np.any(warn_channels):
                     warning_numbers = [i + 1 for i in range(len(warn_channels)) if warn_channels[i]]
@@ -423,7 +424,7 @@ class AcquisitionProcess(AbstractMessageProcess):
                     abort_numbers = [i + 1 for i in range(len(abort_channels)) if abort_channels[i]]
                     print(f"Channels {abort_numbers} Reached Abort Limit")
                     self.log(f"Channels {abort_numbers} Reached Abort Limit")
-                    self.gui_update_queue.put(("stop", None))
+                    self.gui_update_queue.put((UICommands.STOP, None))
 
             # Send the data to the different channels
             for environment in self.environment_list:

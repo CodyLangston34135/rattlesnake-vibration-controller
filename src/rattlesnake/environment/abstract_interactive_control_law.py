@@ -69,8 +69,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
 from abc import ABC, abstractmethod
-
+from enum import Enum
 from rattlesnake.utilities import GlobalCommands
+
+
+class ControlLawUICommands(Enum):
+    INTERACTIVE_CONTROL_UPDATE = 0
 
 
 class AbstractControlLawUI(ABC):
@@ -200,7 +204,7 @@ class AbstractControlLawComputation(ABC):
         self.gui_update_queue.put(
             (
                 self.environment_name,
-                ("interactive_control_update", self.collect_results()),
+                (ControlLawUICommands.INTERACTIVE_CONTROL_UPDATE, self.collect_results()),
             )
         )
 

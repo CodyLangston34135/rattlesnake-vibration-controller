@@ -31,6 +31,7 @@ from qtpy import QtCore, QtGui, QtWidgets, uic
 from qtpy.QtCore import Qt, QTimer  # pylint: disable=no-name-in-module
 from scipy.interpolate import interp1d
 from scipy.io import loadmat
+from enum import Enum
 
 from rattlesnake.environment.environment_utilities import (
     ControlTypes,
@@ -44,6 +45,18 @@ from rattlesnake.utilities import (
     save_csv_matrix,
     trac,
 )
+
+
+class UICommands(Enum):
+    ERROR = -1
+    MONITOR = 0
+    UPDATE_METADATA = 1
+    STOP = 2
+    ENABLE = 3
+    DISABLE = 4
+    ENABLE_TAB = 5
+    DISABLE_TAB = 6
+
 
 ACQUISITION_FRAMES_TO_DISPLAY = 4
 

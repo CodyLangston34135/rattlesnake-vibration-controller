@@ -10,6 +10,7 @@ from rattlesnake.utilities import (
 from rattlesnake.environment.random_vibration_sys_id_environment import (
     RandomVibrationMetadata,
     RandomVibrationCommands,
+    RandomVibrationUICommands,
 )
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.user_interface.ui_utilities import (
@@ -22,12 +23,17 @@ from rattlesnake.user_interface.random_vibration_sys_id_ui_utilities import (
     load_specification,
 )
 from rattlesnake.user_interface.ui_utilities import (
+    UICommands,
     PlotWindow,
     TransformationMatrixWindow,
     multiline_plotter,
 )
-from rattlesnake.environment.abstract_interactive_control_law import (  # noqa: E402 pylint: disable=wrong-import-position
+from rattlesnake.environment.abstract_interactive_control_law import (
+    ControlLawUICommands,
     AbstractControlLawComputation,
+)
+from rattlesnake.process.random_vibration_sys_id_data_analysis import (
+    RandomVibrationDataAnalysisUICommands,
 )
 from qtpy import QtWidgets, uic
 from qtpy.QtCore import Qt, QTimer
@@ -1705,7 +1711,7 @@ class RandomVibrationUI(AbstractSysIdUI):
         if super().update_gui(queue_data):
             return
         message, data = queue_data
-        if message == "control_predictions":
+        if message == RandomVibrationDataAnalysisUICommands.CONTROL_PREDICTIONS:
             (
                 _,
                 self.excitation_prediction,
@@ -1765,7 +1771,7 @@ class RandomVibrationUI(AbstractSysIdUI):
                         item.setBackground(QColor(255, 255, 125))
                     else:
                         item.setBackground(QColor(255, 255, 255))
-        elif message == "control_update":
+        elif message == RandomVibrationDataAnalysisUICommands.CONTROL_UPDATE:
             (
                 frames,
                 total_frames,
@@ -1789,13 +1795,13 @@ class RandomVibrationUI(AbstractSysIdUI):
             self.plot_windows = [window for window in self.plot_windows if window.isVisible()]
             for window in self.plot_windows:
                 window.update_plot(self.last_response_cpsd)
-        elif message == "interactive_control_sysid_update":
+        elif message == RandomVibrationDataAnalysisUICommands.INTERACTIVE_CONTROL_SYSID_UPDATE:
             if self.interactive_control_law_widget is not None:
                 self.interactive_control_law_widget.update_ui_sysid(*data)
-        elif message == "interactive_control_update":
+        elif message == ControlLawUICommands.INTERACTIVE_CONTROL_UPDATE:
             if self.interactive_control_law_widget is not None:
                 self.interactive_control_law_widget.update_ui_control(data)
-        elif message == "update_test_response_error_list":
+        elif message == RandomVibrationDataAnalysisUICommands.UPDATE_TEST_RESPONSE_ERROR_LIST:
             rms_db_error, warning_channels, abort_channels = data
             self.run_widget.test_response_error_list.clear()
             self.run_widget.test_response_error_list.addItems([f"{d:.3f}" for d in rms_db_error])
@@ -1805,9 +1811,9 @@ class RandomVibrationUI(AbstractSysIdUI):
             for index in abort_channels:
                 item = self.run_widget.test_response_error_list.item(index)
                 item.setBackground(QColor(255, 125, 125))
-        elif message == "enable_control":
+        elif message == RandomVibrationUICommands.ENABLE_CONTROL:
             self.enable_control(True)
-        elif message == "enable":
+        elif message == UICommands.ENABLE:
             widget = None
             for parent in [
                 self.definition_widget,
@@ -1823,7 +1829,7 @@ class RandomVibrationUI(AbstractSysIdUI):
             if widget is None:
                 raise ValueError(f"Cannot Enable Widget {data}: not found in UI")
             widget.setEnabled(True)
-        elif message == "disable":
+        elif message == UICommands.DISABLE:
             widget = None
             for parent in [
                 self.definition_widget,

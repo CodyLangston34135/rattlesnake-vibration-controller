@@ -44,6 +44,7 @@ from rattlesnake.utilities import (
     shift_signal,
     trac,
 )
+from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.process.abstract_sysid_data_analysis import (
     sysid_data_analysis_process,
 )
@@ -76,6 +77,14 @@ class TransientCommands(Enum):
     STOP_CONTROL = 1
     PERFORM_CONTROL_PREDICTION = 3
     # UPDATE_INTERACTIVE_CONTROL_PARAMETERS = 4
+
+
+class TransientUICommands(Enum):
+    INTERACTIVE_CONTROL_SYSID_UPDATE = 0
+    CONTROL_PREDICTIONS = 1
+    TIME_DATA = 2
+    CONTROL_DATA = 3
+    ENABLE_CONTROL = 4
 
 
 # region: Queues
@@ -501,7 +510,7 @@ class TransientEnvironment(AbstractSysIdEnvironment):
         if self.frf is None:
             self.gui_update_queue.put(
                 (
-                    "error",
+                    UICommands.ERROR,
                     (
                         "Perform System Identification",
                         "Perform System ID before performing test predictions",
@@ -554,7 +563,7 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                         (
                             self.environment_name,
                             (
-                                "interactive_control_sysid_update",
+                                TransientUICommands.INTERACTIVE_CONTROL_SYSID_UPDATE,
                                 (
                                     self.frf,
                                     self.sysid_response_noise,
@@ -627,7 +636,7 @@ class TransientEnvironment(AbstractSysIdEnvironment):
             (
                 self.environment_name,
                 (
-                    "control_predictions",
+                    TransientUICommands.CONTROL_PREDICTIONS,
                     (
                         np.arange(self.environment_parameters.control_signal.shape[-1])
                         / self.data_acquisition_parameters.sample_rate,
@@ -787,7 +796,7 @@ class TransientEnvironment(AbstractSysIdEnvironment):
             self.queue_container.gui_update_queue.put(
                 (
                     self.environment_name,
-                    ("time_data", (control_data, output_data, sample_delay)),
+                    (TransientUICommands.TIME_DATA, (control_data, output_data, sample_delay)),
                 )
             )  # Sample_delay will be None if the alignment is not found
             if self.aligned_output is not None:
@@ -800,12 +809,18 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                 )
                 time_trac = trac(self.aligned_response, self.environment_parameters.control_signal)
                 self.gui_update_queue.put(
-                    (self.environment_name, ("control_response_error_list", time_trac))
+                    (
+                        self.environment_name,
+                        ("control_response_error_list", time_trac),
+                    )
                 )
                 self.queue_container.gui_update_queue.put(
                     (
                         self.environment_name,
-                        ("control_data", (self.aligned_response, self.aligned_output)),
+                        (
+                            TransientUICommands.CONTROL_DATA,
+                            (self.aligned_response, self.aligned_output),
+                        ),
                     )
                 )
                 # Do the next control
@@ -844,7 +859,9 @@ class TransientEnvironment(AbstractSysIdEnvironment):
     def shutdown(self):
         """Let the UI know that this environment has completely shut down"""
         self.log("Environment Shut Down")
-        self.gui_update_queue.put((self.environment_name, ("enable_control", None)))
+        self.gui_update_queue.put(
+            (self.environment_name, (TransientUICommands.ENABLE_CONTROL, None))
+        )
         self.startup = True
 
     def stop_environment(self, data):

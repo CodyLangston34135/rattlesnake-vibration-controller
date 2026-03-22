@@ -390,6 +390,12 @@ class DataCollectorCommands(Enum):
     CLEAR_KURTOSIS_BUFFER = 9
 
 
+class DataCollectorUICommands(Enum):
+
+    TIME_FRAME = 0
+    KURTOSIS = 1
+
+
 class AcquisitionType(Enum):
     """Enumeration of different triggering strategies"""
 
@@ -781,7 +787,7 @@ class DataCollectorProcess(AbstractMessageProcess):
                 reference_frame *= self.reference_window / self.test_level
                 if accepted and not self.frame_buffer.manual_accept:
                     self.gui_update_queue.put(
-                        (self.environment_name, ("time_frame", (frame, True)))
+                        (self.environment_name, (DataCollectorUICommands.TIME_FRAME, (frame, True)))
                     )
                     self.log("Sending data")
                     if self.collector_metadata.kurtosis_buffer_length is not None:
@@ -789,7 +795,10 @@ class DataCollectorProcess(AbstractMessageProcess):
                         self.gui_update_queue.put(
                             (
                                 self.environment_name,
-                                ("kurtosis", self.kurtosis_buffer.get_kurtosis()),
+                                (
+                                    DataCollectorUICommands.KURTOSIS,
+                                    self.kurtosis_buffer.get_kurtosis(),
+                                ),
                             )
                         )
                     # Separate into response and reference
@@ -801,11 +810,17 @@ class DataCollectorProcess(AbstractMessageProcess):
                 elif self.frame_buffer.manual_accept:
                     self.last_frame = frame
                     self.gui_update_queue.put(
-                        (self.environment_name, ("time_frame", (frame, False)))
+                        (
+                            self.environment_name,
+                            (DataCollectorUICommands.TIME_FRAME, (frame, False)),
+                        )
                     )
                 else:
                     self.gui_update_queue.put(
-                        (self.environment_name, ("time_frame", (frame, False)))
+                        (
+                            self.environment_name,
+                            (DataCollectorUICommands.TIME_FRAME, (frame, False)),
+                        )
                     )
         # Keep running until stopped
         if not last_data:
@@ -826,7 +841,10 @@ class DataCollectorProcess(AbstractMessageProcess):
         if keep_frame:
             self.log("Sending data manually")
             self.gui_update_queue.put(
-                (self.environment_name, ("time_frame", (self.last_frame, True)))
+                (
+                    self.environment_name,
+                    (DataCollectorUICommands.TIME_FRAME, (self.last_frame, True)),
+                )
             )
             frame_fft = rfft(self.last_frame, axis=-1) * self.window_correction
             # Separate into response and reference

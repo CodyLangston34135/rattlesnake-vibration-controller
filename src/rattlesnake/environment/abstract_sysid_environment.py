@@ -72,6 +72,11 @@ class SystemIdCommands(Enum):
     CHECK_FOR_COMPLETE_SHUTDOWN = 4
 
 
+class SystemIdUICommands(Enum):
+    ENABLE_SYSTEM_ID = 0
+    DISABLE_SYSTEM_ID = 1
+
+
 # region: Metadata
 class AbstractSysIdMetadata(AbstractMetadata):
     """Abstract class for storing metadata for an environment.
@@ -1051,7 +1056,9 @@ class AbstractSysIdEnvironment(AbstractEnvironment):
             if self._waiting_to_start_transfer_function:
                 self.start_transfer_function(self.environment_parameters)
             else:
-                self.gui_update_queue.put((self.environment_name, ("enable_system_id", None)))
+                self.gui_update_queue.put(
+                    (self.environment_name, (SystemIdUICommands.ENABLE_SYSTEM_ID, None))
+                )
                 self._sysid_stream_name = None
             self._waiting_to_start_transfer_function = False
         else:

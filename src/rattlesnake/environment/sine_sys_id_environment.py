@@ -38,7 +38,7 @@ from rattlesnake.environment.abstract_sysid_environment import (
     AbstractSysIdEnvironment,
     AbstractSysIdMetadata,
 )
-from rattlesnake.user_interface.abstract_sys_id_user_interface import AbstractSysIdUI
+from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.environment.sine_sys_id_utilities import (
     DefaultSineControlLaw,
@@ -84,10 +84,6 @@ if DEBUG:
     FILE_OUTPUT = "debug_data/sine_control_{:}.npz"
 
 
-class SineUI(AbstractSysIdUI):
-    pass
-
-
 # %% Commands
 class SineCommands(Enum):
     """Enumeration containing sine commands"""
@@ -98,6 +94,18 @@ class SineCommands(Enum):
     PERFORM_CONTROL_PREDICTION = 3
     SEND_EXCITATION_PREDICTION = 4
     SEND_RESPONSE_PREDICTION = 5
+
+
+class SineUICommands(Enum):
+    SPECIFICATION_FOR_PLOTTING = 0
+    REQUEST_PREDICTION_PLOT_CHOICES = 1
+    EXCITATION_VOLTAGE_LIST = 2
+    RESPONSE_ERROR_MATRIX = 3
+    EXCITATION_PREDICTION = 4
+    RESPONSE_PREDICTION = 5
+    TIME_DATA = 6
+    CONTROL_DATA = 7
+    ENABLE_CONTROL = 8
 
 
 # region: Queues
@@ -705,7 +713,7 @@ class SineEnvironment(AbstractSysIdEnvironment):
             (
                 self.environment_name,
                 (
-                    "specification_for_plotting",
+                    SineUICommands.SPECIFICATION_FOR_PLOTTING,
                     (
                         self.specification_signals_combined[
                             ...,
@@ -917,7 +925,7 @@ class SineEnvironment(AbstractSysIdEnvironment):
         if self.sysid_frf is None:
             self.gui_update_queue.put(
                 (
-                    "error",
+                    UICommands.ERROR,
                     (
                         "Perform System Identification",
                         "Perform System ID before performing test predictions",
@@ -995,16 +1003,16 @@ class SineEnvironment(AbstractSysIdEnvironment):
     def show_test_prediction(self):
         """Starts the process to show the predictions by requesting the current plot choices"""
         self.gui_update_queue.put(
-            (self.environment_name, ("request_prediction_plot_choices", None))
+            (self.environment_name, (SineUICommands.REQUEST_PREDICTION_PLOT_CHOICES, None))
         )
         self.gui_update_queue.put(
-            (self.environment_name, ("excitation_voltage_list", self.peak_voltages))
+            (self.environment_name, (SineUICommands.EXCITATION_VOLTAGE_LIST, self.peak_voltages))
         )
         self.gui_update_queue.put(
             (
                 self.environment_name,
                 (
-                    "response_error_matrix",
+                    SineUICommands.RESPONSE_ERROR_MATRIX,
                     (
                         self.predicted_amplitude_error,
                         self.predicted_warning_matrix,
@@ -1101,7 +1109,7 @@ class SineEnvironment(AbstractSysIdEnvironment):
         # print(f'{ordinate.shape=}, {abscissa.shape=}')
         # print(f'{abscissa.min()=}, {abscissa.max()=}')
         self.gui_update_queue.put(
-            (self.environment_name, ("excitation_prediction", (abscissa, ordinate)))
+            (self.environment_name, (SineUICommands.EXCITATION_PREDICTION, (abscissa, ordinate)))
         )
 
     def send_response_prediction(self, response_plot_choices):
@@ -1213,7 +1221,7 @@ class SineEnvironment(AbstractSysIdEnvironment):
         # print(f'{ordinate[0].shape=}, {ordinate[1].shape=}, {abscissa.shape=}')
         # print(f'{abscissa.min()=}, {abscissa.max()=}')
         self.gui_update_queue.put(
-            (self.environment_name, ("response_prediction", (abscissa, ordinate)))
+            (self.environment_name, (SineUICommands.RESPONSE_PREDICTION, (abscissa, ordinate)))
         )
 
     def compute_spec_amplitudes_and_phases(self):
@@ -1509,7 +1517,7 @@ class SineEnvironment(AbstractSysIdEnvironment):
                 (
                     self.environment_name,
                     (
-                        "time_data",
+                        SineUICommands.TIME_DATA,
                         (
                             excitation_data[..., :: self.plot_downsample],
                             control_data[..., :: self.plot_downsample],
@@ -1796,7 +1804,7 @@ class SineEnvironment(AbstractSysIdEnvironment):
                         (
                             self.environment_name,
                             (
-                                "control_data",
+                                SineUICommands.CONTROL_DATA,
                                 (
                                     full_achieved_signals[..., :: self.plot_downsample],
                                     full_achieved_amplitudes[..., :: self.plot_downsample],
@@ -1874,7 +1882,7 @@ class SineEnvironment(AbstractSysIdEnvironment):
         self.log(f"Before Flush: {self.queue_container.time_history_to_generate_queue.qsize()=}")
         flush_queue(self.queue_container.time_history_to_generate_queue, timeout=0.01)
         self.log(f"After Flush: {self.queue_container.time_history_to_generate_queue.qsize()=}")
-        self.gui_update_queue.put((self.environment_name, ("enable_control", None)))
+        self.gui_update_queue.put((self.environment_name, (SineUICommands.ENABLE_CONTROL, None)))
         self.control_startup = True
 
     def stop_environment(self, data):

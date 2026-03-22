@@ -4,9 +4,12 @@ from rattlesnake.environment.abstract_environment import AbstractMetadata
 from rattlesnake.environment.abstract_sysid_environment import (
     AbstractSysIdMetadata,
     SystemIdCommands,
+    SystemIdUICommands,
 )
 from rattlesnake.user_interface.ui_utilities import system_identification_ui_path
 from rattlesnake.process.abstract_sysid_data_analysis import SysIDDataAnalysisCommands
+from rattlesnake.process.data_collector import DataCollectorUICommands
+from rattlesnake.process.abstract_sysid_data_analysis import SysIDDataAnalysisUICommands
 from abc import ABC, abstractmethod
 from multiprocessing.queues import Queue
 import netCDF4 as nc4
@@ -877,7 +880,7 @@ class AbstractSysIdUI(AbstractUI):
         message, data = queue_data
         self.log(f"Got GUI Message {message}")
         # print('Update GUI Got {:}'.format(message))
-        if message == "time_frame":
+        if message == DataCollectorUICommands.TIME_FRAME:
             self.last_time_response, accept = data
             self.update_sysid_plots(
                 update_time=True,
@@ -885,7 +888,7 @@ class AbstractSysIdUI(AbstractUI):
                 update_noise=False,
                 update_kurtosis=False,
             )
-        elif message == "kurtosis":
+        elif message == DataCollectorUICommands.KURTOSIS:
             self.last_kurtosis = data
             self.update_sysid_plots(
                 update_time=False,
@@ -893,7 +896,7 @@ class AbstractSysIdUI(AbstractUI):
                 update_noise=False,
                 update_kurtosis=True,
             )
-        elif message == "noise_update":
+        elif message == SysIDDataAnalysisUICommands.NOISE_UPDATE:
             (
                 frames,
                 total_frames,
@@ -910,7 +913,7 @@ class AbstractSysIdUI(AbstractUI):
             self.system_id_widget.current_frames_spinbox.setValue(frames)
             self.system_id_widget.total_frames_spinbox.setValue(total_frames)
             self.system_id_widget.progressBar.setValue(int(frames / total_frames * 100))
-        elif message == "sysid_update":
+        elif message == SysIDDataAnalysisUICommands.SYS_ID_UPDATE:
             (
                 frames,
                 total_frames,
@@ -934,7 +937,7 @@ class AbstractSysIdUI(AbstractUI):
             self.system_id_widget.current_frames_spinbox.setValue(frames)
             self.system_id_widget.total_frames_spinbox.setValue(total_frames)
             self.system_id_widget.progressBar.setValue(int(frames / total_frames * 100))
-        elif message == "enable_system_id":
+        elif message == SystemIdUICommands.ENABLE_SYSTEM_ID:
             for widget in [
                 self.system_id_widget.preview_noise_button,
                 self.system_id_widget.preview_system_id_button,
@@ -964,7 +967,7 @@ class AbstractSysIdUI(AbstractUI):
                 widget.setEnabled(True)
             for widget in [self.system_id_widget.stop_button]:
                 widget.setEnabled(False)
-        elif message == "disable_system_id":
+        elif message == SystemIdUICommands.DISABLE_SYSTEM_ID:
             for widget in [
                 self.system_id_widget.preview_noise_button,
                 self.system_id_widget.preview_system_id_button,

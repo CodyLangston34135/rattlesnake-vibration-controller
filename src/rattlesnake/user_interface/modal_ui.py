@@ -1,6 +1,6 @@
 from rattlesnake.user_interface.abstract_user_interface import AbstractUI
 from rattlesnake.environment.abstract_environment import AbstractMetadata
-from rattlesnake.environment.modal_environment import ModalCommands, ModalMetadata
+from rattlesnake.environment.modal_environment import ModalCommands, ModalUICommands, ModalMetadata
 from rattlesnake.utilities import (
     VerboseMessageQueue,
     GlobalCommands,
@@ -10,10 +10,12 @@ from rattlesnake.utilities import (
 )
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.user_interface.ui_utilities import (
+    UICommands,
     environment_definition_ui_paths,
     environment_run_ui_paths,
 )
 from rattlesnake.user_interface.ui_utilities import ModalMDISubWindow, multiline_plotter
+from rattlesnake.process.data_collector import DataCollectorUICommands
 from qtpy import QtWidgets, uic
 from qtpy.QtCore import Qt
 from multiprocessing.queues import Queue
@@ -1267,7 +1269,7 @@ class ModalUI(AbstractUI):
         """
         # print('Got GUI Update {:}'.format(queue_data[0]))
         message, data = queue_data
-        if message == "spectral_update":
+        if message == ModalUICommands.SPECTRAL_UPDATE:
             (
                 frames,
                 _,
@@ -1319,7 +1321,7 @@ class ModalUI(AbstractUI):
                 self.acquiring = False
             # else:
             #     print('Continuing Control')
-        elif message == "time_frame":
+        elif message == DataCollectorUICommands.TIME_FRAME:
             frame, accepted = data
             self.run_widget.channel_display_area.last_frame = frame
             self.run_widget.channel_display_area.last_spectrum = np.abs(np.fft.rfft(frame, axis=-1))
@@ -1338,7 +1340,7 @@ class ModalUI(AbstractUI):
                 self.run_widget.accept_average_button.setEnabled(True)
                 self.run_widget.reject_average_button.setEnabled(True)
 
-        elif message == "finished":
+        elif message == ModalUICommands.FINISHED:
             self.run_widget.stop_test_button.setEnabled(False)
             self.run_widget.preview_test_button.setEnabled(True)
             self.run_widget.start_test_button.setEnabled(True)
@@ -1350,7 +1352,7 @@ class ModalUI(AbstractUI):
                 self.netcdf_handle.close()
                 self.netcdf_handle = None
 
-        elif message == "enable":
+        elif message == UICommands.ENABLE:
             widget = None
             for parent in [
                 self.definition_widget,
@@ -1364,7 +1366,7 @@ class ModalUI(AbstractUI):
             if widget is None:
                 raise ValueError(f"Cannot Enable Widget {data}: not found in UI")
             widget.setEnabled(True)
-        elif message == "disable":
+        elif message == UICommands.DISABLE:
             widget = None
             for parent in [
                 self.definition_widget,

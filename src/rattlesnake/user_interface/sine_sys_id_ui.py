@@ -1,5 +1,9 @@
 from rattlesnake.user_interface.abstract_sys_id_user_interface import AbstractSysIdUI
-from rattlesnake.environment.sine_sys_id_environment import SineCommands, SineMetadata
+from rattlesnake.environment.sine_sys_id_environment import (
+    SineCommands,
+    SineUICommands,
+    SineMetadata,
+)
 from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue, load_python_module, db2scale
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.user_interface.ui_utilities import (
@@ -1542,19 +1546,19 @@ class SineUI(AbstractSysIdUI):
         if super().update_gui(queue_data):
             return
         message, data = queue_data
-        if message == "request_prediction_plot_choices":
+        if message == SineUICommands.REQUEST_PREDICTION_PLOT_CHOICES:
             self.log("Sending Prediction Plot Choices...")
             self.send_response_prediction_plot_choices()
             self.send_excitation_prediction_plot_choices()
-        elif message == "excitation_prediction":
+        elif message == SineUICommands.EXCITATION_PREDICTION:
             self.plot_excitation_prediction(*data)
-        elif message == "response_prediction":
+        elif message == SineUICommands.RESPONSE_PREDICTION:
             self.plot_response_prediction(*data)
-        elif message == "response_error_matrix":
+        elif message == SineUICommands.RESPONSE_ERROR_MATRIX:
             self.update_response_matrix(*data)
-        elif message == "excitation_voltage_list":
+        elif message == SineUICommands.EXCITATION_VOLTAGE_LIST:
             self.update_voltage_list(data)
-        elif message == "specification_for_plotting":
+        elif message == SineUICommands.SPECIFICATION_FOR_PLOTTING:
             (
                 self.specification_signals_combined,
                 self.specification_signals,
@@ -1566,11 +1570,11 @@ class SineUI(AbstractSysIdUI):
             ) = data
             self.log(f"Plot Downsample: {self.plot_downsample}")
             self.update_run_plot(update_spec=True)
-        elif message == "time_data":
+        elif message == SineUICommands.TIME_DATA:
             (last_excitation, last_control) = data
             self.achieved_excitation_signals_combined.append(last_excitation)
             self.achieved_response_signals_combined.append(last_control)
-        elif message == "control_data":
+        elif message == SineUICommands.CONTROL_DATA:
             (
                 last_signals,
                 last_amplitudes,
@@ -1589,7 +1593,7 @@ class SineUI(AbstractSysIdUI):
             self.update_control_run_plot()
             self.update_run_plot(update_spec=False)
             self.update_control_error_table(last_errors, last_warning_flags, last_abort_flags)
-        elif message == "enable_control":
+        elif message == SineUICommands.ENABLE_CONTROL:
             self.enable_control(True)
         else:
             widget = None

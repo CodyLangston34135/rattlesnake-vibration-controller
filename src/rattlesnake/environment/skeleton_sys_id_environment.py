@@ -24,31 +24,31 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # flake8: noqa
 # pylint: skip-file
 import multiprocessing as mp
-from enum import Enum
 from multiprocessing.queues import Queue
 
 import netCDF4 as nc4
-from qtpy import QtWidgets, uic
-
 from rattlesnake.environment.abstract_sysid_environment import (
     AbstractSysIdEnvironment,
     AbstractSysIdMetadata,
 )
-from rattlesnake.user_interface.abstract_sys_id_user_interface import AbstractSysIdUI
 from rattlesnake.environment.environment_utilities import ControlTypes
-from rattlesnake.user_interface.ui_utilities import (
-    environment_definition_ui_paths,
-    environment_prediction_ui_paths,
-    environment_run_ui_paths,
-)
 from rattlesnake.utilities import VerboseMessageQueue
+from rattlesnake.process.data_collector import (
+    data_collector_process,
+)
+from rattlesnake.process.signal_generation_process import (
+    signal_generation_process,
+)
+from rattlesnake.process.spectral_processing import (
+    spectral_processing_process,
+)
 
 # Update this line to define the controller type, and add to the ControlTypes enumeration in
 # components/environments.py
 control_type = ControlTypes.Skeleton  # noqa pylint: disable=no-member
 
 
-# %% Queues
+# region: Queues
 class SkeletonQueues:
     """A container class for the queues that this environment will manage."""
 
@@ -114,7 +114,7 @@ class SkeletonQueues:
         self.log_file_queue = log_file_queue
 
 
-# %% Metadata
+# region: Metadata
 class SkeletonMetadata(AbstractSysIdMetadata):
     def __init__(self):
         pass
@@ -147,91 +147,7 @@ class SkeletonMetadata(AbstractSysIdMetadata):
         super().store_to_netcdf(netcdf_group_handle)
 
 
-# %% UI
-
-from rattlesnake.process.data_collector import (
-    data_collector_process,
-)
-from rattlesnake.process.signal_generation_process import (
-    signal_generation_process,
-)
-from rattlesnake.process.spectral_processing import (
-    spectral_processing_process,
-)
-
-
-class SkeletonUI(AbstractSysIdUI):
-    def __init__(
-        self,
-        environment_name: str,
-        definition_tabwidget: QtWidgets.QTabWidget,
-        system_id_tabwidget: QtWidgets.QTabWidget,
-        test_predictions_tabwidget: QtWidgets.QTabWidget,
-        run_tabwidget: QtWidgets.QTabWidget,
-        environment_command_queue: VerboseMessageQueue,
-        controller_communication_queue: VerboseMessageQueue,
-        log_file_queue: Queue,
-    ):
-        super().__init__(
-            environment_name,
-            environment_command_queue,
-            controller_communication_queue,
-            log_file_queue,
-            system_id_tabwidget,
-        )
-        # Add the page to the control definition tabwidget
-        self.definition_widget = QtWidgets.QWidget()
-        uic.loadUi(environment_definition_ui_paths[control_type], self.definition_widget)
-        definition_tabwidget.addTab(self.definition_widget, self.environment_name)
-        # Add the page to the control prediction tabwidget
-        self.prediction_widget = QtWidgets.QWidget()
-        uic.loadUi(environment_prediction_ui_paths[control_type], self.prediction_widget)
-        test_predictions_tabwidget.addTab(self.prediction_widget, self.environment_name)
-        # Add the page to the run tabwidget
-        self.run_widget = QtWidgets.QWidget()
-        uic.loadUi(environment_run_ui_paths[control_type], self.run_widget)
-        run_tabwidget.addTab(self.run_widget, self.environment_name)
-
-    def collect_environment_definition_parameters(self):
-        pass
-
-    def create_environment_template(self, environment_name, workbook):
-        pass
-
-    def initialize_data_acquisition(self, data_acquisition_parameters):
-        pass
-
-    def initialize_environment(self):
-        pass
-
-    @property
-    def initialized_control_names(self):
-        pass
-
-    @property
-    def initialized_output_names(self):
-        pass
-
-    def retrieve_metadata(self, netcdf_handle):
-        pass
-
-    def set_parameters_from_template(self, worksheet):
-        pass
-
-    def start_control(self):
-        pass
-
-    def stop_control(self):
-        pass
-
-    def update_gui(self, queue_data):
-        if super().update_gui(queue_data):
-            return
-
-
-# %% Environment
-
-
+# region: Environment
 class SkeletonEnvironment(AbstractSysIdEnvironment):
 
     def __init__(self, environment_name: str, queue_container: SkeletonQueues):
@@ -256,9 +172,7 @@ class SkeletonEnvironment(AbstractSysIdEnvironment):
         pass
 
 
-# %% Process
-
-
+# region: Process
 def skeleton_process(
     environment_name: str,
     input_queue: VerboseMessageQueue,

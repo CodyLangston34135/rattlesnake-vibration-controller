@@ -61,6 +61,11 @@ class ModalCommands(Enum):
     CHECK_FOR_COMPLETE_SHUTDOWN = 4
 
 
+class ModalUICommands(Enum):
+    SPECTRAL_UPDATE = 0
+    FINISHED = 1
+
+
 # region: Queues
 class ModalQueues:
     """A set of queues used by the modal environment"""
@@ -928,7 +933,7 @@ class ModalEnvironment(AbstractEnvironment):
                 (
                     self.environment_name,
                     (
-                        "spectral_update",
+                        ModalUICommands.SPECTRAL_UPDATE,
                         (
                             frames,
                             self.environment_parameters.num_averages,
@@ -996,7 +1001,7 @@ class ModalEnvironment(AbstractEnvironment):
             and self.spectral_shutdown_achieved
         ):
             self.log("Shutdown Achieved")
-            self.gui_update_queue.put((self.environment_name, ("finished", None)))
+            self.gui_update_queue.put((self.environment_name, (ModalUICommands.FINISHED, None)))
         else:
             # Recheck some time later
             time.sleep(1)

@@ -1,6 +1,6 @@
 from rattlesnake.user_interface.abstract_user_interface import AbstractUI
 from rattlesnake.environment.abstract_environment import AbstractMetadata
-from rattlesnake.environment.time_environment import TimeParameters
+from rattlesnake.environment.time_environment import TimeParameters, TimeUICommands
 from rattlesnake.utilities import (
     GlobalCommands,
     VerboseMessageQueue,
@@ -8,7 +8,7 @@ from rattlesnake.utilities import (
     rms_time,
     db2scale,
 )
-from rattlesnake.user_interface.ui_utilities import multiline_plotter, load_time_history
+from rattlesnake.user_interface.ui_utilities import UICommands, multiline_plotter, load_time_history
 from rattlesnake.environment.environment_utilities import ControlTypes
 from rattlesnake.user_interface.ui_utilities import (
     environment_definition_ui_paths,
@@ -452,7 +452,7 @@ class TimeUI(AbstractUI):
             to be displayed.
         """
         message, data = queue_data
-        if message == "time_data":
+        if message == TimeUICommands.TIME_DATA:
             response_data, output_data = data
             for curve, this_data in zip(
                 self.plot_data_items["response_signal_measurement"], response_data
@@ -467,7 +467,7 @@ class TimeUI(AbstractUI):
                 x, y = curve.getData()
                 y = np.concatenate((y[this_output.size :], this_output[-x.size :]), axis=0)
                 curve.setData(x, y)
-        elif message == "enable":
+        elif message == UICommands.ENABLE:
             widget = None
             for parent in [self.definition_widget, self.run_widget]:
                 try:
@@ -478,7 +478,7 @@ class TimeUI(AbstractUI):
             if widget is None:
                 raise ValueError(f"Cannot Enable Widget {data}: not found in UI")
             widget.setEnabled(True)
-        elif message == "disable":
+        elif message == UICommands.DISABLE:
             widget = None
             for parent in [self.definition_widget, self.run_widget]:
                 try:

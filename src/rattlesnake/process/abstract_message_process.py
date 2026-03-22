@@ -29,6 +29,7 @@ from datetime import datetime
 from multiprocessing.queues import Queue
 
 from rattlesnake.utilities import GlobalCommands, VerboseMessageQueue
+from rattlesnake.user_interface.ui_utilities import UICommands
 
 
 class AbstractMessageProcess(ABC):
@@ -166,7 +167,7 @@ class AbstractMessageProcess(ABC):
                 self.log(f"ERROR\n\n {tb}")
                 self.gui_update_queue.put(
                     (
-                        "error",
+                        UICommands.ERROR,
                         (
                             f"{self.process_name} Error",
                             f"!!!UNKNOWN ERROR!!!\n\n{tb}",
