@@ -81,13 +81,10 @@ class TransientCommands(Enum):
 
 class TransientUICommands(Enum):
     INTERACTIVE_CONTROL_SYSID_UPDATE = 0
-    EXCITATION_VOLTAGE_LIST = 1
-    RESPONSE_ERROR_LIST = 2
-    CONTROL_PREDICTIONS = 3
-    TIME_DATA = 4
-    CONTROL_RESPONSE_ERROR_LIST = 5
-    CONTROL_DATA = 6
-    ENABLE_CONTROL = 7
+    CONTROL_PREDICTIONS = 1
+    TIME_DATA = 2
+    CONTROL_DATA = 3
+    ENABLE_CONTROL = 4
 
 
 # region: Queues
@@ -632,11 +629,9 @@ class TransientEnvironment(AbstractSysIdEnvironment):
         time_trac = trac(self.predicted_response, self.environment_parameters.control_signal)
         peak_voltages = np.max(np.abs(self.next_drive), axis=-1)
         self.gui_update_queue.put(
-            (self.environment_name, (TransientUICommands.EXCITATION_VOLTAGE_LIST, peak_voltages))
+            (self.environment_name, ("excitation_voltage_list", peak_voltages))
         )
-        self.gui_update_queue.put(
-            (self.environment_name, (TransientUICommands.RESPONSE_ERROR_LIST, time_trac))
-        )
+        self.gui_update_queue.put((self.environment_name, ("response_error_list", time_trac)))
         self.gui_update_queue.put(
             (
                 self.environment_name,
@@ -816,7 +811,7 @@ class TransientEnvironment(AbstractSysIdEnvironment):
                 self.gui_update_queue.put(
                     (
                         self.environment_name,
-                        (TransientUICommands.CONTROL_RESPONSE_ERROR_LIST, time_trac),
+                        ("control_response_error_list", time_trac),
                     )
                 )
                 self.queue_container.gui_update_queue.put(

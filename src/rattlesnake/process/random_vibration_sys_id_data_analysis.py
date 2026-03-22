@@ -63,7 +63,6 @@ class RandomVibrationDataAnalysisUICommands(Enum):
     CONTROL_PREDICTIONS = 1
     CONTROL_UPDATE = 2
     UPDATE_TEST_RESPONSE_ERROR_LIST = 3
-    TEST_OUTPUT_VOLTAGE_LIST = 4
 
 
 class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
@@ -248,7 +247,7 @@ class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
                         (
                             self.environment_name,
                             (
-                                "interactive_control_sysid_update",
+                                RandomVibrationDataAnalysisUICommands.INTERACTIVE_CONTROL_SYSID_UPDATE,
                                 (
                                     self.sysid_frf,  # Transfer Functions
                                     self.sysid_response_noise,  # Noise levels and correlation
@@ -315,7 +314,7 @@ class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
             (
                 self.environment_name,
                 (
-                    "control_predictions",
+                    RandomVibrationDataAnalysisUICommands.CONTROL_PREDICTIONS,
                     (
                         self.frequencies,
                         self.drive_cpsd_prediction,
@@ -353,7 +352,7 @@ class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
                 (
                     self.environment_name,
                     (
-                        "control_update",
+                        RandomVibrationDataAnalysisUICommands.CONTROL_UPDATE,
                         (
                             self.frames,
                             self.parameters.frames_in_cpsd,
@@ -428,7 +427,7 @@ class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
                 (
                     self.environment_name,
                     (
-                        "update_test_response_error_list",
+                        RandomVibrationDataAnalysisUICommands.UPDATE_TEST_RESPONSE_ERROR_LIST,
                         (rms_db_error, warning_channels, abort_channels),
                     ),
                 )
@@ -499,7 +498,10 @@ class RandomVibrationDataAnalysisProcess(AbstractSysIDAnalysisProcess):
             self.log("Finished Controlling")
             rms_voltages = rms_csd(output_cpsd, self.parameters.frequency_spacing)
             self.gui_update_queue.put(
-                (self.environment_name, ("test_output_voltage_list", rms_voltages))
+                (
+                    self.environment_name,
+                    ("test_output_voltage_list", rms_voltages),
+                )
             )
         self.command_queue.put(
             self.process_name, (RandomVibrationDataAnalysisCommands.RUN_CONTROL, None)
