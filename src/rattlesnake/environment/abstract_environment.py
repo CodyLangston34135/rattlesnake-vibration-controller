@@ -43,7 +43,7 @@ if PICKLE_ON_ERROR:
     import pickle
 
 
-# region: Metadata
+# region Metadata
 class AbstractMetadata(ABC):
     """Abstract class for storing metadata for an environment.
 
@@ -83,7 +83,10 @@ class AbstractMetadata(ABC):
         """
 
 
-# region: Environment
+# endregion
+
+
+# region Environment
 class AbstractEnvironment(ABC):
     """Abstract Environment class defining the interface with the controller
 

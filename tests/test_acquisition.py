@@ -8,6 +8,7 @@ from rattlesnake.utilities import (
 )
 from rattlesnake.process.acquisition import AcquisitionProcess, acquisition_process
 from rattlesnake.hardware.abstract_hardware import HardwareAcquisition
+from rattlesnake.user_interface.ui_utilities import UICommands
 from functions.common_functions import create_hardware_dict_acquisition
 from functions.acquisition_functions import create_acquire_log_calls
 from unittest import mock
@@ -276,7 +277,7 @@ def test_acquisition_acquire_signal(
 
     log_calls = create_acquire_log_calls()
     mock_log.assert_has_calls(log_calls)
-    assert mock_put.call_args_list[0][0][0][0] == "monitor"
+    assert mock_put.call_args_list[0][0][0][0] == UICommands.MONITOR
     np.testing.assert_array_equal(mock_put.call_args_list[1][0][0][0], np.zeros((2, 98)))
     vput_calls = [mock.call("Process Name", (GlobalCommands.RUN_HARDWARE, None))]
     mock_vput.assert_has_calls(vput_calls)

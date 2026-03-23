@@ -26,6 +26,7 @@ from rattlesnake.process.data_collector import DataCollectorCommands
 # from rattlesnake.components.environments import ControlTypes  # unused import
 from rattlesnake.environment.modal_environment import (
     ModalCommands,
+    ModalUICommands,
     ModalEnvironment,
     ModalMetadata,
     ModalQueues,
@@ -923,7 +924,7 @@ def test_modal_environment_run_control(
         "reference_cpsd",
         "condition",
     )
-    mock_put.assert_called_with(("Environment_name", ("spectral_update", put_data)))
+    mock_put.assert_called_with(("Environment_name", (ModalUICommands.SPECTRAL_UPDATE, put_data)))
     mock_vput.assert_called_with("Environment_name", (ModalCommands.RUN_CONTROL, None))
 
 
@@ -960,7 +961,7 @@ def test_modal_environment_check_for_shutdown(
 
     if shutdown:
         mock_log.assert_called_with("Shutdown Achieved")
-        mock_put.assert_called_with(("Environment_name", ("finished", None)))
+        mock_put.assert_called_with(("Environment_name", (ModalUICommands.FINISHED, None)))
     else:
         mock_vput.assert_called_with(
             "Environment_name", (ModalCommands.CHECK_FOR_COMPLETE_SHUTDOWN, None)

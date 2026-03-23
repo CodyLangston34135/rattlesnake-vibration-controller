@@ -18,6 +18,7 @@ from rattlesnake.environment.time_environment import (
     time_process,
 )
 from rattlesnake.user_interface.time_ui import TimeUI
+from rattlesnake.user_interface.ui_utilities import UICommands
 from rattlesnake.utilities import (
     Channel,
     DataAcquisitionParameters,
@@ -518,10 +519,10 @@ def test_time_environment_shutdown(mock_log, mock_flush, mock_put, time_environm
     mock_log.assert_called_with("Shutting Down Time History Generation")
     mock_flush.assert_called_with("Environment Name")
     put_calls = [
-        mock.call(("Environment Name", ("enable", "test_level_selector"))),
-        mock.call(("Environment Name", ("enable", "repeat_signal_checkbox"))),
-        mock.call(("Environment Name", ("enable", "start_test_button"))),
-        mock.call(("Environment Name", ("disable", "stop_test_button"))),
+        mock.call(("Environment Name", (UICommands.ENABLE, "test_level_selector"))),
+        mock.call(("Environment Name", (UICommands.ENABLE, "repeat_signal_checkbox"))),
+        mock.call(("Environment Name", (UICommands.ENABLE, "start_test_button"))),
+        mock.call(("Environment Name", (UICommands.DISABLE, "stop_test_button"))),
     ]
     mock_put.assert_has_calls(put_calls)
     assert time_environment.startup == True
