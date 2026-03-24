@@ -187,6 +187,19 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras --dev
 
+      - name: Update Jupyter Book metadata
+        run: |
+          # Create a timestamp for the output file
+          TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
+
+          uv run python src/rattlesnake/cicd/report_jupyter_book.py \
+            --myst_file documentation/myst.yml \
+            --timestamp "$TIMESTAMP" \
+            --run_id ${{ github.run_id }} \
+            --ref_name ${{ github.ref_name }} \
+            --github_sha ${{ github.sha }} \
+            --github_repo ${{ github.repository }}
+
       - name: Build the book
         run: |
           # Build the book. We use --strict to ensure any errors fail the job.
