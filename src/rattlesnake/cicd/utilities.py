@@ -154,6 +154,46 @@ def extend_timestamp(short: str) -> str:
     return timestamp
 
 
+def get_multiline_timestamp(short: str) -> list[str]:
+    """
+    Given a timestamp string from CI/CD in the form of
+    20250815_211112_UTC, return a list of strings:
+    - Date: YYYY-MM-DD
+    - Time UTC: HH:MM:SS UTC
+    - Time EST: HH:MM:SS EST
+    - Time MST: HH:MM:SS MST
+
+    Args:
+        short: the UTC bash string, for example: 20250815_211112_UTC
+
+    Returns:
+        List of 4 formatted strings.
+    """
+    pattern: re.Pattern = re.compile(r"^(\d{8})_(\d{6})_(UTC|GMT|Z)$")
+    match = pattern.match(short)
+
+    if not match:
+        raise ValueError(f"Invalid timestamp format: '{short}'")
+
+    date_part, time_part, _ = match.groups()
+    datetime_str: str = f"{date_part}_{time_part}_UTC"
+    utc_datetime: datetime = datetime.strptime(datetime_str, "%Y%m%d_%H%M%S_%Z")
+    utc_now: datetime = pytz.utc.localize(utc_datetime)
+
+    timezone_est: pytz.BaseTzInfo = pytz.timezone("America/New_York")
+    timezone_mst: pytz.BaseTzInfo = pytz.timezone("America/Denver")
+
+    est_now: datetime = utc_now.astimezone(timezone_est)
+    mst_now: datetime = utc_now.astimezone(timezone_mst)
+
+    date_str: str = utc_now.strftime("%Y-%m-%d")
+    utc_time: str = utc_now.strftime("%H:%M:%S UTC")
+    est_time: str = est_now.strftime("%H:%M:%S EST")
+    mst_time: str = mst_now.strftime("%H:%M:%S MST")
+
+    return [date_str, utc_time, est_time, mst_time]
+
+
 def write_report(html_content: str, output_file: str) -> None:
     """
     Write HTML content to file.

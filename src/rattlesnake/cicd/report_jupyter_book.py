@@ -8,17 +8,17 @@ CI/CD metadata (timestamp, branch, commit hash).
 
 import argparse
 import sys
-from rattlesnake.cicd.utilities import extend_timestamp
+from rattlesnake.cicd.utilities import get_multiline_timestamp
 
 
 def generate_footer_md(
-    timestamp_ext: str, run_id: str, ref_name: str, github_sha: str, github_repo: str
+    timestamp_raw: str, run_id: str, ref_name: str, github_sha: str, github_repo: str
 ) -> str:
     """
     Generate a Markdown snippet with CI/CD metadata.
 
     Args:
-        timestamp_ext: Formatted timestamp string
+        timestamp_raw: Raw UTC timestamp string from CI/CD
         run_id: GitHub Actions run ID
         ref_name: Git reference name (branch)
         github_sha: GitHub commit SHA
@@ -29,14 +29,22 @@ def generate_footer_md(
     """
     # Use 6-space indentation as found in myst.yml for the block content
     indent: str = "      "
+    ts_lines = get_multiline_timestamp(timestamp_raw)
+    
+    # User wants: Generated: Date <br> UTC <br> EST <br> MST <br> Run ID <br> Branch <br> Commit
+    # Font size at least three point sizes smaller (e.g., 0.7em)
     return (
         f"\n"
         f"{indent}---\n"
-        f"{indent}**Generated:** {timestamp_ext}\n"
-        f"{indent}**Run ID:** [{run_id}](https://github.com/{github_repo}/actions/runs/{run_id})\n"
-        f"{indent}**Branch:** [{ref_name}](https://github.com/{github_repo}/tree/{ref_name})\n"
-        f"{indent}**Commit:** [{github_sha[:7]}](https://github.com/{github_repo}/commit/{github_sha})\n"
-        f"{indent}**Repository:** [{github_repo}](https://github.com/{github_repo})\n"
+        f'{indent}<div style="font-size: 0.7em;">\n'
+        f"{indent}Generated: {ts_lines[0]}<br>\n"
+        f"{indent}{ts_lines[1]}<br>\n"
+        f"{indent}{ts_lines[2]}<br>\n"
+        f"{indent}{ts_lines[3]}<br>\n"
+        f"{indent}Run ID: [{run_id}](https://github.com/{github_repo}/actions/runs/{run_id})<br>\n"
+        f"{indent}Branch: [{ref_name}](https://github.com/{github_repo}/tree/{ref_name})<br>\n"
+        f"{indent}Commit: [{github_sha[:7]}](https://github.com/{github_repo}/commit/{github_sha})<br>\n"
+        f"{indent}</div>\n"
     )
 
 
@@ -96,9 +104,8 @@ def main() -> int:
     """Main entry point."""
     args: argparse.Namespace = parse_arguments()
     try:
-        timestamp_ext: str = extend_timestamp(args.timestamp)
         footer_md: str = generate_footer_md(
-            timestamp_ext,
+            args.timestamp,
             args.run_id,
             args.ref_name,
             args.github_sha,
