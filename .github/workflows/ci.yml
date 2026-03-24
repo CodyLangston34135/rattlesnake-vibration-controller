@@ -32,6 +32,10 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # Force all JavaScript actions to run on Node 24 (The 2026 Standard)
+  # After 02 June 2026, the following line can be removed since on that date,
+  # Node.js 24 will be the GitHub default.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   # `BASE_URL` determines the website is served from, including CSS & JS assets
   # This is dynamically set based on the branch to ensure correct pathing on GitHub Pages
   BASE_URL: /${{ github.event.repository.name }}/${{ github.ref == 'refs/heads/main' && 'main' || 'dev' }}/book/jupyter/
@@ -52,10 +56,10 @@ jobs:
     steps:
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
@@ -72,10 +76,10 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@v7
       with:
         enable-cache: true
         # Note: 'version' refers to the uv version itself
@@ -119,7 +123,7 @@ jobs:
           --github_repo ${{ github.repository }}
 
     - name: Upload pylint artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: pylint-report
         path: |
@@ -130,10 +134,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           version: "latest"
@@ -159,7 +163,7 @@ jobs:
             --github_repo ${{ github.repository }}
 
       - name: Upload pytest artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pytest-report
           path: |
@@ -175,10 +179,10 @@ jobs:
   docs_jupyter_book:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           version: "latest"
@@ -206,7 +210,7 @@ jobs:
           cd documentation && uv run jupyter book build --html --strict && cd ..
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: jupyter-book-report
           path: documentation/_build/html
@@ -218,32 +222,32 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           version: "latest"
           python-version: "3.12"
 
       - name: Install dependencies
-        run: uv sync --all-extras --dev
+        run: uv sync --no-dev
 
       - name: Download pylint artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: pylint-report
           path: pylint-report
           
       - name: Download pytest artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: pytest-report
           path: pytest-report
 
       - name: Download jupyter book artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: jupyter-book-report
           path: jupyter-book-report
@@ -361,7 +365,7 @@ jobs:
           EOF
 
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./pages
