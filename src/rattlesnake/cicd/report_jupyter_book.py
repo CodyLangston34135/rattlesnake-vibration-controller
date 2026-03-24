@@ -31,8 +31,6 @@ def generate_footer_md(
     indent: str = "      "
     ts_lines = get_multiline_timestamp(timestamp_raw)
 
-    # User wants: Generated: Date <br> UTC <br> EST <br> MST <br> Run ID <br> Branch <br> Commit
-    # Font size at least three point sizes smaller (e.g., 0.7em)
     # Use HTML links instead of Markdown links since we are inside a <div>
     run_url = f"https://github.com/{github_repo}/actions/runs/{run_id}"
     branch_url = f"https://github.com/{github_repo}/tree/{ref_name}"
