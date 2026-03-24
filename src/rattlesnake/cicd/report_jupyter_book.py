@@ -41,14 +41,15 @@ def generate_footer_md(
         f"{indent}---\n"
         f'{indent}<div style="font-size: 0.7em;">\n'
         f"{indent}Generated: {ts_lines[0]}<br>\n"
-        f"{indent}{indent}{ts_lines[1]}<br>\n"
-        f"{indent}{indent}{ts_lines[2]}<br>\n"
-        f"{indent}{indent}{ts_lines[3]}<br>\n"
+        f"{indent}&nbsp;&nbsp;{ts_lines[1]}<br>\n"
+        f"{indent}&nbsp;&nbsp;{ts_lines[2]}<br>\n"
+        f"{indent}&nbsp;&nbsp;{ts_lines[3]}<br>\n"
         f'{indent}Run ID: <a href="{run_url}">{run_id}</a><br>\n'
         f'{indent}Branch: <a href="{branch_url}">{ref_name}</a><br>\n'
         f'{indent}Commit: <a href="{commit_url}">{github_sha[:7]}</a><br>\n'
         f"{indent}</div>\n"
     )
+
 
 
 def update_myst_file(file_path: str, footer_md: str) -> None:
