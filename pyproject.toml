@@ -49,18 +49,19 @@ classifiers = [
 
 [project.optional-dependencies]
 dev = [
-  'coverage-badge',
-  'flake8',
-  'isort',
-  'pylint',
-  'pytest',
-  'pytest-cov',
-  'pytest-qt==4.4.0',
-  'pytz',
-  'ruff',
-  # 'black',
-  # 'mypy',
-  # 'pydocstyle',
+  "coverage-badge",
+  "flake8",
+  "isort",
+  "jupyter-book>=2.0.0",
+  "pylint",
+  "pytest",
+  "pytest-cov",
+  "pytest-qt==4.4.0",
+  "pytz",
+  "ruff",
+  # "black",
+  # "mypy",
+  # "pydocstyle",
 ]
 #docs = [
 #    'docutils<0.18,>=0.14', 'ipykernel', 'ipython',
