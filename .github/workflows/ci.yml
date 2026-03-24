@@ -7,10 +7,24 @@ on:
     branches:
       - main
       - "dev*"  # Explicity include branches with "dev" in the name (e.g., dev, dev-feature, etc.)
+    # Only trigger if files in these paths change
+    paths:
+      - 'src/**'                    # Any source code changes
+      - 'pyproject.toml'            # Any dependency changes
+      - 'uv.lock'                   # Any locked version changes
+      - '.github/workflows/ci.yml'  # Changes to the workflow itself
+      - 'src/rattlesnake/cicd/**'   # Changes to your reporting scripts
   pull_request:
     branches:
       - main
       - "dev*"  # Explicity include branches with "dev" in the name (e.g., dev, dev-feature, etc.)
+    paths:
+      - 'src/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/ci.yml'
+      - 'src/rattlesnake/cicd/**'
+
 
 # Concurrency ensures that if you push again while a build is already running, the old one is canceled to save time.
 concurrency:
@@ -61,15 +75,17 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v1
+      uses: astral-sh/setup-uv@v5
       with:
         enable-cache: true
+        # Note: 'version' refers to the uv version itself
+        version: "latest"
         python-version: "3.12"
 
     - name: Install dependencies
-      run: |
-        uv venv
-        uv pip install .[dev]
+      # 'uv sync' uses uv.lock to install exactly what you need
+      # --all-extras ensures [dev] or other extras are included
+      run: uv sync --all-extras --dev
         
     - name: pylint analysis and custom pylint HTML report
       run: |
@@ -77,9 +93,11 @@ jobs:
         TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
         PYLINT_OUTPUT_FILE="pylint_output_${TIMESTAMP}.txt"
 
-        # Run pylint once, capturing the output to a variable.
+        # Run pylint once using 'uv run' (which automatically uses the synced venv)
+        # and capturing the output to a variable.
         # This avoids reading the file twice.
-        PYLINT_OUTPUT=$(uv run pylint src/rattlesnake/**/*.py --output-format=text --reports=yes || true)
+        # PYLINT_OUTPUT=$(uv run pylint src/rattlesnake/**/*.py --output-format=text --reports=yes || true)
+        PYLINT_OUTPUT=$(uv run pylint src/rattlesnake --output-format=text --reports=yes || true)
         echo "$PYLINT_OUTPUT" > "$PYLINT_OUTPUT_FILE"
 
         # Extract the score from the captured output
@@ -115,15 +133,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v1
+        uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+          version: "latest"
           python-version: "3.12"
 
       - name: Install dependencies
-        run: |
-          uv venv
-          uv pip install .[dev]
+        run: uv sync --all-extras --dev
 
       - name: pytest coverage and custom coverage HTML report
         run: |
@@ -161,15 +178,27 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v1
+        uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+          version: "latest"
           python-version: "3.12"
 
       - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Update Jupyter Book metadata
         run: |
-          uv venv
-          uv pip install "jupyter-book>=2.0.0"
+          # Create a timestamp for the output file
+          TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
+
+          uv run python src/rattlesnake/cicd/report_jupyter_book.py \
+            --myst_file documentation/myst.yml \
+            --timestamp "$TIMESTAMP" \
+            --run_id ${{ github.run_id }} \
+            --ref_name ${{ github.ref_name }} \
+            --github_sha ${{ github.sha }} \
+            --github_repo ${{ github.repository }}
 
       - name: Build the book
         run: |
@@ -192,15 +221,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v1
+        uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+          version: "latest"
           python-version: "3.12"
 
       - name: Install dependencies
-        run: |
-          uv venv
-          uv pip install .[dev]
+        run: uv sync --all-extras --dev
 
       - name: Download pylint artifact
         uses: actions/download-artifact@v4
