@@ -30,20 +30,25 @@ def generate_footer_md(
     # Use 6-space indentation as found in myst.yml for the block content
     indent: str = "      "
     ts_lines = get_multiline_timestamp(timestamp_raw)
-    
+
     # User wants: Generated: Date <br> UTC <br> EST <br> MST <br> Run ID <br> Branch <br> Commit
     # Font size at least three point sizes smaller (e.g., 0.7em)
+    # Use HTML links instead of Markdown links since we are inside a <div>
+    run_url = f"https://github.com/{github_repo}/actions/runs/{run_id}"
+    branch_url = f"https://github.com/{github_repo}/tree/{ref_name}"
+    commit_url = f"https://github.com/{github_repo}/commit/{github_sha}"
+
     return (
         f"\n"
         f"{indent}---\n"
         f'{indent}<div style="font-size: 0.7em;">\n'
         f"{indent}Generated: {ts_lines[0]}<br>\n"
-        f"{indent}{ts_lines[1]}<br>\n"
-        f"{indent}{ts_lines[2]}<br>\n"
-        f"{indent}{ts_lines[3]}<br>\n"
-        f"{indent}Run ID: [{run_id}](https://github.com/{github_repo}/actions/runs/{run_id})<br>\n"
-        f"{indent}Branch: [{ref_name}](https://github.com/{github_repo}/tree/{ref_name})<br>\n"
-        f"{indent}Commit: [{github_sha[:7]}](https://github.com/{github_repo}/commit/{github_sha})<br>\n"
+        f"{indent}{indent}{ts_lines[1]}<br>\n"
+        f"{indent}{indent}{ts_lines[2]}<br>\n"
+        f"{indent}{indent}{ts_lines[3]}<br>\n"
+        f'{indent}Run ID: <a href="{run_url}">{run_id}</a><br>\n'
+        f'{indent}Branch: <a href="{branch_url}">{ref_name}</a><br>\n'
+        f'{indent}Commit: <a href="{commit_url}">{github_sha[:7]}</a><br>\n'
         f"{indent}</div>\n"
     )
 

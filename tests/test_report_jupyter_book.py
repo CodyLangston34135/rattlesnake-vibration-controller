@@ -34,9 +34,9 @@ def test_generate_footer_md():
     assert "12:00:00 UTC<br>" in footer
     assert "08:00:00 EST<br>" in footer
     assert "06:00:00 MST<br>" in footer
-    assert f"Run ID: [12345678](https://github.com/owner/repo/actions/runs/12345678)<br>" in footer
-    assert f"Branch: [main](https://github.com/owner/repo/tree/main)<br>" in footer
-    assert f"Commit: [abc1234](https://github.com/owner/repo/commit/abc123456789)<br>" in footer
+    assert 'Run ID: <a href="https://github.com/owner/repo/actions/runs/12345678">12345678</a><br>' in footer
+    assert 'Branch: <a href="https://github.com/owner/repo/tree/main">main</a><br>' in footer
+    assert 'Commit: <a href="https://github.com/owner/repo/commit/abc123456789">abc1234</a><br>' in footer
     assert "owner/repo" in footer
     assert "Repository:" not in footer
 
