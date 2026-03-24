@@ -22,6 +22,7 @@ from rattlesnake.cicd.utilities import (
     get_score_color_lint,
     get_timestamp,
     extend_timestamp,
+    get_multiline_timestamp,
 )
 
 
@@ -184,6 +185,32 @@ def test_extend_timestamp_invalid_format():
         extend_timestamp("invalid_string")
     with pytest.raises(ValueError):
         extend_timestamp("20250815_211112")  # Missing time zone
+
+
+# endregion
+
+
+# region: Test get_multiline_timestamp
+
+
+def test_get_multiline_timestamp():
+    """Test the multiline timestamp generation."""
+    short_ts = "20240324_204412_UTC"
+    lines = get_multiline_timestamp(short_ts)
+
+    assert len(lines) == 4
+    assert lines[0] == "2024-03-24"
+    assert lines[1] == "20:44:12 UTC"
+    # On March 24, it is Daylight Saving Time (EDT and MDT).
+    # EST/MST are used as fixed strings in the utility function for now as requested.
+    assert lines[2] == "16:44:12 EST"
+    assert lines[3] == "14:44:12 MST"
+
+
+def test_get_multiline_timestamp_invalid():
+    """Test invalid format for multiline timestamp."""
+    with pytest.raises(ValueError):
+        get_multiline_timestamp("invalid")
 
 
 # endregion

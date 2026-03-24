@@ -20,20 +20,25 @@ from rattlesnake.cicd.report_jupyter_book import (
 
 def test_generate_footer_md():
     """Test the generation of the Markdown footer."""
-    timestamp_ext = "2024-03-24 12:00:00 UTC (2024-03-24 08:00:00 EST / 2024-03-24 06:00:00 MST)"
+    timestamp_raw = "20240324_120000_UTC"
     run_id = "12345678"
     ref_name = "main"
     github_sha = "abc123456789"
     github_repo = "owner/repo"
 
-    footer = generate_footer_md(timestamp_ext, run_id, ref_name, github_sha, github_repo)
+    footer = generate_footer_md(timestamp_raw, run_id, ref_name, github_sha, github_repo)
 
     assert "---" in footer
-    assert f"**Generated:** {timestamp_ext}" in footer
-    assert f"[12345678](https://github.com/owner/repo/actions/runs/12345678)" in footer
-    assert f"[main](https://github.com/owner/repo/tree/main)" in footer
-    assert f"[abc1234](https://github.com/owner/repo/commit/abc123456789)" in footer
+    assert '<div style="font-size: 0.7em;">' in footer
+    assert "Generated: 2024-03-24<br>" in footer
+    assert "12:00:00 UTC<br>" in footer
+    assert "08:00:00 EST<br>" in footer
+    assert "06:00:00 MST<br>" in footer
+    assert f"Run ID: [12345678](https://github.com/owner/repo/actions/runs/12345678)<br>" in footer
+    assert f"Branch: [main](https://github.com/owner/repo/tree/main)<br>" in footer
+    assert f"Commit: [abc1234](https://github.com/owner/repo/commit/abc123456789)<br>" in footer
     assert "owner/repo" in footer
+    assert "Repository:" not in footer
 
 
 def test_update_myst_file_success(tmp_path):
@@ -47,13 +52,13 @@ site:
     myst_file = tmp_path / "myst.yml"
     myst_file.write_text(myst_content)
 
-    footer_md = "      ---\n      **Generated:** NOW"
+    footer_md = "      ---\n      <div style=\"font-size: 0.7em;\">Generated: 2024-03-24</div>"
     update_myst_file(str(myst_file), footer_md)
 
     updated_content = myst_file.read_text()
     assert "[Link](https://example.com)" in updated_content
     assert "---" in updated_content
-    assert "**Generated:** NOW" in updated_content
+    assert '<div style="font-size: 0.7em;">Generated: 2024-03-24</div>' in updated_content
 
 
 def test_update_myst_file_no_footer(tmp_path, capsys):
@@ -96,7 +101,8 @@ site:
     assert "✅ Successfully updated Jupyter Book metadata" in captured.out
     
     updated_content = myst_file.read_text()
-    assert "2024-03-24 12:00:00 UTC" in updated_content
+    assert "Generated: 2024-03-24<br>" in updated_content
+    assert "12:00:00 UTC<br>" in updated_content
 
 
 def test_main_error(monkeypatch, capsys):
