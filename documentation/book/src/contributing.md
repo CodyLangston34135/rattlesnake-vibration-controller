@@ -23,7 +23,7 @@ or with [uv](https://docs.astral.sh/uv/)
 uv add "jupyter-book"
 ```
 
-### Build the documentation locally
+### Local Build
 
 ```sh
 cd rattlesnake-vibration-controller/documentation
