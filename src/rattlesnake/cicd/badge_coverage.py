@@ -1,5 +1,5 @@
 """
-Generates the Pytest coverage badge (SVG) and metadata (JSON) for CI/CD.
+Generates the Coverage badge (SVG) and metadata (JSON) for CI/CD.
 """
 
 import argparse

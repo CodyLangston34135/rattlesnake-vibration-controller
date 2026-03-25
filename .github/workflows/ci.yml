@@ -63,7 +63,7 @@ jobs:
         # By default, the GitHub Action actions/checkout performs a "shallow clone."
         # This means it only downloads the very latest commit to save time.
         # However, a shallow clone does not include the tags or history.
-        # Without that information, hatch-vcs won't know what version the code is
+        # Without that information, hatch-vcs won't know what version your code is
         # and might default to 0.0.0 or fail during the build.  Setting
         # fetch-depth: 0 tells GitHub to download the entire commit history
         # and all tags, which gives Hatch the information it needs to correctly
@@ -162,28 +162,28 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras --dev
 
-      - name: pytest coverage and custom coverage HTML report
+      - name: coverage analysis and custom coverage HTML report
         run: |
           # Create a timestamp for the output file
           TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
 
           uv run pytest -v --cov=rattlesnake --cov-report=html --cov-report=xml --cov-report=term-missing
 
-          uv run python src/rattlesnake/cicd/report_pytest.py \
+          uv run python src/rattlesnake/cicd/report_coverage.py \
             --input_file coverage.xml \
-            --output_file pytest_report.html \
+            --output_file coverage_report.html \
             --timestamp "$TIMESTAMP" \
             --run_id ${{ github.run_id }} \
             --ref_name ${{ github.ref_name }} \
             --github_sha ${{ github.sha }} \
             --github_repo ${{ github.repository }}
 
-      - name: Upload pytest artifact
+      - name: Upload coverage artifact
         uses: actions/upload-artifact@v7
         with:
-          name: pytest-report
+          name: coverage-report
           path: |
-            pytest_report.html
+            coverage_report.html
             htmlcov/
             coverage.xml
 
@@ -261,11 +261,11 @@ jobs:
           name: lint-report
           path: lint-report
           
-      - name: Download pytest artifact
+      - name: Download coverage artifact
         uses: actions/download-artifact@v7
         with:
-          name: pytest-report
-          path: pytest-report
+          name: coverage-report
+          path: coverage-report
 
       - name: Download jupyter book artifact
         uses: actions/download-artifact@v7
@@ -293,25 +293,14 @@ jobs:
             --run_id ${{ github.run_id }} \
             --github_server_url ${{ github.server_url }}
 
-          # Pytest badge (now using Python script)
+          # Coverage badge (now using Python script)
           uv run python src/rattlesnake/cicd/badge_coverage.py \
-            --input_file pytest-report/coverage.xml \
+            --input_file coverage-report/coverage.xml \
             --output_dir badges \
             --github_repo ${{ github.repository }} \
             --deploy_subdir ${{ env.DEPLOY_SUBDIR }} \
             --run_id ${{ github.run_id }} \
             --github_server_url ${{ github.server_url }}
-
-#      - name: Commit badges
-#        run: |
-#          git pull
-#          git config --local user.email "action@github.com"
-#          git config --local user.name "GitHub Action"
-#          git add badges/
-#          git diff --staged --quiet || git commit -m "Update badges [skip ci]"
-#          git push
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Assemble pages directory
         run: |
@@ -321,8 +310,8 @@ jobs:
           mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/badges"
           
           mv lint-report/lint_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/lint/index.html"
-          mv pytest-report/pytest_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/index.html"
-          mv pytest-report/htmlcov/ "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/"
+          mv coverage-report/coverage_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/index.html"
+          mv coverage-report/htmlcov/ "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/"
           mv jupyter-book-report/* "pages/${{ env.DEPLOY_SUBDIR }}/book/jupyter/"
           cp badges/* "pages/${{ env.DEPLOY_SUBDIR }}/badges/"
           
@@ -357,14 +346,14 @@ jobs:
                   <ul>
                       <li><a href="main/book/jupyter/index.html">User's Manual (work in progress)</a> <span class="badge badge-main">stable</span></li>
                       <li><a href="main/reports/lint/index.html">Lint Report (work in progress)</a> <img src="main/badges/lint.svg" alt="Lint Score" style="vertical-align: middle; margin-left: 10px;"></li>
-                      <li><a href="main/reports/coverage/index.html">Pytest Coverage (work in progress)</a> <img src="main/badges/coverage.svg" alt="Coverage" style="vertical-align: middle; margin-left: 10px;"></li>
+                      <li><a href="main/reports/coverage/index.html">Coverage Report (work in progress)</a> <img src="main/badges/coverage.svg" alt="Coverage" style="vertical-align: middle; margin-left: 10px;"></li>
                   </ul>
 
                   <h2>🛠️ Development (<a href="https://github.com/sandialabs/rattlesnake-vibration-controller/tree/dev?tab=readme-ov-file">Dev Branch</a>)</h2>
                   <ul>
                       <li><a href="dev/book/jupyter/index.html">User's Manual</a> <span class="badge badge-dev">latest</span></li>
                       <li><a href="dev/reports/lint/index.html">Lint Report</a> <img src="dev/badges/lint.svg" alt="Lint Score" style="vertical-align: middle; margin-left: 10px;"></li>
-                      <li><a href="dev/reports/coverage/index.html">Pytest Coverage</a> <img src="dev/badges/coverage.svg" alt="Coverage" style="vertical-align: middle; margin-left: 10px;"></li>
+                      <li><a href="dev/reports/coverage/index.html">Coverage Report</a> <img src="dev/badges/coverage.svg" alt="Coverage" style="vertical-align: middle; margin-left: 10px;"></li>
                   </ul>
               </div>
           </body>
