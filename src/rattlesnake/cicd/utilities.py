@@ -59,6 +59,33 @@ def get_score_color_coverage(coverage_score: str) -> str:
         return "gray"
 
 
+def _get_timezone_strings(utc_now: datetime) -> tuple[str, str, str]:
+    """
+    Helper to get formatted UTC, EST, and MST strings from a UTC datetime.
+
+    Args:
+        utc_now: The UTC datetime object.
+
+    Returns:
+        A tuple of three strings: (UTC string, EST string, MST string).
+    """
+    # Define the time zones
+    timezone_est: pytz.BaseTzInfo = pytz.timezone("America/New_York")
+    timezone_mst: pytz.BaseTzInfo = pytz.timezone("America/Denver")
+
+    # Convert UTC time to EST and MST
+    est_now: datetime = utc_now.astimezone(timezone_est)
+    mst_now: datetime = utc_now.astimezone(timezone_mst)
+
+    # Format the output
+    df: str = "%Y-%m-%d %H:%M:%S"  # Date format
+    utc_str: str = utc_now.strftime(f"{df} UTC")
+    est_str: str = est_now.strftime(f"{df} EST")
+    mst_str: str = mst_now.strftime(f"{df} MST")
+
+    return utc_str, est_str, mst_str
+
+
 def get_timestamp() -> str:
     """
     Get formatted timestamp with UTC, EST, and MST times.
@@ -69,22 +96,11 @@ def get_timestamp() -> str:
     # Get the current UTC time
     utc_now: datetime = datetime.now(pytz.utc)
 
-    # Define the time zones
-    timezone_est: pytz.BaseTzInfo = pytz.timezone("America/New_York")
-    timezone_mst: pytz.BaseTzInfo = pytz.timezone("America/Denver")
-
-    # Convert UTC time to EST and MST
-    est_now: datetime = utc_now.astimezone(timezone_est)
-    mst_now: datetime = utc_now.astimezone(timezone_mst)
-
-    # Format the output
-    df: str = "%Y-%m-%d %H:%M:%S "  # Date format
-    utc: str = utc_now.strftime(df + "UTC")
-    est: str = est_now.strftime(df + "EST")
-    mst: str = mst_now.strftime(df + "MST")
+    # Get the formatted strings for each timezone
+    utc_str, est_str, mst_str = _get_timezone_strings(utc_now)
 
     # Combine the formatted times
-    timestamp: str = f"{utc} ({est} / {mst})"
+    timestamp: str = f"{utc_str} ({est_str} / {mst_str})"
 
     return timestamp
 
@@ -103,16 +119,35 @@ def extend_timestamp(short: str) -> str:
         Extended timestamp, for example
         2025-08-15 21:11:12 UTC (2025-08-15 17:11:12 EST / 2025-08-15 15:11:12 MST)
     """
+    # Call the multiline function to get the individual strings
+    lines: list[str] = get_multiline_timestamp(short)
+
+    # lines[1] is the UTC time, lines[2] is the EST time, lines[3] is the MST time
+    # This is consistent with get_multiline_timestamp's return format
+    return f"{lines[1]} ({lines[2]} / {lines[3]})"
+
+
+def get_multiline_timestamp(short: str) -> list[str]:
+    """
+    Given a timestamp string from CI/CD in the form of
+    20250815_211112_UTC, return a list of strings:
+    - Generated:
+    - YYYY-MM-DD HH:MM:SS UTC
+    - YYYY-MM-DD HH:MM:SS EST
+    - YYYY-MM-DD HH:MM:SS MST
+
+    Args:
+        short: the UTC bash string, for example: 20250815_211112_UTC
+
+    Returns:
+        List of 4 formatted strings.
+    """
     # Regex pattern to match the required format: YYYYMMDD_HHMMSS_TZ
-    # The timezone abbreviation must be 'UTC', 'GMT', or 'Z'
     pattern: re.Pattern = re.compile(r"^(\d{8})_(\d{6})_(UTC|GMT|Z)$")
     match = pattern.match(short)
 
     if not match:
-        raise ValueError(
-            f"Invalid timestamp format: '{short}'. "
-            f"Expected format is YYYYMMDD_HHMMSS_TZ, where TZ is one of UTC, GMT, or Z."
-        )
+        raise ValueError(f"Invalid timestamp format: '{short}'")
 
     # Extract the date and time parts from the regex match
     date_part, time_part, _ = match.groups()
@@ -127,71 +162,10 @@ def extend_timestamp(short: str) -> str:
     # Make the datetime object timezone-aware
     utc_now: datetime = pytz.utc.localize(utc_datetime)
 
-    # Define the time zones
-    timezone_est: pytz.BaseTzInfo = pytz.timezone("America/New_York")
-    timezone_mst: pytz.BaseTzInfo = pytz.timezone("America/Denver")
+    # Get the formatted strings for each timezone
+    utc_str, est_str, mst_str = _get_timezone_strings(utc_now)
 
-    # Convert UTC time to EST and MST
-    est_now: datetime = utc_now.astimezone(timezone_est)
-    mst_now: datetime = utc_now.astimezone(timezone_mst)
-
-    # Format the output
-    df: str = "%Y-%m-%d %H:%M:%S"  # Date format without trailing space
-    utc: str = utc_now.strftime(df)
-    est: str = est_now.strftime(df)
-    mst: str = mst_now.strftime(df)
-
-    # Use timezone abbreviations from the datetime objects
-    utc_tz_abbr: str = utc_now.strftime("%Z")
-    # est_tz_abbr: str = est_now.strftime("%Z")
-    est_tz_abbr: str = "EST"
-    # mst_tz_abbr: str = mst_now.strftime("%Z")
-    mst_tz_abbr: str = "MST"
-
-    # Combine the formatted times
-    timestamp: str = f"{utc} {utc_tz_abbr} ({est} {est_tz_abbr} / {mst} {mst_tz_abbr})"
-
-    return timestamp
-
-
-def get_multiline_timestamp(short: str) -> list[str]:
-    """
-    Given a timestamp string from CI/CD in the form of
-    20250815_211112_UTC, return a list of strings:
-    - Date: YYYY-MM-DD
-    - Time UTC: HH:MM:SS UTC
-    - Time EST: HH:MM:SS EST
-    - Time MST: HH:MM:SS MST
-
-    Args:
-        short: the UTC bash string, for example: 20250815_211112_UTC
-
-    Returns:
-        List of 4 formatted strings.
-    """
-    pattern: re.Pattern = re.compile(r"^(\d{8})_(\d{6})_(UTC|GMT|Z)$")
-    match = pattern.match(short)
-
-    if not match:
-        raise ValueError(f"Invalid timestamp format: '{short}'")
-
-    date_part, time_part, _ = match.groups()
-    datetime_str: str = f"{date_part}_{time_part}_UTC"
-    utc_datetime: datetime = datetime.strptime(datetime_str, "%Y%m%d_%H%M%S_%Z")
-    utc_now: datetime = pytz.utc.localize(utc_datetime)
-
-    timezone_est: pytz.BaseTzInfo = pytz.timezone("America/New_York")
-    timezone_mst: pytz.BaseTzInfo = pytz.timezone("America/Denver")
-
-    est_now: datetime = utc_now.astimezone(timezone_est)
-    mst_now: datetime = utc_now.astimezone(timezone_mst)
-
-    date_str: str = utc_now.strftime("%Y-%m-%d")
-    utc_time: str = utc_now.strftime("%H:%M:%S UTC")
-    est_time: str = est_now.strftime("%H:%M:%S EST")
-    mst_time: str = mst_now.strftime("%H:%M:%S MST")
-
-    return [date_str, utc_time, est_time, mst_time]
+    return ["Generated:", utc_str, est_str, mst_str]
 
 
 def write_report(html_content: str, output_file: str) -> None:
