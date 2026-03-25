@@ -2071,7 +2071,6 @@ wheels = [
 
 [[package]]
 name = "rattlesnake"
-version = "3.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "kaitaistruct" },

@@ -57,6 +57,17 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+        # By default, the GitHub Action actions/checkout performs a "shallow clone."
+        # This means it only downloads the very latest commit to save time.
+        # However, a shallow clone does not include the tags or history.
+        # Without that information, hatch-vcs won't know what version the code is
+        # and might default to 0.0.0 or fail during the build.  Setting
+        # fetch-depth: 0 tells GitHub to download the entire commit history
+        # and all tags, which gives Hatch the information it needs to correctly
+        # calculate the version.
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
@@ -77,6 +88,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
 
     - name: Install uv
       uses: astral-sh/setup-uv@v7
@@ -87,8 +100,10 @@ jobs:
         python-version: "3.12"
 
     - name: Install dependencies
-      # 'uv sync' uses uv.lock to install exactly what you need
+      # "uv sync" uses uv.lock to install exactly what you need
       # --all-extras ensures [dev] or other extras are included
+      # if the pyproject.toml file changes, run "uv sync" and check into
+      # GitHub both the pyproject.toml file and the uv.lock file.
       run: uv sync --all-extras --dev
         
     - name: pylint analysis and custom pylint HTML report
@@ -135,6 +150,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -179,7 +196,10 @@ jobs:
   docs_jupyter_book:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -223,6 +243,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -372,3 +394,5 @@ jobs:
           publish_branch: gh-pages
           keep_files: true
           commit_message: 'Deploy reports for ${{ github.ref_name }} (${{ github.sha }})'
+
+    # TODO: Publish to PyPI
