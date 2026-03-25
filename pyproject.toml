@@ -69,9 +69,9 @@ local_scheme = "no-local-version"  # Ensures clean versions like 0.0.9 instead o
 packages = ["src/rattlesnake"]
 
 [tool.pytest.ini_options]
-python_files = ["*.py"]
+python_files = ["test_*.py"]  # Ignores files without "test" prefix for pytest runs
 testpaths = ["tests/"]
-pythonpath = ["src"]
+pythonpath = ["src", "tests"]
 
 [tool.ruff]
 line-length = 100
