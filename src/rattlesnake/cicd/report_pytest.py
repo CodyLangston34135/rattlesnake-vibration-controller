@@ -40,11 +40,7 @@ class CoverageMetric:
         Returns 0.0 if `lines_valid` is zero to prevent division by zero errors.
         """
 
-        return (
-            (self.lines_covered / self.lines_valid * 100)
-            if self.lines_valid > 0
-            else 0.0
-        )
+        return (self.lines_covered / self.lines_valid * 100) if self.lines_valid > 0 else 0.0
 
     @property
     def color(self) -> str:
@@ -90,7 +86,7 @@ def get_report_html(
 
     Args:
         coverage_metric: CoverageMetric object containing coverage data
-        timestamp: The timestampe from bash when pylint ran, in format YYYYMMDD_HHMMSS_UTC
+        timestamp: The timestamp from bash when lint ran, in format YYYYMMDD_HHMMSS_UTC
             e.g., 20250815_211112_UTC
         run_id: GitHub Actions run ID
         ref_name: Git reference name (branch)
@@ -199,7 +195,7 @@ def run_pytest_report(
     Args:
         input_file: Path to the pytest output text file
         output_file: Path for the generated HTML report
-        timestamp: The timestampe from bash when pylint ran, in format YYYYMMDD_HHMMSS_UTC
+        timestamp: The timestamp from bash when lint ran, in format YYYYMMDD_HHMMSS_UTC
             e.g., 20250815_211112_UTC
         run_id: GitHub Actions run ID
         ref_name: Git reference name (branch)
@@ -262,9 +258,7 @@ Example:
 
     parser.add_argument("--run_id", required=True, help="GitHub Actions run ID")
 
-    parser.add_argument(
-        "--ref_name", required=True, help="Git reference name (branch name)"
-    )
+    parser.add_argument("--ref_name", required=True, help="Git reference name (branch name)")
 
     parser.add_argument("--github_sha", required=True, help="GitHub commit SHA")
 

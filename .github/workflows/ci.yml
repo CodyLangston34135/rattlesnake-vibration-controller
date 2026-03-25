@@ -106,44 +106,43 @@ jobs:
       # GitHub both the pyproject.toml file and the uv.lock file.
       run: uv sync --all-extras --dev
         
-    - name: pylint analysis and custom pylint HTML report
+    - name: lint analysis and custom lint HTML report
       run: |
         # Create a timestamp for the output file
         TIMESTAMP=$(date +"%Y%m%d_%H%M%S_%Z")
-        PYLINT_OUTPUT_FILE="pylint_output_${TIMESTAMP}.txt"
+        LINT_OUTPUT_FILE="lint_output_${TIMESTAMP}.txt"
 
         # Run pylint once using 'uv run' (which automatically uses the synced venv)
         # and capturing the output to a variable.
         # This avoids reading the file twice.
-        # PYLINT_OUTPUT=$(uv run pylint src/rattlesnake/**/*.py --output-format=text --reports=yes || true)
-        PYLINT_OUTPUT=$(uv run pylint src/rattlesnake --output-format=text --reports=yes || true)
-        echo "$PYLINT_OUTPUT" > "$PYLINT_OUTPUT_FILE"
+        LINT_OUTPUT=$(uv run pylint src/rattlesnake --output-format=text --reports=yes || true)
+        echo "$LINT_OUTPUT" > "$LINT_OUTPUT_FILE"
 
         # Extract the score from the captured output
-        SCORE=$(echo "$PYLINT_OUTPUT" | grep "Your code has been rated at" | awk '{print $7}' | cut -d'/' -f1 || echo "0")
+        SCORE=$(echo "$LINT_OUTPUT" | grep "Your code has been rated at" | awk '{print $7}' | cut -d'/' -f1 || echo "0")
 
         # Output the score and file name
-        echo "🏁 Pylint analysis completed. 🏁"
-        echo "    📄 Output file: $PYLINT_OUTPUT_FILE"
-        echo "    🏆 Pylint score: $SCORE out of 10"
+        echo "🏁 Lint analysis completed. 🏁"
+        echo "    📄 Output file: $LINT_OUTPUT_FILE"
+        echo "    🏆 Lint score: $SCORE out of 10"
 
-        # The report_pylint.py script still needs the file, which we created above.
-        uv run python src/rattlesnake/cicd/report_pylint.py \
-          --input_file "$PYLINT_OUTPUT_FILE" \
-          --output_file pylint_report.html \
+        # The report_lint.py script still needs the file, which we created above.
+        uv run python src/rattlesnake/cicd/report_lint.py \
+          --input_file "$LINT_OUTPUT_FILE" \
+          --output_file lint_report.html \
           --timestamp "$TIMESTAMP" \
           --run_id ${{ github.run_id }} \
           --ref_name ${{ github.ref_name }} \
           --github_sha ${{ github.sha }} \
           --github_repo ${{ github.repository }}
 
-    - name: Upload pylint artifact
+    - name: Upload lint artifact
       uses: actions/upload-artifact@v7
       with:
-        name: pylint-report
+        name: lint-report
         path: |
-          pylint_report.html
-          pylint_output_*.txt
+          lint_report.html
+          lint_output_*.txt
 
   coverage:
     runs-on: ubuntu-latest
@@ -256,11 +255,11 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras --dev
 
-      - name: Download pylint artifact
+      - name: Download lint artifact
         uses: actions/download-artifact@v7
         with:
-          name: pylint-report
-          path: pylint-report
+          name: lint-report
+          path: lint-report
           
       - name: Download pytest artifact
         uses: actions/download-artifact@v7
@@ -284,10 +283,10 @@ jobs:
 
       - name: Create badges
         run: |
-          # Pylint badge (now using Python script)
-          PYLINT_LOG=$(ls pylint-report/pylint_output_*.txt)
-          uv run python src/rattlesnake/cicd/badge_pylint.py \
-            --input_file "$PYLINT_LOG" \
+          # Lint badge (now using Python script)
+          LINT_LOG=$(ls lint-report/lint_output_*.txt)
+          uv run python src/rattlesnake/cicd/badge_lint.py \
+            --input_file "$LINT_LOG" \
             --output_dir badges \
             --github_repo ${{ github.repository }} \
             --deploy_subdir ${{ env.DEPLOY_SUBDIR }} \
@@ -316,12 +315,12 @@ jobs:
 
       - name: Assemble pages directory
         run: |
-          mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/reports/pylint"
+          mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/reports/lint"
           mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage"
           mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/book/jupyter"
           mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/badges"
           
-          mv pylint-report/pylint_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/pylint/index.html"
+          mv lint-report/lint_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/lint/index.html"
           mv pytest-report/pytest_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/index.html"
           mv pytest-report/htmlcov/ "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/"
           mv jupyter-book-report/* "pages/${{ env.DEPLOY_SUBDIR }}/book/jupyter/"
@@ -357,14 +356,14 @@ jobs:
                   <h2>🚀 Released (<a href="https://github.com/sandialabs/rattlesnake-vibration-controller/tree/main?tab=readme-ov-file">Main Branch</a>)</h2>
                   <ul>
                       <li><a href="main/book/jupyter/index.html">User's Manual (work in progress)</a> <span class="badge badge-main">stable</span></li>
-                      <li><a href="main/reports/pylint/index.html">Pylint Report (work in progress)</a> <img src="main/badges/pylint.svg" alt="Pylint Score" style="vertical-align: middle; margin-left: 10px;"></li>
+                      <li><a href="main/reports/lint/index.html">Lint Report (work in progress)</a> <img src="main/badges/lint.svg" alt="Lint Score" style="vertical-align: middle; margin-left: 10px;"></li>
                       <li><a href="main/reports/coverage/index.html">Pytest Coverage (work in progress)</a> <img src="main/badges/coverage.svg" alt="Coverage" style="vertical-align: middle; margin-left: 10px;"></li>
                   </ul>
 
                   <h2>🛠️ Development (<a href="https://github.com/sandialabs/rattlesnake-vibration-controller/tree/dev?tab=readme-ov-file">Dev Branch</a>)</h2>
                   <ul>
                       <li><a href="dev/book/jupyter/index.html">User's Manual</a> <span class="badge badge-dev">latest</span></li>
-                      <li><a href="dev/reports/pylint/index.html">Pylint Report</a> <img src="dev/badges/pylint.svg" alt="Pylint Score" style="vertical-align: middle; margin-left: 10px;"></li>
+                      <li><a href="dev/reports/lint/index.html">Lint Report</a> <img src="dev/badges/lint.svg" alt="Lint Score" style="vertical-align: middle; margin-left: 10px;"></li>
                       <li><a href="dev/reports/coverage/index.html">Pytest Coverage</a> <img src="dev/badges/coverage.svg" alt="Coverage" style="vertical-align: middle; margin-left: 10px;"></li>
                   </ul>
               </div>
