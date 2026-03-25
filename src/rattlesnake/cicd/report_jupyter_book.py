@@ -51,7 +51,6 @@ def generate_footer_md(
     )
 
 
-
 def update_myst_file(file_path: str, footer_md: str) -> None:
     """
     Append metadata footer to the myst.yml file.
@@ -117,8 +116,11 @@ def main() -> int:
         )
         update_myst_file(args.myst_file, footer_md)
         print(f"✅ Successfully updated Jupyter Book metadata in {args.myst_file}")
-    except Exception as e:
-        print(f"❌ Error: {e}")
+    except (FileNotFoundError, IOError) as e:
+        print(f"❌ File Error: {e}")
+        return 1
+    except ValueError as e:  # Catch potential parsing errors
+        print(f"❌ Input Error: {e}")
         return 1
     return 0
 
