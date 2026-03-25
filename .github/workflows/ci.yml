@@ -57,6 +57,17 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+        # By default, the GitHub Action actions/checkout performs a "shallow clone."
+        # This means it only downloads the very latest commit to save time.
+        # However, a shallow clone does not include the tags or history.
+        # Without that information, hatch-vcs won't know what version the code is
+        # and might default to 0.0.0 or fail during the build.  Setting
+        # fetch-depth: 0 tells GitHub to download the entire commit history
+        # and all tags, which gives Hatch the information it needs to correctly
+        # calculate the version.
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
@@ -77,6 +88,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
 
     - name: Install uv
       uses: astral-sh/setup-uv@v7
@@ -87,8 +100,10 @@ jobs:
         python-version: "3.12"
 
     - name: Install dependencies
-      # 'uv sync' uses uv.lock to install exactly what you need
+      # "uv sync" uses uv.lock to install exactly what you need
       # --all-extras ensures [dev] or other extras are included
+      # if the pyproject.toml file changes, run "uv sync" and check into
+      # GitHub both the pyproject.toml file and the uv.lock file.
       run: uv sync --all-extras --dev
         
     - name: pylint analysis and custom pylint HTML report
@@ -135,6 +150,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -179,7 +196,10 @@ jobs:
   docs_jupyter_book:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -223,6 +243,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -262,24 +284,17 @@ jobs:
 
       - name: Create badges
         run: |
-          # Pylint badge
-          PYLINT_OUTPUT_FILE=$(ls pylint-report/pylint_output_*.txt)
-          SCORE=$(grep "Your code has been rated at" "$PYLINT_OUTPUT_FILE" | awk '{print $7}' | cut -d'/' -f1 || echo "0")
-          uv run python src/rattlesnake/cicd/badge_color_pylint.py "$SCORE"
-          mkdir -p badges
-          curl -o badges/pylint.svg "https://img.shields.io/badge/pylint-${SCORE}-${{ env.BADGE_COLOR }}.svg"
-          cat > badges/pylint-info.json << EOF
-          {
-            "score": "${SCORE}",
-            "color": "${{ env.BADGE_COLOR }}",
-            "pages_url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ env.DEPLOY_SUBDIR }}/reports/pylint/",
-            "workflow_url": "${{ github.server_url }}/${{ github.repository }}/actions/workflows/ci.yml",
-            "run_id": "${{ github.run_id }}",
-            "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-          }
-          EOF
+          # Pylint badge (now using Python script)
+          PYLINT_LOG=$(ls pylint-report/pylint_output_*.txt)
+          uv run python src/rattlesnake/cicd/badge_pylint.py \
+            --input_file "$PYLINT_LOG" \
+            --output_dir badges \
+            --github_repo ${{ github.repository }} \
+            --deploy_subdir ${{ env.DEPLOY_SUBDIR }} \
+            --run_id ${{ github.run_id }} \
+            --github_server_url ${{ github.server_url }}
 
-          # Pytest badge
+          # Pytest badge (legacy bash logic, to be updated later)
           uv run python src/rattlesnake/cicd/badge_color_coverage.py pytest-report/coverage.xml
           
           REPO_URL="${{ github.server_url }}/${{ github.repository }}"
@@ -313,11 +328,13 @@ jobs:
           mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/reports/pylint"
           mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage"
           mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/book/jupyter"
+          mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/badges"
           
           mv pylint-report/pylint_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/pylint/index.html"
           mv pytest-report/pytest_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/index.html"
           mv pytest-report/htmlcov/ "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/"
           mv jupyter-book-report/* "pages/${{ env.DEPLOY_SUBDIR }}/book/jupyter/"
+          cp badges/* "pages/${{ env.DEPLOY_SUBDIR }}/badges/"
           
           # Create a root index.html that redirects or links to both versions
           cat > pages/index.html << 'EOF'
@@ -349,15 +366,15 @@ jobs:
                   <h2>🚀 Released (<a href="https://github.com/sandialabs/rattlesnake-vibration-controller/tree/main?tab=readme-ov-file">Main Branch</a>)</h2>
                   <ul>
                       <li><a href="main/book/jupyter/index.html">User's Manual (work in progress)</a> <span class="badge badge-main">stable</span></li>
-                      <li><a href="main/reports/pylint/index.html">Pylint Report (work in progress)</a></li>
-                      <li><a href="main/reports/coverage/index.html">Pytest Coverage (work in progress)</a></li>
+                      <li><a href="main/reports/pylint/index.html">Pylint Report (work in progress)</a> <img src="main/badges/pylint.svg" alt="Pylint Score" style="vertical-align: middle; margin-left: 10px;"></li>
+                      <li><a href="main/reports/coverage/index.html">Pytest Coverage (work in progress)</a> <img src="main/badges/coverage.svg" alt="Coverage" style="vertical-align: middle; margin-left: 10px;"></li>
                   </ul>
 
                   <h2>🛠️ Development (<a href="https://github.com/sandialabs/rattlesnake-vibration-controller/tree/dev?tab=readme-ov-file">Dev Branch</a>)</h2>
                   <ul>
                       <li><a href="dev/book/jupyter/index.html">User's Manual</a> <span class="badge badge-dev">latest</span></li>
-                      <li><a href="dev/reports/pylint/index.html">Pylint Report</a></li>
-                      <li><a href="dev/reports/coverage/index.html">Pytest Coverage</a></li>
+                      <li><a href="dev/reports/pylint/index.html">Pylint Report</a> <img src="dev/badges/pylint.svg" alt="Pylint Score" style="vertical-align: middle; margin-left: 10px;"></li>
+                      <li><a href="dev/reports/coverage/index.html">Pytest Coverage</a> <img src="dev/badges/coverage.svg" alt="Coverage" style="vertical-align: middle; margin-left: 10px;"></li>
                   </ul>
               </div>
           </body>
@@ -372,3 +389,5 @@ jobs:
           publish_branch: gh-pages
           keep_files: true
           commit_message: 'Deploy reports for ${{ github.ref_name }} (${{ github.sha }})'
+
+    # TODO: Publish to PyPI
