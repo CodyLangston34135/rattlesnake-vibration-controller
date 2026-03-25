@@ -284,24 +284,17 @@ jobs:
 
       - name: Create badges
         run: |
-          # Pylint badge
-          PYLINT_OUTPUT_FILE=$(ls pylint-report/pylint_output_*.txt)
-          SCORE=$(grep "Your code has been rated at" "$PYLINT_OUTPUT_FILE" | awk '{print $7}' | cut -d'/' -f1 || echo "0")
-          uv run python src/rattlesnake/cicd/badge_color_pylint.py "$SCORE"
-          mkdir -p badges
-          curl -o badges/pylint.svg "https://img.shields.io/badge/pylint-${SCORE}-${{ env.BADGE_COLOR }}.svg"
-          cat > badges/pylint-info.json << EOF
-          {
-            "score": "${SCORE}",
-            "color": "${{ env.BADGE_COLOR }}",
-            "pages_url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ env.DEPLOY_SUBDIR }}/reports/pylint/",
-            "workflow_url": "${{ github.server_url }}/${{ github.repository }}/actions/workflows/ci.yml",
-            "run_id": "${{ github.run_id }}",
-            "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-          }
-          EOF
+          # Pylint badge (now using Python script)
+          PYLINT_LOG=$(ls pylint-report/pylint_output_*.txt)
+          uv run python src/rattlesnake/cicd/badge_pylint.py \
+            --input_file "$PYLINT_LOG" \
+            --output_dir badges \
+            --github_repo ${{ github.repository }} \
+            --deploy_subdir ${{ env.DEPLOY_SUBDIR }} \
+            --run_id ${{ github.run_id }} \
+            --github_server_url ${{ github.server_url }}
 
-          # Pytest badge
+          # Pytest badge (legacy bash logic, to be updated later)
           uv run python src/rattlesnake/cicd/badge_color_coverage.py pytest-report/coverage.xml
           
           REPO_URL="${{ github.server_url }}/${{ github.repository }}"
@@ -335,11 +328,13 @@ jobs:
           mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/reports/pylint"
           mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage"
           mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/book/jupyter"
+          mkdir -p "pages/${{ env.DEPLOY_SUBDIR }}/badges"
           
           mv pylint-report/pylint_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/pylint/index.html"
           mv pytest-report/pytest_report.html "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/index.html"
           mv pytest-report/htmlcov/ "pages/${{ env.DEPLOY_SUBDIR }}/reports/coverage/"
           mv jupyter-book-report/* "pages/${{ env.DEPLOY_SUBDIR }}/book/jupyter/"
+          cp badges/* "pages/${{ env.DEPLOY_SUBDIR }}/badges/"
           
           # Create a root index.html that redirects or links to both versions
           cat > pages/index.html << 'EOF'
@@ -371,15 +366,15 @@ jobs:
                   <h2>🚀 Released (<a href="https://github.com/sandialabs/rattlesnake-vibration-controller/tree/main?tab=readme-ov-file">Main Branch</a>)</h2>
                   <ul>
                       <li><a href="main/book/jupyter/index.html">User's Manual (work in progress)</a> <span class="badge badge-main">stable</span></li>
-                      <li><a href="main/reports/pylint/index.html">Pylint Report (work in progress)</a></li>
-                      <li><a href="main/reports/coverage/index.html">Pytest Coverage (work in progress)</a></li>
+                      <li><a href="main/reports/pylint/index.html">Pylint Report (work in progress)</a> <img src="main/badges/pylint.svg" alt="Pylint Score" style="vertical-align: middle; margin-left: 10px;"></li>
+                      <li><a href="main/reports/coverage/index.html">Pytest Coverage (work in progress)</a> <img src="main/badges/coverage.svg" alt="Coverage" style="vertical-align: middle; margin-left: 10px;"></li>
                   </ul>
 
                   <h2>🛠️ Development (<a href="https://github.com/sandialabs/rattlesnake-vibration-controller/tree/dev?tab=readme-ov-file">Dev Branch</a>)</h2>
                   <ul>
                       <li><a href="dev/book/jupyter/index.html">User's Manual</a> <span class="badge badge-dev">latest</span></li>
-                      <li><a href="dev/reports/pylint/index.html">Pylint Report</a></li>
-                      <li><a href="dev/reports/coverage/index.html">Pytest Coverage</a></li>
+                      <li><a href="dev/reports/pylint/index.html">Pylint Report</a> <img src="dev/badges/pylint.svg" alt="Pylint Score" style="vertical-align: middle; margin-left: 10px;"></li>
+                      <li><a href="dev/reports/coverage/index.html">Pytest Coverage</a> <img src="dev/badges/coverage.svg" alt="Coverage" style="vertical-align: middle; margin-left: 10px;"></li>
                   </ul>
               </div>
           </body>
