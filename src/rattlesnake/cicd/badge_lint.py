@@ -7,7 +7,7 @@ import json
 import os
 import re
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
@@ -90,7 +90,7 @@ def main():
                 "pages_url": f"https://{owner}.github.io/{repo}/{args.deploy_subdir}/reports/lint/",
                 "workflow_url": f"{args.github_server_url}/{args.github_repo}/actions/workflows/ci.yml",
                 "run_id": args.run_id,
-                "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             }
 
             with open(Path(args.output_dir) / "lint-info.json", "w", encoding="utf-8") as f:
