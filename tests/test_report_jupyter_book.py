@@ -121,4 +121,4 @@ def test_main_error(monkeypatch, capsys):
     exit_code = main()
     assert exit_code == 1
     captured = capsys.readouterr()
-    assert "❌ Error:" in captured.out
+    assert "❌ File Error:" in captured.out

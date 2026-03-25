@@ -47,9 +47,7 @@ def main():
     parser.add_argument("--deploy_subdir", help="main or dev")
     parser.add_argument("--run_id", help="GitHub Run ID")
     parser.add_argument("--github_server_url", default="https://github.com")
-    parser.add_argument(
-        "--export_env", action="store_true", help="Export to GITHUB_ENV"
-    )
+    parser.add_argument("--export_env", action="store_true", help="Export to GITHUB_ENV")
 
     args = parser.parse_args()
 

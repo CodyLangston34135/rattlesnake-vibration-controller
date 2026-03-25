@@ -35,7 +35,7 @@ def test_main_success(tmp_path, monkeypatch, capsys):
     main()
     
     assert output_file.exists()
-    content = output_file.read_text()
+    content = output_file.read_text(encoding="utf-8")
     assert github_repo in content
     captured = capsys.readouterr()
     assert "✅ Dashboard generated" in captured.out
