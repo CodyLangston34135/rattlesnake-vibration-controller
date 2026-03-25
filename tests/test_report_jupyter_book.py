@@ -30,10 +30,10 @@ def test_generate_footer_md():
 
     assert "---" in footer
     assert '<div style="font-size: 0.7em;">' in footer
-    assert "Generated: 2024-03-24<br>" in footer
-    assert "&nbsp;&nbsp;12:00:00 UTC<br>" in footer
-    assert "&nbsp;&nbsp;08:00:00 EST<br>" in footer
-    assert "&nbsp;&nbsp;06:00:00 MST<br>" in footer
+    assert "Generated:<br>" in footer
+    assert "&nbsp;&nbsp;2024-03-24 12:00:00 UTC<br>" in footer
+    assert "&nbsp;&nbsp;2024-03-24 08:00:00 EST<br>" in footer
+    assert "&nbsp;&nbsp;2024-03-24 06:00:00 MST<br>" in footer
     assert 'Run ID: <a href="https://github.com/owner/repo/actions/runs/12345678">12345678</a><br>' in footer
     assert 'Branch: <a href="https://github.com/owner/repo/tree/main">main</a><br>' in footer
     assert 'Commit: <a href="https://github.com/owner/repo/commit/abc123456789">abc1234</a><br>' in footer
@@ -101,8 +101,8 @@ site:
     assert "✅ Successfully updated Jupyter Book metadata" in captured.out
     
     updated_content = myst_file.read_text()
-    assert "Generated: 2024-03-24<br>" in updated_content
-    assert "&nbsp;&nbsp;12:00:00 UTC<br>" in updated_content
+    assert "Generated:<br>" in updated_content
+    assert "&nbsp;&nbsp;2024-03-24 12:00:00 UTC<br>" in updated_content
 
 
 def test_main_error(monkeypatch, capsys):

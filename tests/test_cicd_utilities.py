@@ -199,12 +199,25 @@ def test_get_multiline_timestamp():
     lines = get_multiline_timestamp(short_ts)
 
     assert len(lines) == 4
-    assert lines[0] == "2024-03-24"
-    assert lines[1] == "20:44:12 UTC"
+    assert lines[0] == "Generated:"
+    assert lines[1] == "2024-03-24 20:44:12 UTC"
     # On March 24, it is Daylight Saving Time (EDT and MDT).
     # EST/MST are used as fixed strings in the utility function for now as requested.
-    assert lines[2] == "16:44:12 EST"
-    assert lines[3] == "14:44:12 MST"
+    assert lines[2] == "2024-03-24 16:44:12 EST"
+    assert lines[3] == "2024-03-24 14:44:12 MST"
+
+
+def test_get_multiline_timestamp_rollover():
+    """Test date rollover across timezones."""
+    # 2:44 AM UTC on March 25 is 10:44 PM EST and 8:44 PM MST on March 24
+    short_ts = "20240325_024412_UTC"
+    lines = get_multiline_timestamp(short_ts)
+
+    assert len(lines) == 4
+    assert lines[0] == "Generated:"
+    assert lines[1] == "2024-03-25 02:44:12 UTC"
+    assert lines[2] == "2024-03-24 22:44:12 EST"
+    assert lines[3] == "2024-03-24 20:44:12 MST"
 
 
 def test_get_multiline_timestamp_invalid():
