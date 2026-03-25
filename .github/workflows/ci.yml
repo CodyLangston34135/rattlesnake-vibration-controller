@@ -294,23 +294,14 @@ jobs:
             --run_id ${{ github.run_id }} \
             --github_server_url ${{ github.server_url }}
 
-          # Pytest badge (legacy bash logic, to be updated later)
-          uv run python src/rattlesnake/cicd/badge_color_coverage.py pytest-report/coverage.xml
-          
-          REPO_URL="${{ github.server_url }}/${{ github.repository }}"
-          WORKFLOW_URL="${REPO_URL}/actions/workflows/ci.yml"
-          curl -o badges/coverage.svg "https://img.shields.io/badge/coverage-${{ env.COVERAGE }}%25-${{ env.BADGE_COLOR_COV }}.svg"
-          cat > badges/coverage-info.json << EOF
-          {
-            "coverage": "${{ env.COVERAGE }}",
-            "color": "${{ env.BADGE_COLOR_COV }}",
-            "pages_url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ env.DEPLOY_SUBDIR }}/reports/coverage/",
-            "workflow_url": "${WORKFLOW_URL}",
-            "run_id": "${{ github.run_id }}",
-            "artifact_url": "${REPO_URL}/actions/runs/${{ github.run_id }}",
-            "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-          }
-          EOF
+          # Pytest badge (now using Python script)
+          uv run python src/rattlesnake/cicd/badge_coverage.py \
+            --input_file pytest-report/coverage.xml \
+            --output_dir badges \
+            --github_repo ${{ github.repository }} \
+            --deploy_subdir ${{ env.DEPLOY_SUBDIR }} \
+            --run_id ${{ github.run_id }} \
+            --github_server_url ${{ github.server_url }}
 
 #      - name: Commit badges
 #        run: |
