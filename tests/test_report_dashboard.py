@@ -13,7 +13,9 @@ def test_generate_dashboard_html():
     html = generate_dashboard_html(github_repo)
     
     assert "<!DOCTYPE html>" in html
-    assert "Rattlesnake Vibration Controller - CI/CD Hub" in html
+    assert "Project Dashboard" in html
+    assert "Rattlesnake" in html
+    assert f"https://github.com/{github_repo}" in html
     assert f"https://github.com/{github_repo}/tree/main" in html
     assert f"https://github.com/{github_repo}/tree/dev" in html
     assert "main/badges/lint.svg" in html
@@ -38,4 +40,4 @@ def test_main_success(tmp_path, monkeypatch, capsys):
     content = output_file.read_text(encoding="utf-8")
     assert github_repo in content
     captured = capsys.readouterr()
-    assert "✅ Dashboard generated" in captured.out
+    assert "✅ Project Dashboard generated" in captured.out
