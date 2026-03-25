@@ -37,9 +37,7 @@ class CoverageMetric:
         Returns 0.0 if `lines_valid` is zero to prevent division by zero errors.
         """
 
-        return (
-            (self.lines_covered / self.lines_valid * 100) if self.lines_valid > 0 else 0.0
-        )
+        return (self.lines_covered / self.lines_valid * 100) if self.lines_valid > 0 else 0.0
 
     @property
     def color(self) -> str:
@@ -257,9 +255,7 @@ Example:
 
     parser.add_argument("--run_id", required=True, help="GitHub Actions run ID")
 
-    parser.add_argument(
-        "--ref_name", required=True, help="Git reference name (branch name)"
-    )
+    parser.add_argument("--ref_name", required=True, help="Git reference name (branch name)")
 
     parser.add_argument("--github_sha", required=True, help="GitHub commit SHA")
 
@@ -301,8 +297,8 @@ def main() -> int:
     except IOError as e:
         print(f"❌ I/O error occurred: {e}")
         return 1
-    except Exception as e:
-        print(f"❌ An unexpected error occurred: {e}")
+    except ValueError as e:
+        print(f"❌ Input Error : {e}")
         return 1
 
     return 0  # Success exit code

@@ -188,7 +188,9 @@ def get_html_issues_table(issues: List[str], github_repo: str, github_sha: str) 
 
             # Create GitHub link
             # Note: We assume the file_path from lint is relative to repo root
-            github_url: str = f"https://github.com/{github_repo}/blob/{github_sha}/{file_path}#L{line}"
+            github_url: str = (
+                f"https://github.com/{github_repo}/blob/{github_sha}/{file_path}#L{line}"
+            )
 
             html.append(
                 f"""
@@ -298,8 +300,11 @@ def main() -> int:
             args.github_repo,
         )
         print(f"✅ Lint report generated: {args.output_file}")
-    except Exception as e:
-        print(f"❌ Error: {e}")
+    except (FileNotFoundError, IOError) as e:
+        print(f"❌ File Error: {e}")
+        return 1
+    except ValueError as e:  # Catch potential parsing errors
+        print(f"❌ Input Error: {e}")
         return 1
     return 0
 

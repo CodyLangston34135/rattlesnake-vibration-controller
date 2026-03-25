@@ -7,7 +7,7 @@ import json
 import os
 import re
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
@@ -47,9 +47,7 @@ def main():
     parser.add_argument("--deploy_subdir", help="main or dev")
     parser.add_argument("--run_id", help="GitHub Run ID")
     parser.add_argument("--github_server_url", default="https://github.com")
-    parser.add_argument(
-        "--export_env", action="store_true", help="Export color to GITHUB_ENV"
-    )
+    parser.add_argument("--export_env", action="store_true", help="Export color to GITHUB_ENV")
 
     args = parser.parse_args()
 
@@ -92,12 +90,10 @@ def main():
                 "pages_url": f"https://{owner}.github.io/{repo}/{args.deploy_subdir}/reports/lint/",
                 "workflow_url": f"{args.github_server_url}/{args.github_repo}/actions/workflows/ci.yml",
                 "run_id": args.run_id,
-                "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             }
 
-            with open(
-                Path(args.output_dir) / "lint-info.json", "w", encoding="utf-8"
-            ) as f:
+            with open(Path(args.output_dir) / "lint-info.json", "w", encoding="utf-8") as f:
                 json.dump(metadata, f, indent=2)
             print(f"✅ Lint JSON metadata saved to {args.output_dir}")
 
