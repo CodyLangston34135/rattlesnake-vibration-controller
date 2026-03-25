@@ -1,17 +1,14 @@
 """This module extracts key coverage metrics from a coverage output file."""
 
 import argparse
+import sys
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 
-import sys
-
-# from typing import Dict, List, Tuple
-
 from rattlesnake.cicd.utilities import (
-    get_score_color_coverage,
     extend_timestamp,
+    get_score_color_coverage,
     write_report,
 )
 
@@ -40,7 +37,9 @@ class CoverageMetric:
         Returns 0.0 if `lines_valid` is zero to prevent division by zero errors.
         """
 
-        return (self.lines_covered / self.lines_valid * 100) if self.lines_valid > 0 else 0.0
+        return (
+            (self.lines_covered / self.lines_valid * 100) if self.lines_valid > 0 else 0.0
+        )
 
     @property
     def color(self) -> str:
@@ -114,7 +113,7 @@ def get_report_html(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pytest Report</title>
+    <title>Coverage Report</title>
     <style>
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -155,7 +154,7 @@ def get_report_html(
 <body>
     <div class="container">
         <div class="header">
-            <h1>Pytest Coverage Report</h1>
+            <h1>Coverage Report</h1>
             <div class="score">Coverage: {coverage_metric.coverage:.2f}%</div>
             <div class="metadata">
                 <div><strong>Lines Covered:</strong> {coverage_metric.lines_covered}</div>
@@ -180,7 +179,7 @@ def get_report_html(
     return html_content
 
 
-def run_pytest_report(
+def run_coverage_report(
     input_file: str,
     output_file: str,
     timestamp: str,
@@ -190,10 +189,10 @@ def run_pytest_report(
     github_repo: str,
 ) -> CoverageMetric:
     """
-    Main function to create HTML report from pytest output.
+    Main function to create HTML report from coverage output.
 
     Args:
-        input_file: Path to the pytest output text file
+        input_file: Path to the coverage output text file
         output_file: Path for the generated HTML report
         timestamp: The timestamp from bash when lint ran, in format YYYYMMDD_HHMMSS_UTC
             e.g., 20250815_211112_UTC
@@ -207,7 +206,7 @@ def run_pytest_report(
     """
     # Get the coverage metric
     coverage_metric = get_coverage_metric(coverage_file=Path(input_file))
-    print(f"run_pytest_report: coverage_metric={coverage_metric}")
+    print(f"run_coverage_report: coverage_metric={coverage_metric}")
 
     # Generate HTML report
     html_content: str = get_report_html(
@@ -233,13 +232,13 @@ def parse_arguments() -> argparse.Namespace:
         Parsed arguments namespace
     """
     parser: argparse.ArgumentParser = argparse.ArgumentParser(
-        description="Generate enhanced HTML report from pytest output",
+        description="Generate enhanced HTML report from coverage output",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Example:
-  python pytest_report.py \
-    --input_file pytest_output_20240101_120000_UTC.txt \
-    --output_file pytest_report.html \
+  python coverage_report.py \
+    --input_file coverage.xml \
+    --output_file coverage_report.html \
     --timestamp 20240101_120000_UTC \
     --run_id 1234567890 \
     --ref_name main \
@@ -248,7 +247,7 @@ Example:
         """,
     )
 
-    parser.add_argument("--input_file", required=True, help="Input pytest output file")
+    parser.add_argument("--input_file", required=True, help="Input coverage output file")
 
     parser.add_argument("--output_file", required=True, help="Output HTML report file")
 
@@ -258,7 +257,9 @@ Example:
 
     parser.add_argument("--run_id", required=True, help="GitHub Actions run ID")
 
-    parser.add_argument("--ref_name", required=True, help="Git reference name (branch name)")
+    parser.add_argument(
+        "--ref_name", required=True, help="Git reference name (branch name)"
+    )
 
     parser.add_argument("--github_sha", required=True, help="GitHub commit SHA")
 
@@ -279,7 +280,7 @@ def main() -> int:
     args: argparse.Namespace = parse_arguments()
 
     try:
-        cm: CoverageMetric = run_pytest_report(
+        cm: CoverageMetric = run_coverage_report(
             args.input_file,
             args.output_file,
             args.timestamp,
@@ -289,7 +290,7 @@ def main() -> int:
             args.github_repo,
         )
 
-        print(f"✅ Pytest HTML report generated: {args.output_file}")
+        print(f"✅ Coverage HTML report generated: {args.output_file}")
         print(f"📊 - valid lines of code: {cm.lines_valid}")
         print(f"🔍 - lines covered: {cm.lines_covered}")
         print(f"🎉 - coverage: {cm.coverage} percent")

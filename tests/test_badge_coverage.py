@@ -1,5 +1,5 @@
 """
-Unit tests for badge_coverage.py — Pytest Coverage Badge Generator.
+Unit tests for badge_coverage.py — Coverage Badge Generator.
 """
 
 import json

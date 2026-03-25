@@ -35,7 +35,7 @@ def get_score_color_lint(pylint_score: str) -> str:
 
 def get_score_color_coverage(coverage_score: str) -> str:
     """
-    Determines the color based on a pytest coverage score.
+    Determines the color based on a coverage score.
 
     Args:
         coverage_score:  The coverage score as a string, e.g., "92.5"
